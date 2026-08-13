@@ -27,6 +27,7 @@ pub fn transparency_head_path(pkg_dir: &Path) -> PathBuf {
     pkg_dir.join(".genesis").join("transparency_head")
 }
 
+#[cfg(feature = "parity-oracle")]
 pub fn append_transparency_entry(
     store: &EvidenceStore,
     pkg_dir: &Path,
@@ -170,6 +171,7 @@ fn looks_like_hex32(s: &str) -> bool {
     s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+#[cfg(feature = "parity-oracle")]
 fn hex32_to_bytes(s: &str) -> Result<[u8; 32], String> {
     let t = s.trim();
     if t.len() != 64 || !t.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -194,6 +196,7 @@ fn bytes_to_hex32(b: &[u8]) -> String {
     out
 }
 
+#[cfg(feature = "parity-oracle")]
 fn hex_val(b: u8) -> Option<u8> {
     match b {
         b'0'..=b'9' => Some(b - b'0'),

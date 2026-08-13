@@ -1,15 +1,19 @@
 use std::collections::BTreeMap;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use base64ct::{Base64, Encoding};
-use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+#[cfg(feature = "parity-oracle")]
+use ed25519_dalek::Signer;
+use ed25519_dalek::{Signature, SigningKey, VerifyingKey};
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use rand_core::OsRng;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use zeroize::Zeroizing;
 
+#[cfg(feature = "parity-oracle")]
 use crate::store::EvidenceStore;
 
 #[derive(Debug, Error)]
@@ -25,6 +29,9 @@ pub enum SigningError {
 
     #[error("store error: {0}")]
     Store(String),
+
+    #[error("selfhost signing authority error: {0}")]
+    Authority(String),
 
     #[error("signature verification failed")]
     VerifyFailed,
@@ -49,7 +56,47 @@ impl KeyFile {
     }
 
     pub fn load(path: &Path) -> Result<Self, SigningError> {
-        let s = fs::read_to_string(path)?;
+        let path_metadata = fs::symlink_metadata(path)?;
+        if !path_metadata.file_type().is_file() || path_metadata.file_type().is_symlink() {
+            return Err(SigningError::KeyParse(format!(
+                "{}: signing key must be a regular non-symlink file",
+                path.display()
+            )));
+        }
+
+        let mut options = OpenOptions::new();
+        options.read(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.custom_flags(libc::O_NOFOLLOW);
+        }
+        let mut file = options.open(path)?;
+        let metadata = file.metadata()?;
+        if !metadata.file_type().is_file() {
+            return Err(SigningError::KeyParse(format!(
+                "{}: signing key must be a regular non-symlink file",
+                path.display()
+            )));
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::{MetadataExt, PermissionsExt};
+            if path_metadata.dev() != metadata.dev() || path_metadata.ino() != metadata.ino() {
+                return Err(SigningError::KeyParse(format!(
+                    "{}: signing key changed while it was being opened",
+                    path.display()
+                )));
+            }
+            if metadata.permissions().mode() & 0o077 != 0 {
+                return Err(SigningError::KeyParse(format!(
+                    "{}: signing key permissions must deny group and other access",
+                    path.display()
+                )));
+            }
+        }
+        let mut s = String::new();
+        file.read_to_string(&mut s)?;
         let k: KeyFile = toml::from_str(&s)
             .map_err(|e| SigningError::KeyParse(format!("{}: {e}", path.display())))?;
         if k.alg != "ed25519" {
@@ -59,9 +106,14 @@ impl KeyFile {
                 k.alg
             )));
         }
-        // Validate base64 payloads early.
-        let _ = decode_b64_32(&k.sk_b64).map_err(SigningError::KeyParse)?;
-        let _ = decode_b64_32(&k.pk_b64).map_err(SigningError::KeyParse)?;
+        let signing = k.signing_key()?;
+        let verifying = k.verifying_key()?;
+        if signing.verifying_key() != verifying {
+            return Err(SigningError::KeyParse(format!(
+                "{}: signing and public key material do not match",
+                path.display()
+            )));
+        }
         Ok(k)
     }
 
@@ -71,14 +123,16 @@ impl KeyFile {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        fs::write(path, s.as_bytes())?;
-        // Best-effort permission hardening on Unix.
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
-            let perm = fs::Permissions::from_mode(0o600);
-            let _ = fs::set_permissions(path, perm);
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
         }
+        let mut file = options.open(path)?;
+        file.write_all(s.as_bytes())?;
+        file.sync_all()?;
         Ok(())
     }
 
@@ -101,6 +155,7 @@ pub struct AcceptanceSignature {
 }
 
 impl AcceptanceSignature {
+    #[cfg(feature = "parity-oracle")]
     pub fn to_term(&self) -> Term {
         Term::Map(
             [
@@ -177,12 +232,13 @@ pub fn acceptance_message(acceptance_hash: &[u8; 32]) -> Vec<u8> {
     msg
 }
 
+#[cfg(feature = "parity-oracle")]
 pub fn sign_acceptance_hash(
     store: &EvidenceStore,
     acceptance_hex: &str,
     key: &SigningKey,
 ) -> Result<(String, AcceptanceSignature), SigningError> {
-    let acceptance_hash = hex32_to_bytes(acceptance_hex)?;
+    let acceptance_hash = parse_hash32(acceptance_hex)?;
     let msg = acceptance_message(&acceptance_hash);
     let sig = key.sign(&msg);
     let pk = key.verifying_key().to_bytes();
@@ -239,6 +295,7 @@ pub fn load_signature_set(path: &Path) -> Result<Vec<String>, SigningError> {
     Ok(out)
 }
 
+#[cfg(feature = "parity-oracle")]
 pub fn write_signature_set(path: &Path, sigs: &[String]) -> Result<(), SigningError> {
     let mut v = sigs.to_vec();
     v.sort();
@@ -258,7 +315,7 @@ fn decode_b64_32(s: &str) -> Result<[u8; 32], String> {
     Ok(out)
 }
 
-fn hex32_to_bytes(s: &str) -> Result<[u8; 32], SigningError> {
+pub fn parse_hash32(s: &str) -> Result<[u8; 32], SigningError> {
     let t = s.trim();
     if t.len() != 64 || !t.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err(SigningError::SigParse("invalid hex hash".to_string()));
@@ -305,4 +362,51 @@ fn bytes64_field(m: &BTreeMap<TermOrdKey, Term>, key: &str) -> Result<[u8; 64], 
     let mut out = [0u8; 64];
     out.copy_from_slice(b);
     Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn secure_key_write_is_create_only_and_pair_checked() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let path = directory.path().join("key.toml");
+        let key = KeyFile::generate_ed25519();
+        key.write_secure(&path).expect("initial key write");
+        key.write_secure(&path)
+            .expect_err("key generation must not overwrite existing secret material");
+        KeyFile::load(&path).expect("secure matching keypair");
+
+        let other = KeyFile::generate_ed25519();
+        let mut mismatched = key.clone();
+        mismatched.pk_b64 = other.pk_b64;
+        let mismatch_path = directory.path().join("mismatch.toml");
+        mismatched
+            .write_secure(&mismatch_path)
+            .expect("write malformed fixture");
+        let error = KeyFile::load(&mismatch_path).expect_err("mismatched keypair must fail");
+        assert!(error.to_string().contains("do not match"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn key_load_rejects_permissive_and_symlinked_secret_files() {
+        use std::os::unix::fs::{PermissionsExt, symlink};
+
+        let directory = tempfile::tempdir().expect("tempdir");
+        let path = directory.path().join("key.toml");
+        KeyFile::generate_ed25519()
+            .write_secure(&path)
+            .expect("secure key");
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).expect("permissions");
+        let error = KeyFile::load(&path).expect_err("permissive key must fail");
+        assert!(error.to_string().contains("deny group and other"));
+
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).expect("permissions");
+        let link = directory.path().join("key-link.toml");
+        symlink(&path, &link).expect("symlink fixture");
+        let error = KeyFile::load(&link).expect_err("symlink key must fail");
+        assert!(error.to_string().contains("regular non-symlink"));
+    }
 }

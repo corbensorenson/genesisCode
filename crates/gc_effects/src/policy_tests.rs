@@ -1982,12 +1982,12 @@ max_layer_opacity = 500
 }
 
 #[test]
-fn selfhost_authority_rejects_malformed_xr_device_decisions() {
+fn selfhost_authority_rejects_malformed_xr_device_decisions() -> Result<(), &'static str> {
     use super::policy_authority::xr::decode;
 
     let mut malformed = xr_policy_term(":first-party-runtime", Term::Nil);
     let Term::Map(map) = &mut malformed else {
-        unreachable!("test fixture is a map")
+        return Err("test fixture is not a map");
     };
     map.insert(
         TermOrdKey(Term::symbol(":max-anchors")),
@@ -1998,7 +1998,7 @@ fn selfhost_authority_rejects_malformed_xr_device_decisions() {
 
     let mut malformed = xr_policy_term(":first-party-runtime", Term::Nil);
     let Term::Map(map) = &mut malformed else {
-        unreachable!("test fixture is a map")
+        return Err("test fixture is not a map");
     };
     map.insert(
         TermOrdKey(Term::symbol(":allow-layer-types")),
@@ -2008,13 +2008,14 @@ fn selfhost_authority_rejects_malformed_xr_device_decisions() {
 
     let mut malformed = xr_policy_term(":first-party-runtime", Term::Nil);
     let Term::Map(map) = &mut malformed else {
-        unreachable!("test fixture is a map")
+        return Err("test fixture is not a map");
     };
     map.insert(
         TermOrdKey(Term::symbol(":allow-hand-tracking")),
         Term::symbol(":absent"),
     );
     decode(&malformed, true).expect_err("noncanonical compact bool state must fail closed");
+    Ok(())
 }
 
 #[test]

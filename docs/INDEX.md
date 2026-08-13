@@ -198,11 +198,15 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json` - closed schema for the H2 effect-policy composition profile.
 - `docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.md` - normative H2 R4.2.d effect-log replay decision and bounded host-mechanism contract.
 - `docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.schema.json` - closed schema for the H2 replay-authority profile.
+- `docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.md` - normative H2 R4.2.d package and GenesisBench signing semantics, secret-custody boundary, and no-fallback contract.
+- `docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.schema.json` - closed schema for the H2 signing-authority profile.
+- `policies/selfhost_signing_authority_v0.1.json` - content-addressed signing decision, host-mechanism, resource-bound, source, verifier, and nonclaim profile.
+- `scripts/lib/selfhost_signing_authority.py` - independent signing source/artifact custody, production-route, secret-boundary, ledger, and mutation verifier.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.
 - `scripts/selfhost_effect_policy_composition_guard.sh` - focused profile, mutation, admission, cap, and operation-inventory-bound guard.
-- `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md` - normative partial R4.2.d primitive-fact, unit-expectation, resource-budget, strict-decoder, and residual-obligation contract; it does not promote `SD-OBLIGATION`.
-- `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial obligation-authority profile.
-- `policies/selfhost_obligation_authority_v0.1.json` - content-addressed migrated/residual obligation inventory, host-fact boundary, runtime limits, and nonclaims.
+- `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md` - normative H2 R4.2.d primitive-fact, complete obligation decision, resource-budget, strict-decoder, and no-fallback contract.
+- `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked H2 obligation-authority profile.
+- `policies/selfhost_obligation_authority_v0.1.json` - content-addressed complete obligation inventory, host-fact boundary, runtime limits, and nonclaims.
 - `scripts/lib/selfhost_obligation_authority.py` - independent profile, source, call-site, production-graph, removed-host-decision, and mutation verifier; optional runtime mode checks native/WASI package routes.
 - `scripts/lib/semantic_ownership_ledger.py --refresh-identities` - explicit identity refresh for reviewed ledger edits; validation remains read-only in `scripts/check_selfhost_boundary.sh`.
 - `.genesis/perf/selfhost_readiness_report.json` - optional mutable local routing/runtime readiness observation, produced only by `scripts/update_selfhost_readiness_scorecard_report.sh`; not semantic authority or release evidence.

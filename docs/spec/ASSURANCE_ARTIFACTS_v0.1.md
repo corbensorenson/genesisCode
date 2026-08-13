@@ -71,6 +71,8 @@ Genesis canonical statement JSON is UTF-8 with sorted object keys, compact separ
 
 where lengths are decimal byte counts and `SP` is one ASCII space. Bundle attestations retain both the decoded statement and DSSE envelope for auditability; validators MUST prove the envelope payload is byte-identical to canonical serialization of the retained statement before signature evaluation.
 
+Production GenesisBench DSSE PAE bytes and signed-envelope facts are constructed by artifact-loaded `core/security::signing-authority` under `SELFHOST_SIGNING_AUTHORITY_v0.1.md`. SHA-256 and Ed25519 execution remain bounded host mechanisms whose closed outcomes are submitted back to that authority; a host formatter or signer MUST NOT independently choose PAE bytes or semantic envelope fields.
+
 The authenticated profile uses Ed25519. `keyid` is `sha256:<lowercase hex SHA-256 of the raw 32-byte public key>`. Signatures are standard base64 of the 64-byte Ed25519 signature over PAE bytes. Signature validity proves control of a key, not authorization. Trust roots, thresholds, role separation, expiration/revocation, and identity policy are external verifier inputs and MUST NOT be accepted from the bundle being verified.
 
 E1 and E2 bundles MAY omit envelopes when policy explicitly permits unsigned local/review evidence. E3 and E4 bundles require an envelope and at least one valid, authorized signature for every statement. E4 additionally requires an independently operated verifier and policy-defined signer/verifier separation; self-produced reports cannot promote themselves. R0.2.c owns the independent read-only cryptographic verifier and trust-policy implementation.

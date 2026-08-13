@@ -10,7 +10,9 @@ This document specifies the normative behavior of package acceptance signing in 
 - `sk_b64 = "..."` (base64-encoded 32-byte Ed25519 secret key seed)
 - `pk_b64 = "..."` (base64-encoded 32-byte Ed25519 public key)
 
-The tool SHOULD set restrictive file permissions on Unix (best-effort).
+The tool MUST create the secret file without overwriting an existing path, MUST reject symlink and non-regular key inputs, MUST reject mismatched secret/public material, and on Unix MUST deny group and other permissions before secret bytes are written. Unix readers MUST open the final path with no-follow semantics and validate the opened descriptor's identity, regular-file type, and permissions before reading secret bytes; a pathname-only precheck is insufficient.
+
+Production keypair admission, signed-message construction, signature artifact construction, signature-set canonicalization, and transparency-entry construction are owned by the artifact-loaded `core/security::signing-authority` contract in `SELFHOST_SIGNING_AUTHORITY_v0.1.md`. Rust performs only the bounded cryptographic, secret-custody, codec, storage, and pointer-write mechanisms named there and MUST NOT retain a production semantic fallback.
 
 ## Message To Sign
 
@@ -43,7 +45,8 @@ Ed25519 signatures are deterministic for a given message and key.
 3. Write `.genesis/last_signature` containing the signature artifact hash (one line).
 4. Update the signature set file (default `.genesis/signatures.gc`) by inserting the signature artifact hash and writing a canonical CoreForm vector of 64-hex strings (sorted, deduplicated).
 
+Malformed existing signature-set or transparency-head state MUST fail closed; it MUST NOT be interpreted as an empty set or absent head.
+
 ## Verification
 
 Verification is policy-gated (see `docs/spec/REGISTRY_POLICY.md`).
-

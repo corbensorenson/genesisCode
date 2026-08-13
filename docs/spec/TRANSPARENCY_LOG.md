@@ -4,9 +4,12 @@ This document specifies a minimal, local transparency log mechanism for GenesisC
 
 The transparency log is an append-only hash chain stored in the package’s evidence store, anchored by a head pointer file.
 
+The artifact-loaded `core/security::signing-authority` defined by `SELFHOST_SIGNING_AUTHORITY_v0.1.md` exclusively constructs each production entry term and the canonical signature-set update. The host may load bounded prior state, store the exact returned term content-addressably, and write exact pointers; it MUST NOT reconstruct, repair, or replace authority output.
+
 ## Head Pointer
 
 - `.genesis/transparency_head` contains the hex hash (BLAKE3) of the latest transparency entry artifact, or may be absent if no entries exist.
+- A present malformed head is an error, not an empty log.
 
 ## Entry Artifact
 
@@ -41,4 +44,3 @@ Where `:prev-h` is the previous entry’s artifact hash bytes (or `nil` for the 
    - verify the artifact exists and its name matches its content hash
    - verify `:kind` and `:prev-h` types and sizes
 4. Report the number of traversed entries and fail on any mismatch.
-

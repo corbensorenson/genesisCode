@@ -412,6 +412,30 @@ fn sign_and_verify_with_policy_succeeds() {
         .arg(&pkg)
         .assert()
         .success();
+
+    let signatures = dst.join(".genesis/signatures.gc");
+    let valid_signatures = fs::read(&signatures).unwrap();
+    fs::write(&signatures, b"[\"not-an-artifact\"]").unwrap();
+    cargo_bin_cmd!("genesis")
+        .args(["sign", "--pkg"])
+        .arg(&pkg)
+        .args(["--key"])
+        .arg(&key)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("sign/signature-set"));
+    fs::write(&signatures, valid_signatures).unwrap();
+
+    let transparency_head = dst.join(".genesis/transparency_head");
+    fs::write(&transparency_head, b"not-an-artifact\n").unwrap();
+    cargo_bin_cmd!("genesis")
+        .args(["sign", "--pkg"])
+        .arg(&pkg)
+        .args(["--key"])
+        .arg(&key)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("sign/transparency-head"));
 }
 
 #[test]

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-signing-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "hostMechanisms",
+    "hostOracle",
+    "independentVerifier",
+    "kind",
+    "nonclaims",
+    "productionEntrypoints",
+    "requestKind",
+    "resultKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModule",
+    "sourceSha256",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": { "const": "selfhost/toolchain.gc" },
+    "auditDate": { "type": "string", "format": "date" },
+    "binding": { "const": "core/security::signing-authority" },
+    "contentIdentitySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "decisionInventory": {
+      "const": [
+        "keypair-admission",
+        "acceptance-message-construction",
+        "acceptance-signature-artifact-construction",
+        "signature-set-canonicalization",
+        "transparency-entry-construction",
+        "dsse-pae-construction",
+        "dsse-signature-artifact-construction"
+      ]
+    },
+    "hostMechanisms": {
+      "const": [
+        "os-csprng",
+        "ed25519-key-derivation-sign-and-verify",
+        "sha256-and-content-addressed-hashing",
+        "base64-toml-coreform-json-codec",
+        "bounded-owner-only-secret-file-transport",
+        "content-addressed-storage-and-state-pointer-write"
+      ]
+    },
+    "hostOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["removalTask", "required"],
+      "properties": {
+        "removalTask": { "const": "R4.2.d" },
+        "required": { "const": false }
+      }
+    },
+    "independentVerifier": { "const": "scripts/lib/selfhost_signing_authority.py" },
+    "kind": { "const": "genesis/selfhost-signing-authority-v0.1" },
+    "nonclaims": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "productionEntrypoints": { "const": ["genesis", "genesis_wasi"] },
+    "requestKind": { "const": "genesis/signing-authority-request-v0.1" },
+    "resultKind": { "const": "genesis/signing-authority-result-v0.1" },
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocationLimit", "maxPayloadBytes", "stepLimit"],
+      "properties": {
+        "allocationLimit": { "const": 64000000 },
+        "maxPayloadBytes": { "const": 16777216 },
+        "stepLimit": { "const": 20000000 }
+      }
+    },
+    "schema": { "const": "docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.schema.json" },
+    "sourceModule": { "const": "selfhost/signing_authority_v1.gc" },
+    "sourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "spec": { "const": "docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.md" },
+    "version": { "const": "0.1.0" }
+  }
+}

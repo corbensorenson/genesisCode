@@ -216,7 +216,7 @@
       "includesHidden": false,
       "routingImplementationPaths": [
         "crates/gc_cli_driver/src/lib.rs",
-        "crates/gc_cli_driver/src/cmd_security_ops.rs"
+        "crates/gc_cli_driver/src/cmd_security_signing.rs"
       ],
       "selector": "keygen",
       "semanticDecisionIds": [
@@ -498,7 +498,7 @@
       "includesHidden": false,
       "routingImplementationPaths": [
         "crates/gc_cli_driver/src/lib.rs",
-        "crates/gc_cli_driver/src/cmd_security_ops.rs"
+        "crates/gc_cli_driver/src/cmd_security_signing.rs"
       ],
       "selector": "sign",
       "semanticDecisionIds": [
@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "cc914944a33f5847938ecb7508bf94657b67dfc460a78e1bae1ccdd380aaf4e5",
+  "contentIdentitySha256": "2315cd4cada4c7b8bc2c5a946563cd1d2b4aaa9383b6f53bf4d80837e3efc51f",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1645,38 +1645,49 @@
         "sign",
         "bench/*"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
       "hostBindingPaths": [
-        "crates/gc_cli_driver/src"
+        "crates/gc_cli_driver/src/cmd_bench.rs",
+        "crates/gc_cli_driver/src/cmd_security_signing.rs",
+        "crates/gc_obligations/src/signing.rs",
+        "crates/gc_obligations/src/signing_authority.rs",
+        "crates/gc_obligations/src/signing_authority_decode.rs"
       ],
       "id": "SD-SIGNING",
       "internalOnly": false,
       "limitations": [
-        "Cryptographic operations and custody remain host-authoritative"
+        "Operating-system entropy, Ed25519 and SHA mechanisms, codecs, bounded secret-file custody, content-addressed storage, and state-pointer writes remain host mechanisms; evidence verification is tracked separately by SD-EVIDENCE-VERIFY"
       ],
       "migrationTasks": [
         "R4.2.d"
       ],
       "producingImplementationPaths": [
-        "crates/gc_cli_driver/src/cmd_security_ops.rs"
+        "selfhost/signing_authority_v1.gc"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_cli_driver/src/cmd_security_ops.rs"
+        "selfhost/toolchain.gc",
+        "selfhost/signing_authority_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md"
+        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
+        "docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.md",
+        "docs/spec/SIGNING.md",
+        "docs/spec/TRANSPARENCY_LOG.md"
       ],
       "stage0Domains": [
         "S0-H"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/release_evidence_regressions.rs"
+        "crates/gc_cli/tests/cli_genesisbench_registry.rs",
+        "crates/gc_cli/tests/cli_smoke.rs",
+        "crates/gc_obligations/src/signing_authority_decode.rs"
       ],
       "title": "Key generation and artifact signing",
       "verifierPaths": [
-        "scripts/check_genesis_evidence_verifier.sh"
+        "scripts/lib/selfhost_signing_authority.py",
+        "scripts/check_selfhost_boundary.sh"
       ]
     },
     {

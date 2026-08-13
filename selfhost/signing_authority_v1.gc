@@ -1,0 +1,397 @@
+(def selfhost/signing::tag core/data::tag)
+
+(def selfhost/signing::nil? core/list::is-nil?)
+
+(def selfhost/signing::not (fn (value) (if value false true)))
+
+(def selfhost/signing::map?
+  (fn (value) ((core/sym::eq? (selfhost/signing::tag value)) (quote :map))))
+
+(def selfhost/signing::str?
+  (fn (value) ((core/sym::eq? (selfhost/signing::tag value)) (quote :str))))
+
+(def selfhost/signing::sym?
+  (fn (value) ((core/sym::eq? (selfhost/signing::tag value)) (quote :sym))))
+
+(def selfhost/signing::bytes?
+  (fn (value) ((core/sym::eq? (selfhost/signing::tag value)) (quote :bytes))))
+
+(def selfhost/signing::bool?
+  (fn (value) ((core/sym::eq? (selfhost/signing::tag value)) (quote :bool))))
+
+(def selfhost/signing::vec?
+  (fn (value) ((core/sym::eq? (selfhost/signing::tag value)) (quote :vec))))
+
+(def selfhost/signing::field
+  (fn (map) (fn (key) (if (selfhost/signing::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/signing::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/signing::map-has-key-loop? entries) key) ((core/int::add index) 1)))))))))
+
+(def selfhost/signing::map-has-key?
+  (fn (map) (fn (key) (((selfhost/signing::map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/signing::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if ((selfhost/signing::map-has-key? map) ((core/vec::get keys) index))
+            (((selfhost/signing::map-has-keys-loop? map) keys) ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/signing::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/signing::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/signing::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/signing::bytes-len?
+  (fn (value)
+    (fn (length)
+      (if (selfhost/signing::bytes? value)
+        ((core/int::eq? (core/bytes::len value)) length)
+        false))))
+
+(def selfhost/signing::hash32?
+  (fn (value) ((selfhost/signing::bytes-len? value) 32)))
+
+(def selfhost/signing::sig64?
+  (fn (value) ((selfhost/signing::bytes-len? value) 64)))
+
+(def selfhost/signing::nonempty-str?
+  (fn (value)
+    (if (selfhost/signing::str? value) ((core/int::lt? 0) (core/str::len value)) false)))
+
+(def selfhost/signing::hash-text?
+  (fn (value)
+    (if (selfhost/signing::str? value)
+      (let ((decoded (core/bytes::from-hex value)))
+        (if (core/error::is? decoded)
+          false
+          (if ((core/int::eq? (core/bytes::len decoded)) 32)
+            ((core/eq? (core/bytes::to-hex decoded)) value)
+            false)))
+      false)))
+
+(def selfhost/signing::optional-hash32?
+  (fn (value) (if (selfhost/signing::nil? value) true (selfhost/signing::hash32? value))))
+
+(def selfhost/signing::hash-vector-valid-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/signing::hash-text? ((core/vec::get values) index))
+          ((selfhost/signing::hash-vector-valid-loop? values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/signing::hash-vector-valid?
+  (fn (values)
+    (if (selfhost/signing::vec? values)
+      ((selfhost/signing::hash-vector-valid-loop? values) 0)
+      false)))
+
+(def selfhost/signing::hash-set-loop
+  (fn (values)
+    (fn (index)
+      (fn (set)
+        (if ((core/int::eq? index) (core/vec::len values))
+          set
+          (((selfhost/signing::hash-set-loop values) ((core/int::add index) 1))
+            (((core/map::put set) ((core/vec::get values) index)) true)))))))
+
+(def selfhost/signing::entry-keys-loop
+  (fn (entries)
+    (fn (index)
+      (fn (output)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          output
+          (((selfhost/signing::entry-keys-loop entries) ((core/int::add index) 1))
+            ((core/vec::push output) ((core/vec::get ((core/vec::get entries) index)) 0))))))))
+
+(def selfhost/signing::sort-hashes
+  (fn (values)
+    (((selfhost/signing::entry-keys-loop
+       (core/map::entries (((selfhost/signing::hash-set-loop values) 0) {})))
+      0)
+     [])))
+
+(def selfhost/signing::result
+  (fn (request)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (data)
+            {
+              :code code
+              :data data
+              :kind "genesis/signing-authority-result-v0.1"
+              :message message
+              :ok ok
+              :request-h (selfhost/hash::hash-term request)
+              :v 1}))))))
+
+(def selfhost/signing::accept
+  (fn (request) (fn (data) (((((selfhost/signing::result request) true) nil) nil) data))))
+
+(def selfhost/signing::reject
+  (fn (request)
+    (fn (code)
+      (fn (message) (((((selfhost/signing::result request) false) code) message) nil)))))
+
+(def selfhost/signing::acceptance-message
+  (fn (acceptance-h) ((core/bytes::concat b"GCv0.2\x00acceptance\x00") acceptance-h)))
+
+(def selfhost/signing::dsse-message
+  (fn (payload-type)
+    (fn (payload)
+      (let ((payload-type-bytes (core/str::to-utf8 payload-type)))
+        (let
+          (
+            (with-type-length
+              ((core/bytes::concat b"DSSEv1 ")
+                (core/str::to-utf8 (core/int::to-str (core/bytes::len payload-type-bytes))))))
+          (let ((with-type-space ((core/bytes::concat with-type-length) b" ")))
+            (let ((with-type ((core/bytes::concat with-type-space) payload-type-bytes)))
+              (let ((with-payload-space ((core/bytes::concat with-type) b" ")))
+                (let
+                  (
+                    (with-payload-length
+                      ((core/bytes::concat with-payload-space)
+                        (core/str::to-utf8 (core/int::to-str (core/bytes::len payload))))))
+                  ((core/bytes::concat ((core/bytes::concat with-payload-length) b" "))
+                    payload))))))))))
+
+(def selfhost/signing::keygen-valid?
+  (fn (request)
+    (if
+      ((selfhost/signing::exact-map? request)
+        [:keypair-valid :kind :phase :public-key :v])
+      (if (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :public-key)))
+        (selfhost/signing::bool? ((selfhost/signing::field request) (quote :keypair-valid)))
+        false)
+      false)))
+
+(def selfhost/signing::acceptance-plan-valid?
+  (fn (request)
+    (if
+      ((selfhost/signing::exact-map? request) [:acceptance-h :kind :phase :v])
+      (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :acceptance-h)))
+      false)))
+
+(def selfhost/signing::acceptance-finalize-valid?
+  (fn (request)
+    (if
+      ((selfhost/signing::exact-map? request)
+        [:acceptance-h :kind :phase :public-key :signature :signature-valid :v])
+      (if (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :acceptance-h)))
+        (if (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :public-key)))
+          (if (selfhost/signing::sig64? ((selfhost/signing::field request) (quote :signature)))
+            (selfhost/signing::bool?
+              ((selfhost/signing::field request) (quote :signature-valid)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/signing::commit-valid?
+  (fn (request)
+    (if
+      ((selfhost/signing::exact-map? request)
+        [
+          :acceptance-artifact
+          :kind
+          :package-artifact
+          :phase
+          :previous-head
+          :prior-signatures
+          :public-key-base64
+          :signature-artifact
+          :v])
+      (if (selfhost/signing::hash-text? ((selfhost/signing::field request) (quote :acceptance-artifact)))
+        (if (selfhost/signing::hash-text? ((selfhost/signing::field request) (quote :package-artifact)))
+          (if (selfhost/signing::hash-text? ((selfhost/signing::field request) (quote :signature-artifact)))
+            (if
+              (selfhost/signing::optional-hash32?
+                ((selfhost/signing::field request) (quote :previous-head)))
+              (if
+                (selfhost/signing::hash-vector-valid?
+                  ((selfhost/signing::field request) (quote :prior-signatures)))
+                (selfhost/signing::nonempty-str?
+                  ((selfhost/signing::field request) (quote :public-key-base64)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/signing::dsse-plan-valid?
+  (fn (request)
+    (if ((selfhost/signing::exact-map? request) [:kind :payload :payload-type :phase :v])
+      (if (selfhost/signing::bytes? ((selfhost/signing::field request) (quote :payload)))
+        (selfhost/signing::nonempty-str?
+          ((selfhost/signing::field request) (quote :payload-type)))
+        false)
+      false)))
+
+(def selfhost/signing::dsse-finalize-valid?
+  (fn (request)
+    (if
+      ((selfhost/signing::exact-map? request)
+        [
+          :key-h
+          :kind
+          :payload
+          :payload-h
+          :payload-type
+          :phase
+          :public-key
+          :signature
+          :signature-valid
+          :v])
+      (if (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :key-h)))
+        (if (selfhost/signing::bytes? ((selfhost/signing::field request) (quote :payload)))
+          (if (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :payload-h)))
+            (if
+              (selfhost/signing::nonempty-str?
+                ((selfhost/signing::field request) (quote :payload-type)))
+              (if (selfhost/signing::hash32? ((selfhost/signing::field request) (quote :public-key)))
+                (if (selfhost/signing::sig64? ((selfhost/signing::field request) (quote :signature)))
+                  (selfhost/signing::bool?
+                    ((selfhost/signing::field request) (quote :signature-valid)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def core/security::signing-authority
+  (fn (request)
+    (if (selfhost/signing::not (selfhost/signing::map? request))
+      (((selfhost/signing::reject request) "signing/request") "signing authority request must be a map")
+      (if
+        (selfhost/signing::not
+          ((core/eq? ((selfhost/signing::field request) (quote :kind)))
+            "genesis/signing-authority-request-v0.1"))
+        (((selfhost/signing::reject request) "signing/request")
+          "signing authority request kind mismatch")
+        (if (selfhost/signing::not ((core/eq? ((selfhost/signing::field request) (quote :v))) 1))
+          (((selfhost/signing::reject request) "signing/request")
+            "signing authority request version mismatch")
+          (let ((phase ((selfhost/signing::field request) (quote :phase))))
+            (if ((core/sym::eq? phase) (quote :keygen))
+              (if (selfhost/signing::keygen-valid? request)
+                (if ((selfhost/signing::field request) (quote :keypair-valid))
+                  ((selfhost/signing::accept request)
+                    {:alg "ed25519"
+                      :public-key ((selfhost/signing::field request) (quote :public-key))})
+                  (((selfhost/signing::reject request) "signing/keypair")
+                    "generated signing and public keys do not match"))
+                (((selfhost/signing::reject request) "signing/request")
+                  "keygen request field set or types mismatch"))
+              (if ((core/sym::eq? phase) (quote :acceptance-plan))
+                (if (selfhost/signing::acceptance-plan-valid? request)
+                  ((selfhost/signing::accept request)
+                    {:message
+                      (selfhost/signing::acceptance-message
+                        ((selfhost/signing::field request) (quote :acceptance-h)))})
+                  (((selfhost/signing::reject request) "signing/request")
+                    "acceptance-plan request field set or types mismatch"))
+                (if ((core/sym::eq? phase) (quote :acceptance-finalize))
+                  (if (selfhost/signing::acceptance-finalize-valid? request)
+                    (if ((selfhost/signing::field request) (quote :signature-valid))
+                      ((selfhost/signing::accept request)
+                        {
+                          :acceptance-h
+                            ((selfhost/signing::field request) (quote :acceptance-h))
+                          :alg "ed25519"
+                          :kind "genesis/acceptance-signature-v0.2"
+                          :pk ((selfhost/signing::field request) (quote :public-key))
+                          :sig ((selfhost/signing::field request) (quote :signature))})
+                      (((selfhost/signing::reject request) "signing/signature")
+                        "Ed25519 mechanism rejected the acceptance signature"))
+                    (((selfhost/signing::reject request) "signing/request")
+                      "acceptance-finalize request field set or types mismatch"))
+                  (if ((core/sym::eq? phase) (quote :commit))
+                    (if (selfhost/signing::commit-valid? request)
+                      (let
+                        (
+                          (signature
+                            ((selfhost/signing::field request) (quote :signature-artifact)))
+                          (signatures
+                            ((core/vec::push
+                               ((selfhost/signing::field request) (quote :prior-signatures)))
+                              signature)))
+                        ((selfhost/signing::accept request)
+                          {
+                            :signature-set (selfhost/signing::sort-hashes signatures)
+                            :transparency-entry
+                              {
+                                :acceptance-artifact
+                                  ((selfhost/signing::field request) (quote :acceptance-artifact))
+                                :kind "genesis/transparency-entry-v0.2"
+                                :package-artifact
+                                  ((selfhost/signing::field request) (quote :package-artifact))
+                                :prev-h ((selfhost/signing::field request) (quote :previous-head))
+                                :signature-artifact signature
+                                :signer-pk-b64
+                                  ((selfhost/signing::field request)
+                                    (quote :public-key-base64))}}))
+                      (((selfhost/signing::reject request) "signing/request")
+                        "commit request field set or types mismatch"))
+                    (if ((core/sym::eq? phase) (quote :dsse-plan))
+                      (if (selfhost/signing::dsse-plan-valid? request)
+                        ((selfhost/signing::accept request)
+                          {:message
+                            ((selfhost/signing::dsse-message
+                               ((selfhost/signing::field request) (quote :payload-type)))
+                              ((selfhost/signing::field request) (quote :payload)))})
+                        (((selfhost/signing::reject request) "signing/request")
+                          "dsse-plan request field set or types mismatch"))
+                      (if ((core/sym::eq? phase) (quote :dsse-finalize))
+                        (if (selfhost/signing::dsse-finalize-valid? request)
+                          (if ((selfhost/signing::field request) (quote :signature-valid))
+                            (let
+                              (
+                                (key-id
+                                  ((core/str::concat "sha256:")
+                                    (core/bytes::to-hex
+                                      ((selfhost/signing::field request) (quote :key-h))))))
+                              ((selfhost/signing::accept request)
+                                {
+                                  :key-id key-id
+                                  :kind "genesis/genesisbench-dsse-signature-v0.1"
+                                  :payload
+                                    ((selfhost/signing::field request) (quote :payload))
+                                  :payload-sha256
+                                    (core/bytes::to-hex
+                                      ((selfhost/signing::field request) (quote :payload-h)))
+                                  :payload-type
+                                    ((selfhost/signing::field request) (quote :payload-type))
+                                  :public-key
+                                    ((selfhost/signing::field request) (quote :public-key))
+                                  :signature
+                                    ((selfhost/signing::field request) (quote :signature))
+                                  :version "0.1.0"}))
+                            (((selfhost/signing::reject request) "signing/signature")
+                              "Ed25519 mechanism rejected the DSSE signature"))
+                          (((selfhost/signing::reject request) "signing/request")
+                            "dsse-finalize request field set or types mismatch"))
+                        (((selfhost/signing::reject request) "signing/request")
+                          "unknown signing authority phase")))))))))))))

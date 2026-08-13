@@ -1,0 +1,54 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/security::signing-authority",
+  "contentIdentitySha256": "74c2a3f3cc898ced0222e96fc54886ac872fae1a540bfb82de5ac86a0cf80cb1",
+  "decisionInventory": [
+    "keypair-admission",
+    "acceptance-message-construction",
+    "acceptance-signature-artifact-construction",
+    "signature-set-canonicalization",
+    "transparency-entry-construction",
+    "dsse-pae-construction",
+    "dsse-signature-artifact-construction"
+  ],
+  "hostMechanisms": [
+    "os-csprng",
+    "ed25519-key-derivation-sign-and-verify",
+    "sha256-and-content-addressed-hashing",
+    "base64-toml-coreform-json-codec",
+    "bounded-owner-only-secret-file-transport",
+    "content-addressed-storage-and-state-pointer-write"
+  ],
+  "hostOracle": {
+    "removalTask": "R4.2.d",
+    "required": false
+  },
+  "independentVerifier": "scripts/lib/selfhost_signing_authority.py",
+  "kind": "genesis/selfhost-signing-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "evidence-verification-authority",
+    "h3-h4-closure",
+    "r4-2-d-closure",
+    "registry-or-benchmark-publication-readiness",
+    "release-qualification",
+    "sh-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/signing-authority-request-v0.1",
+  "resultKind": "genesis/signing-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 64000000,
+    "maxPayloadBytes": 16777216,
+    "stepLimit": 20000000
+  },
+  "schema": "docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/signing_authority_v1.gc",
+  "sourceSha256": "bd1f0ef085576dac984a8ab8eadaf4445a81037b8d7698560392f815a6fc6a97",
+  "spec": "docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

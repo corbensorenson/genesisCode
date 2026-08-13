@@ -11,6 +11,7 @@ mod obligation_stage;
 mod obligation_translation;
 mod registry_policy;
 mod signing;
+mod signing_authority;
 mod store;
 mod transparency;
 mod verify;
@@ -53,12 +54,17 @@ use crate::obligation_stage::{PackageEval, obligation_stage1_validation};
 use crate::obligation_translation::obligation_translation_validation;
 pub use crate::registry_policy::{RegistryPolicy, RegistryPolicyError};
 pub use crate::signing::{
-    AcceptanceSignature, KeyFile, SigningError, load_signature_set, read_acceptance_hash_from_last,
-    sign_acceptance_hash, signatures_file_path, write_signature_set,
+    AcceptanceSignature, KeyFile, SigningError, load_signature_set, parse_hash32,
+    read_acceptance_hash_from_last, signatures_file_path,
 };
+#[cfg(feature = "parity-oracle")]
+pub use crate::signing::{sign_acceptance_hash, write_signature_set};
+pub use crate::signing_authority::{DsseSigningArtifact, SigningAuthority, SigningCommit};
 pub use crate::store::EvidenceStore;
+#[cfg(feature = "parity-oracle")]
+pub use crate::transparency::append_transparency_entry;
 pub use crate::transparency::{
-    TransparencyError, TransparencyVerifyResult, append_transparency_entry, verify_transparency_log,
+    TransparencyError, TransparencyVerifyResult, transparency_head_path, verify_transparency_log,
 };
 pub use crate::verify::{PackageVerifyResult, verify_package, verify_package_with_policy};
 pub use gc_pkg::{DepEntry, ModuleEntry, PackageManifest};

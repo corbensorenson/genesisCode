@@ -23,6 +23,7 @@ base64ct.workspace = true
 ed25519-dalek.workspace = true
 rand_core.workspace = true
 zeroize.workspace = true
+libc = "0.2"
 
 # local
 gc_coreform = { path = "../gc_coreform" }

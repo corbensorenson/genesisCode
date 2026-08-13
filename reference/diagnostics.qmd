@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Structured failures
 
-**197 diagnostics** · catalog identity `69a77cd03fb5496bd1146aefd2c3818582aa91824e34c8dd5a0a0f55a63ce56d`
+**201 diagnostics** · catalog identity `24467679c65659bc532cb9d8324c79747b1744d168cb89e923ea8eb0cd71af6b`
 
 Repairs are conditional plans, not permission to bypass policy or obligations. Re-check identity and preconditions before automation.
 
@@ -1925,10 +1925,44 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 
 | Code | Severity | Safe action |
 |---|---|---|
+| [`keygen/authority`](#keygen-authority-6fe13c57) | error | `verify-security-evidence` |
+| [`keygen/mechanism`](#keygen-mechanism-98ae03c5) | error | `verify-security-evidence` |
 | [`sign/acceptance`](#sign-acceptance-c2ba49e1) | error | `verify-security-evidence` |
-| [`sign/error`](#sign-error-dbeb28f9) | error | `verify-security-evidence` |
+| [`sign/authority`](#sign-authority-53383624) | error | `verify-security-evidence` |
 | [`sign/key`](#sign-key-205c9acd) | error | `verify-security-evidence` |
+| [`sign/signature-set`](#sign-signature-set-28888162) | error | `verify-security-evidence` |
+| [`sign/transparency-head`](#sign-transparency-head-a18c3233) | error | `verify-security-evidence` |
 | [`transparency/error`](#transparency-error-a13723b5) | error | `verify-security-evidence` |
+
+### `keygen/authority` {#keygen-authority-6fe13c57}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/keygen/authority`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `keygen/mechanism` {#keygen-mechanism-98ae03c5}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/keygen/mechanism`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 
 ### `sign/acceptance` {#sign-acceptance-c2ba49e1}
 
@@ -1945,9 +1979,9 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 
 **Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
 
-### `sign/error` {#sign-error-dbeb28f9}
+### `sign/authority` {#sign-authority-53383624}
 
-**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/error`
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/authority`
 
 **Likely causes**
 
@@ -1963,6 +1997,36 @@ Repairs are conditional plans, not permission to bypass policy or obligations. R
 ### `sign/key` {#sign-key-205c9acd}
 
 **Severity:** error · **ID:** `genesis/diagnostic/v1/sign/key`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `sign/signature-set` {#sign-signature-set-28888162}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/signature-set`
+
+**Likely causes**
+
+- Signature, acceptance, key, or transparency evidence failed verification.
+- The artifact identity does not match the signed statement.
+
+**Safe repairs**
+
+- **`verify-security-evidence`** (automatic eligible; review not required by catalog): Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.
+
+**Documentation:** `docs/spec/CLI_JSON_SCHEMAS_v0.1.md`
+
+### `sign/transparency-head` {#sign-transparency-head-a18c3233}
+
+**Severity:** error · **ID:** `genesis/diagnostic/v1/sign/transparency-head`
 
 **Likely causes**
 

@@ -153,7 +153,7 @@
     },
     {
       "id": "security",
-      "families": ["sign", "transparency"],
+      "families": ["keygen", "sign", "transparency"],
       "likelyCauses": ["Signature, acceptance, key, or transparency evidence failed verification.", "The artifact identity does not match the signed statement."],
       "safeRepairActions": [{"id": "verify-security-evidence", "description": "Do not bypass verification; inspect identities and regenerate evidence only from trusted source artifacts.", "policyEffect": "none"}],
       "documentation": [{"path": "docs/spec/CLI_JSON_SCHEMAS_v0.1.md", "anchor": "Failure diagnostics"}]

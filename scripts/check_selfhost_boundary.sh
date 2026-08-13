@@ -146,8 +146,16 @@ python3 scripts/lib/selfhost_replay_authority.py \
   --schema docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.schema.json \
   --self-test
 
-# R4.2.d obligation authority is partial: eight closed decisions, including lint
-# and AI-style with side-artifact reconstruction, are self-hosted while 12 remain.
+# R4.2.d signing semantics are H2: GenesisCode owns every signed byte and
+# persisted semantic artifact while bounded cryptography and custody stay host mechanisms.
+python3 scripts/lib/selfhost_signing_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_signing_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.schema.json \
+  --self-test
+
+# R4.2.d obligation authority is H2 for every declared obligation kind; Rust
+# retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \
   --root "$ROOT_DIR" \
   --profile policies/selfhost_obligation_authority_v0.1.json \

@@ -3,8 +3,6 @@ use base64ct::{Base64, Encoding};
 use ed25519_dalek::{Signature, Signer, VerifyingKey};
 use sha2::{Digest, Sha256};
 use std::fs;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
 const KIND_BENCH: &str = "genesis/bench-v0.1";
@@ -359,25 +357,6 @@ fn crypto_sign(
     payload_type: &str,
 ) -> Result<CmdOut, CliError> {
     let payload = crypto_payload(payload, payload_type)?;
-    let metadata = fs::symlink_metadata(key).map_err(|error| {
-        crypto_error(
-            "bench/crypto-key",
-            format!("read signing key metadata: {error}"),
-        )
-    })?;
-    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
-        return Err(crypto_error(
-            "bench/crypto-key",
-            "signing key must be a regular non-symlink file",
-        ));
-    }
-    #[cfg(unix)]
-    if metadata.permissions().mode() & 0o077 != 0 {
-        return Err(crypto_error(
-            "bench/crypto-key",
-            "signing key permissions must deny group and other access",
-        ));
-    }
     let key_file = gc_obligations::KeyFile::load(key)
         .map_err(|error| crypto_error("bench/crypto-key", format!("load signing key: {error}")))?;
     let signing = key_file.signing_key().map_err(|error| {
@@ -393,20 +372,44 @@ fn crypto_sign(
         ));
     }
     let public = verifying.to_bytes();
-    let keyid = key_id(&public);
-    let signature = signing.sign(&pae(payload_type, &payload)).to_bytes();
+    let artifact_path = require_explicit_selfhost_artifact(cli, "GenesisBench signing authority")?;
+    let mut authority = gc_obligations::SigningAuthority::load(
+        resolved_selfhost_bootstrap_mode(cli),
+        Some(&artifact_path),
+    )
+    .map_err(|error| crypto_error("bench/crypto-authority", format!("{error}")))?;
+    let message = authority
+        .dsse_message(payload_type, &payload)
+        .map_err(|error| crypto_error("bench/crypto-authority", format!("{error}")))?;
+    let signature = signing.sign(&message).to_bytes();
+    let signature_valid = verifying
+        .verify_strict(&message, &Signature::from_bytes(&signature))
+        .is_ok();
+    let payload_hash: [u8; 32] = Sha256::digest(&payload).into();
+    let key_hash: [u8; 32] = Sha256::digest(public).into();
+    let artifact = authority
+        .dsse_artifact(
+            payload_type,
+            &payload,
+            payload_hash,
+            public,
+            key_hash,
+            signature,
+            signature_valid,
+        )
+        .map_err(|error| crypto_error("bench/crypto-authority", format!("{error}")))?;
     crypto_output(
         cli,
         serde_json::json!({
-            "kind": "genesis/genesisbench-dsse-signature-v0.1",
-            "version": "0.1.0",
-            "keyId": keyid,
-            "publicKeyBase64": Base64::encode_string(&public),
-            "payloadSha256": format!("{:x}", Sha256::digest(&payload)),
+            "kind": artifact.kind,
+            "version": artifact.version,
+            "keyId": artifact.key_id.clone(),
+            "publicKeyBase64": Base64::encode_string(&artifact.public_key),
+            "payloadSha256": artifact.payload_sha256,
             "envelope": {
-                "payloadType": payload_type,
-                "payload": Base64::encode_string(&payload),
-                "signatures": [{"keyid": keyid, "sig": Base64::encode_string(&signature)}],
+                "payloadType": artifact.payload_type,
+                "payload": Base64::encode_string(&artifact.payload),
+                "signatures": [{"keyid": artifact.key_id, "sig": Base64::encode_string(&artifact.signature)}],
             },
         }),
     )

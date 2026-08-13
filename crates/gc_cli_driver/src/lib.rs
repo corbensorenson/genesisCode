@@ -64,6 +64,7 @@ mod cmd_policy;
 mod cmd_refs;
 mod cmd_registry;
 mod cmd_security_ops;
+mod cmd_security_signing;
 mod cmd_selfhost;
 mod cmd_source;
 mod cmd_store;
@@ -127,6 +128,7 @@ use cmd_policy::cmd_policy;
 use cmd_refs::cmd_refs;
 use cmd_registry::cmd_registry;
 use cmd_security_ops::*;
+use cmd_security_signing::*;
 use cmd_selfhost::*;
 use cmd_source::*;
 
