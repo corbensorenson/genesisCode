@@ -29,59 +29,52 @@ pub(super) fn dispatch_lock_io(
     let _ = (policy, store, refs, budget, timeout_ms);
     match op_eff {
         "core/pkg-low::init" => {
+            let Some(authority) = pkg_lock_read_authority else {
+                #[cfg(any(test, feature = "parity-oracle"))]
+                {
+                    return parity::dispatch_lock_ops_parity(op_eff, payload, pol, error_tok, op);
+                }
+                #[cfg(not(any(test, feature = "parity-oracle")))]
+                {
+                    return Err(lock_ops_authority_unavailable(op_eff));
+                }
+            };
             let lock_s = match payload_pkg_lock(payload) {
-                Ok(value) => value,
-                Err(message) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-payload",
-                        message,
-                        Some(op),
-                    ));
-                }
+                Ok(s) => s,
+                Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
-            let workspace = match payload_pkg_workspace(payload) {
-                Ok(value) => value,
-                Err(message) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/bad-payload",
-                        message,
-                        Some(op),
-                    ));
+            match authority.init_lock(payload)? {
+                PkgLockOpsDecision::Write { bytes, lock_hash } => {
+                    let base_dir = effective_base_dir(pol)?;
+                    let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
+                    let lock_path = match sandbox_path_write(&base_dir, &lock_s, create_dirs) {
+                        Ok(path) => path,
+                        Err(error) => {
+                            return Ok(mk_error(
+                                error_tok,
+                                "core/caps/path-escape",
+                                error.to_string(),
+                                Some(op),
+                            ));
+                        }
+                    };
+                    if let Err(error) = atomic_write_text(&lock_path, &bytes) {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/pkg/io-error",
+                            error.to_string(),
+                            Some(op),
+                        ));
+                    }
+                    Ok(lock_write_result(lock_s, lock_hash))
                 }
-            };
-            let mut lock = gc_pkg::GenesisLock::empty(workspace);
-            lock.policy =
-                payload_pkg_policy(payload).unwrap_or_else(|| "policy:default-v0.1".to_string());
-            if let Some(registry) = payload_pkg_registry_default(payload) {
-                lock.registries.insert("default".to_string(), registry);
+                PkgLockOpsDecision::Error { code, message } => {
+                    Ok(mk_error(error_tok, &code, message, Some(op)))
+                }
+                PkgLockOpsDecision::List { .. } => Err(EffectsError::Log(
+                    "selfhost package lock ops authority returned list for init".to_string(),
+                )),
             }
-            let bytes = lock.to_toml_canonical().into_bytes();
-            let lock_hash = blake3::hash(&bytes).to_hex().to_string();
-            let base_dir = effective_base_dir(pol)?;
-            let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
-            let lock_path = match sandbox_path_write(&base_dir, &lock_s, create_dirs) {
-                Ok(p) => p,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/caps/path-escape",
-                        format!("{e}"),
-                        Some(op),
-                    ));
-                }
-            };
-
-            if let Err(error) = atomic_write_text(&lock_path, &bytes) {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/pkg/io-error",
-                    error.to_string(),
-                    Some(op),
-                ));
-            }
-            Ok(lock_write_result(lock_s, lock_hash))
         }
 
         "core/pkg-low::add" => {
@@ -437,4 +430,64 @@ fn legacy_lock_term(lock_path: String, lock: gc_pkg::GenesisLock) -> Term {
         .into_iter()
         .collect(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::policy::SelfhostAuthorityConfig;
+
+    fn artifact_config() -> SelfhostAuthorityConfig {
+        let artifact = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../selfhost/toolchain.gc")
+            .canonicalize()
+            .expect("canonical selfhost artifact path");
+        SelfhostAuthorityConfig {
+            bootstrap_mode: gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+            artifact: Some(artifact),
+        }
+    }
+
+    #[test]
+    fn init_payload_rejection_precedes_path_mechanisms() {
+        let payload = Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":lock")),
+                Term::Str("../outside.lock".to_string()),
+            )]
+            .into_iter()
+            .collect(),
+        );
+        let mut authority = PkgLockReadAuthority::load(&artifact_config()).unwrap();
+        let mut budget = ArtifactBudgetState::default();
+        let error_token = SealId(7);
+
+        let value = dispatch_lock_io(
+            "core/pkg-low::init",
+            &payload,
+            None,
+            &CapsPolicy::empty(),
+            None,
+            None,
+            Some(&mut authority),
+            None,
+            &mut budget,
+            error_token,
+            "core/pkg::init",
+            None,
+        )
+        .unwrap();
+
+        let Value::Sealed { token, payload } = value else {
+            panic!("expected sealed error");
+        };
+        assert_eq!(token, error_token);
+        let Some(Term::Map(fields)) = payload.as_ref().as_data() else {
+            panic!("expected error payload map");
+        };
+        assert!(matches!(
+            fields.get(&TermOrdKey(Term::symbol(":error/code"))),
+            Some(Term::Str(code)) if code == "core/pkg/bad-payload"
+        ));
+    }
 }

@@ -38,6 +38,7 @@ impl PkgLockReadAuthority {
         matches!(
             op,
             "core/pkg-low::load-lock"
+                | "core/pkg-low::init"
                 | "core/pkg-low::add"
                 | "core/pkg-low::list"
                 | "core/pkg-low::info"

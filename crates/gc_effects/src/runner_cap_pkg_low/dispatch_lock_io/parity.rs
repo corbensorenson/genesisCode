@@ -1,6 +1,7 @@
 use super::*;
 use crate::runner_pkg_payload::{
-    payload_pkg_selector, payload_pkg_strategy, payload_pkg_tag_policy, payload_pkg_update_policy,
+    payload_pkg_policy, payload_pkg_registry_default, payload_pkg_selector, payload_pkg_strategy,
+    payload_pkg_tag_policy, payload_pkg_update_policy, payload_pkg_workspace,
 };
 
 pub(super) fn dispatch_lock_ops_parity(
@@ -11,12 +12,58 @@ pub(super) fn dispatch_lock_ops_parity(
     public_operation: &str,
 ) -> Result<Value, EffectsError> {
     match operation {
+        "core/pkg-low::init" => init(payload, policy, error_token, public_operation),
         "core/pkg-low::add" => add(payload, policy, error_token, public_operation),
         "core/pkg-low::list" => list(payload, policy, error_token, public_operation),
         _ => Err(EffectsError::Log(format!(
             "unknown parity lock operation: {operation}"
         ))),
     }
+}
+
+fn init(
+    payload: &Term,
+    policy: Option<&OpPolicy>,
+    error_token: SealId,
+    operation: &str,
+) -> Result<Value, EffectsError> {
+    let lock_s = match payload_pkg_lock(payload) {
+        Ok(value) => value,
+        Err(message) => {
+            return Ok(mk_error(
+                error_token,
+                "core/pkg/bad-payload",
+                message,
+                Some(operation),
+            ));
+        }
+    };
+    let workspace = match payload_pkg_workspace(payload) {
+        Ok(value) => value,
+        Err(message) => {
+            return Ok(mk_error(
+                error_token,
+                "core/pkg/bad-payload",
+                message,
+                Some(operation),
+            ));
+        }
+    };
+    let mut lock = gc_pkg::GenesisLock::empty(workspace);
+    lock.policy = payload_pkg_policy(payload).unwrap_or_else(|| "policy:default-v0.1".to_string());
+    if let Some(registry) = payload_pkg_registry_default(payload) {
+        lock.registries.insert("default".to_string(), registry);
+    }
+    let bytes = lock.to_toml_canonical().into_bytes();
+    let hash = blake3::hash(&bytes).to_hex().to_string();
+    let base = effective_base_dir(policy)?;
+    let create_dirs = policy.map(|value| value.create_dirs).unwrap_or(false);
+    let path = sandbox_path_write(&base, &lock_s, create_dirs)
+        .map_err(|error| EffectsError::Log(format!("parity path: {error}")))?;
+    atomic_write_text(&path, &bytes).map_err(|error| {
+        EffectsError::Log(format!("parity {operation} persistence failed: {error}"))
+    })?;
+    Ok(lock_write_result(lock_s, hash))
 }
 
 fn add(

@@ -90,6 +90,31 @@
       ((selfhost/pkg-lock-ops::render-payload request-h)
         (selfhost/pkg-lock-ops::writer-payload model)))))
 
+(def selfhost/pkg-lock-ops::init
+  (fn (request-h)
+    (fn (payload)
+      (if (selfhost/pkg-lock-read::map? payload)
+        (let ((workspace ((core/map::get payload) (quote :workspace))))
+          (if (selfhost/pkg-lock-read::str? workspace)
+            (let ((policy0 ((core/map::get payload) (quote :policy))))
+              (let
+                ((policy (if (selfhost/pkg-lock-read::str? policy0) policy0 "policy:default-v0.1")))
+                (let ((registry0 ((core/map::get payload) (quote :registry-default))))
+                  (let
+                    ((registries (if (selfhost/pkg-lock-read::str? registry0) {"default" registry0} {})))
+                    ((selfhost/pkg-lock-ops::render-model request-h)
+                      {
+                        :artifacts {}
+                        :locked {}
+                        :policy policy
+                        :registries registries
+                        :requirements {}
+                        :version 2
+                        :workspace workspace})))))
+            (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+              "missing :workspace string")))
+        (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload") "payload must be a map")))))
+
 (def selfhost/pkg-lock-ops::add-to-model
   (fn (request-h)
     (fn (model)
@@ -222,13 +247,15 @@
   (fn (request-h)
     (fn (request)
       (let ((op ((core/map::get request) (quote :op))))
-        (if ((core/sym::eq? op) (quote :add))
-          (((selfhost/pkg-lock-ops::add request-h) ((core/map::get request) (quote :document)))
-            ((core/map::get request) (quote :payload)))
-          (if ((core/sym::eq? op) (quote :list))
-            ((selfhost/pkg-lock-ops::list request-h) ((core/map::get request) (quote :document)))
-            (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
-              "request :op must be :add or :list")))))))
+        (if ((core/sym::eq? op) (quote :init))
+          ((selfhost/pkg-lock-ops::init request-h) ((core/map::get request) (quote :payload)))
+          (if ((core/sym::eq? op) (quote :add))
+            (((selfhost/pkg-lock-ops::add request-h) ((core/map::get request) (quote :document)))
+              ((core/map::get request) (quote :payload)))
+            (if ((core/sym::eq? op) (quote :list))
+              ((selfhost/pkg-lock-ops::list request-h) ((core/map::get request) (quote :document)))
+              (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+                "request :op must be :init, :add, or :list"))))))))
 
 (def core/pkg::lock-ops-authority
   (fn (request)

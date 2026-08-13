@@ -5,16 +5,17 @@ Status: normative partial authority contract for `R4.2.e`.
 ## Scope
 
 The artifact-loaded `core/pkg::lock-ops-authority` binding is the production semantic authority for
-direct `core/pkg-low::add` and `core/pkg-low::list` operations. It owns requirement mutation and
-metadata normalization, complete internal lock normalization before mutation or projection,
-canonical lock TOML bytes and identity for add, and the closed list projection.
+direct `core/pkg-low::init`, `core/pkg-low::add`, and `core/pkg-low::list` operations. It owns empty
+lock construction, workspace and optional policy/default-registry normalization, requirement
+mutation and metadata normalization, complete internal lock normalization before mutation or
+projection, canonical lock TOML bytes and identity for init/add, and the closed list projection.
 
 Rust remains the bounded mechanism for capability-policy admission, artifact bootstrap, generic TOML
 syntax decoding, UTF-8 transport, sandboxed path resolution, bounded file reads, strict result
 decoding, and atomic persistence of authorized bytes. The authority uses the pure deterministic
 Prelude CoreForm printer/parser pair once to freeze its validated runtime-map model into data-map
 form before calling the already custodied canonical lock writer. Graph solving, semver mechanics, registry
-transport, direct lock initialization, publish behavior, workspace scaffolding, and other package
+transport, publish behavior, workspace scaffolding, and other package
 operations remain outside this authority. These residuals keep `SD-PACKAGE-RESOLUTION` at H0.
 
 ## Bootstrap and limits
@@ -37,7 +38,7 @@ Every request is the exact map:
 {
   :document <generic TOML term>
   :kind "genesis/pkg-lock-ops-authority-request-v0.1"
-  :op :add | :list
+  :op :init | :add | :list
   :payload <original capability payload>
   :v 1
 }
@@ -46,6 +47,12 @@ Every request is the exact map:
 The request hash covers the complete envelope, generic document, and original payload. The envelope
 field set is closed. The payload remains the capability ABI map: host-only `:lock` is ignored by
 semantic decisions but remains request-bound.
+
+For init, `:document` is nil. The authority requires a string `:workspace`, defaults a missing or
+non-string optional `:policy` to `policy:default-v0.1`, and includes a `default` registry only when
+`:registry-default` is a string. It constructs a version-2 lock with empty requirements, locked
+entries, and artifacts, then serializes it canonically. This exactly preserves the prior direct-init
+behavior while moving all non-path decisions out of Rust.
 
 For add, the generic TOML document first passes the complete internal model authority's version,
 workspace, policy, registry, requirement, locked-entry, and artifact validation. Name and selector
@@ -68,7 +75,7 @@ Every result is the exact map:
 ```
 
 `:kind` is `genesis/pkg-lock-ops-authority-result-v0.1`, `:v` is 1, and `:request-h` is the canonical
-GenesisCode term hash of the complete request. Add success has UTF-8 canonical TOML bytes, the
+GenesisCode term hash of the complete request. Init/add success has UTF-8 canonical TOML bytes, the
 lowercase BLAKE3 hex64 of those exact bytes, nil value/code/message. List success has the closed value
 projection and nil bytes/hash/code/message. Rejection uses only `core/pkg/bad-authority-request`,
 `core/pkg/bad-lock`, or `core/pkg/bad-payload`, with nil bytes/hash/value.
@@ -80,14 +87,13 @@ invalid hashes, and bytes/hash substitution. It never chooses a semantic default
 ## Host mechanism and parity boundary
 
 Rust extracts the lock path only for sandbox mechanics. Add/list read at most 4 MiB and generically
-decode TOML; add persists the exact authorized bytes atomically; list only attaches the already
-authorized host lock-path string. The former add/list `GenesisLock::{load,set_requirement_with_metadata}`
-and `to_toml_canonical` route is compile-time reachable only under `test` or `parity-oracle`. Direct
-`core/pkg-low::init` remains a production Rust semantic route and is explicitly outside this partial
-authority.
+decode TOML; init/add persist the exact authorized bytes atomically; list only attaches the already
+authorized host lock-path string. The former init `GenesisLock::empty` and add/list
+`GenesisLock::{load,set_requirement_with_metadata}` plus `to_toml_canonical` routes are compile-time
+reachable only under `test` or `parity-oracle`.
 
 ## Nonclaims
 
-This contract does not claim direct init authority, a self-hosted TOML codec, graph or semver
-mechanism authority, registry or publish authority, workspace authority, H2 package resolution,
+This contract does not claim a self-hosted TOML codec, graph or semver mechanism authority, registry
+transport or publish authority, workspace scaffolding authority, H2 package resolution,
 `R4.2.e` or SH-C closure, bootstrap fixpoint, or release qualification.

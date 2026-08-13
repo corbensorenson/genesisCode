@@ -2,8 +2,9 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-13",
   "binding": "core/pkg::lock-ops-authority",
-  "contentIdentitySha256": "d147d7f910064d9ff0551ae89d75900b44316b3f1822d17b6ab6a64f42455560",
+  "contentIdentitySha256": "27174bd673ced8c162e3f75e5b4fcf56402ac5dbe6cb2979ef983e859b655fa8",
   "decisionInventory": [
+    "direct-lock-initialization-and-default-normalization",
     "requirement-mutation-and-metadata-normalization",
     "complete-lock-normalization-before-operation",
     "canonical-lock-toml-and-content-identity",
@@ -27,7 +28,6 @@
   "kind": "genesis/selfhost-pkg-lock-ops-authority-v0.1",
   "nonclaims": [
     "bootstrap-fixpoint",
-    "direct-init-authority",
     "graph-and-semver-mechanism-authority",
     "h2-package-resolution",
     "publish-and-registry-authority",
@@ -38,6 +38,7 @@
     "workspace-authority"
   ],
   "productionOperations": [
+    "core/pkg-low::init",
     "core/pkg-low::add",
     "core/pkg-low::list"
   ],
@@ -45,7 +46,7 @@
   "resultKind": "genesis/pkg-lock-ops-authority-result-v0.1",
   "schema": "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.schema.json",
   "sourceModule": "selfhost/pkg_lock_ops_authority_v1.gc",
-  "sourceSha256": "3636c36b34a2cfcdc3534e4a0a3dfc9f76d9764beff584af4d7deae362c72a00",
+  "sourceSha256": "4d5931284db089e20f97d2902b0376d2be4b48a86722ed08081cfe1352389bc6",
   "spec": "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

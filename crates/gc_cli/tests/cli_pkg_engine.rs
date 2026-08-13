@@ -217,6 +217,7 @@ fn pkg_init_value_matches_between_frontends() {
         .args(["init", "--workspace", "w", "--lock"])
         .arg(&lock)
         .args(["--policy", "policy:default-v0.1"])
+        .args(["--registry-default", "https://example.invalid"])
         .assert()
         .success()
         .get_output()
@@ -224,6 +225,11 @@ fn pkg_init_value_matches_between_frontends() {
         .clone();
     assert_eq!(json_frontend_name(&rust_out), "rust");
     let rust_v = json_value(&rust_out);
+    assert!(
+        fs::read_to_string(&lock)
+            .unwrap()
+            .contains("default = \"https://example.invalid\"")
+    );
 
     let self_out = cmd()
         .current_dir(dir)
@@ -237,6 +243,7 @@ fn pkg_init_value_matches_between_frontends() {
         .args(["init", "--workspace", "w", "--lock"])
         .arg(&lock)
         .args(["--policy", "policy:default-v0.1"])
+        .args(["--registry-default", "https://example.invalid"])
         .assert()
         .success()
         .get_output()
@@ -244,6 +251,11 @@ fn pkg_init_value_matches_between_frontends() {
         .clone();
     assert_eq!(json_frontend_name(&self_out), "selfhost");
     let self_v = json_value(&self_out);
+    assert!(
+        fs::read_to_string(&lock)
+            .unwrap()
+            .contains("default = \"https://example.invalid\"")
+    );
 
     assert_eq!(rust_v, self_v);
 }

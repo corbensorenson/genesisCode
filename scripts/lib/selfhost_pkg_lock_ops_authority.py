@@ -45,11 +45,12 @@ FIELDS = {
     "productionOperations", "requestKind", "resultKind", "schema", "sourceModule",
     "sourceSha256", "spec", "version",
 }
-OPERATIONS = ["core/pkg-low::add", "core/pkg-low::list"]
+OPERATIONS = ["core/pkg-low::init", "core/pkg-low::add", "core/pkg-low::list"]
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
     "binding": "core/pkg::lock-ops-authority",
     "decisionInventory": [
+        "direct-lock-initialization-and-default-normalization",
         "requirement-mutation-and-metadata-normalization",
         "complete-lock-normalization-before-operation",
         "canonical-lock-toml-and-content-identity",
@@ -74,7 +75,7 @@ CONSTANTS = {
     "version": "0.1.0",
 }
 NONCLAIMS = {
-    "bootstrap-fixpoint", "direct-init-authority", "graph-and-semver-mechanism-authority",
+    "bootstrap-fixpoint", "graph-and-semver-mechanism-authority",
     "h2-package-resolution", "publish-and-registry-authority", "r4-2-e-closure",
     "release-qualification", "selfhost-toml-codec", "sh-c-closure", "workspace-authority",
 }
@@ -145,7 +146,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
 
     for marker in (
         "(def core/pkg::lock-ops-authority", profile["requestKind"], profile["resultKind"],
-        "selfhost/pkg-lock-ops::add-to-model",
+        "selfhost/pkg-lock-ops::init", "selfhost/pkg-lock-ops::add-to-model",
         "selfhost/pkg-lock-ops::list-requirements-loop", "selfhost/pkg-lock-ops::list-locked-loop",
         "selfhost/pkg-lock-read::normalize-model-document",
         "selfhost/pkg-lock-write::render-lock", "selfhost/pkg-lock-read::exact-map? request",
@@ -166,7 +167,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("published artifact does not contain lock ops module and binding")
 
     for marker in (
-        "pub(crate) enum PkgLockOpsDecision", "pub(crate) fn add_lock_toml",
+        "pub(crate) enum PkgLockOpsDecision", "pub(crate) fn init_lock",
+        "pub(crate) fn add_lock_toml",
         "pub(crate) fn list_lock_toml",
         "fn decode_ops_result", "fn validate_list_entries", "OPS_REQUEST_KIND",
         "OPS_RESULT_KIND", "bytes and :lock-h are malformed or contradictory",
@@ -185,6 +187,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         if f'"{operation}" =>' not in dispatch:
             fail(f"lock dispatcher missing {operation}")
     for marker in (
+        "authority.init_lock(payload)?",
         "authority.add_lock_toml(&bytes, payload)?",
         "authority.list_lock_toml(&bytes, payload)?", "atomic_write_text(&lock_path, &bytes)",
         "atomic_write_text(&lock_write_path, &bytes)", "lock_ops_authority_unavailable(op_eff)",
@@ -194,12 +197,15 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     fallback = '#[cfg(any(test, feature = "parity-oracle"))]'
     if fallback not in dispatch:
         fail("typed lock operation fallback is not compile-time parity-only")
-    add_route = dispatch.split('"core/pkg-low::add" =>', 1)[1].split('"core/pkg-low::list" =>', 1)[0]
-    list_route = dispatch.split('"core/pkg-low::list" =>', 1)[1].split('"core/pkg-low::load-lock" =>', 1)[0]
-    for marker in ("GenesisLock::load", "to_toml_canonical", "set_requirement_with_metadata"):
-        if marker in add_route or marker in list_route:
-            fail(f"production add/list route retains Rust semantic oracle: {marker}")
+    direct_routes = dispatch.split('"core/pkg-low::init" =>', 1)[1].split('"core/pkg-low::load-lock" =>', 1)[0]
     for marker in (
+        "GenesisLock::empty", "GenesisLock::load", "to_toml_canonical",
+        "set_requirement_with_metadata",
+    ):
+        if marker in direct_routes:
+            fail(f"production init/add/list route retains Rust semantic oracle: {marker}")
+    for marker in (
+        "let mut lock = gc_pkg::GenesisLock::empty(workspace)",
         "let mut lock = match gc_pkg::GenesisLock::load(&path)",
         "let lock = match gc_pkg::GenesisLock::load(&path)",
         "lock.set_requirement_with_metadata(", "let bytes = lock.to_toml_canonical().into_bytes()",
@@ -224,7 +230,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if profile["independentVerifier"] not in row.get("verifierPaths", []):
         fail("semantic ledger missing lock ops verifier")
     limitations = "\n".join(row.get("limitations", [])).lower()
-    if "direct init" not in limitations or "toml" not in limitations or "h0" not in limitations:
+    if "direct init" in limitations or "toml" not in limitations or "h0" not in limitations:
         fail("semantic ledger does not disclose partial lock ops authority and TOML host mechanism")
     if source_identity(profile["sourceModule"], module.encode()) != profile["sourceSha256"]:
         fail("lock ops authority source identity mismatch")
@@ -284,6 +290,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_lock_ops_authority.rs", "fn decode_ops_result", "fn legacy_decode", "decoder")
     source_mutation("crates/gc_effects/src/pkg_lock_ops_authority.rs", "bytes and :lock-h are malformed or contradictory", "bytes accepted", "hash-contradiction")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "MAX_LOCK_BYTES", "UNBOUNDED_LOCK_BYTES", "bound")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.init_lock(payload)?", "legacy_init(payload)?", "init-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.add_lock_toml(&bytes, payload)?", "legacy_add(&bytes, payload)?", "add-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.list_lock_toml(&bytes, payload)?", "legacy_list(&bytes, payload)?", "list-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs", "let mut lock = match gc_pkg::GenesisLock::load(&path)", "let mut lock = match gc_pkg::LegacyLock::load(&path)", "parity-oracle")
@@ -298,7 +305,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 23:
+    if controls != 24:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-ops-authority: self-test ok (negative_controls={controls})")
     return controls

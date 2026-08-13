@@ -211,8 +211,8 @@ python3 scripts/lib/selfhost_pkg_lock_model_authority.py \
   --schema docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json \
   --self-test
 
-# R4.2.e direct lock operations are partial: GenesisCode owns add mutation,
-# canonical bytes, and list projection; init, TOML, and persistence remain H0.
+# R4.2.e direct lock operations are partial: GenesisCode owns init/add mutation,
+# canonical bytes, and list projection; TOML transport and persistence remain H0.
 python3 scripts/lib/selfhost_pkg_lock_ops_authority.py \
   --root "$ROOT_DIR" \
   --profile policies/selfhost_pkg_lock_ops_authority_v0.1.json \

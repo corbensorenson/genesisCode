@@ -12,6 +12,10 @@ pub(crate) enum PkgLockOpsDecision {
 }
 
 impl PkgLockReadAuthority {
+    pub(crate) fn init_lock(&mut self, payload: &Term) -> Result<PkgLockOpsDecision, EffectsError> {
+        self.apply_lock_op(":init", Term::Nil, payload.clone())
+    }
+
     pub(crate) fn add_lock_toml(
         &mut self,
         bytes: &[u8],
@@ -121,7 +125,7 @@ fn decode_ops_result(
     require_nil(fields, ":code")?;
     require_nil(fields, ":message")?;
     match operation {
-        ":add" => {
+        ":init" | ":add" => {
             require_nil(fields, ":value")?;
             let bytes = required_bytes(fields, ":bytes")?;
             std::str::from_utf8(&bytes)
@@ -296,8 +300,55 @@ mod tests {
     }
 
     #[test]
+    fn init_preserves_registry_and_matches_legacy_lock_behavior() {
+        let mut authority = PkgLockReadAuthority::load(&artifact_config()).unwrap();
+        let init = payload([
+            (":lock", Term::Str("genesis.lock".to_string())),
+            (":workspace", Term::Str("demo".to_string())),
+            (":policy", Term::Str("policy:test".to_string())),
+            (
+                ":registry-default",
+                Term::Str("https://example.invalid".to_string()),
+            ),
+        ]);
+        let PkgLockOpsDecision::Write { bytes, lock_hash } = authority.init_lock(&init).unwrap()
+        else {
+            panic!("expected init write");
+        };
+
+        let mut legacy = gc_pkg::GenesisLock::empty("demo".to_string());
+        legacy.policy = "policy:test".to_string();
+        legacy
+            .registries
+            .insert("default".to_string(), "https://example.invalid".to_string());
+        let expected = legacy.to_toml_canonical().into_bytes();
+        assert_eq!(bytes, expected);
+        assert_eq!(lock_hash, blake3::hash(&expected).to_hex().to_string());
+
+        let defaults = payload([
+            (":workspace", Term::Str("defaults".to_string())),
+            (":policy", Term::Bool(false)),
+            (":registry-default", Term::Int(7.into())),
+        ]);
+        let PkgLockOpsDecision::Write { bytes, .. } = authority.init_lock(&defaults).unwrap()
+        else {
+            panic!("expected defaulted init write");
+        };
+        assert_eq!(
+            bytes,
+            gc_pkg::GenesisLock::empty("defaults")
+                .to_toml_canonical()
+                .into_bytes()
+        );
+    }
+
+    #[test]
     fn malformed_inputs_reject_without_host_fallback() {
         let mut authority = PkgLockReadAuthority::load(&artifact_config()).unwrap();
+        assert!(matches!(
+            authority.init_lock(&payload([])).unwrap(),
+            PkgLockOpsDecision::Error { ref code, .. } if code == "core/pkg/bad-payload"
+        ));
         assert!(matches!(
             authority
                 .add_lock_toml(b"not = [toml", &payload([]))

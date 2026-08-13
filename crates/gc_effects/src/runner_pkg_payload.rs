@@ -12,6 +12,7 @@ pub(crate) fn payload_pkg_lock(payload: &Term) -> Result<String, String> {
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_workspace(payload: &Term) -> Result<String, String> {
     let Term::Map(m) = payload else {
         return Err("payload must be a map".to_string());
@@ -22,6 +23,7 @@ pub(crate) fn payload_pkg_workspace(payload: &Term) -> Result<String, String> {
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_policy(payload: &Term) -> Option<String> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":policy"))) {
@@ -30,6 +32,7 @@ pub(crate) fn payload_pkg_policy(payload: &Term) -> Option<String> {
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_pkg_registry_default(payload: &Term) -> Option<String> {
     let Term::Map(m) = payload else { return None };
     match m.get(&TermOrdKey(Term::symbol(":registry-default"))) {
