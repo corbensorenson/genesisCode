@@ -4,8 +4,8 @@ use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use gc_kernel::{MemLimits, StepLimit};
 
 use crate::{
-    AcceptanceSignature, EvidenceStore, ObligationError, PackageManifest, RegistryPolicy,
-    load_signature_set, signatures_file_path,
+    AcceptanceSignature, EvidenceFact, EvidenceStore, EvidenceVerifyAuthority, ObligationError,
+    PackageManifest, RegistryPolicy, load_signature_set, signatures_file_path,
 };
 
 #[derive(Debug, Clone)]
@@ -25,6 +25,7 @@ pub struct PackageVerifyResult {
     pub policy_min_signatures: Option<u64>,
 }
 
+#[cfg(feature = "parity-oracle")]
 pub fn verify_package(
     pkg_toml: &Path,
     acceptance_artifact: Option<&str>,
@@ -33,6 +34,7 @@ pub fn verify_package(
     verify_package_with_policy(pkg_toml, acceptance_artifact, scan_store, None, None)
 }
 
+#[cfg(feature = "parity-oracle")]
 pub fn verify_package_with_policy(
     pkg_toml: &Path,
     acceptance_artifact: Option<&str>,
@@ -40,11 +42,30 @@ pub fn verify_package_with_policy(
     policy: Option<&Path>,
     signatures: Option<&Path>,
 ) -> Result<PackageVerifyResult, ObligationError> {
+    let artifact = Path::new("selfhost/toolchain.gc");
+    verify_package_with_policy_and_authority(
+        pkg_toml,
+        acceptance_artifact,
+        scan_store,
+        policy,
+        signatures,
+        artifact,
+    )
+}
+
+pub fn verify_package_with_policy_and_authority(
+    pkg_toml: &Path,
+    acceptance_artifact: Option<&str>,
+    scan_store: bool,
+    policy: Option<&Path>,
+    signatures: Option<&Path>,
+    authority_artifact: &Path,
+) -> Result<PackageVerifyResult, ObligationError> {
     let (manifest, pkg_dir) =
         PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
-    let mut errors: Vec<String> = Vec::new();
+    let mut facts: Vec<EvidenceFact> = Vec::new();
 
     let mut checked_modules = 0usize;
     let mut checked_artifacts = 0usize;
@@ -64,55 +85,96 @@ pub fn verify_package_with_policy(
                 checked_modules = checked_modules.saturating_add(1);
                 let want = m.entry.hash.as_deref().unwrap_or("");
                 if want.is_empty() {
-                    errors.push(format!(
-                        "module {} is missing pinned hash; run `genesis pack --pkg {}`",
-                        m.entry.path,
-                        pkg_toml.display()
+                    facts.push(identity_fact(
+                        "package/module-hash-missing",
+                        Term::Nil,
+                        Term::Str(super::hex32(m.hash)),
                     ));
                     continue;
                 }
                 let got = super::hex32(m.hash);
-                if want != got {
-                    errors.push(format!(
-                        "module hash mismatch for {}: manifest has {}, computed {}",
-                        m.entry.path, want, got
-                    ));
-                }
+                facts.push(identity_fact(
+                    "package/module-hash-mismatch",
+                    Term::Str(got),
+                    Term::Str(want.to_string()),
+                ));
             }
         }
-        Err(e) => errors.push(format!("{e}")),
+        Err(e) => facts.push(mechanism_fact("package/module-load", false, e.to_string())),
     }
 
     // Dependencies: pinned package hashes must exist and match.
     if let Err(e) = super::check_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend, limits) {
-        errors.push(format!("{e}"));
+        facts.push(mechanism_fact(
+            "package/dependency-integrity",
+            false,
+            e.to_string(),
+        ));
+    } else {
+        facts.push(mechanism_fact("package/dependency-integrity", true, ""));
     }
 
     // Evidence: verify the latest acceptance artifact (or caller-specified) and any referenced
     // obligation artifacts.
-    let acceptance_artifact = acceptance_artifact
-        .map(|s| s.trim().to_string())
-        .or_else(|| read_last_acceptance(&pkg_dir));
+    let acceptance_artifact = if let Some(value) = acceptance_artifact {
+        Some(value.trim().to_string())
+    } else {
+        match read_last_acceptance(&pkg_dir) {
+            Ok(value) => value,
+            Err(error) => {
+                facts.push(mechanism_fact("evidence/last-acceptance", false, error));
+                None
+            }
+        }
+    };
     if let Some(hex) = acceptance_artifact.as_deref() {
         if let Err(e) = store.verify_hex(hex) {
-            errors.push(format!("{e}"));
+            facts.push(mechanism_fact(
+                "evidence/acceptance-store-integrity",
+                false,
+                e.to_string(),
+            ));
         } else {
             checked_artifacts = checked_artifacts.saturating_add(1);
+            facts.push(mechanism_fact(
+                "evidence/acceptance-store-integrity",
+                true,
+                "",
+            ));
         }
 
         match read_term_from_store(&store, hex) {
             Ok(t) => {
                 if let Err(es) = verify_acceptance_kind(&t) {
-                    errors.extend(es);
+                    for error in es {
+                        facts.push(mechanism_fact("evidence/acceptance-schema", false, error));
+                    }
+                } else {
+                    facts.push(mechanism_fact("evidence/acceptance-schema", true, ""));
                 }
                 for a in referenced_artifacts(&t) {
                     match store.verify_hex(&a) {
-                        Ok(()) => checked_artifacts = checked_artifacts.saturating_add(1),
-                        Err(e) => errors.push(format!("{e}")),
+                        Ok(()) => {
+                            checked_artifacts = checked_artifacts.saturating_add(1);
+                            facts.push(mechanism_fact(
+                                "evidence/referenced-artifact-integrity",
+                                true,
+                                "",
+                            ));
+                        }
+                        Err(e) => facts.push(mechanism_fact(
+                            "evidence/referenced-artifact-integrity",
+                            false,
+                            e.to_string(),
+                        )),
                     }
                 }
             }
-            Err(e) => errors.push(format!("{e}")),
+            Err(e) => facts.push(mechanism_fact(
+                "evidence/acceptance-load",
+                false,
+                e.to_string(),
+            )),
         }
     }
 
@@ -125,18 +187,20 @@ pub fn verify_package_with_policy(
                 if pol.min_signatures > 0 {
                     let acc_hex = acceptance_artifact.as_deref();
                     if acc_hex.is_none() {
-                        errors.push(
-                            "policy requires acceptance artifact but none was found".to_string(),
-                        );
+                        facts.push(presence_fact("policy/acceptance-required", false, true));
                     }
 
                     let acc_bytes = acc_hex.and_then(|h| hex32_to_bytes(h).ok());
                     if acc_hex.is_some() && acc_bytes.is_none() {
-                        errors.push("invalid acceptance artifact hash (not 64-hex)".to_string());
+                        facts.push(mechanism_fact(
+                            "policy/acceptance-hash",
+                            false,
+                            "invalid acceptance hash",
+                        ));
                     }
 
                     match (pol.allowed_verifying_keys(), acc_hex, acc_bytes) {
-                        (Ok(allowed), Some(acc_hex), Some(acc_bytes)) => {
+                        (Ok(allowed), Some(_acc_hex), Some(acc_bytes)) => {
                             let sigset_path = signatures
                                 .map(|p| p.to_path_buf())
                                 .unwrap_or_else(|| signatures_file_path(&pkg_dir));
@@ -149,54 +213,77 @@ pub fn verify_package_with_policy(
                                                     checked_artifacts.saturating_add(1)
                                             }
                                             Err(e) => {
-                                                errors.push(format!("{e}"));
+                                                facts.push(mechanism_fact(
+                                                    "policy/signature-store-integrity",
+                                                    false,
+                                                    e.to_string(),
+                                                ));
                                                 continue;
                                             }
                                         }
                                         checked_signatures = checked_signatures.saturating_add(1);
                                         match read_term_from_store(&store, &sh) {
-                                            Ok(t) => match AcceptanceSignature::from_term(&t) {
-                                                Ok(rec) => {
-                                                    if rec.acceptance_hash != acc_bytes {
-                                                        errors.push(format!(
-                                                            "signature {} does not match acceptance artifact {}",
-                                                            sh,
-                                                            acc_hex
+                                            Ok(t) => {
+                                                match AcceptanceSignature::from_term(&t) {
+                                                    Ok(rec) => {
+                                                        if rec.acceptance_hash != acc_bytes {
+                                                            facts.push(identity_fact(
+                                                            "policy/signature-acceptance-mismatch",
+                                                            Term::Bytes(rec.acceptance_hash.to_vec().into()),
+                                                            Term::Bytes(acc_bytes.to_vec().into()),
                                                         ));
-                                                        continue;
+                                                            continue;
+                                                        }
+                                                        if rec.verify(&allowed).is_ok() {
+                                                            valid_signatures =
+                                                                valid_signatures.saturating_add(1);
+                                                            facts.push(crypto_fact(
+                                                                "policy/signature-invalid",
+                                                                true,
+                                                            ));
+                                                        } else {
+                                                            facts.push(crypto_fact(
+                                                                "policy/signature-invalid",
+                                                                false,
+                                                            ));
+                                                        }
                                                     }
-                                                    if rec.verify(&allowed).is_ok() {
-                                                        valid_signatures =
-                                                            valid_signatures.saturating_add(1);
-                                                    } else {
-                                                        errors.push(format!(
-                                                            "invalid signature {}",
-                                                            sh
-                                                        ));
-                                                    }
+                                                    Err(e) => facts.push(mechanism_fact(
+                                                        "policy/signature-schema",
+                                                        false,
+                                                        e.to_string(),
+                                                    )),
                                                 }
-                                                Err(e) => errors.push(format!("{e}")),
-                                            },
-                                            Err(e) => errors.push(format!("{e}")),
+                                            }
+                                            Err(e) => facts.push(mechanism_fact(
+                                                "policy/signature-load",
+                                                false,
+                                                e.to_string(),
+                                            )),
                                         }
                                     }
                                 }
-                                Err(e) => errors.push(format!("{e}")),
+                                Err(e) => facts.push(mechanism_fact(
+                                    "policy/signature-set",
+                                    false,
+                                    e.to_string(),
+                                )),
                             }
 
-                            if valid_signatures < pol.min_signatures as usize {
-                                errors.push(format!(
-                                    "policy requires {} valid signatures but found {}",
-                                    pol.min_signatures, valid_signatures
-                                ));
-                            }
+                            facts.push(at_least_fact(
+                                "policy/signature-threshold",
+                                valid_signatures,
+                                pol.min_signatures as usize,
+                            ));
                         }
-                        (Err(e), _, _) => errors.push(format!("{e}")),
+                        (Err(e), _, _) => {
+                            facts.push(mechanism_fact("policy/key-decode", false, e.to_string()))
+                        }
                         (_, _, _) => {}
                     }
                 }
             }
-            Err(e) => errors.push(format!("{e}")),
+            Err(e) => facts.push(mechanism_fact("policy/load", false, e.to_string())),
         }
     }
 
@@ -219,19 +306,28 @@ pub fn verify_package_with_policy(
                         continue;
                     }
                     match store.verify_hex(&name) {
-                        Ok(()) => checked_artifacts = checked_artifacts.saturating_add(1),
-                        Err(e) => errors.push(format!("{e}")),
+                        Ok(()) => {
+                            checked_artifacts = checked_artifacts.saturating_add(1);
+                            facts.push(mechanism_fact("evidence/store-scan", true, ""));
+                        }
+                        Err(e) => {
+                            facts.push(mechanism_fact("evidence/store-scan", false, e.to_string()))
+                        }
                     }
                 }
             }
-            Err(e) => errors.push(format!("cannot scan store: {e}")),
+            Err(e) => facts.push(mechanism_fact("evidence/store-scan", false, e.to_string())),
         }
     }
 
-    let ok = errors.is_empty();
+    let mut authority = EvidenceVerifyAuthority::load(authority_artifact)
+        .map_err(|error| ObligationError::Store(error.to_string()))?;
+    let decision = authority
+        .package(facts)
+        .map_err(|error| ObligationError::Store(error.to_string()))?;
     Ok(PackageVerifyResult {
-        ok,
-        errors,
+        ok: decision.verified,
+        errors: decision.errors,
         checked_modules,
         checked_deps,
         checked_artifacts,
@@ -266,14 +362,72 @@ fn hex_val(b: u8) -> Option<u8> {
     }
 }
 
-fn read_last_acceptance(pkg_dir: &Path) -> Option<String> {
+fn read_last_acceptance(pkg_dir: &Path) -> Result<Option<String>, String> {
     let p = pkg_dir.join(".genesis").join("last_acceptance");
-    let s = std::fs::read_to_string(p).ok()?;
+    let s = match std::fs::read_to_string(&p) {
+        Ok(source) => source,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(format!("cannot read {}: {error}", p.display())),
+    };
     let t = s.trim();
     if looks_like_hex32(t) {
-        Some(t.to_string())
+        Ok(Some(t.to_string()))
     } else {
-        None
+        Err(format!("{}: malformed acceptance pointer", p.display()))
+    }
+}
+
+fn identity_fact(code: &str, observed: Term, required: Term) -> EvidenceFact {
+    EvidenceFact {
+        class: ":identity",
+        code: code.to_string(),
+        mechanism_ok: true,
+        observed,
+        required,
+    }
+}
+
+fn presence_fact(code: &str, observed: bool, required: bool) -> EvidenceFact {
+    EvidenceFact {
+        class: ":presence",
+        code: code.to_string(),
+        mechanism_ok: true,
+        observed: Term::Bool(observed),
+        required: Term::Bool(required),
+    }
+}
+
+fn crypto_fact(code: &str, valid: bool) -> EvidenceFact {
+    EvidenceFact {
+        class: ":crypto",
+        code: code.to_string(),
+        mechanism_ok: true,
+        observed: Term::Bool(valid),
+        required: Term::Bool(true),
+    }
+}
+
+fn at_least_fact(code: &str, observed: usize, required: usize) -> EvidenceFact {
+    EvidenceFact {
+        class: ":at-least",
+        code: code.to_string(),
+        mechanism_ok: true,
+        observed: Term::Int(observed.into()),
+        required: Term::Int(required.into()),
+    }
+}
+
+fn mechanism_fact(code: &str, valid: bool, detail: impl Into<String>) -> EvidenceFact {
+    EvidenceFact {
+        class: ":schema",
+        code: if valid {
+            code.to_string()
+        } else {
+            format!("{code}: {}", detail.into())
+        },
+        mechanism_ok: valid,
+        observed: Term::Bool(valid),
+        required: Term::Bool(true),
     }
 }
 

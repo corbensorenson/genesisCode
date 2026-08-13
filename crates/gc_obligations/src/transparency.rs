@@ -1,10 +1,14 @@
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+use gc_coreform::{Term, TermOrdKey, parse_term};
 use thiserror::Error;
 
+use crate::evidence_verify_authority::{EvidenceVerifyAuthority, TransparencyEntryObservation};
 use crate::store::EvidenceStore;
+
+const MAX_TRANSPARENCY_ENTRIES: usize = 16_384;
 
 #[derive(Debug, Error)]
 pub enum TransparencyError {
@@ -94,71 +98,93 @@ pub fn append_transparency_entry(
 pub fn verify_transparency_log(
     store: &EvidenceStore,
     pkg_dir: &Path,
+    authority_artifact: &Path,
 ) -> Result<TransparencyVerifyResult, TransparencyError> {
     let head_path = transparency_head_path(pkg_dir);
-    let head = fs::read_to_string(&head_path)
-        .ok()
-        .map(|s| s.trim().to_string());
-    let head = head.filter(|s| looks_like_hex32(s));
-
-    let mut errors: Vec<String> = Vec::new();
-    let mut entries = 0usize;
-
+    let (head, head_bytes, head_error) = read_head_observation(&head_path);
+    let mut observations = Vec::new();
     let mut cur = head.clone();
+    let mut seen = BTreeSet::new();
     while let Some(hex) = cur.as_deref() {
-        if let Err(e) = store.verify_hex(hex) {
-            errors.push(format!("{e}"));
+        if observations.len() >= MAX_TRANSPARENCY_ENTRIES {
+            observations.push(TransparencyEntryObservation {
+                hash: hex32_to_bytes(hex).unwrap_or([0; 32]),
+                store_valid: false,
+                load_error: Some("transparency chain exceeds finite entry limit".to_string()),
+                term: Term::Nil,
+            });
             break;
         }
-        entries = entries.saturating_add(1);
-
-        let t = match read_term_from_store(store, hex) {
-            Ok(t) => t,
-            Err(e) => {
-                errors.push(format!("{e}"));
+        let hash = match hex32_to_bytes(hex) {
+            Ok(hash) => hash,
+            Err(error) => {
+                observations.push(TransparencyEntryObservation {
+                    hash: [0; 32],
+                    store_valid: false,
+                    load_error: Some(error),
+                    term: Term::Nil,
+                });
                 break;
             }
         };
-
-        let Term::Map(m) = t else {
-            errors.push(format!("transparency entry {hex} must be a map"));
-            break;
+        let store_valid = store.verify_hex(hex).is_ok();
+        let (term, load_error) = match read_term_from_store(store, hex) {
+            Ok(term) => (term, None),
+            Err(error) => (Term::Nil, Some(error.to_string())),
         };
-        let kind = m.get(&TermOrdKey(Term::symbol(":kind")));
-        if !matches!(kind, Some(Term::Str(s)) if s == "genesis/transparency-entry-v0.2") {
-            errors.push(format!(
-                "transparency entry {hex} has wrong :kind: {}",
-                kind.map(print_term).unwrap_or_else(|| "nil".to_string())
-            ));
+        observations.push(TransparencyEntryObservation {
+            hash,
+            store_valid,
+            load_error,
+            term: term.clone(),
+        });
+        if !seen.insert(hex.to_string()) {
             break;
         }
-
-        let prev = m.get(&TermOrdKey(Term::symbol(":prev-h")));
-        cur = match prev {
-            None | Some(Term::Nil) => None,
-            Some(Term::Bytes(b)) => {
-                if b.len() != 32 {
-                    errors.push(format!("transparency entry {hex} :prev-h must be 32 bytes"));
-                    break;
-                }
-                Some(bytes_to_hex32(b))
-            }
-            Some(other) => {
-                errors.push(format!(
-                    "transparency entry {hex} :prev-h must be bytes or nil, got {}",
-                    print_term(other)
-                ));
-                break;
-            }
-        };
+        cur = proposed_previous_hash(&term);
     }
 
+    let mut authority = EvidenceVerifyAuthority::load(authority_artifact)
+        .map_err(|error| TransparencyError::Log(error.to_string()))?;
+    let decision = authority
+        .transparency(head_bytes, head_error, observations)
+        .map_err(|error| TransparencyError::Log(error.to_string()))?;
     Ok(TransparencyVerifyResult {
-        ok: errors.is_empty(),
+        ok: decision.verified,
         head,
-        entries,
-        errors,
+        entries: decision.checked,
+        errors: decision.errors,
     })
+}
+
+fn read_head_observation(path: &Path) -> (Option<String>, Option<[u8; 32]>, Option<String>) {
+    match fs::read_to_string(path) {
+        Ok(source) => {
+            let value = source.trim().to_string();
+            match hex32_to_bytes(&value) {
+                Ok(bytes) => (Some(value), Some(bytes), None),
+                Err(_) => (
+                    Some(value),
+                    None,
+                    Some("malformed transparency head".to_string()),
+                ),
+            }
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (None, None, None),
+        Err(error) => (
+            None,
+            None,
+            Some(format!("cannot read transparency head: {error}")),
+        ),
+    }
+}
+
+fn proposed_previous_hash(term: &Term) -> Option<String> {
+    let Term::Map(fields) = term else { return None };
+    match fields.get(&TermOrdKey(Term::symbol(":prev-h"))) {
+        Some(Term::Bytes(bytes)) if bytes.len() == 32 => Some(bytes_to_hex32(bytes)),
+        _ => None,
+    }
 }
 
 fn read_term_from_store(store: &EvidenceStore, hex: &str) -> Result<Term, TransparencyError> {
@@ -167,11 +193,11 @@ fn read_term_from_store(store: &EvidenceStore, hex: &str) -> Result<Term, Transp
     parse_term(&s).map_err(|e| TransparencyError::Log(format!("bad artifact {}: {e}", p.display())))
 }
 
+#[cfg(feature = "parity-oracle")]
 fn looks_like_hex32(s: &str) -> bool {
     s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
-#[cfg(feature = "parity-oracle")]
 fn hex32_to_bytes(s: &str) -> Result<[u8; 32], String> {
     let t = s.trim();
     if t.len() != 64 || !t.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -196,7 +222,6 @@ fn bytes_to_hex32(b: &[u8]) -> String {
     out
 }
 
-#[cfg(feature = "parity-oracle")]
 fn hex_val(b: u8) -> Option<u8> {
     match b {
         b'0'..=b'9' => Some(b - b'0'),

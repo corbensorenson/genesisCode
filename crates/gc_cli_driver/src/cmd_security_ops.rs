@@ -32,7 +32,8 @@ pub(super) fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, C
         cli_err_with_context(EX_PARSE, "manifest/parse", format!("{e}"), context)
     })?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
-    let r = gc_obligations::verify_transparency_log(&store, &pkg_dir)
+    let artifact = require_explicit_selfhost_artifact(cli, "transparency verification authority")?;
+    let r = gc_obligations::verify_transparency_log(&store, &pkg_dir, &artifact)
         .map_err(|e| cli_err(EX_INTERNAL, "transparency/error", format!("{e}")))?;
     let exit_code = if r.ok { EX_OK } else { EX_VERIFY };
     let env = JsonEnvelope {
@@ -479,9 +480,12 @@ pub(super) fn cmd_verify(
     let policy = policy_buf.as_deref();
     let signatures = signatures_buf.as_deref();
 
-    let r =
-        gc_obligations::verify_package_with_policy(pkg, acceptance, scan_store, policy, signatures)
-            .map_err(obligation_err)?;
+    let artifact =
+        require_explicit_selfhost_artifact(cli, "package evidence verification authority")?;
+    let r = gc_obligations::verify_package_with_policy_and_authority(
+        pkg, acceptance, scan_store, policy, signatures, &artifact,
+    )
+    .map_err(obligation_err)?;
     let exit_code = if r.ok { EX_OK } else { EX_VERIFY };
 
     let env = JsonEnvelope {

@@ -413,6 +413,30 @@ fn sign_and_verify_with_policy_succeeds() {
         .assert()
         .success();
 
+    let last_acceptance = dst.join(".genesis/last_acceptance");
+    let valid_acceptance = fs::read(&last_acceptance).unwrap();
+    fs::write(&last_acceptance, b"malformed\n").unwrap();
+    cargo_bin_cmd!("genesis")
+        .args(["verify", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(50)
+        .stdout(predicate::str::contains("not ok"));
+    fs::write(&last_acceptance, valid_acceptance).unwrap();
+
+    let transparency_head = dst.join(".genesis/transparency_head");
+    let valid_head = fs::read(&transparency_head).unwrap();
+    fs::write(&transparency_head, b"malformed\n").unwrap();
+    cargo_bin_cmd!("genesis")
+        .args(["transparency-verify", "--pkg"])
+        .arg(&pkg)
+        .assert()
+        .failure()
+        .code(50)
+        .stdout(predicate::str::contains("not ok"));
+    fs::write(&transparency_head, valid_head).unwrap();
+
     let signatures = dst.join(".genesis/signatures.gc");
     let valid_signatures = fs::read(&signatures).unwrap();
     fs::write(&signatures, b"[\"not-an-artifact\"]").unwrap();
@@ -426,7 +450,6 @@ fn sign_and_verify_with_policy_succeeds() {
         .stderr(predicate::str::contains("sign/signature-set"));
     fs::write(&signatures, valid_signatures).unwrap();
 
-    let transparency_head = dst.join(".genesis/transparency_head");
     fs::write(&transparency_head, b"not-an-artifact\n").unwrap();
     cargo_bin_cmd!("genesis")
         .args(["sign", "--pkg"])

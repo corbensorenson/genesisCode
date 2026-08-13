@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"format": "date", "type": "string"},
+    "binding": {"const": "core/security::evidence-verify-authority"},
+    "contentIdentitySha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "decisionInventory": {
+      "const": [
+        "package-module-dependency-integrity-verdict",
+        "acceptance-artifact-schema-and-reference-verdict",
+        "registry-signature-policy-verdict",
+        "transparency-chain-verdict",
+        "genesisbench-dsse-verdict"
+      ]
+    },
+    "hostMechanisms": {
+      "const": [
+        "bounded-filesystem-read-and-content-addressed-store-access",
+        "blake3-and-sha256-hashing",
+        "ed25519-verification",
+        "base64-toml-json-and-coreform-decoding",
+        "bounded-observation-transport"
+      ]
+    },
+    "hostOracle": {
+      "additionalProperties": false,
+      "properties": {"removalTask": {"const": "R4.2.d"}, "required": {"const": true}},
+      "required": ["removalTask", "required"],
+      "type": "object"
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_evidence_verify_authority.py"},
+    "kind": {"const": "genesis/selfhost-evidence-verify-authority-v0.1"},
+    "nonclaims": {
+      "items": {"type": "string"},
+      "minItems": 8,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "requestKind": {"const": "genesis/evidence-verification-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/evidence-verification-authority-result-v0.1"},
+    "runtimeEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "allocationLimit": {"const": 64000000},
+        "maxPayloadBytes": {"const": 16777216},
+        "maxVectorEntries": {"const": 16384},
+        "stepLimit": {"const": 20000000}
+      },
+      "required": ["allocationLimit", "maxPayloadBytes", "maxVectorEntries", "stepLimit"],
+      "type": "object"
+    },
+    "schema": {"const": "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/evidence_verify_authority_v1.gc"},
+    "sourceSha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "spec": {"const": "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  },
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionEntrypoints", "requestKind", "resultKind", "runtimeEvidence", "schema",
+    "sourceModule", "sourceSha256", "spec", "version"
+  ],
+  "type": "object"
+}

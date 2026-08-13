@@ -154,6 +154,13 @@ python3 scripts/lib/selfhost_signing_authority.py \
   --schema docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.d evidence verification is H2: GenesisCode owns package, policy,
+# transparency, and GenesisBench DSSE verdicts; host mechanisms cannot accept.
+python3 scripts/lib/selfhost_evidence_verify_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_evidence_verify_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \

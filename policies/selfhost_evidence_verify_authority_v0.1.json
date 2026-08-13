@@ -1,0 +1,54 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/security::evidence-verify-authority",
+  "contentIdentitySha256": "502ca038baddd38dbbf6ea346b50372af25e92692a68adac313e1bcc11585f1a",
+  "decisionInventory": [
+    "package-module-dependency-integrity-verdict",
+    "acceptance-artifact-schema-and-reference-verdict",
+    "registry-signature-policy-verdict",
+    "transparency-chain-verdict",
+    "genesisbench-dsse-verdict"
+  ],
+  "hostMechanisms": [
+    "bounded-filesystem-read-and-content-addressed-store-access",
+    "blake3-and-sha256-hashing",
+    "ed25519-verification",
+    "base64-toml-json-and-coreform-decoding",
+    "bounded-observation-transport"
+  ],
+  "hostOracle": {
+    "removalTask": "R4.2.d",
+    "required": true
+  },
+  "independentVerifier": "scripts/lib/selfhost_evidence_verify_authority.py",
+  "kind": "genesis/selfhost-evidence-verify-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "h1-h2-package-authority",
+    "h3-h4-closure",
+    "independent-verifier-replacement",
+    "package-lock-and-resolution-authority",
+    "r4-2-d-closure",
+    "registry-or-benchmark-publication-readiness",
+    "release-qualification",
+    "sh-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/evidence-verification-authority-request-v0.1",
+  "resultKind": "genesis/evidence-verification-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 64000000,
+    "maxPayloadBytes": 16777216,
+    "maxVectorEntries": 16384,
+    "stepLimit": 20000000
+  },
+  "schema": "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/evidence_verify_authority_v1.gc",
+  "sourceSha256": "d36d18d7976d733614ae36d9a1938d05228909d948e41cf8d84d5351891ebcec",
+  "spec": "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

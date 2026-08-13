@@ -44,3 +44,5 @@ Where `:prev-h` is the previous entry’s artifact hash bytes (or `nil` for the 
    - verify the artifact exists and its name matches its content hash
    - verify `:kind` and `:prev-h` types and sizes
 4. Report the number of traversed entries and fail on any mismatch.
+
+The consumed traversal, schema, cycle, bound, and final admission verdict is exclusively produced by artifact-loaded `core/security::evidence-verify-authority` under `SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md`. Host traversal is an untrusted bounded observation proposal: GenesisCode rebinds it to the exact head and validates every link. Cycles, more than 16,384 entries, truncation, trailing entries, malformed present heads, and read failures fail closed.

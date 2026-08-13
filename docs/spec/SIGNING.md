@@ -49,4 +49,4 @@ Malformed existing signature-set or transparency-head state MUST fail closed; it
 
 ## Verification
 
-Verification is policy-gated (see `docs/spec/REGISTRY_POLICY.md`).
+Verification is policy-gated (see `docs/spec/REGISTRY_POLICY.md`) and every production route must consume `core/security::evidence-verify-authority` under `SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md`. The current package phase fails closed but is not yet H1/H2: Rust still computes acceptance/signature schema, key-policy admission, and cryptographic facts before GenesisCode performs the final conjunction and threshold comparison.

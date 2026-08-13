@@ -202,6 +202,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_SIGNING_AUTHORITY_v0.1.schema.json` - closed schema for the H2 signing-authority profile.
 - `policies/selfhost_signing_authority_v0.1.json` - content-addressed signing decision, host-mechanism, resource-bound, source, verifier, and nonclaim profile.
 - `scripts/lib/selfhost_signing_authority.py` - independent signing source/artifact custody, production-route, secret-boundary, ledger, and mutation verifier.
+- `docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md` - normative H0 inventory and partial transparency/DSSE cutover contract with explicit package-semantic residuals.
+- `docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json` - closed schema for the partial evidence-verification profile.
+- `policies/selfhost_evidence_verify_authority_v0.1.json` - content-addressed verification decisions, bounded host mechanisms, runtime limits, and nonclaims.
+- `scripts/lib/selfhost_evidence_verify_authority.py` - independent source/artifact custody, route-reachability, no-fallback, separation, ledger, and mutation verifier.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.
 - `scripts/selfhost_effect_policy_composition_guard.sh` - focused profile, mutation, admission, cap, and operation-inventory-bound guard.
 - `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md` - normative H2 R4.2.d primitive-fact, complete obligation decision, resource-budget, strict-decoder, and no-fallback contract.

@@ -8,8 +8,10 @@ fn diag_toolchain_decode() {
     let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
     let mut env = prelude.env;
-    let path = std::path::Path::new("../../selfhost/toolchain.gc");
-    if let Err(e) = load_selfhost_coreform_toolchain_v1_from_artifact(&mut ctx, &mut env, path) {
+    let path = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from("../../selfhost/toolchain.gc"));
+    if let Err(e) = load_selfhost_coreform_toolchain_v1_from_artifact(&mut ctx, &mut env, &path) {
         panic!("decode failed: {e:#}");
     }
 

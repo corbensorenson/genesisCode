@@ -1,0 +1,421 @@
+(def selfhost/evidence-verify::tag core/data::tag)
+
+(def selfhost/evidence-verify::nil? core/list::is-nil?)
+
+(def selfhost/evidence-verify::not (fn (value) (if value false true)))
+
+(def selfhost/evidence-verify::and (fn (left) (fn (right) (if left right false))))
+
+(def selfhost/evidence-verify::map?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :map))))
+
+(def selfhost/evidence-verify::vec?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :vec))))
+
+(def selfhost/evidence-verify::str?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :str))))
+
+(def selfhost/evidence-verify::sym?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :sym))))
+
+(def selfhost/evidence-verify::bytes?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :bytes))))
+
+(def selfhost/evidence-verify::bool?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :bool))))
+
+(def selfhost/evidence-verify::int?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify::tag value)) (quote :int))))
+
+(def selfhost/evidence-verify::field
+  (fn (map) (fn (key) (if (selfhost/evidence-verify::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/evidence-verify::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (if ((core/eq? ((core/vec::get ((core/vec::get entries) index)) 0)) key)
+            true
+            (((selfhost/evidence-verify::map-has-key-loop? entries) key) ((core/int::add index) 1))))))))
+
+(def selfhost/evidence-verify::map-has-key?
+  (fn (map)
+    (fn (key) (((selfhost/evidence-verify::map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/evidence-verify::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if ((selfhost/evidence-verify::map-has-key? map) ((core/vec::get keys) index))
+            (((selfhost/evidence-verify::map-has-keys-loop? map) keys) ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/evidence-verify::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/evidence-verify::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/evidence-verify::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/evidence-verify::hash32?
+  (fn (value)
+    (if (selfhost/evidence-verify::bytes? value) ((core/int::eq? (core/bytes::len value)) 32) false)))
+
+(def selfhost/evidence-verify::optional-str?
+  (fn (value)
+    (if (selfhost/evidence-verify::nil? value) true (selfhost/evidence-verify::str? value))))
+
+(def selfhost/evidence-verify::optional-hash32?
+  (fn (value)
+    (if (selfhost/evidence-verify::nil? value) true (selfhost/evidence-verify::hash32? value))))
+
+(def selfhost/evidence-verify::result
+  (fn (request)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (data)
+            {
+              :code code
+              :data data
+              :kind "genesis/evidence-verification-authority-result-v0.1"
+              :message message
+              :ok ok
+              :request-h (selfhost/hash::hash-term request)
+              :v 1}))))))
+
+(def selfhost/evidence-verify::accept
+  (fn (request) (fn (data) (((((selfhost/evidence-verify::result request) true) nil) nil) data))))
+
+(def selfhost/evidence-verify::reject
+  (fn (request)
+    (fn (code)
+      (fn (message) (((((selfhost/evidence-verify::result request) false) code) message) nil)))))
+
+(def selfhost/evidence-verify::push-error (fn (errors) (fn (code) ((core/vec::push errors) code))))
+
+(def selfhost/evidence-verify::fact-valid?
+  (fn (fact)
+    (if
+      ((selfhost/evidence-verify::exact-map? fact)
+        [
+          :class
+          :code
+          :mechanism-ok
+          :observed
+          :required])
+      (if (selfhost/evidence-verify::sym? ((selfhost/evidence-verify::field fact) (quote :class)))
+        (if (selfhost/evidence-verify::str? ((selfhost/evidence-verify::field fact) (quote :code)))
+          (selfhost/evidence-verify::bool?
+            ((selfhost/evidence-verify::field fact) (quote :mechanism-ok)))
+          false)
+        false)
+      false)))
+
+(def selfhost/evidence-verify::fact-passes?
+  (fn (fact)
+    (if ((selfhost/evidence-verify::field fact) (quote :mechanism-ok))
+      (let ((class ((selfhost/evidence-verify::field fact) (quote :class))))
+        (if ((core/sym::eq? class) (quote :presence))
+          ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
+            ((selfhost/evidence-verify::field fact) (quote :required)))
+          (if ((core/sym::eq? class) (quote :identity))
+            ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
+              ((selfhost/evidence-verify::field fact) (quote :required)))
+            (if ((core/sym::eq? class) (quote :schema))
+              ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
+                ((selfhost/evidence-verify::field fact) (quote :required)))
+              (if ((core/sym::eq? class) (quote :crypto))
+                ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
+                  ((selfhost/evidence-verify::field fact) (quote :required)))
+                (if ((core/sym::eq? class) (quote :at-least))
+                  (if
+                    (selfhost/evidence-verify::int?
+                      ((selfhost/evidence-verify::field fact) (quote :observed)))
+                    (if
+                      (selfhost/evidence-verify::int?
+                        ((selfhost/evidence-verify::field fact) (quote :required)))
+                      (selfhost/evidence-verify::not
+                        ((core/int::lt? ((selfhost/evidence-verify::field fact) (quote :observed)))
+                          ((selfhost/evidence-verify::field fact) (quote :required))))
+                      false)
+                    false)
+                  false))))))
+      false)))
+
+(def selfhost/evidence-verify::package-loop
+  (fn (facts)
+    (fn (index)
+      (fn (errors)
+        (if ((core/int::eq? index) (core/vec::len facts))
+          errors
+          (let ((fact ((core/vec::get facts) index)))
+            (if (selfhost/evidence-verify::not (selfhost/evidence-verify::fact-valid? fact))
+              (((selfhost/evidence-verify::package-loop facts) ((core/int::add index) 1))
+                ((selfhost/evidence-verify::push-error errors) "evidence/fact-malformed"))
+              (if (selfhost/evidence-verify::fact-passes? fact)
+                (((selfhost/evidence-verify::package-loop facts) ((core/int::add index) 1)) errors)
+                (((selfhost/evidence-verify::package-loop facts) ((core/int::add index) 1))
+                  ((selfhost/evidence-verify::push-error errors)
+                    ((selfhost/evidence-verify::field fact) (quote :code))))))))))))
+
+(def selfhost/evidence-verify::package
+  (fn (request)
+    (if
+      ((selfhost/evidence-verify::exact-map? request)
+        [
+          :facts
+          :kind
+          :phase
+          :v])
+      (let ((facts ((selfhost/evidence-verify::field request) (quote :facts))))
+        (if (selfhost/evidence-verify::vec? facts)
+          (let ((errors (((selfhost/evidence-verify::package-loop facts) 0) [])))
+            ((selfhost/evidence-verify::accept request)
+              {
+                :checked (core/vec::len facts)
+                :errors errors
+                :verified ((core/int::eq? (core/vec::len errors)) 0)}))
+          (((selfhost/evidence-verify::reject request) "evidence/request")
+            "package facts must be a vector")))
+      (((selfhost/evidence-verify::reject request) "evidence/request")
+        "package request fields mismatch"))))
+
+(def selfhost/evidence-verify::entry-valid?
+  (fn (entry)
+    (if
+      ((selfhost/evidence-verify::exact-map? entry)
+        [
+          :hash
+          :load-error
+          :store-valid
+          :term])
+      (if
+        (selfhost/evidence-verify::hash32? ((selfhost/evidence-verify::field entry) (quote :hash)))
+        (if
+          (selfhost/evidence-verify::optional-str?
+            ((selfhost/evidence-verify::field entry) (quote :load-error)))
+          (selfhost/evidence-verify::bool?
+            ((selfhost/evidence-verify::field entry) (quote :store-valid)))
+          false)
+        false)
+      false)))
+
+(def selfhost/evidence-verify::transparency-term-valid?
+  (fn (term)
+    (if
+      ((selfhost/evidence-verify::exact-map? term)
+        [
+          :acceptance-artifact
+          :kind
+          :package-artifact
+          :prev-h
+          :signature-artifact
+          :signer-pk-b64])
+      (if
+        ((core/eq? ((selfhost/evidence-verify::field term) (quote :kind)))
+          "genesis/transparency-entry-v0.2")
+        (if
+          (selfhost/evidence-verify::optional-hash32?
+            ((selfhost/evidence-verify::field term) (quote :prev-h)))
+          (if
+            (selfhost/evidence-verify::str?
+              ((selfhost/evidence-verify::field term) (quote :package-artifact)))
+            (if
+              (selfhost/evidence-verify::str?
+                ((selfhost/evidence-verify::field term) (quote :acceptance-artifact)))
+              (if
+                (selfhost/evidence-verify::str?
+                  ((selfhost/evidence-verify::field term) (quote :signature-artifact)))
+                (selfhost/evidence-verify::str?
+                  ((selfhost/evidence-verify::field term) (quote :signer-pk-b64)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/evidence-verify::transparency-finish
+  (fn (head)
+    (fn (entries)
+      (fn (errors)
+        {
+          :entries entries
+          :errors errors
+          :head head
+          :verified ((core/int::eq? (core/vec::len errors)) 0)}))))
+
+(def selfhost/evidence-verify::transparency-loop
+  (fn (head)
+    (fn (items)
+      (fn (index)
+        (fn (expected)
+          (fn (visited)
+            (fn (errors)
+              (if (selfhost/evidence-verify::nil? expected)
+                (if ((core/int::eq? index) (core/vec::len items))
+                  (((selfhost/evidence-verify::transparency-finish head) index) errors)
+                  (((selfhost/evidence-verify::transparency-finish head) index)
+                    ((selfhost/evidence-verify::push-error errors) "transparency/trailing-entry")))
+                (if ((core/int::eq? index) (core/vec::len items))
+                  (((selfhost/evidence-verify::transparency-finish head) index)
+                    ((selfhost/evidence-verify::push-error errors) "transparency/truncated-chain"))
+                  (let ((entry ((core/vec::get items) index)))
+                    (if
+                      (selfhost/evidence-verify::not (selfhost/evidence-verify::entry-valid? entry))
+                      (((selfhost/evidence-verify::transparency-finish head) index)
+                        ((selfhost/evidence-verify::push-error errors)
+                          "transparency/entry-malformed"))
+                      (let ((hash ((selfhost/evidence-verify::field entry) (quote :hash))))
+                        (if ((selfhost/evidence-verify::map-has-key? visited) hash)
+                          (((selfhost/evidence-verify::transparency-finish head) index)
+                            ((selfhost/evidence-verify::push-error errors) "transparency/cycle"))
+                          (if (selfhost/evidence-verify::not ((core/eq? hash) expected))
+                            (((selfhost/evidence-verify::transparency-finish head) index)
+                              ((selfhost/evidence-verify::push-error errors)
+                                "transparency/link-mismatch"))
+                            (if
+                              (selfhost/evidence-verify::not
+                                ((selfhost/evidence-verify::field entry) (quote :store-valid)))
+                              (((selfhost/evidence-verify::transparency-finish head) index)
+                                ((selfhost/evidence-verify::push-error errors)
+                                  "transparency/store-integrity"))
+                              (if
+                                (selfhost/evidence-verify::not
+                                  (selfhost/evidence-verify::nil?
+                                    ((selfhost/evidence-verify::field entry) (quote :load-error))))
+                                (((selfhost/evidence-verify::transparency-finish head) index)
+                                  ((selfhost/evidence-verify::push-error errors) "transparency/load"))
+                                (let
+                                  ((term ((selfhost/evidence-verify::field entry) (quote :term))))
+                                  (if
+                                    (selfhost/evidence-verify::not
+                                      (selfhost/evidence-verify::transparency-term-valid? term))
+                                    (((selfhost/evidence-verify::transparency-finish head) index)
+                                      ((selfhost/evidence-verify::push-error errors)
+                                        "transparency/schema"))
+                                    (
+                                      (
+                                        ((((selfhost/evidence-verify::transparency-loop head) items) ((core/int::add index) 1))
+                                          ((selfhost/evidence-verify::field term) (quote :prev-h)))
+                                        (((core/map::put visited) hash) true))
+                                      errors)))))))))))))))))))
+
+(def selfhost/evidence-verify::transparency
+  (fn (request)
+    (if
+      ((selfhost/evidence-verify::exact-map? request)
+        [
+          :entries
+          :head
+          :head-error
+          :kind
+          :phase
+          :v])
+      (let
+        ((head ((selfhost/evidence-verify::field request) (quote :head)))
+          (head-error ((selfhost/evidence-verify::field request) (quote :head-error)))
+          (entries ((selfhost/evidence-verify::field request) (quote :entries))))
+        (if
+          (if (selfhost/evidence-verify::optional-hash32? head)
+            (if (selfhost/evidence-verify::optional-str? head-error)
+              (selfhost/evidence-verify::vec? entries)
+              false)
+            false)
+          (if (selfhost/evidence-verify::nil? head-error)
+            ((selfhost/evidence-verify::accept request)
+              ((((((selfhost/evidence-verify::transparency-loop head) entries) 0) head) {}) []))
+            ((selfhost/evidence-verify::accept request)
+              (((selfhost/evidence-verify::transparency-finish head) 0) ["transparency/head"])))
+          (((selfhost/evidence-verify::reject request) "evidence/request")
+            "transparency request types mismatch")))
+      (((selfhost/evidence-verify::reject request) "evidence/request")
+        "transparency request fields mismatch"))))
+
+(def selfhost/evidence-verify::dsse
+  (fn (request)
+    (if
+      ((selfhost/evidence-verify::exact-map? request)
+        [
+          :envelope-closed
+          :expected-key-id
+          :expected-payload-type
+          :key-id
+          :key-valid
+          :kind
+          :payload-h
+          :payload-type
+          :phase
+          :signature-count
+          :signature-fields-closed
+          :signature-key-id
+          :signature-valid
+          :v])
+      (let
+        (
+          (valid
+            ((selfhost/evidence-verify::and ((selfhost/evidence-verify::field request) (quote :envelope-closed)))
+              ((selfhost/evidence-verify::and ((selfhost/evidence-verify::field request) (quote :key-valid)))
+                (
+                  (selfhost/evidence-verify::and
+                    ((core/eq? ((selfhost/evidence-verify::field request) (quote :key-id)))
+                      ((selfhost/evidence-verify::field request) (quote :expected-key-id))))
+                  (
+                    (selfhost/evidence-verify::and
+                      ((core/eq? ((selfhost/evidence-verify::field request) (quote :payload-type)))
+                        ((selfhost/evidence-verify::field request) (quote :expected-payload-type))))
+                    (
+                      (selfhost/evidence-verify::and
+                        ((core/int::eq? ((selfhost/evidence-verify::field request) (quote :signature-count)))
+                          1))
+                      (
+                        (selfhost/evidence-verify::and
+                          ((selfhost/evidence-verify::field request)
+                            (quote :signature-fields-closed)))
+                        (
+                          (selfhost/evidence-verify::and
+                            ((core/eq? ((selfhost/evidence-verify::field request) (quote :signature-key-id)))
+                              ((selfhost/evidence-verify::field request) (quote :expected-key-id))))
+                          ((selfhost/evidence-verify::field request) (quote :signature-valid)))))))))))
+        ((selfhost/evidence-verify::accept request)
+          {
+            :errors (if valid [] ["bench/evidence-verification"])
+            :key-id ((selfhost/evidence-verify::field request) (quote :expected-key-id))
+            :payload-h ((selfhost/evidence-verify::field request) (quote :payload-h))
+            :payload-type ((selfhost/evidence-verify::field request) (quote :expected-payload-type))
+            :verified valid}))
+      (((selfhost/evidence-verify::reject request) "evidence/request")
+        "DSSE request fields mismatch"))))
+
+(def core/security::evidence-verify-authority
+  (fn (request)
+    (if (selfhost/evidence-verify::not (selfhost/evidence-verify::map? request))
+      (((selfhost/evidence-verify::reject request) "evidence/request")
+        "evidence request must be a map")
+      (if
+        (selfhost/evidence-verify::not
+          ((core/eq? ((selfhost/evidence-verify::field request) (quote :kind)))
+            "genesis/evidence-verification-authority-request-v0.1"))
+        (((selfhost/evidence-verify::reject request) "evidence/request")
+          "evidence request kind mismatch")
+        (if
+          (selfhost/evidence-verify::not
+            ((core/eq? ((selfhost/evidence-verify::field request) (quote :v))) 1))
+          (((selfhost/evidence-verify::reject request) "evidence/request")
+            "evidence request version mismatch")
+          (let ((phase ((selfhost/evidence-verify::field request) (quote :phase))))
+            (if ((core/sym::eq? phase) (quote :package))
+              (selfhost/evidence-verify::package request)
+              (if ((core/sym::eq? phase) (quote :transparency))
+                (selfhost/evidence-verify::transparency request)
+                (if ((core/sym::eq? phase) (quote :dsse))
+                  (selfhost/evidence-verify::dsse request)
+                  (((selfhost/evidence-verify::reject request) "evidence/request")
+                    "unknown evidence phase"))))))))))

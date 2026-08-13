@@ -1,4 +1,5 @@
 mod error;
+mod evidence_verify_authority;
 mod frontend;
 mod obligation_authority;
 mod obligation_cache;
@@ -36,6 +37,10 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 pub use crate::error::ObligationError;
+pub use crate::evidence_verify_authority::{
+    DsseVerificationFacts, EvidenceDecision, EvidenceFact, EvidenceVerifyAuthority,
+    EvidenceVerifyError, TransparencyEntryObservation,
+};
 pub use crate::frontend::{
     CoreformFrontend, SelfhostFrontendConfig, coreform_frontend_is_rust, default_coreform_frontend,
     rust_coreform_frontend, set_frontend_runtime_profile_parity_harness,
@@ -66,7 +71,9 @@ pub use crate::transparency::append_transparency_entry;
 pub use crate::transparency::{
     TransparencyError, TransparencyVerifyResult, transparency_head_path, verify_transparency_log,
 };
-pub use crate::verify::{PackageVerifyResult, verify_package, verify_package_with_policy};
+pub use crate::verify::{PackageVerifyResult, verify_package_with_policy_and_authority};
+#[cfg(feature = "parity-oracle")]
+pub use crate::verify::{verify_package, verify_package_with_policy};
 pub use gc_pkg::{DepEntry, ModuleEntry, PackageManifest};
 
 #[cfg(not(target_os = "wasi"))]

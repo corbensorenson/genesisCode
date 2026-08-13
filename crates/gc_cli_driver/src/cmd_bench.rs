@@ -476,12 +476,7 @@ fn crypto_verify(
             "public key must contain exactly 32 bytes",
         )
     })?;
-    if key_id(&public) != expected_keyid {
-        return Err(crypto_error(
-            "bench/crypto-key",
-            "public key identity mismatch",
-        ));
-    }
+    let observed_key_id = key_id(&public);
     let signatures = object
         .get("signatures")
         .and_then(serde_json::Value::as_array)
@@ -495,21 +490,15 @@ fn crypto_verify(
     let signature_object = signatures[0]
         .as_object()
         .ok_or_else(|| crypto_error("bench/crypto-envelope", "signature must be an object"))?;
-    if signature_object
+    let signature_fields_closed = signature_object
         .keys()
         .map(String::as_str)
         .collect::<BTreeSet<_>>()
-        != ["keyid", "sig"].into_iter().collect()
-        || signature_object
-            .get("keyid")
-            .and_then(serde_json::Value::as_str)
-            != Some(expected_keyid)
-    {
-        return Err(crypto_error(
-            "bench/crypto-envelope",
-            "signature fields or key identity mismatch",
-        ));
-    }
+        == ["keyid", "sig"].into_iter().collect();
+    let signature_key_id = signature_object
+        .get("keyid")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or("");
     let payload = Base64::decode_vec(
         object
             .get("payload")
@@ -541,20 +530,41 @@ fn crypto_verify(
             format!("decode Ed25519 signature: {error}"),
         )
     })?;
-    VerifyingKey::from_bytes(&public)
-        .map_err(|error| {
-            crypto_error(
-                "bench/crypto-key",
-                format!("decode Ed25519 public key: {error}"),
-            )
-        })?
-        .verify_strict(&pae(payload_type, &payload), &signature)
-        .map_err(|_| {
-            crypto_error(
-                "bench/crypto-signature",
-                "Ed25519 signature verification failed",
-            )
-        })?;
+    let verifying_key = VerifyingKey::from_bytes(&public);
+    let key_valid = verifying_key.is_ok();
+    let signature_valid = verifying_key.as_ref().is_ok_and(|key| {
+        key.verify_strict(&pae(payload_type, &payload), &signature)
+            .is_ok()
+    });
+    let payload_hash: [u8; 32] = Sha256::digest(&payload).into();
+    let artifact =
+        require_explicit_selfhost_artifact(cli, "GenesisBench evidence verification authority")?;
+    let mut authority = gc_obligations::EvidenceVerifyAuthority::load(&artifact)
+        .map_err(|error| crypto_error("bench/crypto-authority", error.to_string()))?;
+    let decision = authority
+        .dsse(gc_obligations::DsseVerificationFacts {
+            envelope_closed: true,
+            expected_key_id: expected_keyid,
+            expected_payload_type: payload_type,
+            key_id: &observed_key_id,
+            key_valid,
+            payload_hash,
+            payload_type: object
+                .get("payloadType")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or(""),
+            signature_count: signatures.len(),
+            signature_fields_closed,
+            signature_key_id,
+            signature_valid,
+        })
+        .map_err(|error| crypto_error("bench/crypto-authority", error.to_string()))?;
+    if !decision.verified {
+        return Err(crypto_error(
+            "bench/crypto-verification",
+            decision.errors.join(", "),
+        ));
+    }
     crypto_output(
         cli,
         serde_json::json!({

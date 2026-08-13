@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**334 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**336 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `833e7da1c6c8` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `202454538ec3` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0dd915fba729` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `3f76738772bd` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `29bb16d00942` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-11) | md | `bd0e7b8580e7` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ebf50143ae88` |
@@ -29,7 +29,7 @@ toc-depth: 2
 | [`docs/DEPRECATION_MAP_v0.1.md`](../docs/DEPRECATION_MAP_v0.1.md) | Documentation Deprecation Map v0.1 | md | `961d8acb5a56` |
 | [`docs/FOUNDATION_STDLIB_v0.2.md`](../docs/FOUNDATION_STDLIB_v0.2.md) | Foundation Standard Library (Level 1) v0.2 | md | `6f89ada78518` |
 | [`docs/GETTING_STARTED.md`](../docs/GETTING_STARTED.md) | Getting Started (GenesisCode v0.2) | md | `a603057137bd` |
-| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `e82bbe7a7e91` |
+| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `05d84e96f032` |
 | [`docs/PAPER_v0.2.md`](../docs/PAPER_v0.2.md) | **GenesisCode v0.2** | md | `a580551652c7` |
 | [`docs/POLICY_DEFAULTS_v0.1.md`](../docs/POLICY_DEFAULTS_v0.1.md) | Policy Defaults v0.1 | md | `3cd6800f37c2` |
 | [`docs/STACKS_v0.2.md`](../docs/STACKS_v0.2.md) | GenesisCode Stacks (Levels 0–2) v0.2 | md | `8c0df911adeb` |
@@ -61,7 +61,7 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `4ce9bed19d3d` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
 | [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `861b707ac8ec` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `cb1890ad5f6d` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `b165698cbc78` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -98,7 +98,7 @@ toc-depth: 2
 | [`docs/spec/AGENT_TRANSACTION_v0.1.schema.json`](../docs/spec/AGENT_TRANSACTION_v0.1.schema.json) | GenesisCode transactional agent session v0.1 | schema | `07abf0b5118d` |
 | [`docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md`](../docs/spec/AGENT_WORKFLOW_RUNTIME_PARITY_v0.1.md) | Agent Workflow Runtime Parity v0.1 | md | `446c451ee9cf` |
 | [`docs/spec/AI_STYLE.md`](../docs/spec/AI_STYLE.md) | AI Style Obligation (core/obligation::ai-style) | md | `7b79fef136fd` |
-| [`docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`](../docs/spec/ASSURANCE_ARTIFACTS_v0.1.md) | Assurance Artifacts v0.1 | md | `787710037bb7` |
+| [`docs/spec/ASSURANCE_ARTIFACTS_v0.1.md`](../docs/spec/ASSURANCE_ARTIFACTS_v0.1.md) | Assurance Artifacts v0.1 | md | `17e4b0c69a4a` |
 | [`docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md`](../docs/spec/ASSURANCE_PROFILE_PACKS_v0.1.md) | Assurance Profile Packs v0.1 | md | `9f0d0b7aa98a` |
 | [`docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json`](../docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.json) | genesis/assurance-standards-crosswalk-v0.1 | json | `009f508d2c2d` |
 | [`docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md`](../docs/spec/ASSURANCE_STANDARDS_CROSSWALK_v0.1.md) | Assurance Standards Crosswalk v0.1 | md | `98644f5264ff` |
@@ -309,6 +309,8 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json`](../docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json) | GenesisCode Self-Host Closure Levels v0.1 | schema | `60dc6a4d860d` |
 | [`docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md`](../docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md) | Self-host Effect Policy Composition v0.1 | md | `720f23720fc2` |
 | [`docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json`](../docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json) | GenesisCode H2 self-host effect policy composition profile v0.1 | schema | `e9ee80a1ff29` |
+| [`docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md) | Self-hosted Evidence Verification Authority v0.1 | md | `55e44f67044a` |
+| [`docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json) | SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json | schema | `df7aa8936873` |
 | [`docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md) | Self-host Frontend Authority Profile v0.1 | md | `cbe8d5ac951d` |
 | [`docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json) | SELFHOST_FRONTEND_AUTHORITY_v0.1.schema.json | schema | `be3240d099f7` |
 | [`docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md) | Self-host Obligation Authority v0.1 | md | `17e09a2ace2c` |
@@ -328,14 +330,14 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json) | GenesisCode self-host typecheck authority profile v0.1 | schema | `94236af9fe71` |
 | [`docs/spec/SELF_HOST_BOOTSTRAP_API.md`](../docs/spec/SELF_HOST_BOOTSTRAP_API.md) | Self-Host Bootstrap API (CoreForm) v0.2 | md | `166103b6bfba` |
 | [`docs/spec/SELF_HOST_BOUNDARY.md`](../docs/spec/SELF_HOST_BOUNDARY.md) | Self-Host Boundary (WASM-First) v0.2 | md | `1fb939a04377` |
-| [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json) | genesis/semantic-ownership-ledger-v0.1 | json | `5c78f370e857` |
+| [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json) | genesis/semantic-ownership-ledger-v0.1 | json | `515b7d22ca66` |
 | [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md) | Semantic Ownership Ledger v0.1 | md | `b9a7a8e55acb` |
 | [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json) | GenesisCode Semantic Ownership Ledger v0.1 | schema | `c3bc52735a9d` |
 | [`docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md`](../docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md) | Semantic Patch Apply Report v0.1 | md | `fafb159d4bc3` |
 | [`docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md`](../docs/spec/SEMANTIC_PATCH_DIFF_v0.1.md) | Semantic Patch Diff v0.1 | md | `0fdc26984fb0` |
 | [`docs/spec/SEMANTIC_PATCH_MERGE_v0.1.md`](../docs/spec/SEMANTIC_PATCH_MERGE_v0.1.md) | Semantic Patch Merge v0.1 | md | `fd30c12483a9` |
 | [`docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md`](../docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md) | Semantic Refactor Plan v0.1 | md | `4c194bc195a8` |
-| [`docs/spec/SIGNING.md`](../docs/spec/SIGNING.md) | Acceptance Signing (v0.2) | md | `4df8ed7ee3ad` |
+| [`docs/spec/SIGNING.md`](../docs/spec/SIGNING.md) | Acceptance Signing (v0.2) | md | `4d0fb9fe42c2` |
 | [`docs/spec/SOURCE_SIZE_BUDGET_v0.1.md`](../docs/spec/SOURCE_SIZE_BUDGET_v0.1.md) | Source Size Budget v0.1 | md | `f31895d3ca19` |
 | [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json) | genesis/stage0-dependency-boundary-v0.1 | json | `c27e360a688d` |
 | [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md) | Stage0 Dependency Boundary v0.1 | md | `a332218b90c8` |
@@ -351,7 +353,7 @@ toc-depth: 2
 | [`docs/spec/TEXT_PATH_PROFILE_v0.1.md`](../docs/spec/TEXT_PATH_PROFILE_v0.1.md) | Text and Path Profile v0.1 | md | `cd0395b98818` |
 | [`docs/spec/TEXT_PATH_PROFILE_v0.1.schema.json`](../docs/spec/TEXT_PATH_PROFILE_v0.1.schema.json) | GenesisCode Text and Path Profile v0.1 | schema | `6f272086440e` |
 | [`docs/spec/TRANSLATION_VALIDATION.md`](../docs/spec/TRANSLATION_VALIDATION.md) | Translation Validation Obligation v0.2 | md | `66e5e55bfa9e` |
-| [`docs/spec/TRANSPARENCY_LOG.md`](../docs/spec/TRANSPARENCY_LOG.md) | Transparency Log (Local) (v0.2) | md | `e66eae9a3fe1` |
+| [`docs/spec/TRANSPARENCY_LOG.md`](../docs/spec/TRANSPARENCY_LOG.md) | Transparency Log (Local) (v0.2) | md | `458693a398e0` |
 | [`docs/spec/TYPES.md`](../docs/spec/TYPES.md) | Type Terms and Typechecking v0.2 | md | `dbdb58504d5b` |
 | [`docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json`](../docs/spec/V1_COMPATIBILITY_REGISTRY_v0.1.schema.json) | GenesisCode v1 Compatibility Registry v0.1 | schema | `2b3762c7a737` |
 | [`docs/spec/VALUE_EFFECT_HASH.md`](../docs/spec/VALUE_EFFECT_HASH.md) | Runtime Value Graph, Lifetime, and Hashing v0.2 | md | `bc9c851116e4` |
@@ -375,5 +377,5 @@ toc-depth: 2
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
 | [`docs/status/REDTEAM_REPORT.md`](../docs/status/REDTEAM_REPORT.md) | GenesisCode Red-Team Report (P0/P1 Active Risk Summary) | md | `0dcf6b9b6ab4` |
-| [`docs/status/SELFHOST_AUTHORITY_v0.1.md`](../docs/status/SELFHOST_AUTHORITY_v0.1.md) | GenesisCode Semantic Selfhost Authority Status v0.1 | md | `6a5573dfb525` |
+| [`docs/status/SELFHOST_AUTHORITY_v0.1.md`](../docs/status/SELFHOST_AUTHORITY_v0.1.md) | GenesisCode Semantic Selfhost Authority Status v0.1 | md | `b806cbce1802` |
 | [`docs/status/SELFHOST_CUTOVER.md`](../docs/status/SELFHOST_CUTOVER.md) | Selfhost Cutover Dashboard (v0.2) | md | `e0054083f235` |

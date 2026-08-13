@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "2315cd4cada4c7b8bc2c5a946563cd1d2b4aaa9383b6f53bf4d80837e3efc51f",
+  "contentIdentitySha256": "e21b1364045be33cbc3f998321612c6e70d814ba562b2bd622cd0352afd915bc",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1699,37 +1699,55 @@
         "bench/*",
         "sign"
       ],
-      "currentLevel": null,
+      "currentLevel": "H0",
       "fallbackReachability": "host-authoritative",
-      "hostBindingPaths": [],
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src/cmd_bench.rs",
+        "crates/gc_cli_driver/src/cmd_security_ops.rs",
+        "crates/gc_obligations/src/evidence_verify_authority.rs",
+        "crates/gc_obligations/src/transparency.rs",
+        "crates/gc_obligations/src/verify.rs"
+      ],
       "id": "SD-EVIDENCE-VERIFY",
       "internalOnly": false,
       "limitations": [
-        "Independent verifier exists for evidence envelopes, not all production semantic decisions"
+        "Filesystem, content-addressed store access, hashing, Ed25519, and codecs remain bounded host mechanisms; package lock and resolution authority is tracked separately",
+        "Package dependency integrity, acceptance/signature schema extraction, store-integrity booleans, and key-policy admission remain host-semantic inputs, so the package phase is not H1/H2",
+        "The standalone evidence verifier remains an independent corroborator and cannot authorize or replace production GenesisCode verdicts"
       ],
       "migrationTasks": [
         "R4.2.d"
       ],
       "producingImplementationPaths": [
-        "crates/gc_obligations/src",
-        "tools/genesis-evidence-verifier"
+        "selfhost/evidence_verify_authority_v1.gc",
+        "crates/gc_obligations/src/verify.rs"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_cli_driver/src/cmd_security_ops.rs"
+        "selfhost/toolchain.gc",
+        "selfhost/evidence_verify_authority_v1.gc",
+        "crates/gc_obligations/src/verify.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md"
+        "docs/spec/ASSURANCE_ARTIFACTS_v0.1.md",
+        "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md",
+        "docs/spec/SIGNING.md",
+        "docs/spec/TRANSPARENCY_LOG.md"
       ],
       "stage0Domains": [
         "S0-A"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/release_evidence_regressions.rs"
+        "crates/gc_cli/tests/cli_genesisbench_registry.rs",
+        "crates/gc_cli/tests/cli_smoke.rs",
+        "crates/gc_cli/tests/release_evidence_regressions.rs",
+        "crates/gc_obligations/src/evidence_verify_authority.rs"
       ],
       "title": "Evidence, signature, transparency, package, and run verification",
       "verifierPaths": [
-        "scripts/check_genesis_evidence_verifier.sh"
+        "scripts/check_genesis_evidence_verifier.sh",
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/lib/selfhost_evidence_verify_authority.py"
       ]
     },
     {
