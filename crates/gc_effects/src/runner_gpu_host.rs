@@ -51,7 +51,10 @@ pub(crate) fn gpu_host_call(
         return None;
     }
     if !has_explicit_bridge_profile(pol) {
-        let backend_kind = gpu_backend_kind(pol);
+        let backend_kind = match gpu_backend_kind(pol) {
+            Ok(kind) => kind,
+            Err(message) => return Some(gpu_policy_error(error_tok, op, message)),
+        };
         if backend_kind != GpuBackendKind::FirstParty
             && gpu_op_prefers_device_backend(op, backend_kind)
         {
@@ -59,7 +62,8 @@ pub(crate) fn gpu_host_call(
                 match call_device_backend(&mut runtime.device_resources, op, payload) {
                     Ok(resp) => Value::data(resp),
                     Err(err) => match gpu_backend_fallback_policy(pol) {
-                        GpuBackendFallbackPolicy::RequireDevice => mk_error(
+                        Err(message) => gpu_policy_error(error_tok, op, message),
+                        Ok(GpuBackendFallbackPolicy::RequireDevice) => mk_error(
                             error_tok,
                             &BridgeError {
                                 code: err.code,
@@ -67,7 +71,7 @@ pub(crate) fn gpu_host_call(
                             },
                             Some(op),
                         ),
-                        GpuBackendFallbackPolicy::AllowFallback => {
+                        Ok(GpuBackendFallbackPolicy::AllowFallback) => {
                             let fallback = first_party_gpu_response(runtime, op, payload);
                             let decorated = inject_backend_fallback_metadata(
                                 fallback,
@@ -87,6 +91,17 @@ pub(crate) fn gpu_host_call(
             Ok(resp) => Value::data(resp),
             Err(err) => mk_error(error_tok, &err, Some(op)),
         },
+    )
+}
+
+fn gpu_policy_error(error_tok: SealId, op: &str, message: String) -> Value {
+    mk_error(
+        error_tok,
+        &BridgeError {
+            code: "gpu/backend-policy".to_string(),
+            message,
+        },
+        Some(op),
     )
 }
 

@@ -336,17 +336,18 @@
 (def core/effects::policy-authority
   (fn (request)
     (if (selfhost/policy::map? request)
-      (if ((core/int::eq? (core/map::len request)) 6)
+      (if ((core/int::eq? (core/map::len request)) 7)
         (let
           ((kind ((core/map::get request) (quote :kind)))
             (version ((core/map::get request) (quote :v)))
             (baseline ((core/map::get request) (quote :baseline)))
+            (gpu-policy ((core/map::get request) (quote :gpu-policy)))
             (op ((core/map::get request) (quote :op)))
             (override ((core/map::get request) (quote :override)))
             (platform-max ((core/map::get request) (quote :platform-max-bytes))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.15")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 15) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.16")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 16) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -356,7 +357,10 @@
                     false)
                   false)
                 false)
-              (if (selfhost/effect-policy::override-valid? override)
+              (if
+                (if (selfhost/effect-policy::override-valid? override)
+                  (selfhost/effect-gpu::input-valid? gpu-policy)
+                  false)
                 (let ((allowed (((selfhost/effect-policy::allowed? baseline) op) override)))
                   (if (core/error::is? allowed)
                     allowed
@@ -385,7 +389,11 @@
                         (if allowed
                           ((selfhost/effect-ffi::policy override) platform-max)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.15"
+                      :gpu-policy
+                        (if allowed
+                          (selfhost/effect-gpu::policy gpu-policy)
+                          nil)
+                      :kind "genesis/effect-policy-authority-result-v0.16"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -404,7 +412,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 15}))
+                      :v 16}))
                 ((core/error::make2 "core/policy/authority")
                   "effect-policy override must contain exactly the closed typed policy fields"))
               ((core/error::make2 "core/policy/authority")
@@ -412,5 +420,5 @@
             ((core/error::make2 "core/policy/authority")
               "effect-policy authority request identity mismatch")))
         ((core/error::make2 "core/policy/authority")
-          "effect-policy authority request must contain exactly six fields"))
+          "effect-policy authority request must contain exactly seven fields"))
       ((core/error::make2 "core/policy/authority") "effect-policy authority request must be a map"))))

@@ -1,0 +1,49 @@
+(def selfhost/effect-gpu::input-valid?
+  (fn (value)
+    (if
+      ((selfhost/effect-policy::exact-map? value)
+        [:backend :fallback-default :fallback-override])
+      (if (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :backend)))
+        (if (selfhost/effect-network::optional-string-input?
+              ((core/map::get value) (quote :fallback-default)))
+          (selfhost/effect-network::optional-string-input?
+            ((core/map::get value) (quote :fallback-override)))
+          false)
+        false)
+      false)))
+
+(def selfhost/effect-gpu::normalized-string
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (selfhost/effect-crypto::ascii-lower (selfhost/policy::trim raw))
+      "")))
+
+(def selfhost/effect-gpu::backend-policy
+  (fn (raw)
+    (let ((normalized (selfhost/effect-gpu::normalized-string raw)))
+      (if ((core/eq? normalized) "device-runtime")
+        (quote :device-runtime)
+        (if ((core/eq? normalized) "device-runtime-full")
+          (quote :device-runtime-full)
+          (quote :first-party-runtime))))))
+
+(def selfhost/effect-gpu::fallback-policy
+  (fn (raw)
+    (if ((core/eq? (selfhost/effect-gpu::normalized-string raw)) "require-device")
+      (quote :require-device)
+      (quote :allow-fallback))))
+
+(def selfhost/effect-gpu::policy
+  (fn (input)
+    (let
+      ((fallback-override ((core/map::get input) (quote :fallback-override))))
+      {
+        :backend
+          (selfhost/effect-gpu::backend-policy
+            ((core/map::get input) (quote :backend)))
+        :fallback
+          (selfhost/effect-gpu::fallback-policy
+            (if (selfhost/policy::str? fallback-override)
+              fallback-override
+              ((core/map::get input) (quote :fallback-default))))})))

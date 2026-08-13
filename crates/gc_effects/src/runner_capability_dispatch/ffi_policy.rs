@@ -121,6 +121,7 @@ mod tests {
             authorized_database: None,
             authorized_network: None,
             authorized_crypto: None,
+            authorized_gpu: None,
             authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: Some(ffi),

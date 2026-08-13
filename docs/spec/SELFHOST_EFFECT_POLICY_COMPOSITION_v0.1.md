@@ -39,6 +39,10 @@ filtering, transport-mode selection and invalid-mode classification, and
 configured WASI-profile activation. It owns whether an explicit bridge profile
 is active from the command, inline WASI response, WASI response file, or WASI
 profile fields; every first-party-versus-bridge branch consumes that closed fact.
+For `gpu/compute::*` and `gfx/gpu::*`, it also owns canonical GPU backend
+selection and device-error fallback policy, including explicit-over-host-default
+precedence. Device operation applicability, discovery and execution, fallback
+response decoration, and resource lifecycle remain host mechanisms.
 Allowlist matching, command path resolution,
 executable hashing and digest comparison, schema validation, bridge transport
 execution, cancellation, and model-provider lifecycle remain host mechanisms.
@@ -66,14 +70,23 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 
 ## Closed Protocol
 
-Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.15`, version `15`, the operation string,
+Each request is a closed seven-field map with kind
+`genesis/effect-policy-authority-request-v0.16`, version `16`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
 `:timeout-ms`, `:log-inline-max-bytes`, `:max-bytes`, `:process-programs`,
 `:database-policy`, `:network-policy`, `:crypto-policy`, `:plugin-policy`,
 `:ffi-policy`, and `:bridge-identity-policy`.
+The top-level `:gpu-policy` observation is an exact three-field map containing
+`:backend`, `:fallback-override`, and `:fallback-default`. The first two carry
+the exact configured string, `nil`, or `:invalid-type`; the default carries the
+exact host-observed `GENESIS_GPU_BACKEND_POLICY_DEFAULT` string or `nil`.
+GenesisCode trims and ASCII-lowercases these observations, recognizes only the
+three documented backend values, preserves explicit-over-default fallback
+precedence, and maps unsupported values to the compatibility defaults. The
+request hash binds the ambient default observation used for the decision, so the
+runtime consumer never rereads the environment.
 The nested database map has exactly `:target-allow`, `:query-classes`,
 `:max-result-bytes`, `:max-row-count`, and `:max-value-bytes`. The base directory is
 `nil` or the exact configured string. Missing optional fields use `nil`. A TOML
@@ -138,13 +151,14 @@ host rejects malformed, oversized, duplicate, unsorted, substituted, or
 oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
-The authority returns a closed fifteen-field
-`genesis/effect-policy-authority-result-v0.15` map containing the exact operation,
+The authority returns a closed sixteen-field
+`genesis/effect-policy-authority-result-v0.16` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
 private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`, private
-`:bridge-identity-policy`, lowercase canonical request hash, and version `15`.
+`:bridge-identity-policy`, private `:gpu-policy`, lowercase canonical request
+hash, and version `16`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -160,7 +174,7 @@ the closed positive-limit state above. Only valid lists carry nonempty trimmed
 strings, and only valid bounds carry positive platform-sized integers. Denied
 operations must carry no base directory, capability, byte policy,
 process-program policy, database policy, network policy, crypto policy, plugin
-policy, FFI policy, or bridge identity policy. The network result preserves independent URL and remote list states,
+policy, FFI policy, GPU policy, or bridge identity policy. The network result preserves independent URL and remote list states,
 closed optional boolean/string
 states, a closed bind-port state (`:absent`, `:invalid-type`, `:invalid-entry`,
 `:out-of-range`, `:empty`, or `:valid`), and a closed request-byte bound. Only a
@@ -197,20 +211,25 @@ configured command, inline WASI response, or WASI response-file string is
 nonempty after trimming, or the configured WASI profile is literal true.
 Transport is an exact `{:status ... :value ...}` state: `:spawn-per-op` and
 `:persistent-stdio` carry `nil`, while only `:invalid` carries a canonical
-nonempty token that is neither supported mode. The host rejects unknown fields,
+nonempty token that is neither supported mode.
+The GPU result is an exact `{:backend ... :fallback ...}` map. Backend is exactly
+`:first-party-runtime`, `:device-runtime`, or `:device-runtime-full`; fallback is
+exactly `:allow-fallback` or `:require-device`.
+The host rejects unknown fields,
 identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
 noncanonical false/zero/negative/overflowing controls, contradictory status/limit
 pairs, noncanonical or contradictory process-program, database, network, crypto,
-plugin, FFI, or bridge identity states, operation substitution inside the
+plugin, FFI, GPU, or bridge identity states, operation substitution inside the
 capability, and any result that contradicts its retained compatibility oracle.
 After validation, the host
 installs the GenesisCode-selected base directory, create-directories flag,
 timeout, per-operation log limit, closed max-byte state, closed normalized
 process-program state, closed database allowlist/bound states, closed network
 allowlist/option/bind/bound states, closed crypto allowlist/bound states, and
-closed plugin and FFI allowlist/bound/signed-metadata states plus the closed
-bridge activation, command allowlist, command, arguments, transport, WASI profile, digest
+closed plugin and FFI allowlist/bound/signed-metadata states plus the closed GPU
+backend/fallback decision and bridge activation, command allowlist, command,
+arguments, transport, WASI profile, digest
 requirement, and canonical digest into enforcement; its separately parsed values
 are used only by the compatibility oracle.
 
@@ -326,6 +345,13 @@ bridge path. Those consumers do not reread command, WASI response, response-file
 or WASI-profile fields; a present operation policy without authority enters the
 bridge path and fails through the existing sealed bridge-policy boundary rather
 than silently selecting a local backend.
+GPU dispatch additionally consumes only the installed backend/fallback decision;
+it does not reread `gpu_backend`, `gpu_backend_policy`, or
+`GENESIS_GPU_BACKEND_POLICY_DEFAULT`. A present operation policy without GPU
+authority returns a sealed `gpu/backend-policy` error instead of silently
+selecting the in-memory runtime. Rust still decides which operations each device
+backend implements and performs device calls, error transport, and fallback
+response decoration.
 FFI dispatch consumes installed GenesisCode ABI-ID, library, symbol, optional
 schema-ID, buffer-bound, call-payload-bound, and closed signed-policy states
 plus the installed bridge command allowlist, digest requirement, canonical
@@ -391,6 +417,13 @@ closed bridge-active decision used by every first-party-versus-bridge branch.
 Executable path resolution, transport execution, hashing and digest comparison,
 schema implementation, matching, model-provider lifecycle, cancellation, and
 replay remain in the named host residuals.
+GPU backend and fallback policy configuration is no longer residual: GenesisCode
+owns normalization, canonical backend selection, explicit-over-default
+precedence, and fail-open/fail-closed selection. The
+`device-and-graphics-policy` residual still covers GFX first-party profile
+selection, XR backend/profile and haptics policy, GPU device-operation
+applicability, and device/graphics execution and lifecycle; this partial slice
+does not claim those mechanisms moved into GenesisCode.
 FFI allowlist, byte-bound, and signed-policy admission is no longer residual: GenesisCode
 owns ABI-ID, library, symbol, optional schema-ID, buffer-size, and call-payload
 states across all three FFI operations. It also owns malformed opt-in rejection,

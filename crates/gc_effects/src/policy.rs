@@ -256,6 +256,25 @@ pub(crate) struct AuthorizedBridgeIdentityPolicy {
     pub wasi_profile: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AuthorizedGpuBackend {
+    FirstParty,
+    DeviceRuntimeSubmitIntrospection,
+    DeviceRuntimeFullLifecycle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AuthorizedGpuFallback {
+    AllowFallback,
+    RequireDevice,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AuthorizedGpuPolicy {
+    pub backend: AuthorizedGpuBackend,
+    pub fallback: AuthorizedGpuFallback,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum AuthorizedFfiSignedPolicy {
     Disabled,
@@ -303,6 +322,7 @@ pub struct OpPolicy {
     pub(crate) authorized_database: Option<AuthorizedDatabasePolicy>,
     pub(crate) authorized_network: Option<AuthorizedNetworkPolicy>,
     pub(crate) authorized_crypto: Option<AuthorizedCryptoPolicy>,
+    pub(crate) authorized_gpu: Option<AuthorizedGpuPolicy>,
     pub(crate) authorized_bridge_identity: Option<AuthorizedBridgeIdentityPolicy>,
     pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
     pub(crate) authorized_ffi: Option<AuthorizedFfiPolicy>,
@@ -428,6 +448,7 @@ impl CapsPolicy {
                         authorized_database: None,
                         authorized_network: None,
                         authorized_crypto: None,
+                        authorized_gpu: None,
                         authorized_bridge_identity: None,
                         authorized_plugin: None,
                         authorized_ffi: None,
@@ -445,10 +466,15 @@ impl CapsPolicy {
 
         // Compatibility parsing materializes an explicit state; production file
         // loads replace and verify it through the self-host authority.
+        let gpu_default = policy_authority::observed_gpu_default();
         for (op, op_policy) in &mut ops {
             op_policy.authorized_bridge_identity = Some(
                 policy_authority::legacy_bridge_identity_policy(op, Some(op_policy)),
             );
+            op_policy.authorized_gpu = Some(policy_authority::legacy_gpu_policy(
+                Some(op_policy),
+                gpu_default.as_deref(),
+            ));
             op_policy.authorized_ffi = Some(policy_authority::legacy_ffi_policy(Some(op_policy)));
         }
 

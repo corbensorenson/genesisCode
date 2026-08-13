@@ -336,6 +336,7 @@ mod authority_tests {
             authorized_database: None,
             authorized_network: None,
             authorized_crypto: None,
+            authorized_gpu: None,
             authorized_bridge_identity: Some(AuthorizedBridgeIdentityPolicy {
                 active: false,
                 allowlist: AuthorizedBridgeAllowlist::Absent,

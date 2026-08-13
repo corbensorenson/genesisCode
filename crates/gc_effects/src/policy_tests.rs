@@ -1,9 +1,9 @@
 use super::{
     AuthorizedBindPorts, AuthorizedBridgeAllowlist, AuthorizedBridgeDigest,
     AuthorizedBridgeIdentityPolicy, AuthorizedBridgeTransport, AuthorizedDatabasePolicy,
-    AuthorizedFfiSignedPolicy, AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool,
-    AuthorizedOptionalString, AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy,
-    AuthorizedStringList, CapsPolicy,
+    AuthorizedFfiSignedPolicy, AuthorizedGpuBackend, AuthorizedGpuFallback, AuthorizedGpuPolicy,
+    AuthorizedMaxBytes, AuthorizedNetworkPolicy, AuthorizedOptionalBool, AuthorizedOptionalString,
+    AuthorizedProcessPrograms, AuthorizedStoreRemotePolicy, AuthorizedStringList, CapsPolicy,
 };
 use gc_coreform::{Term, TermOrdKey};
 use gc_prelude::SelfhostBootstrapMode;
@@ -96,6 +96,16 @@ fn bridge_identity_policy_term(digest: Term, pin_required: Term) -> Term {
             optional_value_policy(":spawn-per-op", Term::Nil),
         ),
         (TermOrdKey(Term::symbol(":wasi-profile")), Term::Bool(false)),
+    ]))
+}
+
+fn gpu_policy_term(backend: &str, fallback: &str) -> Term {
+    Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":backend")), Term::symbol(backend)),
+        (
+            TermOrdKey(Term::symbol(":fallback")),
+            Term::symbol(fallback),
+        ),
     ]))
 }
 
@@ -1542,6 +1552,135 @@ fn selfhost_authority_rejects_malformed_bridge_invocation_decisions() {
         decode_bridge_identity_policy(&Term::Map(malformed), "host/plugin::command", true)
             .expect_err("malformed bridge invocation decision must fail closed");
     }
+}
+
+#[test]
+fn selfhost_authority_installs_normalized_gpu_policy() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."gpu/compute::limits"]
+gpu_backend = " Device-Runtime "
+gpu_backend_policy = " REQUIRE-DEVICE "
+
+[op."gfx/gpu::features"]
+gpu_backend = " device-runtime-full "
+gpu_backend_policy = " dev-allow-fallback "
+
+[op."gpu/compute::submit"]
+gpu_backend = "device-bridge"
+gpu_backend_policy = "unknown"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+
+    let cases = [
+        (
+            "gpu/compute::limits",
+            AuthorizedGpuPolicy {
+                backend: AuthorizedGpuBackend::DeviceRuntimeSubmitIntrospection,
+                fallback: AuthorizedGpuFallback::RequireDevice,
+            },
+        ),
+        (
+            "gfx/gpu::features",
+            AuthorizedGpuPolicy {
+                backend: AuthorizedGpuBackend::DeviceRuntimeFullLifecycle,
+                fallback: AuthorizedGpuFallback::AllowFallback,
+            },
+        ),
+        (
+            "gpu/compute::submit",
+            AuthorizedGpuPolicy {
+                backend: AuthorizedGpuBackend::FirstParty,
+                fallback: AuthorizedGpuFallback::AllowFallback,
+            },
+        ),
+    ];
+    for (op, expected) in cases {
+        assert_eq!(policy.op_policy(op).unwrap().authorized_gpu, Some(expected));
+    }
+}
+
+#[test]
+fn selfhost_authority_binds_observed_gpu_fallback_default() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        "[op.\"gpu/compute::limits\"]\ngpu_backend = \"device-runtime\"\n",
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let expected_fallback = match std::env::var("GENESIS_GPU_BACKEND_POLICY_DEFAULT")
+        .ok()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
+        "require-device" => AuthorizedGpuFallback::RequireDevice,
+        _ => AuthorizedGpuFallback::AllowFallback,
+    };
+    assert_eq!(
+        policy
+            .op_policy("gpu/compute::limits")
+            .unwrap()
+            .authorized_gpu,
+        Some(AuthorizedGpuPolicy {
+            backend: AuthorizedGpuBackend::DeviceRuntimeSubmitIntrospection,
+            fallback: expected_fallback,
+        })
+    );
+}
+
+#[test]
+fn selfhost_authority_rejects_malformed_gpu_decisions() {
+    use super::policy_authority::{decode_gpu_policy, legacy_gpu_policy};
+
+    assert_eq!(
+        legacy_gpu_policy(None, Some(" REQUIRE-DEVICE ")),
+        AuthorizedGpuPolicy {
+            backend: AuthorizedGpuBackend::FirstParty,
+            fallback: AuthorizedGpuFallback::RequireDevice,
+        }
+    );
+    let valid = gpu_policy_term(":device-runtime", ":require-device");
+    assert_eq!(
+        decode_gpu_policy(&valid, true).unwrap(),
+        AuthorizedGpuPolicy {
+            backend: AuthorizedGpuBackend::DeviceRuntimeSubmitIntrospection,
+            fallback: AuthorizedGpuFallback::RequireDevice,
+        }
+    );
+    for malformed in [
+        gpu_policy_term(":device", ":require-device"),
+        gpu_policy_term(":device-runtime", ":fallback"),
+        Term::Nil,
+    ] {
+        decode_gpu_policy(&malformed, true)
+            .expect_err("malformed GPU authority decision must fail closed");
+    }
+    decode_gpu_policy(&valid, false).expect_err("denied GPU authority decision must be nil");
+    let Term::Map(mut extra) = valid else {
+        return;
+    };
+    extra.insert(TermOrdKey(Term::symbol(":unknown")), Term::Nil);
+    decode_gpu_policy(&Term::Map(extra), true)
+        .expect_err("open GPU authority decision must fail closed");
 }
 
 #[test]
