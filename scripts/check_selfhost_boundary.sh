@@ -219,6 +219,14 @@ python3 scripts/lib/selfhost_pkg_lock_ops_authority.py \
   --schema docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e bridge object authority is partial: GenesisCode owns the complete
+# object/signing graph; storage, Ed25519, lock, and registry mechanisms remain H0.
+python3 scripts/lib/selfhost_pkg_bridge_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_bridge_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.e package identity is partial: GenesisCode owns canonical requirement
 # fingerprints; selector parsing, graph solving, and registry mechanisms remain H0.
 python3 scripts/lib/selfhost_pkg_resolution_identity_authority.py \

@@ -13,6 +13,9 @@ pub(crate) use model::PkgLockModelDecision;
 #[path = "pkg_lock_ops_authority.rs"]
 mod ops;
 pub(crate) use ops::{PkgBridgeLockFacts, PkgLockOpsDecision};
+#[path = "pkg_bridge_authority.rs"]
+mod bridge;
+pub(crate) use bridge::{PkgBridgeDecision, PkgBridgeFacts, PkgBridgeObject};
 
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";
@@ -25,6 +28,7 @@ pub(crate) struct PkgLockReadAuthority {
     authority: Value,
     model_authority: Option<Value>,
     ops_authority: Option<Value>,
+    bridge_authority: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -34,7 +38,7 @@ pub(crate) enum PkgLockReadDecision {
 }
 
 impl PkgLockReadAuthority {
-    pub(crate) fn required_for_request(op: &str, payload: &Term) -> bool {
+    pub(crate) fn required_for_request(op: &str, _payload: &Term) -> bool {
         matches!(
             op,
             "core/pkg-low::load-lock"
@@ -47,14 +51,6 @@ impl PkgLockReadAuthority {
                 | "core/pkg-low::install"
                 | "core/pkg-low::verify"
         ) || op == "core/pkg-low::bridge"
-            && matches!(
-                payload,
-                Term::Map(fields)
-                    if matches!(
-                        fields.get(&TermOrdKey(Term::symbol(":lock"))),
-                        Some(Term::Str(_))
-                    )
-            )
     }
 
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
@@ -81,6 +77,7 @@ impl PkgLockReadAuthority {
             .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
         let model_authority = environment.get(model::MODEL_BINDING);
         let ops_authority = environment.get(ops::OPS_BINDING);
+        let bridge_authority = environment.get(bridge::BRIDGE_BINDING);
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
@@ -88,6 +85,7 @@ impl PkgLockReadAuthority {
             authority,
             model_authority,
             ops_authority,
+            bridge_authority,
         })
     }
 
@@ -522,16 +520,16 @@ rationale = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     }
 
     #[test]
-    fn bridge_requires_authority_only_for_string_lock_requests() {
+    fn bridge_always_requires_object_authority() {
         assert!(PkgLockReadAuthority::required_for_request(
             "core/pkg-low::bridge",
             &map([(":lock", Term::Str("genesis.lock".to_string()))]),
         ));
-        assert!(!PkgLockReadAuthority::required_for_request(
+        assert!(PkgLockReadAuthority::required_for_request(
             "core/pkg-low::bridge",
             &map([]),
         ));
-        assert!(!PkgLockReadAuthority::required_for_request(
+        assert!(PkgLockReadAuthority::required_for_request(
             "core/pkg-low::bridge",
             &map([(":lock", Term::Int(1.into()))]),
         ));

@@ -77,6 +77,7 @@
     "selfhost/pkg_lock_write_authority_v1.gc"
     "selfhost/pkg_lock_ops_authority_v1.gc"
     "selfhost/pkg_resolution_identity_authority_v1.gc"
+    "selfhost/pkg_bridge_authority_v1.gc"
     "selfhost/signing_authority_v1.gc"
     "selfhost/evidence_verify_package_v1.gc"
     "selfhost/evidence_verify_authority_v1.gc"
@@ -172,6 +173,7 @@
     core/store::verify-authority
     core/commit::authority
     core/pkg::lock-ops-authority
+    core/pkg::bridge-authority
     core/cli::obligation-authority
   ]
 }

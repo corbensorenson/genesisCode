@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `3e6e17860fbaa1e5b884e71c7484c721e82ba96fce6bbb3d71b81e8a29ba5625`
-- Freshness artifact hash: `3e6e17860fbaa1e5b884e71c7484c721e82ba96fce6bbb3d71b81e8a29ba5625`
-- Freshness source hash: `790709a142667830941aeae4a746aac32f27f7aa1b1ecf7665c90b51ac72b4d1`
-- Source aggregate hash (module path + module sha256): `d3c271daeef0a6c73fb10302dccabd0ac33c288d3e6b6a3164923f2b9b1c53e2`
+- Artifact sha256: `75736cd6d052c865fc93ab21e94fb7f7b34c23a7a005acc9bedf8c1ee19650ba`
+- Freshness artifact hash: `75736cd6d052c865fc93ab21e94fb7f7b34c23a7a005acc9bedf8c1ee19650ba`
+- Freshness source hash: `1a9bf43648d834a0807f9eae4daad0b589162c6ebd9f2c3d5a1ff21f271575c5`
+- Source aggregate hash (module path + module sha256): `f875445b280c0054ad9befddf86cae87ba4fc4f12c3fb4716f692cec24c5ba83`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `94`
+- Module count: `95`
 
 ## Module Summary
 
@@ -91,6 +91,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
 | `selfhost/pkg_lock_ops_authority_v1.gc` | 476 | 21921 | 29 | `e377f0f028d2d6fb` |
 | `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
+| `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -188,6 +189,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`
 - `selfhost/pkg_lock_ops_authority_v1.gc`: `selfhost/pkg-lock-ops::result`, `selfhost/pkg-lock-ops::reject`, `selfhost/pkg-lock-ops::accept-write`, `selfhost/pkg-lock-ops::accept-value`, `selfhost/pkg-lock-ops::writer-locked-entry`, `selfhost/pkg-lock-ops::writer-locked-loop`, `selfhost/pkg-lock-ops::writer-locked`, `selfhost/pkg-lock-ops::writer-payload`
 - `selfhost/pkg_resolution_identity_authority_v1.gc`: `selfhost/pkg-resolution-id::tag`, `selfhost/pkg-resolution-id::map?`, `selfhost/pkg-resolution-id::str?`, `selfhost/pkg-resolution-id::sym?`, `selfhost/pkg-resolution-id::int?`, `selfhost/pkg-resolution-id::nil?`, `selfhost/pkg-resolution-id::map-has-key-loop?`, `selfhost/pkg-resolution-id::map-has-keys-loop?`
+- `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

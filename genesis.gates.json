@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "c10a431c6d239af7dfd06368bab0b3968d396280e37923e082c17cf748be5409",
+      "inputIdentitySha256": "3d8f85a21212176d7f222e2ec7658a718b56bf1ccfe2b9b313a758fbc8c4c698",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -569,7 +569,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "f30701680727882fbf1a7b6a431463cb03fe5cd143882d706267e37fea967bd9",
+      "inputIdentitySha256": "d6e1f0a09f0aa995267e24501e932ea34199132b0bee16d6018c07fe0484ad16",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1153,6 +1153,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -1191,6 +1192,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -1240,6 +1242,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -1538,6 +1542,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -1708,6 +1714,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -1955,6 +1962,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -2147,6 +2155,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -2470,7 +2479,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "918ef06edddb31ae663b8a4f1ff3f781a51de96425b1ab39a7482638477247e0",
+      "inputIdentitySha256": "0a25354fa60665cdf3634ac4517761818d55ea2c9e3358ef70c670c00342a49c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2598,7 +2607,7 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "e10fe0a90abfdacc1606f7c6a0becf64a082e4384dfd3266771f57dbc57d2362",
+      "inputIdentitySha256": "f24268855624738835a0041d7c38e24302227bd4a3a564c216c383d1bc3ba3d7",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -2669,7 +2678,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2834,6 +2843,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -2872,6 +2882,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -2921,6 +2932,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -3219,6 +3232,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -3389,6 +3404,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -3636,6 +3652,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -3828,6 +3845,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -4046,7 +4064,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4211,6 +4229,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -4249,6 +4268,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -4298,6 +4318,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -4596,6 +4618,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -4766,6 +4790,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -5013,6 +5038,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -5205,6 +5231,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -5298,7 +5325,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5463,6 +5490,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -5501,6 +5529,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -5550,6 +5579,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -5848,6 +5879,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -6018,6 +6051,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -6265,6 +6299,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -6457,6 +6492,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -6538,7 +6574,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "f7b435e64d0617668a79383a934623561a8a3a5d9c99d088226fa6964dcdf522",
+      "inputIdentitySha256": "698dfd70ebbe6fa043dfdca7a6cfce904415ccf6ec0ac7224717d9bba4b69407",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -6629,7 +6665,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6794,6 +6830,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -6832,6 +6869,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -6881,6 +6919,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -7179,6 +7219,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -7349,6 +7391,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -7596,6 +7639,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -7788,6 +7832,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -8169,7 +8214,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "cea03350a89cbca81acbc4e5eefd711955a0cd29199625abd550fdbc02de449f",
+      "inputIdentitySha256": "dff5db00b8909f33f46072d48bf48238a200a06e8af8501ef4d81b45b33771d8",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8384,7 +8429,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "726b8068f937a7455496a9406391372004ca9927aa6dddd9cd4619caac6fb35f",
+      "inputIdentitySha256": "a9894ff5a6abe85553a366d233e8758c17f93a53de97862ed5784eea8d08afb6",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8452,7 +8497,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -8617,6 +8662,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -8655,6 +8701,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -8704,6 +8751,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -9002,6 +9051,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -9172,6 +9223,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -9419,6 +9471,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -9611,6 +9664,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -9849,7 +9903,7 @@
       "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "5f6e36527c460d3d949ee15dc2e974212df6a238b43f996949e5c7763ddec73b",
+      "inputIdentitySha256": "60b262dffbca7754de219f195dbc35f39d665be858f9bff3a5e9cc48ce5cf337",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -9992,7 +10046,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "e60c53931baeb4aefbacba06617c9e668ecce9af7a34fb17bdac9722c96b48c1",
+      "inputIdentitySha256": "c57b7840034cf28ae96900bfa81f9269f6f75a672c8425af5b5ea512d9519e88",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10066,7 +10120,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "b19580e120d6b2d0d51b6457841aa07a956db1c70df9c7e42412ef718f831096",
+      "inputIdentitySha256": "f65b80800c0361af64ec3f901155d482f54beb2aa5ed1f49b7940d6acbfa41ea",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10111,6 +10165,7 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -10147,6 +10202,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -10187,6 +10243,8 @@
           "crates/gc_effects/src/store_authority_verify.rs",
           "crates/gc_effects/src/tests.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -10280,6 +10338,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -10355,6 +10415,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -10400,6 +10461,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -10492,6 +10554,7 @@
           "selfhost/obligation_authority_translation_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -10620,7 +10683,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "bcf955e9f6213f4d9b27bc936bff924650c673ae2f804eb768765d183b35fe62",
+      "inputIdentitySha256": "3f70becf162cc6d0114d942eea9dcfe21658b1cc72c26d412edb0f1f16c4442f",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -10807,7 +10870,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10972,6 +11035,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -11010,6 +11074,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -11059,6 +11124,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -11357,6 +11424,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -11527,6 +11596,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -11774,6 +11844,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -11966,6 +12037,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -12043,7 +12115,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "c10a431c6d239af7dfd06368bab0b3968d396280e37923e082c17cf748be5409",
+      "inputIdentitySha256": "3d8f85a21212176d7f222e2ec7658a718b56bf1ccfe2b9b313a758fbc8c4c698",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12402,7 +12474,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "c10a431c6d239af7dfd06368bab0b3968d396280e37923e082c17cf748be5409",
+      "inputIdentitySha256": "3d8f85a21212176d7f222e2ec7658a718b56bf1ccfe2b9b313a758fbc8c4c698",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12761,7 +12833,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "c10a431c6d239af7dfd06368bab0b3968d396280e37923e082c17cf748be5409",
+      "inputIdentitySha256": "3d8f85a21212176d7f222e2ec7658a718b56bf1ccfe2b9b313a758fbc8c4c698",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13120,7 +13192,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "c10a431c6d239af7dfd06368bab0b3968d396280e37923e082c17cf748be5409",
+      "inputIdentitySha256": "3d8f85a21212176d7f222e2ec7658a718b56bf1ccfe2b9b313a758fbc8c4c698",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13533,7 +13605,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "e71e9b667cd03d82c703e70740baba2201a672a50bdbfd1b23c2a58636bd2904",
+      "inputIdentitySha256": "40c0e19a37832dc8d5132fa5d9c568fc538deb73247608e3bfd5827601b19c37",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -13676,7 +13748,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13841,6 +13913,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -13879,6 +13952,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -13928,6 +14002,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -14226,6 +14302,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -14396,6 +14474,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -14643,6 +14722,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -14835,6 +14915,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -15570,7 +15651,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15735,6 +15816,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -15773,6 +15855,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -15822,6 +15905,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -16120,6 +16205,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -16290,6 +16377,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -16537,6 +16625,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -16729,6 +16818,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -16810,7 +16900,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17011,7 +17101,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17176,6 +17266,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -17214,6 +17305,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -17263,6 +17355,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -17561,6 +17655,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -17731,6 +17827,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -17978,6 +18075,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -18170,6 +18268,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -18426,7 +18525,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18834,7 +18933,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18999,6 +19098,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -19037,6 +19137,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -19086,6 +19187,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -19384,6 +19487,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -19554,6 +19659,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -19801,6 +19907,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -19993,6 +20100,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -20310,7 +20418,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "6c680a0dc25d7b5b3a301cdf8cc30f0221b02d45a92c697f9d11ba9603019a02",
+      "inputIdentitySha256": "0355b64f191d12a395d027400b529d251857fcce8d6684dccffdcfff7c54e56a",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -20367,7 +20475,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20532,6 +20640,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -20570,6 +20679,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -20619,6 +20729,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -20917,6 +21029,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -21087,6 +21201,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -21334,6 +21449,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -21526,6 +21642,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -21799,7 +21916,7 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "5f1d0201671fbc5966a57d496fee00cd2ee66df9e640efe262cf28e2802b4e43",
+      "inputIdentitySha256": "50869b4836c375fa1d7a419838eda2fce71d13a721aec79b6e1965e2a7ab4538",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -21935,7 +22052,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "af21e5fc7f9376064cd9d6019d62dda48e67185c366ed83f02b82072602400fd",
+      "inputIdentitySha256": "af5d0cc605e576a08a171a5a2fa6802ff155278a3d62e1af2f3e635d0bdc09ce",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -22136,7 +22253,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "51cce11296ee29b5b517ceb66c17b05c1320d6989154c3668d0fb2b16572d933",
+      "inputIdentitySha256": "62f34bad07a5c4c5167324e071320693e487a5b4425c6800d276f15010d38286",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -22351,7 +22468,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "3cb34d8c3eaab7162ae1799f4435bff77171283c0cc5e9626de9e0abcd838853",
+      "inputIdentitySha256": "baca08b05b6a881b6c96d9d81f82c0efbd79a7d9418e28dda0529e8a650aaaa4",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22417,7 +22534,7 @@
       "executionIdentitySha256": "c67d34d8fa0d26cdac159125af00a1d6d4a744670b69c37f95f8354c0305918d",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "045c0933e077b0c6f2e6fe5473ae939d84aa22620e70cae58b3a19baa80a81a0",
+      "inputIdentitySha256": "2308c021b2b5f68be9f848adabcc14fd7cf8c522408306248aa1aa1f4f3755d5",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22505,7 +22622,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "3354edc02f8d2cb37687dacad6ba4bdb2d01c57778c1d0f1e273e67095a7e1ea",
+      "inputIdentitySha256": "81aa231131ed292bb983bc97e6a97a6626e552d21b39fba3e07e2c7cb877c954",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -22581,7 +22698,7 @@
       "executionIdentitySha256": "60f671e6ef75b6d6e70ff73f92f29946bb7eb9d6ad700778aacacd7da5a3b6a5",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-workloads",
-      "inputIdentitySha256": "a6546ad7b3d5c66fb54a469d5be87433329e0ee5aa4f0ad26b7e65e31e221241",
+      "inputIdentitySha256": "babd275651f0f9b88cd05d30f7f9578df5c057a202d379a3a089b40df8fa2f9b",
       "inputs": {
         "paths": [
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
@@ -22750,7 +22867,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23100,7 +23217,7 @@
       "executionIdentitySha256": "2cb630dc95963b8f1f56eb63ade2ab93c476ff6caaad083666376d8ec86ed971",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "102f0b8c88385d7c0bcbec6ea6330a0af5df61b6461ebe4897474b3e45466f35",
+      "inputIdentitySha256": "695369dbc89d1c5c6ea9e238189a36645b1708ba643e7c3f861f43a4f611b78e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -23177,10 +23294,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_boundary.sh",
-      "executionIdentitySha256": "5b529cf058c841cc3dba16a47f4c491c9930b14ed059b7af7a4cbcfa92087d7b",
+      "executionIdentitySha256": "31b39e1f1974b9c9b0b4d5a5e61c0fabfddba6152040dba213cd0a4cbc752a31",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "bffca483e5cadc280129de87ba43a643484df010953161f7df417bd3025054ff",
+      "inputIdentitySha256": "ae5804f03fde40c414afa5c5aeb828dbfd25e801dc8d58992b77c0e6d3b305aa",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -23223,6 +23340,7 @@
           "crates/gc_coreform/src/term.rs",
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -23259,6 +23377,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -23299,6 +23418,8 @@
           "crates/gc_effects/src/store_authority_verify.rs",
           "crates/gc_effects/src/tests.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -23383,6 +23504,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -23429,6 +23552,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -23461,6 +23585,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -23509,6 +23634,7 @@
           "selfhost/obligation_authority_translation_v1.gc",
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -23556,7 +23682,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "b3a11b382c6f3b5e2ad78851588ee30131294042e3d75aff27dac2f037255b7c",
+      "sourceSha256": "cc8812931edd462ee64ebfe218488a292a49d837989a015b93c358496bde7ab5",
       "tools": [
         "bash",
         "cargo",
@@ -23574,7 +23700,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "971c8589fc885cc3dae350298ae62e86f849a3e518576a92be5ff44ce141df25",
+      "inputIdentitySha256": "bfcd4852fc67058fcd7ade4ee59e2f9004dd814b57a14aba73fe062410023212",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -23645,7 +23771,7 @@
       "executionIdentitySha256": "31ea6993c7fcee4f72d4359ffa9c18009525b26d4a1587ddb2bc2e0e559ee21c",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-doc-runtime-parity",
-      "inputIdentitySha256": "0bceaa543cc0c25cc1ab5f55d0e29bd59f653c1f8f467e6f2103e7b272f1c5aa",
+      "inputIdentitySha256": "971e0252acfc34a4f63410dd29731db11003d2352d7caf54811efbf620db8d20",
       "inputs": {
         "paths": [
           "docs/spec/CLI.md",
@@ -23700,7 +23826,7 @@
       "executionIdentitySha256": "5506d977431d087766b945f57e60fb8043c9af2561de8f4fe5c330c5694aaaf1",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-gc-migration-plan",
-      "inputIdentitySha256": "5e3a27f6273ffe44076a1fd83bbc3d496ea919e18d84f66d50ea877d30a31b94",
+      "inputIdentitySha256": "1341b635a902d72f91f7f99c0f092b27179e3ca35285827321893616461d3dbe",
       "inputs": {
         "paths": [
           "docs/spec/GC_MODULE_BOUNDARIES_v0.1.md",
@@ -23751,7 +23877,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "c8b7908233312e3f79be9e600e21484a6bc86bfafa81dd7181301a09da068da6",
+      "inputIdentitySha256": "65f504ebd4c7760b1bbc8afd9871bea433062715fc23cff7a603d0885cbea6f3",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -23894,7 +24020,7 @@
       "executionIdentitySha256": "de98a9b2dd03b246bd228fb5aa58e6c216ddd3e98c2db5a2dfe508c302766370",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-refactor-guard",
-      "inputIdentitySha256": "e9729690206701a2ed26f53296491ce3e9e1648835dba8824d7dd10aea9d4fb2",
+      "inputIdentitySha256": "096082c918c051138867316ed2a9d72362bb74cd2c390411f9dcc6ce2188aa6e",
       "inputs": {
         "paths": [
           "scripts/check_selfhost_refactor_guard.sh",
@@ -24012,7 +24138,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "dce51dc99c9dbc22181b206e355c7089f01eb7bd47a130da8404775bafeb75c9",
+      "inputIdentitySha256": "cc16acbbd3700758089a7404f6a89ef596290d1dae24e94e37cac8dc42f02e65",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24079,7 +24205,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -24552,7 +24678,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -24717,6 +24843,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -24755,6 +24882,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -24804,6 +24932,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -25102,6 +25232,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -25272,6 +25404,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -25519,6 +25652,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -25711,6 +25845,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -25906,7 +26041,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "e78e347636879072e998120c4542a2193e9bc658db34ece231099f4a44a5fde7",
+      "inputIdentitySha256": "a223c57293c450e3ac65c5d46e1c55723e2659ef932ca631fcdcc82db6f6c925",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26071,6 +26206,7 @@
           "crates/gc_effects/Cargo.toml",
           "crates/gc_effects/src/lib.rs",
           "crates/gc_effects/src/log.rs",
+          "crates/gc_effects/src/pkg_bridge_authority.rs",
           "crates/gc_effects/src/pkg_lock_model_authority.rs",
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
@@ -26109,6 +26245,7 @@
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+          "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
           "crates/gc_effects/src/runner_cap_refs.rs",
@@ -26158,6 +26295,8 @@
           "crates/gc_effects/tests/host_abi_surface.rs",
           "crates/gc_effects/tests/host_bridge_fault_injection.rs",
           "crates/gc_effects/tests/store_caps.rs",
+          "crates/gc_effects/tests/sync_registry.rs",
+          "crates/gc_effects/tests/sync_registry/cases_a.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -26456,6 +26595,8 @@
           "docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+          "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
@@ -26626,6 +26767,7 @@
           "policies/selfhost_frontend_authority_v0.1.json",
           "policies/selfhost_obligation_authority_v0.1.json",
           "policies/selfhost_patch_authority_v0.1.json",
+          "policies/selfhost_pkg_bridge_authority_v0.1.json",
           "policies/selfhost_pkg_lock_model_authority_v0.1.json",
           "policies/selfhost_pkg_lock_ops_authority_v0.1.json",
           "policies/selfhost_pkg_lock_read_authority_v0.1.json",
@@ -26873,6 +27015,7 @@
           "scripts/lib/selfhost_frontend_authority.py",
           "scripts/lib/selfhost_obligation_authority.py",
           "scripts/lib/selfhost_patch_authority.py",
+          "scripts/lib/selfhost_pkg_bridge_authority.py",
           "scripts/lib/selfhost_pkg_lock_model_authority.py",
           "scripts/lib/selfhost_pkg_lock_ops_authority.py",
           "scripts/lib/selfhost_pkg_lock_read_authority.py",
@@ -27065,6 +27208,7 @@
           "selfhost/obligation_authority_typecheck_v1.gc",
           "selfhost/obligation_authority_v1.gc",
           "selfhost/parse.gc",
+          "selfhost/pkg_bridge_authority_v1.gc",
           "selfhost/pkg_lock_model_authority_v1.gc",
           "selfhost/pkg_lock_ops_authority_v1.gc",
           "selfhost/pkg_lock_read_authority_v1.gc",
@@ -27267,7 +27411,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "696a44404c452aa2367ed731d0986991ad2ab35190c4e9309ee94198f4f59df9",
+      "inputIdentitySha256": "3512b0022ce419d1cbb2dc4c2df826aeb68028b473ceab698a27b0e3dce5f6f6",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -27338,7 +27482,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "3620ebef7e84bb3711a82c4d9927830cf56f08257e240121019d6a1538d9cd5d",
+      "inputIdentitySha256": "f8276d35624d215528ca544c56f1382b831feb0ff34823e1294331d7c0e9e963",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -27698,7 +27842,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -27855,7 +27999,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "44e0daf17e9e1cca2dcd7679c2dd05c6f83952488c622b58c85fa527bb94209c",
+      "inputIdentitySha256": "19084f345f3222749c27748cb49f86e2b3f66c5870a10166e4dcb07d79c979fb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28082,7 +28226,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "035f2683d488b978e4a5a3f172cba913708debe6191039241cc14f0f3d6ec89c",
+      "inputIdentitySha256": "91d041be2e36a4a85efd5085471439cff7677b8f652d20d2fc1def3023ab1b20",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28174,7 +28318,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "a0c8a5dbbef01a4080e1ffa81a78642309fe10362437867c16b7c83f7343fdeb"
+        "sha256": "25941295fb9bf509e3c6481f20d2fb2cc2a1dcb2ab788b54eda7b9b060f06c10"
       },
       {
         "path": "genesis.prerequisites.json",

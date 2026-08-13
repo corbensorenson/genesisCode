@@ -205,11 +205,17 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         if marker not in dispatch:
             fail(f"production lock ops route missing marker: {marker}")
     for marker in (
-        "BridgeLockUpdate", "bridge_lock::update_lock(",
-        "lock_path.is_some() && pkg_lock_read_authority.is_none()",
+        '#[path = "dispatch_publish/bridge_objects.rs"]',
+        '"core/pkg-low::bridge" => bridge_objects::dispatch_bridge(',
     ):
         if marker not in publish:
-            fail(f"bridge dispatcher missing lock authority route: {marker}")
+            fail(f"bridge dispatcher missing delegated authority route: {marker}")
+    bridge_objects = source_text(
+        root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs", overrides
+    )
+    for marker in ("BridgeLockUpdate", "bridge_lock::update_lock(", "authority.finalize_bridge"):
+        if marker not in bridge_objects:
+            fail(f"bridge object adapter missing lock authority route: {marker}")
     for marker in (
         "PkgBridgeLockFacts", "authority.bridge_lock_toml(&bytes, facts)?",
         "read_bounded_lock", "atomic_write_text(&write_path, &bytes)",
@@ -219,10 +225,12 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for marker in (
         "gc_pkg::GenesisLock", "set_requirement_with_metadata", "to_toml_canonical",
     ):
-        if marker in publish or marker in bridge_dispatch:
+        if marker in publish or marker in bridge_dispatch or marker in bridge_objects:
             fail(f"production bridge lock route retains Rust semantic oracle: {marker}")
-    if publish.index("pkg_lock_read_authority.is_none()") > publish.index("let provenance_term"):
-        fail("bridge lock authority presence is not checked before bridge object side effects")
+    if bridge_objects.index("requires the artifact-loaded GenesisCode bridge authority") > bridge_objects.index("let provenance_root = put!"):
+        fail("bridge authority presence is not checked before bridge object side effects")
+    if bridge_objects.index("authority.finalize_bridge") > bridge_objects.index("bridge_lock::update_lock("):
+        fail("bridge lock mutation is attempted before bridge authority finalization")
     fallback = '#[cfg(any(test, feature = "parity-oracle"))]'
     if fallback not in dispatch:
         fail("typed lock operation fallback is not compile-time parity-only")
@@ -281,6 +289,7 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
         "crates/gc_effects/src/runner_cap_pkg_low.rs", "crates/gc_effects/src/runner.rs",
     ]
@@ -326,8 +335,8 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.add_lock_toml(&bytes, payload)?", "legacy_add(&bytes, payload)?", "add-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.list_lock_toml(&bytes, payload)?", "legacy_list(&bytes, payload)?", "list-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs", "authority.bridge_lock_toml(&bytes, facts)?", "legacy_bridge(&bytes, facts)?", "bridge-route")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", "bridge_lock::update_lock(", "legacy_bridge_lock(", "bridge-dispatch")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", "lock_path.is_some() && pkg_lock_read_authority.is_none()", "false", "bridge-authority-order")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", '"core/pkg-low::bridge" => bridge_objects::dispatch_bridge(', '"core/pkg-low::bridge" => legacy_bridge(', "bridge-dispatch")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs", "bridge_lock::update_lock(", "legacy_bridge_lock(", "bridge-lock-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs", "let mut lock = match gc_pkg::GenesisLock::load(&path)", "let mut lock = match gc_pkg::LegacyLock::load(&path)", "parity-oracle")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::list"', '"core/pkg-low::legacy-list"', "lazy-route-set")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")

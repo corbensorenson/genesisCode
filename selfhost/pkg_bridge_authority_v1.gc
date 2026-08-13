@@ -1,0 +1,307 @@
+(def selfhost/pkg-bridge::tag core/data::tag)
+
+(def selfhost/pkg-bridge::bytes?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-bridge::tag value)) (quote :bytes))))
+
+(def selfhost/pkg-bridge::bool?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-bridge::tag value)) (quote :bool))))
+
+(def selfhost/pkg-bridge::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind "genesis/pkg-bridge-authority-result-v0.1"
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-bridge::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message) (((((selfhost/pkg-bridge::result request-h) false) code) message) nil)))))
+
+(def selfhost/pkg-bridge::accept
+  (fn (request-h)
+    (fn (value) (((((selfhost/pkg-bridge::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-bridge::vec1
+  (fn (a) ((core/vec::push (quote [])) a)))
+
+(def selfhost/pkg-bridge::vec2
+  (fn (a)
+    (fn (b) ((core/vec::push (selfhost/pkg-bridge::vec1 a)) b))))
+
+(def selfhost/pkg-bridge::vec3
+  (fn (a)
+    (fn (b)
+      (fn (c) ((core/vec::push ((selfhost/pkg-bridge::vec2 a) b)) c)))))
+
+(def selfhost/pkg-bridge::object
+  (fn (term)
+    (let ((printed (selfhost/printer::print-term term)))
+      (let ((bytes (core/str::to-utf8 printed)))
+        {
+          :bytes bytes
+          :h (core/bytes::to-hex (core/crypto::blake3 bytes))
+          :term term}))))
+
+(def selfhost/pkg-bridge::nonempty-string?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::str? value) ((core/int::lt? 0) (core/str::len value)) false)))
+
+(def selfhost/pkg-bridge::facts-valid?
+  (fn (facts)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? facts)
+        [:ecosystem :name :source :source-hash :version])
+      (if (selfhost/pkg-bridge::nonempty-string? ((core/map::get facts) (quote :ecosystem)))
+        (if (selfhost/pkg-bridge::nonempty-string? ((core/map::get facts) (quote :name)))
+          (if (selfhost/pkg-bridge::nonempty-string? ((core/map::get facts) (quote :source)))
+            (if (selfhost/pkg-bridge::nonempty-string? ((core/map::get facts) (quote :version)))
+              (selfhost/pkg-lock-ops::lower-hex64?
+                ((core/map::get facts) (quote :source-hash)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-bridge::message
+  (fn (ecosystem)
+    (fn (name)
+      (fn (version)
+        ((core/str::concat "bridge ")
+          ((core/str::concat ecosystem)
+            ((core/str::concat " ")
+              ((core/str::concat name) ((core/str::concat " ") version)))))))))
+
+(def selfhost/pkg-bridge::plan-core
+  (fn (facts)
+    (let
+      ((ecosystem ((core/map::get facts) (quote :ecosystem)))
+        (name ((core/map::get facts) (quote :name)))
+        (source ((core/map::get facts) (quote :source)))
+        (source-hash ((core/map::get facts) (quote :source-hash)))
+        (version ((core/map::get facts) (quote :version))))
+      (let
+        ((provenance
+            (selfhost/pkg-bridge::object
+              {
+                :ecosystem ecosystem
+                :name name
+                :source source
+                :source-hash source-hash
+                :type (quote :gcpm/external-provenance)
+                :v 1
+                :version version})))
+        (let ((provenance-h ((core/map::get provenance) (quote :h))))
+          (let
+            ((conversion-data
+                (selfhost/pkg-bridge::object
+                  {
+                    :ecosystem ecosystem
+                    :name name
+                    :provenance-root provenance-h
+                    :replay {:algorithm "identity-source-hash" :input-hash source-hash}
+                    :source source
+                    :source-hash source-hash
+                    :toolchain "genesis/pkg-low::bridge-v0.1"
+                    :type (quote :gcpm/bridge-conversion)
+                    :v 1
+                    :version version})))
+            (let ((conversion-data-h ((core/map::get conversion-data) (quote :h))))
+              (let
+                ((conversion-evidence
+                    (selfhost/pkg-bridge::object
+                      {
+                        :data conversion-data-h
+                        :inputs (selfhost/pkg-bridge::vec1 provenance-h)
+                        :kind (quote :equivalence)
+                        :outputs []
+                        :type (quote :vcs/evidence)
+                        :v 1})))
+                (let
+                  ((patch
+                      (selfhost/pkg-bridge::object
+                        {:ops [] :type (quote :vcs/patch) :v 1})))
+                (let
+                  ((snapshot
+                      (selfhost/pkg-bridge::object
+                        {
+                          :kind (quote :package)
+                          :meta
+                            {
+                              :bridge/ecosystem ecosystem
+                              :bridge/provenance-root provenance-h
+                              :bridge/source source
+                              :bridge/source-hash source-hash}
+                          :modules []
+                          :obligations
+                            ((selfhost/pkg-bridge::vec2
+                                (quote core/obligation::external-provenance))
+                              (quote core/obligation::replayable-conversion))
+                          :pkg/name name
+                          :pkg/version version
+                          :type (quote :vcs/snapshot)
+                          :v 1})))
+                  (let
+                    ((unsigned-commit
+                        {
+                          :attestations []
+                          :base nil
+                          :evidence
+                            (selfhost/pkg-bridge::vec1
+                              ((core/map::get conversion-evidence) (quote :h)))
+                          :message (((selfhost/pkg-bridge::message ecosystem) name) version)
+                          :obligations
+                            [
+                              "core/obligation::external-provenance"
+                              "core/obligation::replayable-conversion"]
+                          :parents []
+                          :patch ((core/map::get patch) (quote :h))
+                          :result ((core/map::get snapshot) (quote :h))
+                          :type (quote :vcs/commit)
+                          :v 1}))
+                    (let
+                      ((signing-h
+                          (core/crypto::blake3
+                            (core/bytes::join
+                              (((selfhost/pkg-bridge::vec3 b"GCv0.2\x00")
+                                  b"vcs\x00commit-signing-hash\x00")
+                                (core/str::to-utf8
+                                  (selfhost/printer::print-term unsigned-commit)))))))
+                      {
+                        :conversion-data conversion-data
+                        :conversion-evidence conversion-evidence
+                        :patch patch
+                        :provenance provenance
+                        :sign-message
+                          (core/bytes::join
+                            (((selfhost/pkg-bridge::vec3 b"GCv0.2\x00")
+                                b"vcs\x00commit-sign\x00")
+                              signing-h))
+                        :signing-h signing-h
+                        :snapshot snapshot
+                        :unsigned-commit unsigned-commit}))))))))))))
+
+(def selfhost/pkg-bridge::plan-value
+  (fn (facts)
+    (let ((plan (selfhost/pkg-bridge::plan-core facts)))
+      {:plan plan :plan-h (selfhost/hash::hash-term plan)})))
+
+(def selfhost/pkg-bridge::mechanism-valid?
+  (fn (mechanism)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? mechanism)
+        [:plan-h :public-key :signature :signature-valid])
+      (if (selfhost/pkg-lock-ops::lower-hex64?
+            ((core/map::get mechanism) (quote :plan-h)))
+        (if (selfhost/pkg-bridge::bytes? ((core/map::get mechanism) (quote :public-key)))
+          (if
+            ((core/int::eq?
+                (core/bytes::len ((core/map::get mechanism) (quote :public-key))))
+              32)
+            (if (selfhost/pkg-bridge::bytes? ((core/map::get mechanism) (quote :signature)))
+              (if
+                ((core/int::eq?
+                    (core/bytes::len ((core/map::get mechanism) (quote :signature))))
+                  64)
+                (selfhost/pkg-bridge::bool?
+                  ((core/map::get mechanism) (quote :signature-valid)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-bridge::finalize
+  (fn (request-h)
+    (fn (facts)
+      (fn (mechanism)
+        (if (selfhost/pkg-bridge::mechanism-valid? mechanism)
+          (let ((plan-value (selfhost/pkg-bridge::plan-value facts)))
+            (let ((plan ((core/map::get plan-value) (quote :plan))))
+              (let ((plan-h ((core/map::get plan-value) (quote :plan-h))))
+                (if ((core/eq? plan-h) ((core/map::get mechanism) (quote :plan-h)))
+                  (if ((core/map::get mechanism) (quote :signature-valid))
+                    (let
+                      ((attestation
+                          (selfhost/pkg-bridge::object
+                            {
+                              :alg "ed25519"
+                              :pk ((core/map::get mechanism) (quote :public-key))
+                              :role (quote :mirror-converter)
+                              :sig ((core/map::get mechanism) (quote :signature))
+                              :signing-h ((core/map::get plan) (quote :signing-h))
+                              :type (quote :vcs/attestation)
+                              :v 1})))
+                      (let
+                        ((commit-term
+                            (((core/map::put
+                                  ((core/map::get plan) (quote :unsigned-commit)))
+                                (quote :attestations))
+                              (selfhost/pkg-bridge::vec1
+                                ((core/map::get attestation) (quote :h))))))
+                        ((selfhost/pkg-bridge::accept request-h)
+                          {
+                            :attestation attestation
+                            :commit (selfhost/pkg-bridge::object commit-term)
+                            :plan-h plan-h})))
+                    (((selfhost/pkg-bridge::reject request-h) "core/pkg/bridge-signature")
+                      "bridge signature failed cryptographic verification"))
+                  (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+                    "finalize plan identity mismatch")))))
+          (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+            "finalize mechanism fields mismatch"))))))
+
+(def selfhost/pkg-bridge::dispatch
+  (fn (request-h)
+    (fn (request)
+      (let ((facts ((core/map::get request) (quote :facts))))
+        (if (selfhost/pkg-bridge::facts-valid? facts)
+          (let ((op ((core/map::get request) (quote :op))))
+            (if ((core/sym::eq? op) (quote :plan))
+              (if (selfhost/pkg-lock-read::nil?
+                    ((core/map::get request) (quote :mechanism)))
+                ((selfhost/pkg-bridge::accept request-h)
+                  (selfhost/pkg-bridge::plan-value facts))
+                (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+                  "plan mechanism must be nil"))
+              (if ((core/sym::eq? op) (quote :finalize))
+                (((selfhost/pkg-bridge::finalize request-h) facts)
+                  ((core/map::get request) (quote :mechanism)))
+                (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+                  "request :op must be :plan or :finalize"))))
+          (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-payload")
+            "bridge facts are malformed"))))))
+
+(def core/pkg::bridge-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if
+        ((selfhost/pkg-lock-read::exact-map? request)
+          [:facts :kind :mechanism :op :v])
+        (let ((kind ((core/map::get request) (quote :kind))))
+          (if
+            (if (selfhost/pkg-lock-read::str? kind)
+              ((core/eq? kind) "genesis/pkg-bridge-authority-request-v0.1")
+              false)
+            (let ((version ((core/map::get request) (quote :v))))
+              (if
+                (if (selfhost/pkg-lock-read::int? version)
+                  ((core/int::eq? version) 1)
+                  false)
+                ((selfhost/pkg-bridge::dispatch request-h) request)
+                (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+                  "request :v must be 1")))
+            (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+              "request :kind mismatch")))
+        (((selfhost/pkg-bridge::reject request-h) "core/pkg/bad-authority-request")
+          "request fields mismatch")))))

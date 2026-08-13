@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use ed25519_dalek::{Signer, SigningKey};
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::{SelfhostBootstrapMode, build_prelude};
@@ -683,8 +684,9 @@ fn mk_caps_for_pkg_bridge(
     base_dir: &std::path::Path,
     store_dir: &std::path::Path,
     refs_path: &std::path::Path,
-) -> CapsPolicy {
-    let s = pkg_bridge_caps_source(base_dir, store_dir, refs_path);
+) -> (CapsPolicy, String) {
+    let (public_key, signature) = pkg_bridge_test_signature();
+    let s = pkg_bridge_caps_source(base_dir, store_dir, refs_path, &signature);
     let artifact = std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {
@@ -692,12 +694,13 @@ fn mk_caps_for_pkg_bridge(
         })
         .canonicalize()
         .expect("canonical selfhost artifact path");
-    CapsPolicy::from_toml_str_with_selfhost_authority(
+    let caps = CapsPolicy::from_toml_str_with_selfhost_authority(
         &s,
         SelfhostBootstrapMode::ArtifactOnly,
         Some(&artifact),
     )
-    .expect("selfhost-authorized caps")
+    .expect("selfhost-authorized caps");
+    (caps, public_key)
 }
 
 fn mk_caps_for_pkg_bridge_without_selfhost(
@@ -705,15 +708,29 @@ fn mk_caps_for_pkg_bridge_without_selfhost(
     store_dir: &std::path::Path,
     refs_path: &std::path::Path,
 ) -> CapsPolicy {
-    CapsPolicy::from_toml_str(&pkg_bridge_caps_source(base_dir, store_dir, refs_path))
-        .expect("caps")
+    CapsPolicy::from_toml_str(&pkg_bridge_caps_source(
+        base_dir, store_dir, refs_path, &[0; 64],
+    ))
+    .expect("caps")
 }
 
 fn pkg_bridge_caps_source(
     base_dir: &std::path::Path,
     store_dir: &std::path::Path,
     refs_path: &std::path::Path,
+    signature: &[u8; 64],
 ) -> String {
+    let response = print_term(&Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
+            (
+                TermOrdKey(Term::symbol(":signature")),
+                Term::Bytes(signature.to_vec().into()),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    ));
     format!(
         r#"
 allow = ["core/pkg-low::bridge", "core/crypto::sign"]
@@ -733,12 +750,58 @@ allow_key_ids = ["mirror-key"]
 max_message_bytes = 4096
 max_context_bytes = 256
 wasi_bridge_profile = true
-wasi_bridge_response = "{{:ok true :signature b\"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"}}"
+wasi_bridge_response = {response:?}
 "#,
         base_dir = base_dir.display(),
         store_dir = store_dir.display(),
         refs_path = refs_path.display(),
     )
+}
+
+fn pkg_bridge_test_signature() -> (String, [u8; 64]) {
+    let source_hash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let provenance = parse_term(&format!(
+        r#"{{:type :gcpm/external-provenance :v 1 :ecosystem "crates" :name "serde" :version "1.0.217" :source "serde@1.0.217" :source-hash "{source_hash}"}}"#
+    ))
+    .unwrap();
+    let provenance_h = bridge_object_hash(&provenance);
+    let conversion_data = parse_term(&format!(
+        r#"{{:type :gcpm/bridge-conversion :v 1 :toolchain "genesis/pkg-low::bridge-v0.1" :ecosystem "crates" :name "serde" :version "1.0.217" :source "serde@1.0.217" :source-hash "{source_hash}" :provenance-root "{provenance_h}" :replay {{:algorithm "identity-source-hash" :input-hash "{source_hash}"}}}}"#
+    ))
+    .unwrap();
+    let conversion_data_h = bridge_object_hash(&conversion_data);
+    let evidence = parse_term(&format!(
+        r#"{{:type :vcs/evidence :v 1 :kind :equivalence :inputs ["{provenance_h}"] :outputs [] :data "{conversion_data_h}"}}"#
+    ))
+    .unwrap();
+    let evidence_h = bridge_object_hash(&evidence);
+    let patch = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_h = bridge_object_hash(&patch);
+    let snapshot = parse_term(&format!(
+        r#"{{:type :vcs/snapshot :v 1 :kind :package :pkg/name "serde" :pkg/version "1.0.217" :modules [] :obligations [core/obligation::external-provenance core/obligation::replayable-conversion] :meta {{:bridge/ecosystem "crates" :bridge/source "serde@1.0.217" :bridge/source-hash "{source_hash}" :bridge/provenance-root "{provenance_h}"}}}}"#
+    ))
+    .unwrap();
+    let snapshot_h = bridge_object_hash(&snapshot);
+    let commit = parse_term(&format!(
+        r#"{{:type :vcs/commit :v 1 :parents [] :base nil :patch "{patch_h}" :result "{snapshot_h}" :obligations ["core/obligation::external-provenance" "core/obligation::replayable-conversion"] :evidence ["{evidence_h}"] :attestations [] :message "bridge crates serde 1.0.217"}}"#
+    ))
+    .unwrap();
+    let signing_hash = gc_vcs::commit_signing_hash(&commit).unwrap();
+    let message = gc_vcs::commit_attestation_message(&signing_hash);
+    let signing_key = SigningKey::from_bytes(&[0x42; 32]);
+    let public_key = signing_key
+        .verifying_key()
+        .to_bytes()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    (public_key, signing_key.sign(&message).to_bytes())
+}
+
+fn bridge_object_hash(term: &Term) -> String {
+    blake3::hash(print_term(term).as_bytes())
+        .to_hex()
+        .to_string()
 }
 
 fn mk_prog(op: &str, payload: &Term) -> (Vec<Term>, [u8; 32]) {

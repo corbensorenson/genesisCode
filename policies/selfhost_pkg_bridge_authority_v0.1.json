@@ -1,0 +1,52 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::bridge-authority",
+  "contentIdentitySha256": "6ad5416e6cc5437169225b05249442eff32eddefb66a0332ccee9fd909c7ea29",
+  "decisionInventory": [
+    "external-provenance-object-and-content-identity",
+    "conversion-data-and-evidence-object-identities",
+    "bridge-patch-and-package-snapshot-identities",
+    "unsigned-commit-and-domain-separated-signing-message",
+    "cryptographic-mechanism-fact-admission",
+    "attestation-and-final-commit-identities",
+    "request-and-plan-bound-two-phase-result"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "capability-policy-payload-and-store-admission",
+    "ed25519-sign-mechanism-and-supplied-key-verification",
+    "exact-authorized-byte-content-addressed-storage",
+    "strict-result-and-vcs-contradiction-checking",
+    "separately-custodied-conditional-lock-persistence"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_bridge_authority.py",
+  "kind": "genesis/selfhost-pkg-bridge-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "graph-and-semver-mechanism-authority",
+    "h2-package-resolution",
+    "payload-transport-and-cryptographic-mechanism-authority",
+    "publish-and-registry-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "selfhost-toml-codec",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionOperations": [
+    "core/pkg-low::bridge"
+  ],
+  "requestKind": "genesis/pkg-bridge-authority-request-v0.1",
+  "resultKind": "genesis/pkg-bridge-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_bridge_authority_v1.gc",
+  "sourceSha256": "0cdc55605be05b14e793931d23df0196b24b9fc20cc6ac7e7a8bdaeca9806e29",
+  "spec": "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

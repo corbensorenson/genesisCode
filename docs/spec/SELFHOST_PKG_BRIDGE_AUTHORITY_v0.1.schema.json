@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-pkg-bridge-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionOperations", "requestKind", "resultKind", "schema", "sourceModule",
+    "sourceSha256", "spec", "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/pkg::bridge-authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {"const": [
+      "external-provenance-object-and-content-identity",
+      "conversion-data-and-evidence-object-identities",
+      "bridge-patch-and-package-snapshot-identities",
+      "unsigned-commit-and-domain-separated-signing-message",
+      "cryptographic-mechanism-fact-admission",
+      "attestation-and-final-commit-identities",
+      "request-and-plan-bound-two-phase-result"
+    ]},
+    "hostMechanisms": {"const": [
+      "artifact-only-authority-bootstrap-and-bounded-evaluation",
+      "capability-policy-payload-and-store-admission",
+      "ed25519-sign-mechanism-and-supplied-key-verification",
+      "exact-authorized-byte-content-addressed-storage",
+      "strict-result-and-vcs-contradiction-checking",
+      "separately-custodied-conditional-lock-persistence"
+    ]},
+    "hostOracle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parityOnly", "productionRequired", "removalTask"],
+      "properties": {
+        "parityOnly": {"const": true}, "productionRequired": {"const": false},
+        "removalTask": {"const": "R4.2.e"}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_pkg_bridge_authority.py"},
+    "kind": {"const": "genesis/selfhost-pkg-bridge-authority-v0.1"},
+    "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "productionOperations": {"const": ["core/pkg-low::bridge"]},
+    "requestKind": {"const": "genesis/pkg-bridge-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/pkg-bridge-authority-result-v0.1"},
+    "schema": {"const": "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/pkg_bridge_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

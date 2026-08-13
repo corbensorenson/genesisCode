@@ -262,18 +262,6 @@ waiver_rationale = "Stable report schema is prioritized for agent compatibility 
 waiver_review_by = "2026-10-31"
 
 [[tracked_over_budget_rows]]
-module_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs"
-target_gc_modules = ["prelude/modules/31_data_pipeline.gc", "prelude/modules/32_network_workflow.gc"]
-parity_gate = "bash scripts/check_gcpm_operation_contract_pack.sh"
-phase = "phase-1"
-status = "waived"
-notes = "Split publish orchestration by lock/build/export/push/ref-update stages."
-waiver_owner = "gcpm-runtime"
-waiver_scope = "Bounded to low-level publish orchestration; component stage helpers must remain isolated."
-waiver_rationale = "Publish path is correctness-critical for registry trust; waiver preserves atomic behavior while staged split proceeds behind contract-pack gate."
-waiver_review_by = "2026-10-31"
-
-[[tracked_over_budget_rows]]
 module_path = "crates/gc_effects/src/runner_capability_dispatch.rs"
 target_gc_modules = ["prelude/modules/00_core.gc", "prelude/modules/10_browser_host.gc", "prelude/modules/32_network_workflow.gc"]
 parity_gate = "cargo test -p gc_effects --lib --quiet"

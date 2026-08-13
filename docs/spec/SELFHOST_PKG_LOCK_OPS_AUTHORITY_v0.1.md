@@ -17,8 +17,9 @@ syntax decoding, UTF-8 transport, sandboxed path resolution, bounded file reads,
 decoding, and atomic persistence of authorized bytes. The authority uses the pure deterministic
 Prelude CoreForm printer/parser pair once to freeze its validated runtime-map model into data-map
 form before calling the already custodied canonical lock writer. Bridge provenance, conversion,
-snapshot, attestation, and commit object construction remain Rust-authoritative mechanisms outside
-this contract. Graph solving, semver mechanics, registry transport, publish behavior, workspace
+snapshot, attestation, and commit object construction are separately custodied by
+`core/pkg::bridge-authority` and remain outside this lock contract. Graph solving, semver mechanics,
+registry transport, publish behavior, workspace
 scaffolding, and other package operations also remain outside this authority. These residuals keep
 `SD-PACKAGE-RESOLUTION` at H0.
 
@@ -27,8 +28,9 @@ scaffolding, and other package operations also remain outside this authority. Th
 Production evaluation MUST use `SelfhostBootstrapMode::ArtifactOnly`. A missing artifact or binding,
 evaluator failure, sealed `ERROR`, resource exhaustion, open or malformed result, wrong request
 identity, unknown rejection code, or bytes/hash contradiction is a hard authority error. There is no
-production Rust semantic fallback. For lock-bearing bridge requests, authority availability is
-checked after payload-shape validation and before any bridge object is constructed or stored.
+production Rust semantic fallback. Every bridge request requires the separately custodied bridge
+authority before object storage. Lock-bearing requests exercise this lock authority only after the
+bridge authority has finalized and stored its object graph.
 
 Each request is bounded to 20,000,000 evaluation steps, 80,000,000 logical allocation units, 4 MiB
 bytes or string values, and 65,536 map or vector entries. Add, list, and bridge-lock file reads are

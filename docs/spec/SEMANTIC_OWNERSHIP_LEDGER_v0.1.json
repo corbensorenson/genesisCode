@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "5c4b7b764878ffc81c4fea28c8dbc082e86b15186eb8806065cc330fbb49ac1b",
+  "contentIdentitySha256": "b9229cdb83baaf887f564766c3c1dfb68340ed6cb2858e2e9b74032d22ba2c2a",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2004,9 +2004,10 @@
         "Artifact-loaded GenesisCode exclusively validates and normalizes the typed public core/pkg-low::load-lock result under genesis/selfhost-pkg-lock-read-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the complete internal typed lock model consumed by core/pkg-low::{info,lock,update,install,verify} under genesis/selfhost-pkg-lock-model-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively initializes direct locks with workspace, policy, and default-registry normalization, mutates and canonically serializes core/pkg-low::add requirements, owns conditional core/pkg-low::bridge lock mutation and dependency artifact-key identity after a bounded pure CoreForm runtime-map freeze, and constructs the closed core/pkg-low::list projection under genesis/selfhost-pkg-lock-ops-authority-v0.1",
+        "Artifact-loaded GenesisCode exclusively constructs the core/pkg-low::bridge object graph: provenance, conversion data and evidence, patch, package snapshot, unsigned commit, VCS domain-separated signing message, attestation, final commit, exact object bytes, and content identities under genesis/selfhost-pkg-bridge-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively constructs canonical package requirement environment fingerprints for lock, update, and install hydration under genesis/selfhost-pkg-resolution-identity-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively normalizes and classifies effect-route selectors, checks declared strategy and tag-policy coherence, normalizes semver selection policy, and decides existing-lock update admission under genesis/selfhost-pkg-resolution-plan-authority-v0.1",
-        "The generic Rust TOML syntax decoder, bridge provenance/conversion/snapshot/attestation/commit object construction, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, artifact and commit validation, workspace scaffolding, policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
+        "The generic Rust TOML syntax decoder, bridge payload transport, exact-byte storage, Ed25519 signing and supplied-key verification mechanisms, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, artifact and commit validation, workspace scaffolding, policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -2018,11 +2019,13 @@
         "selfhost/pkg_lock_model_authority_v1.gc",
         "selfhost/pkg_lock_write_authority_v1.gc",
         "selfhost/pkg_lock_ops_authority_v1.gc",
+        "selfhost/pkg_bridge_authority_v1.gc",
         "selfhost/pkg_resolution_identity_authority_v1.gc",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_lock_ops_authority.rs",
+        "crates/gc_effects/src/pkg_bridge_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
         "crates/gc_pkg/src"
@@ -2032,11 +2035,13 @@
         "selfhost/pkg_lock_model_authority_v1.gc",
         "selfhost/pkg_lock_write_authority_v1.gc",
         "selfhost/pkg_lock_ops_authority_v1.gc",
+        "selfhost/pkg_bridge_authority_v1.gc",
         "selfhost/pkg_resolution_identity_authority_v1.gc",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_lock_ops_authority.rs",
+        "crates/gc_effects/src/pkg_bridge_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
@@ -2044,6 +2049,7 @@
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
         "crates/gc_pkg/src"
       ],
@@ -2054,6 +2060,7 @@
         "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md",
+        "docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md"
       ],
@@ -2067,6 +2074,7 @@
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_lock_ops_authority.rs",
+        "crates/gc_effects/src/pkg_bridge_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
         "crates/gc_effects/tests/sync_registry.rs"
@@ -2078,6 +2086,7 @@
         "scripts/lib/selfhost_pkg_lock_model_authority.py",
         "scripts/lib/selfhost_pkg_lock_write_authority.py",
         "scripts/lib/selfhost_pkg_lock_ops_authority.py",
+        "scripts/lib/selfhost_pkg_bridge_authority.py",
         "scripts/lib/selfhost_pkg_resolution_identity_authority.py",
         "scripts/lib/selfhost_pkg_resolution_plan_authority.py"
       ]

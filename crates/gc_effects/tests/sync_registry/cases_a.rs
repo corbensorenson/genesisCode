@@ -618,26 +618,26 @@ fn pkg_bridge_creates_signed_commit_and_updates_lock() {
     std::fs::create_dir_all(&workspace_dir).unwrap();
     let store_dir = td.path().join("store");
     let refs_path = td.path().join("refs.gc");
-    let caps = mk_caps_for_pkg_bridge(&workspace_dir, &store_dir, &refs_path);
+    let (caps, public_key) = mk_caps_for_pkg_bridge(&workspace_dir, &store_dir, &refs_path);
 
     let lock_path = workspace_dir.join("genesis.lock");
     let lock = gc_pkg::GenesisLock::empty("workspace");
     std::fs::write(&lock_path, lock.to_toml_canonical()).unwrap();
 
-    let payload = parse_term(
-        r#"{
+    let payload = parse_term(&format!(
+        r#"{{
           :ecosystem "crates"
           :name "serde"
           :version "1.0.217"
           :source "serde@1.0.217"
           :source-hash "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
           :key-id "mirror-key"
-          :public-key "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+          :public-key "{public_key}"
           :lock "genesis.lock"
           :dep-name "serde"
           :registry "upstream"
-        }"#,
-    )
+        }}"#,
+    ))
     .unwrap();
     let (forms, h) = mk_prog("core/pkg-low::bridge", &payload);
     let mut ctx = EvalCtx::new();
@@ -692,6 +692,13 @@ fn pkg_bridge_creates_signed_commit_and_updates_lock() {
         commit_mm.get(&TermOrdKey(Term::symbol(":attestations"))),
         Some(&Term::Vector(vec![Term::Str(attestation_h.clone())]))
     );
+    let signing_h = gc_vcs::commit_signing_hash(&Term::Map(commit_mm.clone())).unwrap();
+    let attestation_bytes = store.get_bytes(&attestation_h).unwrap();
+    let attestation_term = parse_term(&String::from_utf8(attestation_bytes).unwrap()).unwrap();
+    let attestation = gc_vcs::Attestation::from_term(&attestation_term).unwrap();
+    let public_key_bytes: [u8; 32] = gc_vcs::hex_to_bytes32(&public_key).unwrap();
+    let verifying_key = ed25519_dalek::VerifyingKey::from_bytes(&public_key_bytes).unwrap();
+    gc_vcs::verify_commit_attestation(&attestation, &signing_h, &[verifying_key]).unwrap();
 
     let snapshot_bytes = store.get_bytes(&snapshot_h).unwrap();
     let snapshot_t = parse_term(&String::from_utf8(snapshot_bytes).unwrap()).unwrap();
@@ -766,7 +773,7 @@ fn pkg_bridge_rejects_lock_without_dep_name() {
     std::fs::create_dir_all(&workspace_dir).unwrap();
     let store_dir = td.path().join("store");
     let refs_path = td.path().join("refs.gc");
-    let caps = mk_caps_for_pkg_bridge(&workspace_dir, &store_dir, &refs_path);
+    let (caps, _) = mk_caps_for_pkg_bridge(&workspace_dir, &store_dir, &refs_path);
 
     let payload = parse_term(
         r#"{
@@ -825,6 +832,43 @@ fn pkg_bridge_missing_lock_authority_fails_before_store_side_effects() {
     let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
     let error = match run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()) {
         Ok(_) => panic!("bridge lock mutation should require selfhost authority"),
+        Err(error) => error,
+    };
+    assert!(
+        error
+            .to_string()
+            .contains("requires the artifact-loaded GenesisCode")
+    );
+    assert_eq!(std::fs::read_dir(&store_dir).unwrap().count(), 0);
+}
+
+#[test]
+fn pkg_bridge_without_lock_still_requires_authority_before_store_side_effects() {
+    let td = tempfile::tempdir().unwrap();
+    let workspace_dir = td.path().join("workspace");
+    std::fs::create_dir_all(&workspace_dir).unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_pkg_bridge_without_selfhost(&workspace_dir, &store_dir, &refs_path);
+    let payload = parse_term(
+        r#"{
+          :ecosystem "crates"
+          :name "serde"
+          :version "1.0.217"
+          :source "serde@1.0.217"
+          :source-hash "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          :key-id "mirror-key"
+          :public-key "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+        }"#,
+    )
+    .unwrap();
+    let (forms, h) = mk_prog("core/pkg-low::bridge", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let error = match run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()) {
+        Ok(_) => panic!("bridge object construction should require selfhost authority"),
         Err(error) => error,
     };
     assert!(
