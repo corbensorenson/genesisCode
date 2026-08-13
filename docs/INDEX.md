@@ -226,6 +226,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package resolution identity profile.
 - `policies/selfhost_pkg_resolution_identity_authority_v0.1.json` - content-addressed requirement-identity decision inventory, bounded host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_resolution_identity_authority.py` - independent identity source/artifact/route/fallback/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md` - normative partial R4.2.e selector, strategy, semver-policy, and update-admission authority boundary.
+- `docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package resolution plan profile.
+- `policies/selfhost_pkg_resolution_plan_authority_v0.1.json` - content-addressed resolution-plan decision inventory, residual host mechanisms, and explicit nonclaims.
+- `scripts/lib/selfhost_pkg_resolution_plan_authority.py` - independent plan source/artifact/route/no-fallback/ledger custody and mutation verifier.
 - `policies/selfhost_evidence_verify_authority_v0.1.json` - content-addressed verification decisions, bounded host mechanisms, runtime limits, and nonclaims.
 - `scripts/lib/selfhost_evidence_verify_authority.py` - independent source/artifact custody, route-reachability, no-fallback, separation, ledger, and mutation verifier.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.

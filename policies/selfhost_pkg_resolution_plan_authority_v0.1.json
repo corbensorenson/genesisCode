@@ -1,0 +1,51 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::resolution-plan-authority",
+  "contentIdentitySha256": "3ab6cf905fc776ef28c8e97593f235fa81e82e36d83ec2974172e5ebf4caff2d",
+  "decisionInventory": [
+    "selector-form-admission-and-normalization",
+    "selector-kind-and-strategy-inference",
+    "declared-strategy-agreement",
+    "tag-policy-presence-admission",
+    "semver-selection-policy-normalization",
+    "existing-lock-update-admission",
+    "request-bound-plan-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-shared-context-bootstrap-and-bounded-evaluation",
+    "typed-request-and-strict-result-transport",
+    "semver-grammar-version-comparison-and-ref-observation",
+    "artifact-commit-registry-network-and-lock-transport",
+    "sealed-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_resolution_plan_authority.py",
+  "kind": "genesis/selfhost-pkg-resolution-plan-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "complete-graph-solving",
+    "generic-lock-codec-authority",
+    "h2-package-resolution",
+    "r4-2-e-closure",
+    "registry-transport-authority",
+    "release-qualification",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/pkg-resolution-plan-request-v0.1",
+  "resultKind": "genesis/pkg-resolution-plan-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_resolution_identity_authority_v1.gc",
+  "sourceSha256": "3b054daeb925c9f0b26012f66d6b100b018ff048fea36c57d47009874a774a00",
+  "spec": "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

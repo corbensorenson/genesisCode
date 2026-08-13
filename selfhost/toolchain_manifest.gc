@@ -135,6 +135,7 @@
     core/pkg::lock-read-authority
     core/pkg::lock-write-authority
     core/pkg::resolution-identity-authority
+    core/pkg::resolution-plan-authority
     core/cli::stage1-transform-module
     core/cli::store-get-program
     core/cli::store-has-program

@@ -11,48 +11,47 @@ pub(crate) use lock_validation::{
     validate_locked_entries_strict,
 };
 
-#[derive(Debug, Clone)]
-pub(crate) enum Selector {
-    Commit(String),
-    Snapshot(String),
-    Ref(String),
-    SemverRange(String),
-}
-
-pub(crate) fn parse_selector(s: &str) -> Option<Selector> {
+#[cfg(any(test, feature = "parity-oracle"))]
+fn parse_selector_parity(s: &str) -> Option<PkgResolutionSelector> {
     let t = s.trim();
     if let Some(rest) = t.strip_prefix("semver:") {
         let range = rest.trim();
         if range.is_empty() {
             return None;
         }
-        return Some(Selector::SemverRange(range.to_string()));
+        return Some(PkgResolutionSelector::SemverRange(range.to_string()));
     }
     if let Some(rest) = t.strip_prefix("commit:") {
-        return Some(Selector::Commit(rest.trim().to_string()));
+        let value = rest.trim();
+        return gc_vcs::validate_hex_hash(value)
+            .is_ok()
+            .then(|| PkgResolutionSelector::Commit(value.to_string()));
     }
     if let Some(rest) = t.strip_prefix("snapshot:") {
-        return Some(Selector::Snapshot(rest.trim().to_string()));
+        let value = rest.trim();
+        return gc_vcs::validate_hex_hash(value)
+            .is_ok()
+            .then(|| PkgResolutionSelector::Snapshot(value.to_string()));
     }
     if let Some(rest) = t.strip_prefix("ref:") {
-        return Some(Selector::Ref(rest.trim().to_string()));
+        let value = rest.trim();
+        return value
+            .starts_with("refs/")
+            .then(|| PkgResolutionSelector::Ref(value.to_string()));
     }
     if t.starts_with("refs/") {
-        return Some(Selector::Ref(t.to_string()));
+        return Some(PkgResolutionSelector::Ref(t.to_string()));
     }
     if gc_vcs::validate_hex_hash(t).is_ok() {
-        return Some(Selector::Commit(t.to_string()));
+        return Some(PkgResolutionSelector::Commit(t.to_string()));
     }
     None
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SemverSelectionPolicy {
-    Highest,
-    Lowest,
-}
-
-fn semver_selection_policy(tag_policy: Option<&str>) -> Result<SemverSelectionPolicy, String> {
+#[cfg(any(test, feature = "parity-oracle"))]
+fn semver_selection_policy_parity(
+    tag_policy: Option<&str>,
+) -> Result<SemverSelectionPolicy, String> {
     match tag_policy.unwrap_or("highest") {
         // Keep existing tag-policy defaults backward compatible with v0.1 ("exact").
         "highest" | "latest" | "exact" => Ok(SemverSelectionPolicy::Highest),
@@ -61,6 +60,139 @@ fn semver_selection_policy(tag_policy: Option<&str>) -> Result<SemverSelectionPo
             "unsupported semver tag_policy `{other}` (expected highest|lowest)"
         )),
     }
+}
+
+pub(crate) fn plan_requirement(
+    authority: Option<&mut PkgResolutionIdentityAuthority>,
+    req: &gc_pkg::Requirement,
+    has_existing: bool,
+    error_tok: SealId,
+    op: &str,
+) -> Result<PkgResolutionPlan, Value> {
+    plan_requirement_with_diagnostic(authority, req, has_existing, false, error_tok, op)
+}
+
+pub(crate) fn plan_requirement_for_strict_validation(
+    authority: Option<&mut PkgResolutionIdentityAuthority>,
+    req: &gc_pkg::Requirement,
+    error_tok: SealId,
+    op: &str,
+) -> Result<PkgResolutionPlan, Value> {
+    plan_requirement_with_diagnostic(authority, req, true, true, error_tok, op)
+}
+
+fn plan_requirement_with_diagnostic(
+    authority: Option<&mut PkgResolutionIdentityAuthority>,
+    req: &gc_pkg::Requirement,
+    has_existing: bool,
+    strict_validation: bool,
+    error_tok: SealId,
+    op: &str,
+) -> Result<PkgResolutionPlan, Value> {
+    if let Some(authority) = authority {
+        return authority
+            .plan(req, has_existing)
+            .map_err(|error| match error {
+                PkgResolutionPlanError::Rejected { code, message } => mk_error(
+                    error_tok,
+                    plan_rejection_diagnostic(&code, strict_validation),
+                    message,
+                    Some(op),
+                ),
+                PkgResolutionPlanError::Boundary(error) => mk_error(
+                    error_tok,
+                    "core/pkg/authority-error",
+                    error.to_string(),
+                    Some(op),
+                ),
+            });
+    }
+
+    #[cfg(any(test, feature = "parity-oracle"))]
+    return plan_requirement_parity(req, has_existing).map_err(|(class, message)| {
+        mk_error(
+            error_tok,
+            plan_rejection_diagnostic(class, strict_validation),
+            message,
+            Some(op),
+        )
+    });
+
+    #[cfg(not(any(test, feature = "parity-oracle")))]
+    Err(mk_error(
+        error_tok,
+        "core/pkg/authority-error",
+        "package resolution requires the artifact-loaded GenesisCode planning authority"
+            .to_string(),
+        Some(op),
+    ))
+}
+
+fn plan_rejection_diagnostic(class: &str, strict_validation: bool) -> &'static str {
+    if strict_validation
+        && matches!(
+            class,
+            "core/pkg/strategy-mismatch"
+                | "core/pkg/tag-policy-required"
+                | "core/pkg/tag-policy-forbidden"
+        )
+    {
+        "core/pkg/lock-invariant"
+    } else {
+        "core/pkg/bad-selector"
+    }
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn plan_requirement_parity(
+    req: &gc_pkg::Requirement,
+    has_existing: bool,
+) -> Result<PkgResolutionPlan, (&'static str, String)> {
+    let selector = parse_selector_parity(&req.selector).ok_or_else(|| {
+        (
+            "core/pkg/bad-selector",
+            format!("unsupported selector: {}", req.selector),
+        )
+    })?;
+    let inferred = gc_pkg::infer_strategy(&req.selector);
+    if req.strategy != inferred {
+        return Err((
+            "core/pkg/strategy-mismatch",
+            format!(
+                "selector strategy mismatch: declared {}, inferred {}",
+                req.strategy.as_str(),
+                inferred.as_str()
+            ),
+        ));
+    }
+    if matches!(inferred, gc_pkg::ResolutionStrategy::TagPolicy) && req.tag_policy.is_none() {
+        return Err((
+            "core/pkg/tag-policy-required",
+            "tag-policy strategy requires tag_policy".to_string(),
+        ));
+    }
+    if !matches!(inferred, gc_pkg::ResolutionStrategy::TagPolicy) && req.tag_policy.is_some() {
+        return Err((
+            "core/pkg/tag-policy-forbidden",
+            "tag_policy is only valid for tag-policy strategy".to_string(),
+        ));
+    }
+    let semver_policy = if matches!(selector, PkgResolutionSelector::SemverRange(_)) {
+        Some(
+            semver_selection_policy_parity(req.tag_policy.as_deref())
+                .map_err(|message| ("core/pkg/semver-policy-unsupported", message))?,
+        )
+    } else {
+        None
+    };
+    let should_resolve = !has_existing
+        || (req.update_policy == gc_pkg::UpdatePolicy::Auto
+            && !matches!(inferred, gc_pkg::ResolutionStrategy::Pinned));
+    Ok(PkgResolutionPlan {
+        selector,
+        semver_policy,
+        should_resolve,
+    })
 }
 
 fn parse_tag_semver_version(ref_name: &str) -> Option<Version> {
@@ -138,51 +270,13 @@ pub(crate) fn resolve_requirement(
     timeout_ms: Option<u64>,
     _name: &str,
     req: &gc_pkg::Requirement,
+    plan: PkgResolutionPlan,
     identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<gc_pkg::LockedEntry, Value> {
-    let inferred_strategy = gc_pkg::infer_strategy(&req.selector);
-    if req.strategy != inferred_strategy {
-        return Err(mk_error(
-            error_tok,
-            "core/pkg/bad-selector",
-            format!(
-                "selector strategy mismatch: declared {}, inferred {}",
-                req.strategy.as_str(),
-                inferred_strategy.as_str()
-            ),
-            Some(op),
-        ));
-    }
-    if matches!(req.strategy, gc_pkg::ResolutionStrategy::TagPolicy) && req.tag_policy.is_none() {
-        return Err(mk_error(
-            error_tok,
-            "core/pkg/bad-selector",
-            "tag-policy strategy requires tag_policy".to_string(),
-            Some(op),
-        ));
-    }
-    if !matches!(req.strategy, gc_pkg::ResolutionStrategy::TagPolicy) && req.tag_policy.is_some() {
-        return Err(mk_error(
-            error_tok,
-            "core/pkg/bad-selector",
-            "tag_policy is only valid for tag-policy strategy".to_string(),
-            Some(op),
-        ));
-    }
-
-    let sel = parse_selector(&req.selector).ok_or_else(|| {
-        mk_error(
-            error_tok,
-            "core/pkg/bad-selector",
-            format!("unsupported selector: {}", req.selector),
-            Some(op),
-        )
-    })?;
-
-    match sel {
-        Selector::Snapshot(h) => {
+    match plan.selector {
+        PkgResolutionSelector::Snapshot(h) => {
             if let Err(e) = gc_vcs::validate_hex_hash(&h) {
                 return Err(mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)));
             }
@@ -216,7 +310,7 @@ pub(crate) fn resolve_requirement(
                 environment_fingerprint: Some(fp),
             })
         }
-        Selector::Commit(h) => {
+        PkgResolutionSelector::Commit(h) => {
             if let Err(e) = gc_vcs::validate_hex_hash(&h) {
                 return Err(mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)));
             }
@@ -267,7 +361,7 @@ pub(crate) fn resolve_requirement(
                 environment_fingerprint: Some(fp),
             })
         }
-        Selector::Ref(rn) => {
+        PkgResolutionSelector::Ref(rn) => {
             let local_h = refs
                 .get(&rn)
                 .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
@@ -354,7 +448,7 @@ pub(crate) fn resolve_requirement(
                 environment_fingerprint: Some(fp),
             })
         }
-        Selector::SemverRange(range) => {
+        PkgResolutionSelector::SemverRange(range) => {
             let req_range = VersionReq::parse(&range).map_err(|e| {
                 mk_error(
                     error_tok,
@@ -363,8 +457,14 @@ pub(crate) fn resolve_requirement(
                     Some(op),
                 )
             })?;
-            let selection_policy = semver_selection_policy(req.tag_policy.as_deref())
-                .map_err(|e| mk_error(error_tok, "core/pkg/bad-selector", e, Some(op)))?;
+            let Some(selection_policy) = plan.semver_policy else {
+                return Err(mk_error(
+                    error_tok,
+                    "core/pkg/authority-error",
+                    "semver resolution plan omitted selection policy".to_string(),
+                    Some(op),
+                ));
+            };
             let local_refs_list = refs
                 .list(Some("refs/tags/"))
                 .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
@@ -617,9 +717,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_selector_accepts_semver_range() {
-        let parsed = parse_selector("semver:^1.2.0");
-        assert!(matches!(parsed, Some(Selector::SemverRange(r)) if r == "^1.2.0"));
+    fn parity_selector_parser_accepts_semver_range() {
+        let parsed = parse_selector_parity("semver:^1.2.0");
+        assert!(matches!(parsed, Some(PkgResolutionSelector::SemverRange(r)) if r == "^1.2.0"));
     }
 
     #[test]
@@ -647,5 +747,21 @@ mod tests {
         let low = select_semver_tag_ref(&refs, &range, SemverSelectionPolicy::Lowest);
         assert_eq!(high, Some(("refs/tags/v1.2.5".to_string(), "c".repeat(64))));
         assert_eq!(low, Some(("refs/tags/v1.2.0".to_string(), "a".repeat(64))));
+    }
+
+    #[test]
+    fn plan_rejection_classes_preserve_route_diagnostics() {
+        assert_eq!(
+            plan_rejection_diagnostic("core/pkg/strategy-mismatch", false),
+            "core/pkg/bad-selector"
+        );
+        assert_eq!(
+            plan_rejection_diagnostic("core/pkg/strategy-mismatch", true),
+            "core/pkg/lock-invariant"
+        );
+        assert_eq!(
+            plan_rejection_diagnostic("core/pkg/bad-selector", true),
+            "core/pkg/bad-selector"
+        );
     }
 }

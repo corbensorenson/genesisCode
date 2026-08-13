@@ -211,6 +211,14 @@ python3 scripts/lib/selfhost_pkg_resolution_identity_authority.py \
   --schema docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e resolution planning is partial: GenesisCode owns selector/strategy,
+# semver-policy, and update-admission decisions; host resolution mechanisms remain H0.
+python3 scripts/lib/selfhost_pkg_resolution_plan_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_resolution_plan_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \

@@ -178,6 +178,18 @@ pub(super) fn dispatch_resolution(
                 if let Err(v) = validate_requirement_registry_alias(&l, name, req, error_tok, op) {
                     return Ok(v);
                 }
+                let plan = match plan_requirement(
+                    identity_authority.as_deref_mut(),
+                    req,
+                    false,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(plan) => plan,
+                    Err(err_val) => {
+                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
+                    }
+                };
                 match resolve_requirement(
                     store,
                     refs,
@@ -188,6 +200,7 @@ pub(super) fn dispatch_resolution(
                     timeout_ms,
                     name,
                     req,
+                    plan,
                     identity_authority.as_deref_mut(),
                     error_tok,
                     op,
@@ -380,19 +393,25 @@ pub(super) fn dispatch_resolution(
                     continue;
                 }
                 selected_count = selected_count.saturating_add(1);
-                let should_update = req.update_policy == gc_pkg::UpdatePolicy::Auto
-                    && matches!(
-                        req.strategy,
-                        gc_pkg::ResolutionStrategy::TrackRef
-                            | gc_pkg::ResolutionStrategy::TagPolicy
-                    );
                 let has_existing = l.locked.contains_key(name);
-                if !should_update && has_existing {
+                let plan = match plan_requirement(
+                    identity_authority.as_deref_mut(),
+                    req,
+                    has_existing,
+                    error_tok,
+                    op,
+                ) {
+                    Ok(plan) => plan,
+                    Err(err_val) => {
+                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
+                    }
+                };
+                if !plan.should_resolve {
                     rationale.push(update_rationale_term(
                         name,
                         Some(req),
                         ":kept-existing",
-                        "update_policy=manual and locked entry already present",
+                        "GenesisCode resolution plan retained the existing locked entry",
                         l.locked.get(name),
                     ));
                     continue;
@@ -408,6 +427,7 @@ pub(super) fn dispatch_resolution(
                     timeout_ms,
                     name,
                     req,
+                    plan,
                     identity_authority.as_deref_mut(),
                     error_tok,
                     op,

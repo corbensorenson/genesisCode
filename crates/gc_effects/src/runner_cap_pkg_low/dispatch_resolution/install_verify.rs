@@ -80,6 +80,16 @@ pub(super) fn handle_pkg_install(
         if !store.path_for(snapshot_hex).exists()
             && let (Some(req), Some(refs_db)) = (l.requirements.get(name), refs)
         {
+            let plan = match plan_requirement(
+                identity_authority.as_deref_mut(),
+                req,
+                false,
+                error_tok,
+                op,
+            ) {
+                Ok(plan) => plan,
+                Err(v) => return Ok(v),
+            };
             match resolve_requirement(
                 store,
                 refs_db,
@@ -90,6 +100,7 @@ pub(super) fn handle_pkg_install(
                 timeout_ms,
                 name,
                 req,
+                plan,
                 identity_authority.as_deref_mut(),
                 error_tok,
                 op,

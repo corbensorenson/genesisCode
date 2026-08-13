@@ -12,7 +12,10 @@ use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
 use crate::pkg_lock_read_authority::PkgLockReadAuthority;
 use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
-use crate::pkg_resolution_identity_authority::PkgResolutionIdentityAuthority;
+use crate::pkg_resolution_identity_authority::{
+    PkgResolutionIdentityAuthority, PkgResolutionPlan, PkgResolutionPlanError,
+    PkgResolutionSelector, SemverSelectionPolicy,
+};
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::refs_authority::RefsAuthority;

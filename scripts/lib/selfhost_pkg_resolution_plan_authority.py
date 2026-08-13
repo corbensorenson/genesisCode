@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent custody verifier for self-hosted package resolution identities."""
+"""Independent custody verifier for self-hosted package resolution planning."""
 
 from __future__ import annotations
 
@@ -47,32 +47,38 @@ FIELDS = {
 }
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
-    "binding": "core/pkg::resolution-identity-authority",
+    "binding": "core/pkg::resolution-plan-authority",
     "decisionInventory": [
-        "closed-requirement-identity-map", "deterministic-coreform-term-print",
-        "newline-delimited-identity-bytes", "raw-blake3-requirement-fingerprint",
-        "closed-enum-and-optional-field-admission", "request-bound-result-verdict",
+        "selector-form-admission-and-normalization",
+        "selector-kind-and-strategy-inference",
+        "declared-strategy-agreement",
+        "tag-policy-presence-admission",
+        "semver-selection-policy-normalization",
+        "existing-lock-update-admission",
+        "request-bound-plan-verdict",
     ],
     "hostMechanisms": [
-        "artifact-only-authority-bootstrap-and-bounded-evaluation",
-        "typed-requirement-term-transport", "strict-result-contradiction-checking",
-        "effect-log-and-diagnostic-rendering",
+        "artifact-only-shared-context-bootstrap-and-bounded-evaluation",
+        "typed-request-and-strict-result-transport",
+        "semver-grammar-version-comparison-and-ref-observation",
+        "artifact-commit-registry-network-and-lock-transport",
+        "sealed-diagnostic-rendering",
     ],
     "hostOracle": {"parityOnly": True, "productionRequired": False, "removalTask": "R4.2.e"},
-    "independentVerifier": "scripts/lib/selfhost_pkg_resolution_identity_authority.py",
-    "kind": "genesis/selfhost-pkg-resolution-identity-authority-v0.1",
+    "independentVerifier": "scripts/lib/selfhost_pkg_resolution_plan_authority.py",
+    "kind": "genesis/selfhost-pkg-resolution-plan-authority-v0.1",
     "productionEntrypoints": ["genesis", "genesis_wasi"],
-    "requestKind": "genesis/pkg-resolution-identity-request-v0.1",
-    "resultKind": "genesis/pkg-resolution-identity-result-v0.1",
-    "schema": "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json",
+    "requestKind": "genesis/pkg-resolution-plan-request-v0.1",
+    "resultKind": "genesis/pkg-resolution-plan-result-v0.1",
+    "schema": "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json",
     "sourceModule": "selfhost/pkg_resolution_identity_authority_v1.gc",
-    "spec": "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md",
+    "spec": "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md",
     "version": "0.1.0",
 }
 NONCLAIMS = {
-    "bootstrap-fixpoint", "graph-resolution-authority", "h2-package-resolution",
-    "r4-2-e-closure", "registry-authority", "release-qualification",
-    "selector-resolution-authority", "sh-c-closure", "workspace-authority",
+    "bootstrap-fixpoint", "complete-graph-solving", "generic-lock-codec-authority",
+    "h2-package-resolution", "r4-2-e-closure", "registry-transport-authority",
+    "release-qualification", "sh-c-closure", "workspace-authority",
 }
 
 
@@ -129,10 +135,12 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     manifest = source_text(root, "selfhost/toolchain_manifest.gc", overrides)
     artifact = source_text(root, profile["artifact"], overrides)
     adapter = source_text(root, "crates/gc_effects/src/pkg_resolution_identity_authority.rs", overrides)
+    plan_adapter = source_text(root, "crates/gc_effects/src/pkg_resolution_plan_authority.rs", overrides)
+    planner = source_text(root, "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs", overrides)
     validation = source_text(
         root, "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs", overrides
     )
-    resolution = source_text(
+    dispatch = source_text(
         root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", overrides
     )
     install = source_text(
@@ -142,66 +150,88 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
 
     for marker in (
-        "(def core/pkg::resolution-identity-authority", profile["requestKind"],
-        profile["resultKind"], "selfhost/pkg-resolution-id::fingerprint",
-        "selfhost/pkg-resolution-id::exact-map? request",
-        "selfhost/printer::print-term identity", "core/crypto::blake3",
-        "selfhost/hash::hash-term request",
+        "(def core/pkg::resolution-plan-authority", profile["requestKind"], profile["resultKind"],
+        "selfhost/pkg-resolution-plan::plan", "selfhost/pkg-resolution-plan::hash64?",
+        "selfhost/pkg-resolution-plan::semver-policy", "selfhost/pkg-resolution-plan::should-resolve?",
+        "selfhost/pkg-resolution-id::exact-map? request", "selfhost/hash::hash-term request",
     ):
         if marker not in module:
-            fail(f"GenesisCode identity authority missing marker: {marker}")
+            fail(f"GenesisCode plan authority missing marker: {marker}")
     if f'    "{profile["sourceModule"]}"' not in manifest or profile["binding"] not in manifest:
-        fail("toolchain manifest does not custody identity authority module and binding")
+        fail("toolchain manifest does not custody plan authority module and required binding")
     if f':path "{profile["sourceModule"]}"' not in artifact or profile["binding"] not in artifact:
-        fail("published artifact does not contain identity authority module and binding")
+        fail("published artifact does not contain plan authority module and binding")
+
     for marker in (
-        "pub(crate) struct PkgResolutionIdentityAuthority", "SelfhostBootstrapMode::ArtifactOnly",
-        "const STEP_LIMIT: u64 = 2_000_000", "const ALLOC_LIMIT: u64 = 4_000_000",
-        "decode_identity_result", "result field set mismatch", "request-h",
-        "result :fingerprint must be lowercase BLAKE3 hex64",
+        "plan_authority: Value", "let plan_authority = environment", ".get(PLAN_BINDING)",
+        'mod plan;', "PkgResolutionPlanError", "result field set mismatch",
     ):
         if marker not in adapter:
-            fail(f"Rust identity adapter missing marker: {marker}")
-
-    parity_marker = '\n#[cfg(any(test, feature = "parity-oracle"))]\nfn compute_requirement_fingerprint_parity'
-    if parity_marker not in validation:
-        fail("test-only Rust fingerprint oracle boundary missing")
-    production = validation.split(parity_marker, 1)[0]
+            fail(f"Rust shared authority adapter missing marker: {marker}")
     for marker in (
-        ".fingerprint(req, snapshot, commit)", "core/pkg/authority-error",
-        "requires the artifact-loaded GenesisCode identity authority",
+        "pub(crate) fn plan(",
+        "decode_plan_result", "request-h",
+        "semver selector and :semver-policy disagree", "PkgResolutionPlanError::Rejected",
+        "result :code is outside the closed rejection inventory",
     ):
-        if marker not in production:
-            fail(f"production fingerprint route missing marker: {marker}")
-    if "blake3::hash" in production or "print_term(&Term::Map(m))" in production:
-        fail("production fingerprint route retains Rust identity oracle")
+        if marker not in plan_adapter:
+            fail(f"Rust plan adapter missing marker: {marker}")
+    if adapter.count("load_selfhost_coreform_toolchain_v1_with_mode(") != 1:
+        fail("plan and identity bindings must share exactly one artifact bootstrap context")
+
+    parity_marker = '\n#[cfg(any(test, feature = "parity-oracle"))]\nfn plan_requirement_parity'
+    if parity_marker not in planner:
+        fail("test-only Rust planning oracle boundary missing")
+    production = planner.split(parity_marker, 1)[0]
+    for marker in (
+        ".plan(req, has_existing)", "requires the artifact-loaded GenesisCode planning authority",
+        "pub(crate) fn resolve_requirement(", "plan: PkgResolutionPlan", "match plan.selector",
+    ):
+        if marker not in planner:
+            fail(f"production planning route missing marker: {marker}")
+    for forbidden in (
+        "pub(crate) fn parse_selector(", "fn semver_selection_policy(",
+        "let inferred_strategy = gc_pkg::infer_strategy",
+    ):
+        if forbidden in production:
+            fail(f"production route retains Rust planning oracle: {forbidden}")
+
+    for text, markers, label in (
+        (dispatch, ("plan_requirement(", "if !plan.should_resolve", "resolve_requirement("), "lock/update"),
+        (validation, ("plan_requirement_for_strict_validation(", "match plan.selector"), "strict validation"),
+        (install, ("plan_requirement(", "resolve_requirement("), "install hydration"),
+    ):
+        for marker in markers:
+            if marker not in text:
+                fail(f"{label} plan wiring missing marker: {marker}")
+    if "let should_update = req.update_policy" in dispatch:
+        fail("update dispatcher retains duplicated Rust update admission")
     for marker in (
         ".map(PkgResolutionIdentityAuthority::load)", '"core/pkg-low::lock"',
         '"core/pkg-low::update"', '"core/pkg-low::install"',
-        "pkg_resolution_identity_authority.as_mut()",
     ):
         if marker not in runner:
-            fail(f"runner identity authority wiring missing marker: {marker}")
-    if resolution.count("identity_authority.as_deref_mut()") != 6:
-        fail("lock/update resolution authority forwarding inventory drift")
-    if (install.count("identity_authority.as_deref_mut()") != 2
-            or "resolve_requirement(" not in install):
-        fail("install hydration does not forward identity authority")
+            fail(f"runner plan authority wiring missing marker: {marker}")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
                 if item.get("id") == "SD-PACKAGE-RESOLUTION"), None)
     if not row or row.get("currentLevel") != "H0":
         fail("SD-PACKAGE-RESOLUTION must remain truthful H0")
-    for path in (profile["sourceModule"], "crates/gc_effects/src/pkg_resolution_identity_authority.rs"):
+    for path in (
+        profile["sourceModule"],
+        "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
+        "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
+    ):
         if path not in row.get("productionAuthorityPaths", []):
-            fail(f"semantic ledger missing production authority path: {path}")
+            fail(f"semantic ledger missing plan production authority path: {path}")
     if profile["spec"] not in row.get("specAuthorityPaths", []):
-        fail("semantic ledger missing identity authority specification")
+        fail("semantic ledger missing plan authority specification")
     limitations = "\n".join(row.get("limitations", [])).lower()
-    if "fingerprint" not in limitations or "graph" not in limitations or "remain" not in limitations:
-        fail("semantic ledger lacks partial identity claim and residual graph limitation")
+    for marker in ("selector", "update", "semver", "graph", "remain"):
+        if marker not in limitations:
+            fail(f"semantic ledger lacks partial plan claim/residual marker: {marker}")
     if source_identity(profile["sourceModule"], module.encode()) != profile["sourceSha256"]:
-        fail("identity authority source identity mismatch")
+        fail("plan authority source identity mismatch")
 
 
 def validate_all(root, profile, schema, overrides=None, check_identity=True) -> None:
@@ -213,6 +243,8 @@ def self_test(root: Path, profile, schema) -> int:
     paths = [
         profile["sourceModule"], "selfhost/toolchain_manifest.gc", profile["artifact"],
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
+        "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
         "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
@@ -227,7 +259,7 @@ def self_test(root: Path, profile, schema) -> int:
         changed["contentIdentitySha256"] = canonical_identity(changed)
         mutations.append((changed, {}, name))
 
-    profile_mutation("binding", "core/pkg::legacy-resolution-identity")
+    profile_mutation("binding", "core/pkg::legacy-resolution-plan")
     profile_mutation("decisionInventory", profile["decisionInventory"][:-1])
     profile_mutation("hostMechanisms", profile["hostMechanisms"][:-1])
     profile_mutation("hostOracle", {"parityOnly": False, "productionRequired": True, "removalTask": "R4.2.e"})
@@ -240,13 +272,23 @@ def self_test(root: Path, profile, schema) -> int:
             fail(f"self-test marker absent for {name}")
         mutations.append((profile, {path: sources[path].replace(old, new, 1)}, name))
 
-    source_mutation(profile["sourceModule"], "selfhost/printer::print-term identity", "legacy-print identity", "source")
-    source_mutation("selfhost/toolchain_manifest.gc", profile["sourceModule"], "selfhost/missing.gc", "manifest")
-    source_mutation(profile["artifact"], f':path "{profile["sourceModule"]}"', ':path "selfhost/missing.gc"', "artifact")
-    source_mutation("crates/gc_effects/src/pkg_resolution_identity_authority.rs", "result field set mismatch", "result accepted", "decoder")
-    source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs", ".fingerprint(req, snapshot, commit)", ".legacy_fingerprint(req)", "production route")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "identity_authority.as_deref_mut()", "None", "resolution forwarding")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "identity_authority.as_deref_mut()", "None", "install forwarding")
+    source_mutation(profile["sourceModule"], "(def core/pkg::resolution-plan-authority", "(def core/pkg::legacy-plan", "source")
+    source_mutation("selfhost/toolchain_manifest.gc", profile["binding"], "core/pkg::missing-plan", "manifest")
+    if profile["binding"] not in sources[profile["artifact"]]:
+        fail("self-test marker absent for artifact")
+    mutations.append((
+        profile,
+        {profile["artifact"]: sources[profile["artifact"]].replace(
+            profile["binding"], "core/pkg::missing-plan"
+        )},
+        "artifact",
+    ))
+    source_mutation("crates/gc_effects/src/pkg_resolution_plan_authority.rs", "semver selector and :semver-policy disagree", "semver accepted", "decoder")
+    source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs", ".plan(req, has_existing)", ".legacy_plan(req)", "production plan")
+    source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs", "match plan.selector", "match parse_selector_parity(&req.selector).unwrap()", "selector execution")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "if !plan.should_resolve", "if false", "update decision")
+    source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs", "match plan.selector", "match parse_selector_parity(&req.selector).unwrap()", "strict validation")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "plan_requirement(", "legacy_plan(", "install")
     source_mutation("crates/gc_effects/src/runner.rs", ".map(PkgResolutionIdentityAuthority::load)", ".map(PkgLockReadAuthority::load)", "runner load")
 
     controls = 0
@@ -257,7 +299,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 15:
+    if controls != 17:
         fail(f"negative control inventory drift: {controls}")
     return controls
 
@@ -290,12 +332,12 @@ def main(argv=None) -> int:
             fail("artifact argument does not match profile")
         controls = self_test(root, profile, schema) if args.self_test else 0
         print(
-            "selfhost-pkg-resolution-identity-authority: ok "
+            "selfhost-pkg-resolution-plan-authority: ok "
             f"profile={profile['contentIdentitySha256']} controls={controls}"
         )
         return 0
     except CheckError as error:
-        print(f"selfhost-pkg-resolution-identity-authority: {error}", file=sys.stderr)
+        print(f"selfhost-pkg-resolution-plan-authority: {error}", file=sys.stderr)
         return 1
 
 

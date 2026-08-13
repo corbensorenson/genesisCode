@@ -176,3 +176,316 @@
               ((selfhost/pkg-resolution-id::reject request-h) "request :kind mismatch")))
           ((selfhost/pkg-resolution-id::reject request-h) "request fields mismatch"))
         ((selfhost/pkg-resolution-id::reject request-h) "request must be map")))))
+
+; Package selector and update planning authority. Host code executes the returned
+; plan but does not classify selectors or choose update behavior in production.
+
+(def selfhost/pkg-resolution-plan::bool?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :bool))))
+
+(def selfhost/pkg-resolution-plan::starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let ((length (core/bytes::len bytes)))
+            (let ((prefix-length (core/bytes::len prefix-bytes)))
+              (if ((core/int::lt? length) prefix-length)
+                false
+                ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes)))))))))
+
+(def selfhost/pkg-resolution-plan::ascii-space?
+  (fn (byte)
+    (if ((core/int::eq? byte) 32)
+      true
+      (if ((core/int::eq? byte) 9)
+        true
+        (if ((core/int::eq? byte) 10) true ((core/int::eq? byte) 13))))))
+
+(def selfhost/pkg-resolution-plan::trim-left
+  (fn (bytes)
+    (fn (length)
+      (fn (index)
+        (if ((core/int::eq? index) length)
+          index
+          (if (selfhost/pkg-resolution-plan::ascii-space? ((core/bytes::get bytes) index))
+            (((selfhost/pkg-resolution-plan::trim-left bytes) length) ((core/int::add index) 1))
+            index))))))
+
+(def selfhost/pkg-resolution-plan::trim-right
+  (fn (bytes)
+    (fn (start)
+      (fn (end)
+        (if ((core/int::eq? start) end)
+          end
+          (let ((index ((core/int::sub end) 1)))
+            (if (selfhost/pkg-resolution-plan::ascii-space? ((core/bytes::get bytes) index))
+              (((selfhost/pkg-resolution-plan::trim-right bytes) start) index)
+              end)))))))
+
+(def selfhost/pkg-resolution-plan::trim
+  (fn (value)
+    (let ((bytes (core/str::to-utf8 value)))
+      (let ((length (core/bytes::len bytes)))
+        (let ((start (((selfhost/pkg-resolution-plan::trim-left bytes) length) 0)))
+          (let ((end (((selfhost/pkg-resolution-plan::trim-right bytes) start) length)))
+            (core/str::from-utf8
+              (((core/bytes::slice bytes) start) ((core/int::sub end) start)))))))))
+
+(def selfhost/pkg-resolution-plan::drop-prefix
+  (fn (value)
+    (fn (length)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((total (core/bytes::len bytes)))
+          (core/str::from-utf8
+            (((core/bytes::slice bytes) length) ((core/int::sub total) length))))))))
+
+(def selfhost/pkg-resolution-plan::ascii-hex?
+  (fn (byte)
+    (if
+      (if ((core/int::lt? 47) byte) ((core/int::lt? byte) 58) false)
+      true
+      (if
+        (if ((core/int::lt? 64) byte) ((core/int::lt? byte) 71) false)
+        true
+        (if ((core/int::lt? 96) byte) ((core/int::lt? byte) 103) false)))))
+
+(def selfhost/pkg-resolution-plan::hash64-loop?
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? index) 64)
+        true
+        (if (selfhost/pkg-resolution-plan::ascii-hex? ((core/bytes::get bytes) index))
+          ((selfhost/pkg-resolution-plan::hash64-loop? bytes) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-resolution-plan::hash64?
+  (fn (value)
+    (let ((bytes (core/str::to-utf8 value)))
+      (if ((core/int::eq? (core/bytes::len bytes)) 64)
+        ((selfhost/pkg-resolution-plan::hash64-loop? bytes) 0)
+        false))))
+
+(def selfhost/pkg-resolution-plan::plan
+  (fn (selector)
+    (let ((value (selfhost/pkg-resolution-plan::trim selector)))
+      (if ((selfhost/pkg-resolution-plan::starts-with? value) "semver:")
+        (let
+          ((rest
+            (selfhost/pkg-resolution-plan::trim
+              ((selfhost/pkg-resolution-plan::drop-prefix value) 7))))
+          (if ((core/int::eq? (core/str::len rest)) 0)
+            nil
+            {:selector-kind (quote :semver-range)
+             :selector-value rest
+             :strategy (quote :tag-policy)}))
+        (if ((selfhost/pkg-resolution-plan::starts-with? value) "commit:")
+          (let
+            ((rest
+              (selfhost/pkg-resolution-plan::trim
+                ((selfhost/pkg-resolution-plan::drop-prefix value) 7))))
+            (if (selfhost/pkg-resolution-plan::hash64? rest)
+              {:selector-kind (quote :commit)
+               :selector-value rest
+               :strategy (quote :pinned)}
+              nil))
+          (if ((selfhost/pkg-resolution-plan::starts-with? value) "snapshot:")
+            (let
+              ((rest
+                (selfhost/pkg-resolution-plan::trim
+                  ((selfhost/pkg-resolution-plan::drop-prefix value) 9))))
+              (if (selfhost/pkg-resolution-plan::hash64? rest)
+                {:selector-kind (quote :snapshot)
+                 :selector-value rest
+                 :strategy (quote :pinned)}
+                nil))
+            (if ((selfhost/pkg-resolution-plan::starts-with? value) "ref:")
+              (let
+                ((rest
+                  (selfhost/pkg-resolution-plan::trim
+                    ((selfhost/pkg-resolution-plan::drop-prefix value) 4))))
+                (if ((selfhost/pkg-resolution-plan::starts-with? rest) "refs/tags/")
+                  {:selector-kind (quote :ref)
+                   :selector-value rest
+                   :strategy (quote :tag-policy)}
+                  (if ((selfhost/pkg-resolution-plan::starts-with? rest) "refs/")
+                    {:selector-kind (quote :ref)
+                     :selector-value rest
+                     :strategy (quote :track-ref)}
+                    nil)))
+              (if ((selfhost/pkg-resolution-plan::starts-with? value) "refs/tags/")
+                {:selector-kind (quote :ref)
+                 :selector-value value
+                 :strategy (quote :tag-policy)}
+                (if ((selfhost/pkg-resolution-plan::starts-with? value) "refs/")
+                  {:selector-kind (quote :ref)
+                   :selector-value value
+                   :strategy (quote :track-ref)}
+                  (if (selfhost/pkg-resolution-plan::hash64? value)
+                    {:selector-kind (quote :commit)
+                     :selector-value value
+                     :strategy (quote :pinned)}
+                    nil))))))))))
+
+(def selfhost/pkg-resolution-plan::semver-policy
+  (fn (tag-policy)
+    (if ((core/eq? tag-policy) "lowest")
+      (quote :lowest)
+      (if ((core/eq? tag-policy) "highest")
+        (quote :highest)
+        (if ((core/eq? tag-policy) "latest")
+          (quote :highest)
+          (if ((core/eq? tag-policy) "exact") (quote :highest) nil))))))
+
+(def selfhost/pkg-resolution-plan::should-resolve?
+  (fn (has-existing)
+    (fn (update-policy)
+      (fn (strategy)
+        (if has-existing
+          (if ((core/sym::eq? update-policy) (quote :auto))
+            (if ((core/sym::eq? strategy) (quote :pinned)) false true)
+            false)
+          true)))))
+
+(def selfhost/pkg-resolution-plan::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        {
+          :code code
+          :kind "genesis/pkg-resolution-plan-result-v0.1"
+          :message message
+          :ok false
+          :request-h request-h
+          :selector-kind nil
+          :selector-value nil
+          :semver-policy nil
+          :should-resolve nil
+          :v 1}))))
+
+(def selfhost/pkg-resolution-plan::accept
+  (fn (request-h)
+    (fn (selector-plan)
+      (fn (semver-policy)
+        (fn (should-resolve)
+          {
+            :code nil
+            :kind "genesis/pkg-resolution-plan-result-v0.1"
+            :message nil
+            :ok true
+            :request-h request-h
+            :selector-kind ((core/map::get selector-plan) (quote :selector-kind))
+            :selector-value ((core/map::get selector-plan) (quote :selector-value))
+            :semver-policy semver-policy
+            :should-resolve should-resolve
+            :v 1})))))
+
+(def selfhost/pkg-resolution-plan::evaluate
+  (fn (request-h)
+    (fn (request)
+      (let ((selector ((core/map::get request) (quote :selector))))
+        (let ((declared ((core/map::get request) (quote :strategy))))
+          (let ((tag-policy ((core/map::get request) (quote :tag-policy))))
+            (let ((selector-plan (selfhost/pkg-resolution-plan::plan selector)))
+              (if (core/list::is-nil? selector-plan)
+                (((selfhost/pkg-resolution-plan::reject request-h) "core/pkg/bad-selector")
+                  "unsupported or malformed selector")
+                (let ((inferred ((core/map::get selector-plan) (quote :strategy))))
+                  (if ((core/sym::eq? declared) inferred)
+                    (if ((core/sym::eq? inferred) (quote :tag-policy))
+                      (if (selfhost/pkg-resolution-id::str? tag-policy)
+                        (let
+                          ((selector-kind
+                            ((core/map::get selector-plan) (quote :selector-kind))))
+                          (if ((core/sym::eq? selector-kind) (quote :semver-range))
+                            (let
+                              ((semver-policy
+                                (selfhost/pkg-resolution-plan::semver-policy tag-policy)))
+                              (if (core/list::is-nil? semver-policy)
+                                (((selfhost/pkg-resolution-plan::reject request-h)
+                                    "core/pkg/semver-policy-unsupported")
+                                  "unsupported semver tag_policy")
+                                ((((selfhost/pkg-resolution-plan::accept request-h) selector-plan)
+                                    semver-policy)
+                                  (((selfhost/pkg-resolution-plan::should-resolve?
+                                      ((core/map::get request) (quote :has-existing)))
+                                    ((core/map::get request) (quote :update-policy))) inferred))))
+                            ((((selfhost/pkg-resolution-plan::accept request-h) selector-plan) nil)
+                              (((selfhost/pkg-resolution-plan::should-resolve?
+                                  ((core/map::get request) (quote :has-existing)))
+                                ((core/map::get request) (quote :update-policy))) inferred))))
+                        (((selfhost/pkg-resolution-plan::reject request-h)
+                            "core/pkg/tag-policy-required")
+                          "tag-policy strategy requires tag_policy"))
+                      (if (selfhost/pkg-resolution-id::nil? tag-policy)
+                        ((((selfhost/pkg-resolution-plan::accept request-h) selector-plan) nil)
+                          (((selfhost/pkg-resolution-plan::should-resolve?
+                              ((core/map::get request) (quote :has-existing)))
+                            ((core/map::get request) (quote :update-policy))) inferred))
+                        (((selfhost/pkg-resolution-plan::reject request-h)
+                            "core/pkg/tag-policy-forbidden")
+                          "tag_policy is only valid for tag-policy strategy")))
+                    (((selfhost/pkg-resolution-plan::reject request-h)
+                        "core/pkg/strategy-mismatch")
+                      "selector strategy mismatch")))))))))))
+
+(def core/pkg::resolution-plan-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-resolution-id::map? request)
+        (if
+          ((selfhost/pkg-resolution-id::exact-map? request)
+            [:has-existing :kind :op :selector :strategy :tag-policy :update-policy :v])
+          (let ((kind ((core/map::get request) (quote :kind))))
+            (if
+              (if (selfhost/pkg-resolution-id::str? kind)
+                ((core/eq? kind) "genesis/pkg-resolution-plan-request-v0.1")
+                false)
+              (let ((op ((core/map::get request) (quote :op))))
+                (if
+                  (if (selfhost/pkg-resolution-id::sym? op)
+                    ((core/sym::eq? op) (quote :plan))
+                    false)
+                  (let ((version ((core/map::get request) (quote :v))))
+                    (if
+                      (if (selfhost/pkg-resolution-id::int? version)
+                        ((core/int::eq? version) 1)
+                        false)
+                      (if
+                        (if
+                          (selfhost/pkg-resolution-id::str?
+                            ((core/map::get request) (quote :selector)))
+                          (if
+                            (selfhost/pkg-resolution-id::strategy?
+                              ((core/map::get request) (quote :strategy)))
+                            (if
+                              (selfhost/pkg-resolution-id::optional-string?
+                                ((core/map::get request) (quote :tag-policy)))
+                              (if
+                                (selfhost/pkg-resolution-id::update-policy?
+                                  ((core/map::get request) (quote :update-policy)))
+                                (selfhost/pkg-resolution-plan::bool?
+                                  ((core/map::get request) (quote :has-existing)))
+                                false)
+                              false)
+                            false)
+                          false)
+                        ((selfhost/pkg-resolution-plan::evaluate request-h) request)
+                        (((selfhost/pkg-resolution-plan::reject request-h)
+                            "core/pkg/bad-authority-request")
+                          "request plan fields are invalid"))
+                      (((selfhost/pkg-resolution-plan::reject request-h)
+                          "core/pkg/bad-authority-request")
+                        "request :v must be 1")))
+                  (((selfhost/pkg-resolution-plan::reject request-h)
+                      "core/pkg/bad-authority-request")
+                    "request :op must be :plan")))
+              (((selfhost/pkg-resolution-plan::reject request-h)
+                  "core/pkg/bad-authority-request")
+                "request :kind mismatch")))
+          (((selfhost/pkg-resolution-plan::reject request-h)
+              "core/pkg/bad-authority-request")
+            "request fields mismatch"))
+        (((selfhost/pkg-resolution-plan::reject request-h)
+            "core/pkg/bad-authority-request")
+          "request must be map")))))

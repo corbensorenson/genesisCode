@@ -238,41 +238,15 @@ pub(crate) fn validate_locked_entries_strict(
             ));
         }
 
-        let inferred_strategy = gc_pkg::infer_strategy(&req.selector);
-        if req.strategy != inferred_strategy {
-            return Err(mk_error(
-                error_tok,
-                "core/pkg/lock-invariant",
-                format!(
-                    "selector strategy mismatch for {name} (declared={}, inferred={})",
-                    req.strategy.as_str(),
-                    inferred_strategy.as_str()
-                ),
-                Some(op),
-            ));
-        }
-        if matches!(req.strategy, gc_pkg::ResolutionStrategy::TagPolicy) && req.tag_policy.is_none()
-        {
-            return Err(mk_error(
-                error_tok,
-                "core/pkg/lock-invariant",
-                format!("tag-policy strategy requires tag_policy for {name}"),
-                Some(op),
-            ));
-        }
-        if !matches!(req.strategy, gc_pkg::ResolutionStrategy::TagPolicy)
-            && req.tag_policy.is_some()
-        {
-            return Err(mk_error(
-                error_tok,
-                "core/pkg/lock-invariant",
-                format!("tag_policy is only valid for tag-policy strategy: {name}"),
-                Some(op),
-            ));
-        }
+        let plan = plan_requirement_for_strict_validation(
+            identity_authority.as_deref_mut(),
+            req,
+            error_tok,
+            op,
+        )?;
 
-        match parse_selector(&req.selector) {
-            Some(Selector::Snapshot(_)) => {
+        match plan.selector {
+            PkgResolutionSelector::Snapshot(_) => {
                 if le.resolved_ref.is_some() {
                     return Err(mk_error(
                         error_tok,
@@ -282,7 +256,7 @@ pub(crate) fn validate_locked_entries_strict(
                     ));
                 }
             }
-            Some(Selector::Commit(sel_h)) => {
+            PkgResolutionSelector::Commit(sel_h) => {
                 if le.resolved_ref.is_some() {
                     return Err(mk_error(
                         error_tok,
@@ -308,7 +282,7 @@ pub(crate) fn validate_locked_entries_strict(
                     ));
                 }
             }
-            Some(Selector::Ref(ref_name)) => {
+            PkgResolutionSelector::Ref(ref_name) => {
                 if le.resolved_ref.as_deref() != Some(ref_name.as_str()) {
                     return Err(mk_error(
                         error_tok,
@@ -326,7 +300,7 @@ pub(crate) fn validate_locked_entries_strict(
                     ));
                 }
             }
-            Some(Selector::SemverRange(range)) => {
+            PkgResolutionSelector::SemverRange(range) => {
                 let Some(resolved_ref) = le.resolved_ref.as_deref() else {
                     return Err(mk_error(
                         error_tok,
@@ -377,14 +351,6 @@ pub(crate) fn validate_locked_entries_strict(
                         Some(op),
                     ));
                 }
-            }
-            None => {
-                return Err(mk_error(
-                    error_tok,
-                    "core/pkg/bad-selector",
-                    format!("unsupported selector: {}", req.selector),
-                    Some(op),
-                ));
             }
         }
 

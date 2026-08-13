@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `6921291f1776b8b5605f73a499674be9fe586303d58e5d692ded462f991c099b`
-- Freshness artifact hash: `6921291f1776b8b5605f73a499674be9fe586303d58e5d692ded462f991c099b`
-- Freshness source hash: `bda4093f50800d35cd42433a4da3e5385d23a5b33bd2db25be264a1891b0b722`
-- Source aggregate hash (module path + module sha256): `be8afdbf37e91b51f4cdee953840ab1a8f109d5c9161420e89bc53b51cf900d7`
+- Artifact sha256: `018ba87289d7eca3a534fd44936efb4cf70025b19976d4e002272906645e6334`
+- Freshness artifact hash: `018ba87289d7eca3a534fd44936efb4cf70025b19976d4e002272906645e6334`
+- Freshness source hash: `69deaec90c89a66a492a555e9d999b483365b9efece3e0d2577089e59da8a2f2`
+- Source aggregate hash (module path + module sha256): `2faac44e7509e65e8e8201321a3c3f7ba9e43f3ae3830b9c750bf55bd5c10b37`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `92`
 
@@ -88,7 +88,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/refs_authority_v1.gc` | 191 | 8348 | 18 | `e960ef5bc80f891a` |
 | `selfhost/pkg_lock_read_authority_v1.gc` | 384 | 18032 | 34 | `ab97365a6cafcdf4` |
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
-| `selfhost/pkg_resolution_identity_authority_v1.gc` | 178 | 7186 | 18 | `f3c5d8a07fd1917e` |
+| `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |

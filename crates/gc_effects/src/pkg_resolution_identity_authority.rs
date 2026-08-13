@@ -7,15 +7,23 @@ use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use crate::EffectsError;
 use crate::policy::SelfhostAuthorityConfig;
 
-const BINDING: &str = "core/pkg::resolution-identity-authority";
-const REQUEST_KIND: &str = "genesis/pkg-resolution-identity-request-v0.1";
-const RESULT_KIND: &str = "genesis/pkg-resolution-identity-result-v0.1";
+#[path = "pkg_resolution_plan_authority.rs"]
+mod plan;
+pub(crate) use plan::{
+    PkgResolutionPlan, PkgResolutionPlanError, PkgResolutionSelector, SemverSelectionPolicy,
+};
+
+const IDENTITY_BINDING: &str = "core/pkg::resolution-identity-authority";
+const IDENTITY_REQUEST_KIND: &str = "genesis/pkg-resolution-identity-request-v0.1";
+const IDENTITY_RESULT_KIND: &str = "genesis/pkg-resolution-identity-result-v0.1";
+const PLAN_BINDING: &str = "core/pkg::resolution-plan-authority";
 const STEP_LIMIT: u64 = 2_000_000;
 const ALLOC_LIMIT: u64 = 4_000_000;
 
 pub(crate) struct PkgResolutionIdentityAuthority {
     context: EvalCtx,
-    authority: Value,
+    identity_authority: Value,
+    plan_authority: Value,
 }
 
 impl PkgResolutionIdentityAuthority {
@@ -38,12 +46,19 @@ impl PkgResolutionIdentityAuthority {
             config.artifact.as_deref(),
         )
         .map_err(|error| authority_error(format!("artifact bootstrap failed: {error:#}")))?;
-        let authority = environment
-            .get(BINDING)
-            .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
+        let identity_authority = environment
+            .get(IDENTITY_BINDING)
+            .ok_or_else(|| authority_error(format!("missing binding {IDENTITY_BINDING}")))?;
+        let plan_authority = environment
+            .get(PLAN_BINDING)
+            .ok_or_else(|| authority_error(format!("missing binding {PLAN_BINDING}")))?;
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
-        Ok(Self { context, authority })
+        Ok(Self {
+            context,
+            identity_authority,
+            plan_authority,
+        })
     }
 
     pub(crate) fn fingerprint(
@@ -59,7 +74,7 @@ impl PkgResolutionIdentityAuthority {
                     .map(|value| Term::Str(value.to_string()))
                     .unwrap_or(Term::Nil),
             ),
-            (":kind", Term::Str(REQUEST_KIND.to_string())),
+            (":kind", Term::Str(IDENTITY_REQUEST_KIND.to_string())),
             (":op", Term::symbol(":requirement-fingerprint")),
             (
                 ":registry",
@@ -101,15 +116,15 @@ impl PkgResolutionIdentityAuthority {
         self.context.reset_counters();
         self.context.step_limit = Some(STEP_LIMIT);
         let value = self
-            .authority
+            .identity_authority
             .clone()
             .apply(&mut self.context, Value::data(request))
             .map_err(|error| authority_error(format!("apply failed: {error}")))?;
-        decode_result(plain_result(value, &self.context)?, request_hash)
+        decode_identity_result(plain_result(value, &self.context)?, request_hash)
     }
 }
 
-fn decode_result(term: Term, request_hash: [u8; 32]) -> Result<String, EffectsError> {
+fn decode_identity_result(term: Term, request_hash: [u8; 32]) -> Result<String, EffectsError> {
     let fields = exact_map(
         &term,
         &[
@@ -122,7 +137,7 @@ fn decode_result(term: Term, request_hash: [u8; 32]) -> Result<String, EffectsEr
             ":v",
         ],
     )?;
-    require_string(fields, ":kind", RESULT_KIND)?;
+    require_string(fields, ":kind", IDENTITY_RESULT_KIND)?;
     require_int(fields, ":v", 1)?;
     require_string(fields, ":request-h", &hex32(request_hash))?;
     if required_bool(fields, ":ok")? {
@@ -271,8 +286,17 @@ mod tests {
     use super::*;
 
     fn artifact_config() -> SelfhostAuthorityConfig {
-        let artifact = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../selfhost/toolchain.gc")
+        let workspace = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let artifact = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+            .map(std::path::PathBuf::from)
+            .map(|path| {
+                if path.is_absolute() {
+                    path
+                } else {
+                    workspace.join(path)
+                }
+            })
+            .unwrap_or_else(|| workspace.join("selfhost/toolchain.gc"))
             .canonicalize()
             .expect("canonical selfhost artifact path");
         SelfhostAuthorityConfig {
@@ -356,7 +380,7 @@ mod tests {
         let base = map([
             (":code", Term::Nil),
             (":fingerprint", Term::Str("a".repeat(64))),
-            (":kind", Term::Str(RESULT_KIND.to_string())),
+            (":kind", Term::Str(IDENTITY_RESULT_KIND.to_string())),
             (":message", Term::Nil),
             (":ok", Term::Bool(true)),
             (":request-h", Term::Str(hex32(request_hash))),
@@ -367,7 +391,7 @@ mod tests {
             _ => return,
         };
         open.insert(TermOrdKey(Term::symbol(":extra")), Term::Nil);
-        assert!(decode_result(Term::Map(open), request_hash).is_err());
+        assert!(decode_identity_result(Term::Map(open), request_hash).is_err());
         let mut unbound = match base {
             Term::Map(fields) => fields,
             _ => return,
@@ -376,7 +400,7 @@ mod tests {
             TermOrdKey(Term::symbol(":request-h")),
             Term::Str("0".repeat(64)),
         );
-        assert!(decode_result(Term::Map(unbound), request_hash).is_err());
+        assert!(decode_identity_result(Term::Map(unbound), request_hash).is_err());
     }
 
     #[test]
@@ -384,7 +408,7 @@ mod tests {
         let mut authority = PkgResolutionIdentityAuthority::load(&artifact_config()).unwrap();
         let request = map([
             (":extra", Term::Nil),
-            (":kind", Term::Str(REQUEST_KIND.to_string())),
+            (":kind", Term::Str(IDENTITY_REQUEST_KIND.to_string())),
             (":op", Term::symbol(":requirement-fingerprint")),
             (":registry", Term::Nil),
             (":selector", Term::Str("snapshot:a".to_string())),
@@ -396,12 +420,12 @@ mod tests {
         ]);
         let request_hash = hash_term(&request);
         let result = authority
-            .authority
+            .identity_authority
             .clone()
             .apply(&mut authority.context, Value::data(request))
             .unwrap();
         assert!(
-            decode_result(
+            decode_identity_result(
                 plain_result(result, &authority.context).unwrap(),
                 request_hash
             )
