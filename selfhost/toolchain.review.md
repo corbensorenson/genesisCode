@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `119210191782e5f4577c965f3a0ec1a70d99ac128fde088fc6d429dd6759932c`
-- Freshness artifact hash: `119210191782e5f4577c965f3a0ec1a70d99ac128fde088fc6d429dd6759932c`
-- Freshness source hash: `d68e63084cfeb5d1a9ae5f3b1d857883d6f1cea5f8ca6da7b4edd1d7fcb78200`
-- Source aggregate hash (module path + module sha256): `62b20386e1b455740c082030f66f4a347ac189380c11822b8a0dc7151fc2731a`
+- Artifact sha256: `e318e63ab87b90bbae5b6813176e2907b8dc877d70bea1f6d820f195f2c8e144`
+- Freshness artifact hash: `e318e63ab87b90bbae5b6813176e2907b8dc877d70bea1f6d820f195f2c8e144`
+- Freshness source hash: `58817ccb27c874a80c3178a883312e58368ee58cb24be296ad30b4ee2b480a83`
+- Source aggregate hash (module path + module sha256): `d9cd7bfab034d1de67acf521963db94d3cf9e26889f724e4c07b92168640f0b8`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `89`
+- Module count: `90`
 
 ## Module Summary
 
@@ -29,7 +29,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/cli_coreform_vcs_queries_v1.gc` | 210 | 9125 | 13 | `96fbbb8f4b9f1e06` |
 | `selfhost/cli_coreform_vcs_blame_v1.gc` | 327 | 17092 | 13 | `24b55511a286997b` |
 | `selfhost/cli_coreform_vcs_pkg_v1.gc` | 465 | 22278 | 21 | `befd359a9422d577` |
-| `selfhost/cli_pkg_runtime_v1.gc` | 233 | 13168 | 8 | `7f05a6398597ecdd` |
+| `selfhost/cli_pkg_runtime_v1.gc` | 249 | 13706 | 13 | `e70665938b7131fe` |
 | `selfhost/cli_pkg_runtime_updates_v1.gc` | 201 | 10219 | 8 | `d872ba3597eda520` |
 | `selfhost/cli_pkg_runtime_verify_v1.gc` | 243 | 11706 | 14 | `5267629fe45699a5` |
 | `selfhost/cli_pkg_ops_v1.gc` | 421 | 21222 | 21 | `7bd3d718d554a167` |
@@ -86,6 +86,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/store_verify_authority_v1.gc` | 374 | 18313 | 24 | `0588486a78bd068c` |
 | `selfhost/commit_authority_v1.gc` | 344 | 16401 | 24 | `dba6fc77d9fa18bb` |
 | `selfhost/refs_authority_v1.gc` | 191 | 8348 | 18 | `e960ef5bc80f891a` |
+| `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -178,6 +179,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/store_verify_authority_v1.gc`: `selfhost/store-verify::vec?`, `selfhost/store-verify::sym?`, `selfhost/store-verify::single`, `selfhost/store-verify::hash-vectors-equal-loop?`, `selfhost/store-verify::hash-vectors-equal?`, `selfhost/store-verify::result`, `selfhost/store-verify::reject`, `selfhost/store-verify::error`
 - `selfhost/commit_authority_v1.gc`: `selfhost/commit::vec?`, `selfhost/commit::sym?`, `selfhost/commit::nonempty-str?`, `selfhost/commit::optional-nonempty-str?`, `selfhost/commit::hash-vector-loop?`, `selfhost/commit::hash-vector?`, `selfhost/commit::obligation?`, `selfhost/commit::obligation-vector-loop?`
 - `selfhost/refs_authority_v1.gc`: `selfhost/refs::tag`, `selfhost/refs::nil?`, `selfhost/refs::map?`, `selfhost/refs::str?`, `selfhost/refs::bool?`, `selfhost/refs::sym?`, `selfhost/refs::starts-with?`, `selfhost/refs::refs-loop?`
+- `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

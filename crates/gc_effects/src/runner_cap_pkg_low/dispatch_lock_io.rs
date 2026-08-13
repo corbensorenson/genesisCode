@@ -13,6 +13,7 @@ pub(super) fn dispatch_lock_io(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    pkg_lock_write_authority: Option<&mut PkgLockWriteAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -368,7 +369,9 @@ pub(super) fn dispatch_lock_io(
             Ok(Value::data(Term::Map(m)))
         }
         "core/pkg-low::load-package" => handle_load_package(payload, pol, error_tok, op),
-        "core/pkg-low::save-lock" => save_lock::dispatch_save_lock(payload, pol, error_tok, op),
+        "core/pkg-low::save-lock" => {
+            save_lock::dispatch_save_lock(payload, pol, pkg_lock_write_authority, error_tok, op)
+        }
 
         _ => Ok(mk_error(
             error_tok,

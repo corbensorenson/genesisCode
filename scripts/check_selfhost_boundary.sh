@@ -187,6 +187,14 @@ python3 scripts/lib/selfhost_refs_authority.py \
   --schema docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e package lock writing is partial: GenesisCode owns canonical save-lock
+# normalization, bytes, and identity; parsing, resolution, and persistence remain H0.
+python3 scripts/lib/selfhost_pkg_lock_write_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_lock_write_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \

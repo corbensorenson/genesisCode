@@ -10,6 +10,7 @@ use std::path::Path;
 use crate::error::EffectsError;
 use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
+use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::refs_authority::RefsAuthority;
@@ -202,6 +203,7 @@ pub fn run(
     // actually reaches the corresponding production boundary.
     let mut store_authority = None;
     let mut refs_authority = None;
+    let mut pkg_lock_write_authority = None;
 
     macro_rules! run_try {
         ($result:expr) => {
@@ -318,6 +320,14 @@ pub fn run(
                                 .transpose()
                         );
                     }
+                    if pkg_lock_write_authority.is_none() && req.op == "core/pkg-low::save-lock" {
+                        pkg_lock_write_authority = run_try!(
+                            policy
+                                .selfhost_authority_config()
+                                .map(PkgLockWriteAuthority::load)
+                                .transpose()
+                        );
+                    }
                     let resp = if let Some(task_resp) = task_runtime_call(
                         &mut task_runtime,
                         policy,
@@ -380,6 +390,7 @@ pub fn run(
                             store.as_ref(),
                             refs.as_ref(),
                             refs_authority.as_mut(),
+                            pkg_lock_write_authority.as_mut(),
                             &mut artifact_budget_state,
                             store_authority.as_mut(),
                             &mut bridge_runtime,

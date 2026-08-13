@@ -1,14 +1,79 @@
 use super::*;
+use crate::pkg_lock_write_authority::{PkgLockWriteAuthority, PkgLockWriteDecision};
 
 pub(super) fn dispatch_save_lock(
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    authority: Option<&mut PkgLockWriteAuthority>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<Value, EffectsError> {
+    let Some(authority) = authority else {
+        #[cfg(any(test, feature = "parity-oracle"))]
+        {
+            return dispatch_save_lock_parity(payload, pol, error_tok, op);
+        }
+        #[cfg(not(any(test, feature = "parity-oracle")))]
+        {
+            return Err(EffectsError::Log(
+                "core/pkg-low::save-lock requires the artifact-loaded GenesisCode lock write authority"
+                    .to_string(),
+            ));
+        }
+    };
+    let lock_s = match payload_pkg_lock(payload) {
+        Ok(s) => s,
+        Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+    };
+    let (bytes, lock_h) = match authority.write(payload)? {
+        PkgLockWriteDecision::Write { bytes, lock_hash } => (bytes, lock_hash),
+        PkgLockWriteDecision::Error { code, message } => {
+            return Ok(mk_error(error_tok, &code, message, Some(op)));
+        }
+    };
+    let base_dir = effective_base_dir(pol)?;
+    let lock_path = match sandbox_path_write(
+        &base_dir,
+        &lock_s,
+        pol.map(|policy| policy.create_dirs).unwrap_or(false),
+    ) {
+        Ok(path) => path,
+        Err(error) => {
+            return Ok(mk_error(
+                error_tok,
+                "core/caps/path-escape",
+                error.to_string(),
+                Some(op),
+            ));
+        }
+    };
+    if let Err(error) = atomic_write_text(&lock_path, &bytes) {
+        return Ok(mk_error(
+            error_tok,
+            "core/pkg/io-error",
+            error.to_string(),
+            Some(op),
+        ));
+    }
+    let mut out = std::collections::BTreeMap::new();
+    out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
+    out.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
+    out.insert(TermOrdKey(Term::symbol(":lock-h")), Term::Str(lock_h));
+    Ok(Value::data(Term::Map(out)))
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn dispatch_save_lock_parity(
     payload: &Term,
     pol: Option<&OpPolicy>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
     let lock_s = match payload_pkg_lock(payload) {
-        Ok(s) => s,
-        Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+        Ok(path) => path,
+        Err(error) => {
+            return Ok(mk_error(error_tok, "core/pkg/bad-payload", error, Some(op)));
+        }
     };
     let Term::Map(m) = payload else {
         return Ok(mk_error(

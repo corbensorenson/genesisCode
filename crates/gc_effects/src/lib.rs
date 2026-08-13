@@ -1,6 +1,7 @@
 mod error;
 mod lock;
 mod log;
+mod pkg_lock_write_authority;
 mod policy;
 mod refs;
 mod refs_authority;

@@ -698,7 +698,7 @@ pub fn load_selfhost_coreform_toolchain_v1_with_mode(
                 Ok(()) => Ok(()),
                 Err(err) => match mode {
                     SelfhostBootstrapMode::ArtifactOnly => Err(anyhow::anyhow!(
-                        "selfhost artifact bootstrap required, failed at {}: {err}",
+                        "selfhost artifact bootstrap required, failed at {}: {err:#}",
                         resolved.display()
                     )),
                     SelfhostBootstrapMode::ArtifactPreferred => {

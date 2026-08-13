@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-pkg-lock-write-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionEntrypoints", "requestKind", "resultKind", "schema", "sourceModule",
+    "sourceSha256", "spec", "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/pkg::lock-write-authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {"const": [
+      "lock-payload-normalization", "requirement-policy-and-strategy-normalization",
+      "resolution-strategy-inference", "legacy-lock-version-upgrade",
+      "canonical-lock-toml-serialization", "canonical-lock-content-identity",
+      "request-bound-result-verdict"
+    ]},
+    "hostMechanisms": {"const": [
+      "artifact-only-authority-bootstrap-and-bounded-evaluation",
+      "capability-policy-and-sandbox-path-enforcement", "atomic-file-persistence",
+      "strict-result-contradiction-checking", "effect-log-and-diagnostic-rendering"
+    ]},
+    "hostOracle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parityOnly", "productionRequired", "removalTask"],
+      "properties": {
+        "parityOnly": {"const": true}, "productionRequired": {"const": false},
+        "removalTask": {"const": "R4.2.e"}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_pkg_lock_write_authority.py"},
+    "kind": {"const": "genesis/selfhost-pkg-lock-write-authority-v0.1"},
+    "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "requestKind": {"const": "genesis/pkg-lock-write-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/pkg-lock-write-authority-result-v0.1"},
+    "schema": {"const": "docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/pkg_lock_write_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

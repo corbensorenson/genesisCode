@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "1719f0abbcc1e817ff61e1b5fbf12cafebe33f47b06ab0ef539cb5144cb3133d",
+  "contentIdentitySha256": "4d86ffe5035691e3882364071d609d612a48d394a11dd111c40f6a184454b73d",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2000,31 +2000,42 @@
       "id": "SD-PACKAGE-RESOLUTION",
       "internalOnly": false,
       "limitations": [
-        "GenesisCode orchestration is routed; Rust resolver remains production authority"
+        "Artifact-loaded GenesisCode exclusively normalizes and serializes core/pkg-low::save-lock payloads and decides their canonical BLAKE3 lock identity under genesis/selfhost-pkg-lock-write-authority-v0.1",
+        "Lock parsing, package graph resolution, registry behavior, workspace scaffolding, policy admission, sandboxing, and atomic persistence remain host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
       ],
       "producingImplementationPaths": [
+        "selfhost/toolchain.gc",
         "selfhost/cli_pkg_runtime_v1.gc",
+        "selfhost/pkg_lock_write_authority_v1.gc",
+        "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_pkg/src"
       ],
       "productionAuthorityPaths": [
+        "selfhost/pkg_lock_write_authority_v1.gc",
+        "crates/gc_effects/src/pkg_lock_write_authority.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
         "crates/gc_pkg/src"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/GCPM_BUNDLE_v0.1.md"
+        "docs/spec/GCPM_BUNDLE_v0.1.md",
+        "docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
         "S0-R"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/cli_pkg_workspace.rs"
+        "crates/gc_cli/tests/cli_pkg_engine.rs",
+        "crates/gc_cli/tests/cli_pkg_workspace.rs",
+        "crates/gc_effects/src/pkg_lock_write_authority.rs"
       ],
       "title": "Package graph, lock, update, install, and dependency resolution",
       "verifierPaths": [
-        "scripts/check_gcpm_operation_contract_pack.sh"
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/lib/selfhost_pkg_lock_write_authority.py"
       ]
     },
     {

@@ -69,7 +69,7 @@
       "additionalProperties": false,
       "required": ["allocationLimit", "stepLimit", "timeoutSeconds"],
       "properties": {
-        "allocationLimit": {"const": 20000000},
+        "allocationLimit": {"const": 32000000},
         "stepLimit": {"const": 20000000},
         "timeoutSeconds": {"const": 30}
       }

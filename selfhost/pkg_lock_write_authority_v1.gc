@@ -1,0 +1,693 @@
+(def selfhost/pkg-lock-write::append (fn (left) (fn (right) ((core/str::concat left) right))))
+
+(def selfhost/pkg-lock-write::append3
+  (fn (a)
+    (fn (b) (fn (c) ((selfhost/pkg-lock-write::append ((selfhost/pkg-lock-write::append a) b)) c)))))
+
+(def selfhost/pkg-lock-write::quoted
+  (fn (value) (((selfhost/pkg-lock-write::append3 "\"") (core/coreform::escape-str value)) "\"")))
+
+(def selfhost/pkg-lock-write::starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let ((length (core/bytes::len bytes)))
+            (let ((prefix-length (core/bytes::len prefix-bytes)))
+              (if ((core/int::lt? length) prefix-length)
+                false
+                ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes)))))))))
+
+(def selfhost/pkg-lock-write::ascii-space?
+  (fn (byte)
+    (if ((core/int::eq? byte) 32)
+      true
+      (if ((core/int::eq? byte) 9)
+        true
+        (if ((core/int::eq? byte) 10) true ((core/int::eq? byte) 13))))))
+
+(def selfhost/pkg-lock-write::trim-left
+  (fn (bytes)
+    (fn (length)
+      (fn (index)
+        (if ((core/int::eq? index) length)
+          index
+          (if (selfhost/pkg-lock-write::ascii-space? ((core/bytes::get bytes) index))
+            (((selfhost/pkg-lock-write::trim-left bytes) length) ((core/int::add index) 1))
+            index))))))
+
+(def selfhost/pkg-lock-write::trim-right
+  (fn (bytes)
+    (fn (start)
+      (fn (end)
+        (if ((core/int::eq? start) end)
+          end
+          (let ((index ((core/int::sub end) 1)))
+            (if (selfhost/pkg-lock-write::ascii-space? ((core/bytes::get bytes) index))
+              (((selfhost/pkg-lock-write::trim-right bytes) start) index)
+              end)))))))
+
+(def selfhost/pkg-lock-write::trim
+  (fn (value)
+    (let ((bytes (core/str::to-utf8 value)))
+      (let ((length (core/bytes::len bytes)))
+        (let ((start (((selfhost/pkg-lock-write::trim-left bytes) length) 0)))
+          (let ((end (((selfhost/pkg-lock-write::trim-right bytes) start) length)))
+            (core/str::from-utf8 (((core/bytes::slice bytes) start) ((core/int::sub end) start)))))))))
+
+(def selfhost/pkg-lock-write::drop-prefix
+  (fn (value)
+    (fn (length)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((total (core/bytes::len bytes)))
+          (core/str::from-utf8 (((core/bytes::slice bytes) length) ((core/int::sub total) length))))))))
+
+(def selfhost/pkg-lock-write::selector-kind
+  (fn (selector)
+    (let ((value (selfhost/pkg-lock-write::trim selector)))
+      (if ((selfhost/pkg-lock-write::starts-with? value) "semver:")
+        (let
+          ((rest (selfhost/pkg-lock-write::trim ((selfhost/pkg-lock-write::drop-prefix value) 7))))
+          (if ((core/int::eq? (core/str::len rest)) 0) (quote :other) (quote :tag)))
+        (if ((selfhost/pkg-lock-write::starts-with? value) "ref:")
+          (let
+            ((rest (selfhost/pkg-lock-write::trim ((selfhost/pkg-lock-write::drop-prefix value) 4))))
+            (if ((selfhost/pkg-lock-write::starts-with? rest) "refs/tags/")
+              (quote :tag)
+              (if ((selfhost/pkg-lock-write::starts-with? rest) "refs/")
+                (quote :ref)
+                (quote :other))))
+          (if ((selfhost/pkg-lock-write::starts-with? value) "refs/tags/")
+            (quote :tag)
+            (if ((selfhost/pkg-lock-write::starts-with? value) "refs/") (quote :ref) (quote :other))))))))
+
+(def selfhost/pkg-lock-write::infer-strategy
+  (fn (selector)
+    (let ((kind (selfhost/pkg-lock-write::selector-kind selector)))
+      (if ((core/sym::eq? kind) (quote :ref))
+        "track-ref"
+        (if ((core/sym::eq? kind) (quote :tag)) "tag-policy" "pinned")))))
+
+(def selfhost/pkg-lock-write::ok-part
+  (fn (line)
+    (fn (has-v2)
+      {
+        :error nil
+        :has-v2 has-v2
+        :line line})))
+
+(def selfhost/pkg-lock-write::bad-part
+  (fn (message)
+    {
+      :error message
+      :has-v2 false
+      :line ""}))
+
+(def selfhost/pkg-lock-write::entry-pair
+  (fn (entry)
+    (let
+      (
+        (pair
+          (if ((core/sym::eq? (core/data::tag entry)) (quote :vec))
+            entry
+            (core/pair::as-proper-list entry))))
+      (if ((core/sym::eq? (core/data::tag pair)) (quote :vec))
+        (if ((core/int::eq? (core/vec::len pair)) 2) pair nil)
+        nil))))
+
+(def selfhost/pkg-lock-write::normalize-update-policy
+  (fn (value)
+    (if (selfhost/pkg-lock-write::nil? value)
+      "manual"
+      (if (selfhost/pkg-lock-write::sym? value)
+        (let ((name (core/sym::to-str value)))
+          (if ((core/eq? name) ":manual") "manual" (if ((core/eq? name) ":auto") "auto" nil)))
+        (if (selfhost/pkg-lock-write::str? value)
+          (if ((core/eq? value) "manual")
+            "manual"
+            (if ((core/eq? value) ":manual")
+              "manual"
+              (if ((core/eq? value) "auto") "auto" (if ((core/eq? value) ":auto") "auto" nil))))
+          nil)))))
+
+(def selfhost/pkg-lock-write::normalize-strategy
+  (fn (value)
+    (fn (selector)
+      (if (selfhost/pkg-lock-write::nil? value)
+        (selfhost/pkg-lock-write::infer-strategy selector)
+        (if (selfhost/pkg-lock-write::sym? value)
+          (let ((name (core/sym::to-str value)))
+            (if (if ((core/eq? name) "pinned") true ((core/eq? name) ":pinned"))
+              "pinned"
+              (if (if ((core/eq? name) "track-ref") true ((core/eq? name) ":track-ref"))
+                "track-ref"
+                (if (if ((core/eq? name) "tag-policy") true ((core/eq? name) ":tag-policy"))
+                  "tag-policy"
+                  nil))))
+          (if (selfhost/pkg-lock-write::str? value)
+            (if ((core/eq? value) "pinned")
+              "pinned"
+              (if ((core/eq? value) "track-ref")
+                "track-ref"
+                (if ((core/eq? value) "tag-policy") "tag-policy" nil)))
+            nil))))))
+
+(def selfhost/pkg-lock-write::render-requirement-line
+  (fn (name)
+    (fn (selector)
+      (fn (update-policy)
+        (fn (registry)
+          (fn (strategy)
+            (fn (tag-policy)
+              (let
+                (
+                  (prefix
+                    ((selfhost/pkg-lock-write::append (selfhost/pkg-lock-write::quoted name))
+                      " = { selector = ")))
+                (let
+                  (
+                    (with-selector
+                      ((selfhost/pkg-lock-write::append prefix)
+                        (selfhost/pkg-lock-write::quoted selector))))
+                  (let
+                    (
+                      (with-policy
+                        ((selfhost/pkg-lock-write::append with-selector)
+                          ((selfhost/pkg-lock-write::append ", update_policy = ")
+                            (selfhost/pkg-lock-write::quoted update-policy)))))
+                    (let
+                      (
+                        (with-registry
+                          ((selfhost/pkg-lock-write::append with-policy)
+                            ((selfhost/pkg-lock-write::append ", registry = ")
+                              (selfhost/pkg-lock-write::quoted registry)))))
+                      (let
+                        (
+                          (with-strategy
+                            ((selfhost/pkg-lock-write::append with-registry)
+                              ((selfhost/pkg-lock-write::append ", strategy = ")
+                                (selfhost/pkg-lock-write::quoted strategy)))))
+                        (let
+                          (
+                            (with-tag
+                              (if (selfhost/pkg-lock-write::nil? tag-policy)
+                                with-strategy
+                                ((selfhost/pkg-lock-write::append with-strategy)
+                                  ((selfhost/pkg-lock-write::append ", tag_policy = ")
+                                    (selfhost/pkg-lock-write::quoted tag-policy))))))
+                          (let ((kind (selfhost/pkg-lock-write::selector-kind selector)))
+                            ((selfhost/pkg-lock-write::ok-part ((selfhost/pkg-lock-write::append with-tag) " }\n"))
+                              (if
+                                (if ((core/eq? strategy) "pinned")
+                                  (selfhost/pkg-lock-write::nil? tag-policy)
+                                  false)
+                                (if ((core/sym::eq? kind) (quote :other)) false true)
+                                true))))))))))))))))
+
+(def selfhost/pkg-lock-write::render-requirement
+  (fn (name)
+    (fn (requirement)
+      (if
+        (if (selfhost/pkg-lock-write::str? name) (selfhost/pkg-lock-write::map? requirement) false)
+        (let ((selector ((core/map::get requirement) (quote :selector))))
+          (if (selfhost/pkg-lock-write::str? selector)
+            (let
+              (
+                (update-policy
+                  (selfhost/pkg-lock-write::normalize-update-policy
+                    ((core/map::get requirement) (quote :update-policy)))))
+              (if (selfhost/pkg-lock-write::nil? update-policy)
+                (selfhost/pkg-lock-write::bad-part
+                  ":requirements update-policy must be manual or auto")
+                (let ((registry0 ((core/map::get requirement) (quote :registry))))
+                  (if
+                    (if (selfhost/pkg-lock-write::nil? registry0)
+                      true
+                      (selfhost/pkg-lock-write::str? registry0))
+                    (let
+                      ((registry (if (selfhost/pkg-lock-write::nil? registry0) "default" registry0)))
+                      (let
+                        (
+                          (strategy
+                            ((selfhost/pkg-lock-write::normalize-strategy ((core/map::get requirement) (quote :strategy)))
+                              selector)))
+                        (if (selfhost/pkg-lock-write::nil? strategy)
+                          (selfhost/pkg-lock-write::bad-part
+                            ":requirements strategy must be pinned, track-ref, or tag-policy")
+                          (let ((tag-policy ((core/map::get requirement) (quote :tag-policy))))
+                            (if
+                              (if (selfhost/pkg-lock-write::nil? tag-policy)
+                                true
+                                (selfhost/pkg-lock-write::str? tag-policy))
+                              (
+                                (((((selfhost/pkg-lock-write::render-requirement-line name) selector) update-policy) registry)
+                                  strategy)
+                                tag-policy)
+                              (selfhost/pkg-lock-write::bad-part
+                                ":requirements tag-policy must be string or nil"))))))
+                    (selfhost/pkg-lock-write::bad-part
+                      ":requirements registry must be string or nil")))))
+            (selfhost/pkg-lock-write::bad-part ":requirements selector must be string")))
+        (selfhost/pkg-lock-write::bad-part ":requirements must map strings to maps")))))
+
+(def selfhost/pkg-lock-write::render-requirements-loop
+  (fn (entries)
+    (fn (length)
+      (fn (index)
+        (fn (out)
+          (fn (has-v2)
+            (if ((core/int::eq? index) length)
+              {
+                :error nil
+                :has-v2 has-v2
+                :text out}
+              (let ((pair (selfhost/pkg-lock-write::entry-pair ((core/vec::get entries) index))))
+                (if (selfhost/pkg-lock-write::nil? pair)
+                  {
+                    :error ":requirements contains malformed entry"
+                    :has-v2 false
+                    :text ""}
+                  (let
+                    (
+                      (part
+                        ((selfhost/pkg-lock-write::render-requirement ((core/vec::get pair) 0))
+                          ((core/vec::get pair) 1))))
+                    (let ((error ((core/map::get part) (quote :error))))
+                      (if (selfhost/pkg-lock-write::nil? error)
+                        (
+                          ((((selfhost/pkg-lock-write::render-requirements-loop entries) length) ((core/int::add index) 1))
+                            ((selfhost/pkg-lock-write::append out)
+                              ((core/map::get part) (quote :line))))
+                          (if has-v2 true ((core/map::get part) (quote :has-v2))))
+                        {
+                          :error error
+                          :has-v2 false
+                          :text ""}))))))))))))
+
+(def selfhost/pkg-lock-write::render-requirements
+  (fn (value)
+    (if (selfhost/pkg-lock-write::nil? value)
+      {
+        :error nil
+        :has-v2 false
+        :text ""}
+      (if (selfhost/pkg-lock-write::map? value)
+        (let ((entries (core/map::entries value)))
+          (((((selfhost/pkg-lock-write::render-requirements-loop entries) (core/vec::len entries)) 0) "")
+            false))
+        {
+          :error ":requirements must be map"
+          :has-v2 false
+          :text ""}))))
+
+(def selfhost/pkg-lock-write::optional-string
+  (fn (map)
+    (fn (field)
+      (let ((value ((core/map::get map) field)))
+        (if (selfhost/pkg-lock-write::nil? value)
+          {:error nil :value nil}
+          (if (selfhost/pkg-lock-write::str? value)
+            {:error nil :value value}
+            {:error "optional lock field must be string or nil" :value nil}))))))
+
+(def selfhost/pkg-lock-write::append-optional-field
+  (fn (line)
+    (fn (label)
+      (fn (value)
+        (if (selfhost/pkg-lock-write::nil? value)
+          line
+          ((selfhost/pkg-lock-write::append line)
+            ((selfhost/pkg-lock-write::append label) (selfhost/pkg-lock-write::quoted value))))))))
+
+(def selfhost/pkg-lock-write::error-or
+  (fn (left) (fn (right) (if (selfhost/pkg-lock-write::nil? left) right left))))
+
+(def selfhost/pkg-lock-write::render-locked-fields
+  (fn (name)
+    (fn (snapshot)
+      (fn (fields)
+        (let ((commit ((core/map::get fields) (quote :commit))))
+          (let ((registry ((core/map::get fields) (quote :registry))))
+            (let ((source-selector ((core/map::get fields) (quote :source-selector))))
+              (let ((resolved-ref ((core/map::get fields) (quote :resolved-ref))))
+                (let ((exports-hash ((core/map::get fields) (quote :exports-hash))))
+                  (let
+                    ((environment-fingerprint ((core/map::get fields) (quote :environment-fingerprint))))
+                    (let
+                      (
+                        (error
+                          ((selfhost/pkg-lock-write::error-or ((core/map::get commit) (quote :error)))
+                            ((selfhost/pkg-lock-write::error-or ((core/map::get registry) (quote :error)))
+                              ((selfhost/pkg-lock-write::error-or ((core/map::get source-selector) (quote :error)))
+                                ((selfhost/pkg-lock-write::error-or ((core/map::get resolved-ref) (quote :error)))
+                                  ((selfhost/pkg-lock-write::error-or ((core/map::get exports-hash) (quote :error)))
+                                    ((core/map::get environment-fingerprint) (quote :error)))))))))
+                      (if (selfhost/pkg-lock-write::nil? error)
+                        (let ((commit-value ((core/map::get commit) (quote :value))))
+                          (let
+                            ((line0 ((selfhost/pkg-lock-write::append (selfhost/pkg-lock-write::quoted name)) " = { ")))
+                            (let
+                              (
+                                (line1
+                                  (if (selfhost/pkg-lock-write::nil? commit-value)
+                                    line0
+                                    ((selfhost/pkg-lock-write::append line0)
+                                      ((selfhost/pkg-lock-write::append "commit = ")
+                                        ((selfhost/pkg-lock-write::append (selfhost/pkg-lock-write::quoted commit-value))
+                                          ", "))))))
+                              (let
+                                (
+                                  (line2
+                                    ((selfhost/pkg-lock-write::append line1)
+                                      ((selfhost/pkg-lock-write::append "snapshot = ")
+                                        (selfhost/pkg-lock-write::quoted snapshot)))))
+                                (let
+                                  (
+                                    (line3
+                                      (((selfhost/pkg-lock-write::append-optional-field line2) ", registry = ")
+                                        ((core/map::get registry) (quote :value)))))
+                                  (let
+                                    ((source-value ((core/map::get source-selector) (quote :value))))
+                                    (let
+                                      (
+                                        (line4
+                                          (if
+                                            (if (selfhost/pkg-lock-write::str? source-value)
+                                              ((core/int::lt? 0) (core/str::len source-value))
+                                              false)
+                                            (((selfhost/pkg-lock-write::append-optional-field line3) ", source_selector = ")
+                                              source-value)
+                                            line3)))
+                                      (let
+                                        (
+                                          (line5
+                                            (((selfhost/pkg-lock-write::append-optional-field line4) ", resolved_ref = ")
+                                              ((core/map::get resolved-ref) (quote :value)))))
+                                        (let
+                                          (
+                                            (line6
+                                              (((selfhost/pkg-lock-write::append-optional-field line5) ", exports_hash = ")
+                                                ((core/map::get exports-hash) (quote :value)))))
+                                          (let
+                                            (
+                                              (line7
+                                                (((selfhost/pkg-lock-write::append-optional-field line6) ", environment_fingerprint = ")
+                                                  ((core/map::get environment-fingerprint)
+                                                    (quote :value)))))
+                                            ((selfhost/pkg-lock-write::ok-part ((selfhost/pkg-lock-write::append line7) " }\n"))
+                                              false)))))))))))
+                        (selfhost/pkg-lock-write::bad-part error)))))))))))))
+
+(def selfhost/pkg-lock-write::render-locked
+  (fn (name)
+    (fn (locked)
+      (if (if (selfhost/pkg-lock-write::str? name) (selfhost/pkg-lock-write::map? locked) false)
+        (let ((snapshot ((core/map::get locked) (quote :snapshot))))
+          (if (selfhost/pkg-lock-write::str? snapshot)
+            (let
+              ((commit ((selfhost/pkg-lock-write::optional-string locked) (quote :commit)))
+                (registry ((selfhost/pkg-lock-write::optional-string locked) (quote :registry)))
+                (source-selector
+                  ((selfhost/pkg-lock-write::optional-string locked) (quote :source_selector)))
+                (resolved-ref
+                  ((selfhost/pkg-lock-write::optional-string locked) (quote :resolved-ref)))
+                (exports-hash
+                  ((selfhost/pkg-lock-write::optional-string locked) (quote :exports_hash)))
+                (environment-fingerprint
+                  ((selfhost/pkg-lock-write::optional-string locked)
+                    (quote :environment-fingerprint))))
+              (((selfhost/pkg-lock-write::render-locked-fields name) snapshot)
+                {
+                  :commit commit
+                  :environment-fingerprint environment-fingerprint
+                  :exports-hash exports-hash
+                  :registry registry
+                  :resolved-ref resolved-ref
+                  :source-selector source-selector}))
+            (selfhost/pkg-lock-write::bad-part ":locked snapshot must be string")))
+        (selfhost/pkg-lock-write::bad-part ":locked must map strings to maps")))))
+
+(def selfhost/pkg-lock-write::render-map-loop
+  (fn (entries)
+    (fn (length)
+      (fn (index)
+        (fn (out)
+          (fn (renderer)
+            (if ((core/int::eq? index) length)
+              {:error nil :text out}
+              (let ((pair (selfhost/pkg-lock-write::entry-pair ((core/vec::get entries) index))))
+                (if (selfhost/pkg-lock-write::nil? pair)
+                  {:error "map contains malformed entry" :text ""}
+                  (let ((part ((renderer ((core/vec::get pair) 0)) ((core/vec::get pair) 1))))
+                    (let ((error ((core/map::get part) (quote :error))))
+                      (if (selfhost/pkg-lock-write::nil? error)
+                        (
+                          ((((selfhost/pkg-lock-write::render-map-loop entries) length) ((core/int::add index) 1))
+                            ((selfhost/pkg-lock-write::append out)
+                              ((core/map::get part) (quote :line))))
+                          renderer)
+                        {:error error :text ""}))))))))))))
+
+(def selfhost/pkg-lock-write::render-map
+  (fn (value)
+    (fn (renderer)
+      (if (selfhost/pkg-lock-write::nil? value)
+        {:error nil :text ""}
+        (if (selfhost/pkg-lock-write::map? value)
+          (let ((entries (core/map::entries value)))
+            (((((selfhost/pkg-lock-write::render-map-loop entries) (core/vec::len entries)) 0) "")
+              renderer))
+          {:error "lock section must be map" :text ""})))))
+
+(def selfhost/pkg-lock-write::render-bare-string-entry
+  (fn (name)
+    (fn (value)
+      (if (if (selfhost/pkg-lock-write::str? name) (selfhost/pkg-lock-write::str? value) false)
+        (
+          (selfhost/pkg-lock-write::ok-part
+            ((selfhost/pkg-lock-write::append name)
+              ((selfhost/pkg-lock-write::append " = ")
+                ((selfhost/pkg-lock-write::append (selfhost/pkg-lock-write::quoted value)) "\n"))))
+          false)
+        (selfhost/pkg-lock-write::bad-part "lock section must map strings to strings")))))
+
+(def selfhost/pkg-lock-write::section
+  (fn (header)
+    (fn (rendered)
+      (let ((error ((core/map::get rendered) (quote :error))))
+        (if (selfhost/pkg-lock-write::nil? error)
+          (let ((text ((core/map::get rendered) (quote :text))))
+            {
+              :error nil
+              :text
+                (if ((core/int::eq? (core/str::len text)) 0)
+                  ""
+                  ((selfhost/pkg-lock-write::append header)
+                    ((selfhost/pkg-lock-write::append text) "\n")))})
+          {:error error :text ""})))))
+
+(def selfhost/pkg-lock-write::effective-version
+  (fn (value)
+    (fn (has-v2)
+      (let
+        (
+          (base
+            (if (selfhost/pkg-lock-write::nil? value)
+              2
+              (if (selfhost/pkg-lock-write::int? value)
+                (if ((core/int::lt? value) 0)
+                  2
+                  (if ((core/int::lt? 18446744073709551615) value) 2 value))
+                nil))))
+        (if (selfhost/pkg-lock-write::nil? base)
+          nil
+          (if ((core/int::eq? base) 0) 2 (if (if ((core/int::lt? base) 2) has-v2 false) 2 base)))))))
+
+(def selfhost/pkg-lock-write::assemble-lock
+  (fn (payload)
+    (fn (workspace)
+      (fn (policy)
+        (fn (sections)
+          (let ((requirements ((core/map::get sections) (quote :requirements))))
+            (let ((registries ((core/map::get sections) (quote :registries))))
+              (let ((locked ((core/map::get sections) (quote :locked))))
+                (let ((artifacts ((core/map::get sections) (quote :artifacts))))
+                  (let
+                    (
+                      (error
+                        ((selfhost/pkg-lock-write::error-or ((core/map::get requirements) (quote :error)))
+                          ((selfhost/pkg-lock-write::error-or ((core/map::get registries) (quote :error)))
+                            ((selfhost/pkg-lock-write::error-or ((core/map::get locked) (quote :error)))
+                              ((core/map::get artifacts) (quote :error)))))))
+                    (if (selfhost/pkg-lock-write::nil? error)
+                      (let
+                        (
+                          (version
+                            ((selfhost/pkg-lock-write::effective-version ((core/map::get payload) (quote :version)))
+                              ((core/map::get requirements) (quote :has-v2)))))
+                        (if (selfhost/pkg-lock-write::nil? version)
+                          {:error ":version must be int or nil" :text ""}
+                          (let
+                            (
+                              (head
+                                ((selfhost/pkg-lock-write::append "version = ")
+                                  ((selfhost/pkg-lock-write::append (core/int::to-str version)) "\n"))))
+                            (let
+                              (
+                                (with-workspace
+                                  ((selfhost/pkg-lock-write::append head)
+                                    ((selfhost/pkg-lock-write::append "workspace = ")
+                                      ((selfhost/pkg-lock-write::append (selfhost/pkg-lock-write::quoted workspace))
+                                        "\n")))))
+                              (let
+                                (
+                                  (with-policy
+                                    ((selfhost/pkg-lock-write::append with-workspace)
+                                      ((selfhost/pkg-lock-write::append "policy = ")
+                                        ((selfhost/pkg-lock-write::append (selfhost/pkg-lock-write::quoted policy))
+                                          "\n\n")))))
+                                (let
+                                  (
+                                    (with-registries
+                                      ((selfhost/pkg-lock-write::append with-policy)
+                                        ((core/map::get registries) (quote :text)))))
+                                  (let
+                                    (
+                                      (with-requirements
+                                        ((selfhost/pkg-lock-write::append with-registries)
+                                          ((selfhost/pkg-lock-write::append "[requirements]\n")
+                                            ((selfhost/pkg-lock-write::append ((core/map::get requirements) (quote :text)))
+                                              "\n")))))
+                                    (let
+                                      (
+                                        (with-locked
+                                          ((selfhost/pkg-lock-write::append with-requirements)
+                                            ((selfhost/pkg-lock-write::append "[locked]\n")
+                                              ((selfhost/pkg-lock-write::append ((core/map::get locked) (quote :text)))
+                                                "\n")))))
+                                      {
+                                        :error nil
+                                        :text
+                                          ((selfhost/pkg-lock-write::append with-locked)
+                                            ((core/map::get artifacts) (quote :text)))}))))))))
+                      {:error error :text ""})))))))))))
+
+(def selfhost/pkg-lock-write::render-lock-sections
+  (fn (payload)
+    (fn (workspace)
+      (fn (policy)
+        (let
+          (
+            (requirements
+              (selfhost/pkg-lock-write::render-requirements
+                ((core/map::get payload) (quote :requirements)))))
+          (let
+            (
+              (registries
+                ((selfhost/pkg-lock-write::section "[registries]\n")
+                  ((selfhost/pkg-lock-write::render-map ((core/map::get payload) (quote :registries)))
+                    selfhost/pkg-lock-write::render-bare-string-entry))))
+            (let
+              (
+                (locked
+                  ((selfhost/pkg-lock-write::render-map ((core/map::get payload) (quote :locked)))
+                    selfhost/pkg-lock-write::render-locked)))
+              (let
+                (
+                  (artifacts
+                    ((selfhost/pkg-lock-write::section "[artifacts]\n")
+                      ((selfhost/pkg-lock-write::render-map ((core/map::get payload) (quote :artifacts)))
+                        selfhost/pkg-lock-write::render-bare-string-entry))))
+                ((((selfhost/pkg-lock-write::assemble-lock payload) workspace) policy)
+                  {
+                    :artifacts artifacts
+                    :locked locked
+                    :registries registries
+                    :requirements requirements})))))))))
+
+(def selfhost/pkg-lock-write::render-lock
+  (fn (payload)
+    (if (selfhost/pkg-lock-write::map? payload)
+      (let ((workspace ((core/map::get payload) (quote :workspace))))
+        (if (selfhost/pkg-lock-write::str? workspace)
+          (let ((policy0 ((core/map::get payload) (quote :policy))))
+            (if
+              (if (selfhost/pkg-lock-write::nil? policy0)
+                true
+                (selfhost/pkg-lock-write::str? policy0))
+              (let
+                ((policy (if (selfhost/pkg-lock-write::nil? policy0) "policy:default-v0.1" policy0)))
+                (((selfhost/pkg-lock-write::render-lock-sections payload) workspace) policy))
+              {:error ":policy must be string or nil" :text ""}))
+          {:error ":workspace must be string" :text ""}))
+      {:error "payload must be map" :text ""})))
+
+(def selfhost/pkg-lock-write::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (bytes)
+            (fn (lock-h)
+              {
+                :bytes bytes
+                :code code
+                :kind "genesis/pkg-lock-write-authority-result-v0.1"
+                :lock-h lock-h
+                :message message
+                :ok ok
+                :request-h request-h
+                :v 1})))))))
+
+(def selfhost/pkg-lock-write::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        ((((((selfhost/pkg-lock-write::result request-h) false) code) message) nil) nil)))))
+
+(def selfhost/pkg-lock-write::accept
+  (fn (request-h)
+    (fn (bytes)
+      ((((((selfhost/pkg-lock-write::result request-h) true) nil) nil) bytes)
+        (core/bytes::to-hex (core/crypto::blake3 bytes))))))
+
+(def core/pkg::lock-write-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-write::map? request)
+        (let ((fields (core/map::entries request)))
+          (if ((core/int::eq? (core/vec::len fields)) 4)
+            (let ((kind ((core/map::get request) (quote :kind))))
+              (if
+                (if (selfhost/pkg-lock-write::str? kind)
+                  ((core/eq? kind) "genesis/pkg-lock-write-authority-request-v0.1")
+                  false)
+                (let ((op ((core/map::get request) (quote :op))))
+                  (if
+                    (if (selfhost/pkg-lock-write::sym? op)
+                      ((core/sym::eq? op) (quote :write))
+                      false)
+                    (let ((version ((core/map::get request) (quote :v))))
+                      (if
+                        (if (selfhost/pkg-lock-write::int? version)
+                          ((core/int::eq? version) 1)
+                          false)
+                        (let
+                          ((rendered (selfhost/pkg-lock-write::render-lock ((core/map::get request) (quote :payload)))))
+                          (let ((error ((core/map::get rendered) (quote :error))))
+                            (if (selfhost/pkg-lock-write::nil? error)
+                              (let
+                                ((bytes (core/str::to-utf8 ((core/map::get rendered) (quote :text)))))
+                                ((selfhost/pkg-lock-write::accept request-h) bytes))
+                              (((selfhost/pkg-lock-write::reject request-h) "core/pkg/bad-payload")
+                                error))))
+                        (((selfhost/pkg-lock-write::reject request-h) "core/pkg/bad-authority-request")
+                          "request :v must be 1")))
+                    (((selfhost/pkg-lock-write::reject request-h) "core/pkg/bad-authority-request")
+                      "request :op must be :write")))
+                (((selfhost/pkg-lock-write::reject request-h) "core/pkg/bad-authority-request")
+                  "request :kind mismatch")))
+            (((selfhost/pkg-lock-write::reject request-h) "core/pkg/bad-authority-request")
+              "request fields mismatch")))
+        (((selfhost/pkg-lock-write::reject request-h) "core/pkg/bad-authority-request")
+          "request must be map")))))

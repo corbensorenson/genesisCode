@@ -1,7 +1,8 @@
 (def core/cli::pkg-lock-program
   (fn (req)
     (if (core/cli::map? req)
-      (let ((lock ((core/map::get req) (quote :lock))) (strict0 ((core/map::get req) (quote :strict))))
+      (let
+        ((lock ((core/map::get req) (quote :lock))) (strict0 ((core/map::get req) (quote :strict))))
         (let
           ((strict (if (core/cli::bool? strict0) strict0 false))
             (payload {:lock lock :strict strict}))
@@ -231,3 +232,18 @@
                             (core/effect::pure true)
                             (((core/cli::pkg-validate-commit-closure-program name) snapshot-h)
                               commit-h)))))))))))))))
+
+(def selfhost/pkg-lock-write::map?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :map))))
+
+(def selfhost/pkg-lock-write::str?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :str))))
+
+(def selfhost/pkg-lock-write::sym?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :sym))))
+
+(def selfhost/pkg-lock-write::int?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :int))))
+
+(def selfhost/pkg-lock-write::nil?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :nil))))

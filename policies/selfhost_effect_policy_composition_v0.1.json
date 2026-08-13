@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-13",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "fe658f1799789fd5bd531c997b03044615154c3760a0059ae7b1452678c4894b",
+  "contentIdentitySha256": "6f6c0526fcc1fc54588dfdf6b195215b1812c7eef8e3c1594e8826a466edab3e",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -69,7 +69,7 @@
   ],
   "resultKind": "genesis/effect-policy-authority-result-v0.20",
   "runtimeEvidence": {
-    "allocationLimit": 20000000,
+    "allocationLimit": 32000000,
     "stepLimit": 20000000,
     "timeoutSeconds": 30
   },
