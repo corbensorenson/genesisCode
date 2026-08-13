@@ -12,6 +12,7 @@ pub enum RegistryPolicyError {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RegistryPolicy {
     pub version: u64,
 
@@ -25,11 +26,14 @@ pub struct RegistryPolicy {
 }
 
 impl RegistryPolicy {
-    pub fn load(path: &std::path::Path) -> Result<Self, RegistryPolicyError> {
+    pub fn observe(path: &std::path::Path) -> Result<Self, RegistryPolicyError> {
         let s = std::fs::read_to_string(path)
             .map_err(|e| RegistryPolicyError::Parse(format!("{}: {e}", path.display())))?;
-        let p: RegistryPolicy =
-            toml::from_str(&s).map_err(|e| RegistryPolicyError::Parse(format!("{e}")))?;
+        toml::from_str(&s).map_err(|e| RegistryPolicyError::Parse(format!("{e}")))
+    }
+
+    pub fn load(path: &std::path::Path) -> Result<Self, RegistryPolicyError> {
+        let p = Self::observe(path)?;
         if p.version != 1 {
             return Err(RegistryPolicyError::Invalid(format!(
                 "unsupported version {}",
@@ -57,6 +61,13 @@ impl RegistryPolicy {
             out.push(vk);
         }
         Ok(out)
+    }
+
+    pub fn decoded_public_keys(&self) -> Vec<Result<[u8; 32], String>> {
+        self.allowed_public_keys
+            .iter()
+            .map(|key| decode_pk(key))
+            .collect()
     }
 }
 

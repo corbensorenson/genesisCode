@@ -52,6 +52,19 @@ impl EvidenceStore {
         self.verify_existing(hex)
     }
 
+    /// Read an artifact and report its content hash without deciding whether it is valid.
+    pub fn observe_hex(&self, hex: &str) -> Result<String, ObligationError> {
+        self.observe_bytes(hex)
+            .map(|(_, observed_hash)| observed_hash)
+    }
+
+    /// Capture an artifact and the hash of those exact bytes in one filesystem read.
+    pub fn observe_bytes(&self, hex: &str) -> Result<(Vec<u8>, String), ObligationError> {
+        let bytes = std::fs::read(self.path_for(hex))?;
+        let observed_hash = Self::hash_bytes(&bytes);
+        Ok((bytes, observed_hash))
+    }
+
     pub fn put_bytes(&self, bytes: &[u8]) -> Result<String, ObligationError> {
         let hex = Self::hash_bytes(bytes);
         let path = self.path_for(&hex);
@@ -151,5 +164,16 @@ mod tests {
         let e = store.put_bytes(good).unwrap_err();
         let msg = format!("{e}");
         assert!(msg.contains("corruption"), "{msg}");
+    }
+
+    #[test]
+    fn observed_hash_is_bound_to_returned_bytes() {
+        let td = tempfile::tempdir().unwrap();
+        let store = EvidenceStore::open(td.path()).unwrap();
+        let expected = store.put_bytes(b"captured evidence").unwrap();
+
+        let (bytes, observed) = store.observe_bytes(&expected).unwrap();
+        assert_eq!(bytes, b"captured evidence");
+        assert_eq!(observed, expected);
     }
 }

@@ -26,7 +26,7 @@
     },
     "hostOracle": {
       "additionalProperties": false,
-      "properties": {"removalTask": {"const": "R4.2.d"}, "required": {"const": true}},
+      "properties": {"removalTask": {"const": "R4.2.d"}, "required": {"const": false}},
       "required": ["removalTask", "required"],
       "type": "object"
     },
@@ -39,6 +39,8 @@
       "uniqueItems": true
     },
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "packageSourceModule": {"const": "selfhost/evidence_verify_package_v1.gc"},
+    "packageSourceSha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
     "requestKind": {"const": "genesis/evidence-verification-authority-request-v0.1"},
     "resultKind": {"const": "genesis/evidence-verification-authority-result-v0.1"},
     "runtimeEvidence": {
@@ -61,7 +63,7 @@
   "required": [
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
     "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
-    "productionEntrypoints", "requestKind", "resultKind", "runtimeEvidence", "schema",
+    "productionEntrypoints", "packageSourceModule", "packageSourceSha256", "requestKind", "resultKind", "runtimeEvidence", "schema",
     "sourceModule", "sourceSha256", "spec", "version"
   ],
   "type": "object"

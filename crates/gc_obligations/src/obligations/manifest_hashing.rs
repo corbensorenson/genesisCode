@@ -157,6 +157,32 @@ fn check_dep_hashes(
     Ok(())
 }
 
+pub(crate) fn observe_dep_hashes(
+    pkg_dir: &Path,
+    deps: &[DepEntry],
+    frontend: &CoreformFrontend,
+    limits: KernelLimits,
+) -> Result<Vec<(String, Option<String>, String)>, ObligationError> {
+    let mut visited = std::collections::BTreeSet::new();
+    let mut observations = Vec::with_capacity(deps.len());
+    for dependency in deps {
+        let dep_path = pkg_dir.join(&dependency.path);
+        let dep_pkg = if dep_path.is_dir() {
+            dep_path.join("package.toml")
+        } else {
+            dep_path
+        };
+        let observed =
+            compute_package_artifact_hash(&dep_pkg, false, &mut visited, frontend, limits)?;
+        observations.push((
+            dependency.name.clone(),
+            dependency.hash.clone(),
+            observed,
+        ));
+    }
+    Ok(observations)
+}
+
 fn compute_package_artifact_hash(
     pkg_toml: &Path,
     require_pinned: bool,

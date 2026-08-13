@@ -100,90 +100,57 @@
 
 (def selfhost/evidence-verify::push-error (fn (errors) (fn (code) ((core/vec::push errors) code))))
 
-(def selfhost/evidence-verify::fact-valid?
-  (fn (fact)
-    (if
-      ((selfhost/evidence-verify::exact-map? fact)
-        [
-          :class
-          :code
-          :mechanism-ok
-          :observed
-          :required])
-      (if (selfhost/evidence-verify::sym? ((selfhost/evidence-verify::field fact) (quote :class)))
-        (if (selfhost/evidence-verify::str? ((selfhost/evidence-verify::field fact) (quote :code)))
-          (selfhost/evidence-verify::bool?
-            ((selfhost/evidence-verify::field fact) (quote :mechanism-ok)))
+(def selfhost/evidence-verify::vector-equal-loop?
+  (fn (left)
+    (fn (right)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len left))
+          true
+          (if ((core/eq? ((core/vec::get left) index)) ((core/vec::get right) index))
+            (((selfhost/evidence-verify::vector-equal-loop? left) right)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/evidence-verify::vector-equal?
+  (fn (left)
+    (fn (right)
+      (if (selfhost/evidence-verify::vec? left)
+        (if (selfhost/evidence-verify::vec? right)
+          (if ((core/int::eq? (core/vec::len left)) (core/vec::len right))
+            (((selfhost/evidence-verify::vector-equal-loop? left) right) 0)
+            false)
           false)
-        false)
-      false)))
-
-(def selfhost/evidence-verify::fact-passes?
-  (fn (fact)
-    (if ((selfhost/evidence-verify::field fact) (quote :mechanism-ok))
-      (let ((class ((selfhost/evidence-verify::field fact) (quote :class))))
-        (if ((core/sym::eq? class) (quote :presence))
-          ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
-            ((selfhost/evidence-verify::field fact) (quote :required)))
-          (if ((core/sym::eq? class) (quote :identity))
-            ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
-              ((selfhost/evidence-verify::field fact) (quote :required)))
-            (if ((core/sym::eq? class) (quote :schema))
-              ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
-                ((selfhost/evidence-verify::field fact) (quote :required)))
-              (if ((core/sym::eq? class) (quote :crypto))
-                ((core/eq? ((selfhost/evidence-verify::field fact) (quote :observed)))
-                  ((selfhost/evidence-verify::field fact) (quote :required)))
-                (if ((core/sym::eq? class) (quote :at-least))
-                  (if
-                    (selfhost/evidence-verify::int?
-                      ((selfhost/evidence-verify::field fact) (quote :observed)))
-                    (if
-                      (selfhost/evidence-verify::int?
-                        ((selfhost/evidence-verify::field fact) (quote :required)))
-                      (selfhost/evidence-verify::not
-                        ((core/int::lt? ((selfhost/evidence-verify::field fact) (quote :observed)))
-                          ((selfhost/evidence-verify::field fact) (quote :required))))
-                      false)
-                    false)
-                  false))))))
-      false)))
-
-(def selfhost/evidence-verify::package-loop
-  (fn (facts)
-    (fn (index)
-      (fn (errors)
-        (if ((core/int::eq? index) (core/vec::len facts))
-          errors
-          (let ((fact ((core/vec::get facts) index)))
-            (if (selfhost/evidence-verify::not (selfhost/evidence-verify::fact-valid? fact))
-              (((selfhost/evidence-verify::package-loop facts) ((core/int::add index) 1))
-                ((selfhost/evidence-verify::push-error errors) "evidence/fact-malformed"))
-              (if (selfhost/evidence-verify::fact-passes? fact)
-                (((selfhost/evidence-verify::package-loop facts) ((core/int::add index) 1)) errors)
-                (((selfhost/evidence-verify::package-loop facts) ((core/int::add index) 1))
-                  ((selfhost/evidence-verify::push-error errors)
-                    ((selfhost/evidence-verify::field fact) (quote :code))))))))))))
+        false))))
 
 (def selfhost/evidence-verify::package
   (fn (request)
     (if
       ((selfhost/evidence-verify::exact-map? request)
         [
+          :acceptance
+          :acceptance-h
           :facts
           :kind
           :phase
+          :policy
+          :signature-set
+          :signatures
+          :store
           :v])
-      (let ((facts ((selfhost/evidence-verify::field request) (quote :facts))))
-        (if (selfhost/evidence-verify::vec? facts)
-          (let ((errors (((selfhost/evidence-verify::package-loop facts) 0) [])))
+      (if (selfhost/evidence-verify::vec?
+            ((selfhost/evidence-verify::field request) (quote :facts)))
+        (if (selfhost/evidence-verify::vec?
+              ((selfhost/evidence-verify::field request) (quote :store)))
+          (if (selfhost/evidence-verify::vec?
+                ((selfhost/evidence-verify::field request) (quote :signatures)))
             ((selfhost/evidence-verify::accept request)
-              {
-                :checked (core/vec::len facts)
-                :errors errors
-                :verified ((core/int::eq? (core/vec::len errors)) 0)}))
+              (selfhost/evidence-verify-package::evaluate request))
+            (((selfhost/evidence-verify::reject request) "evidence/request")
+              "package signatures must be a vector"))
           (((selfhost/evidence-verify::reject request) "evidence/request")
-            "package facts must be a vector")))
+            "package store observations must be a vector"))
+        (((selfhost/evidence-verify::reject request) "evidence/request")
+          "package facts must be a vector"))
       (((selfhost/evidence-verify::reject request) "evidence/request")
         "package request fields mismatch"))))
 
@@ -194,15 +161,15 @@
         [
           :hash
           :load-error
-          :store-valid
+          :observed-h
           :term])
       (if
         (selfhost/evidence-verify::hash32? ((selfhost/evidence-verify::field entry) (quote :hash)))
         (if
           (selfhost/evidence-verify::optional-str?
             ((selfhost/evidence-verify::field entry) (quote :load-error)))
-          (selfhost/evidence-verify::bool?
-            ((selfhost/evidence-verify::field entry) (quote :store-valid)))
+          (selfhost/evidence-verify::optional-hash32?
+            ((selfhost/evidence-verify::field entry) (quote :observed-h)))
           false)
         false)
       false)))
@@ -283,7 +250,9 @@
                                 "transparency/link-mismatch"))
                             (if
                               (selfhost/evidence-verify::not
-                                ((selfhost/evidence-verify::field entry) (quote :store-valid)))
+                                ((core/eq?
+                                    ((selfhost/evidence-verify::field entry) (quote :observed-h)))
+                                  hash))
                               (((selfhost/evidence-verify::transparency-finish head) index)
                                 ((selfhost/evidence-verify::push-error errors)
                                   "transparency/store-integrity"))
@@ -344,7 +313,7 @@
     (if
       ((selfhost/evidence-verify::exact-map? request)
         [
-          :envelope-closed
+          :envelope-fields
           :expected-key-id
           :expected-payload-type
           :key-id
@@ -354,14 +323,17 @@
           :payload-type
           :phase
           :signature-count
-          :signature-fields-closed
+          :signature-fields
           :signature-key-id
           :signature-valid
           :v])
       (let
         (
           (valid
-            ((selfhost/evidence-verify::and ((selfhost/evidence-verify::field request) (quote :envelope-closed)))
+            ((selfhost/evidence-verify::and
+                ((selfhost/evidence-verify::vector-equal?
+                    ((selfhost/evidence-verify::field request) (quote :envelope-fields)))
+                  ["payload" "payloadType" "signatures"]))
               ((selfhost/evidence-verify::and ((selfhost/evidence-verify::field request) (quote :key-valid)))
                 (
                   (selfhost/evidence-verify::and
@@ -377,8 +349,10 @@
                           1))
                       (
                         (selfhost/evidence-verify::and
-                          ((selfhost/evidence-verify::field request)
-                            (quote :signature-fields-closed)))
+                          ((selfhost/evidence-verify::vector-equal?
+                              ((selfhost/evidence-verify::field request)
+                                (quote :signature-fields)))
+                            ["keyid" "sig"]))
                         (
                           (selfhost/evidence-verify::and
                             ((core/eq? ((selfhost/evidence-verify::field request) (quote :signature-key-id)))

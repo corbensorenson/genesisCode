@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent custody and residual verifier for partial SD-EVIDENCE-VERIFY cutover."""
+"""Independent custody and residual verifier for H2 SD-EVIDENCE-VERIFY."""
 
 from __future__ import annotations
 
@@ -42,8 +42,8 @@ def load_json(path: Path):
 FIELDS = {
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
     "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
-    "productionEntrypoints", "requestKind", "resultKind", "runtimeEvidence", "schema",
-    "sourceModule", "sourceSha256", "spec", "version",
+    "productionEntrypoints", "packageSourceModule", "packageSourceSha256", "requestKind",
+    "resultKind", "runtimeEvidence", "schema", "sourceModule", "sourceSha256", "spec", "version",
 }
 DECISIONS = [
     "package-module-dependency-integrity-verdict",
@@ -60,8 +60,8 @@ MECHANISMS = [
     "bounded-observation-transport",
 ]
 NONCLAIMS = {
-    "bootstrap-fixpoint", "h1-h2-package-authority", "h3-h4-closure", "independent-verifier-replacement",
-    "package-lock-and-resolution-authority", "r4-2-d-closure",
+    "bootstrap-fixpoint", "h3-h4-closure", "independent-verifier-replacement",
+    "package-lock-and-resolution-authority",
     "registry-or-benchmark-publication-readiness", "release-qualification", "sh-c-closure",
 }
 CONSTANTS = {
@@ -69,10 +69,11 @@ CONSTANTS = {
     "binding": "core/security::evidence-verify-authority",
     "decisionInventory": DECISIONS,
     "hostMechanisms": MECHANISMS,
-    "hostOracle": {"removalTask": "R4.2.d", "required": True},
+    "hostOracle": {"removalTask": "R4.2.d", "required": False},
     "independentVerifier": "scripts/lib/selfhost_evidence_verify_authority.py",
     "kind": "genesis/selfhost-evidence-verify-authority-v0.1",
     "productionEntrypoints": ["genesis", "genesis_wasi"],
+    "packageSourceModule": "selfhost/evidence_verify_package_v1.gc",
     "requestKind": "genesis/evidence-verification-authority-request-v0.1",
     "resultKind": "genesis/evidence-verification-authority-result-v0.1",
     "runtimeEvidence": {
@@ -116,7 +117,7 @@ def validate_profile(profile, schema, check_identity=True) -> None:
             fail(f"profile {name} drift")
     if set(profile.get("nonclaims", [])) != NONCLAIMS:
         fail("profile nonclaim inventory drift")
-    for name in ("contentIdentitySha256", "sourceSha256"):
+    for name in ("contentIdentitySha256", "packageSourceSha256", "sourceSha256"):
         if not re.fullmatch(r"[0-9a-f]{64}", str(profile.get(name, ""))):
             fail(f"profile {name} invalid")
     if check_identity and profile["contentIdentitySha256"] != canonical_identity(profile):
@@ -144,17 +145,35 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     source = text(root, relative, overrides)
     if source_identity(relative, source.encode()) != profile["sourceSha256"]:
         fail("authority source identity mismatch")
+    package_relative = profile["packageSourceModule"]
+    package_path = root / package_relative
+    if package_path.is_symlink() or not package_path.is_file() or root.resolve() not in package_path.resolve().parents:
+        fail("package authority source is missing, escaping, or symlinked")
+    package_source = text(root, package_relative, overrides)
+    if source_identity(package_relative, package_source.encode()) != profile["packageSourceSha256"]:
+        fail("package authority source identity mismatch")
     manifest = text(root, "selfhost/toolchain_manifest.gc", overrides)
-    if manifest.count(f'"{relative}"') != 1 or manifest.count(profile["binding"]) != 1:
+    if (manifest.count(f'"{relative}"') != 1 or manifest.count(f'"{package_relative}"') != 1
+            or manifest.index(f'"{package_relative}"') > manifest.index(f'"{relative}"')
+            or manifest.count(profile["binding"]) != 1):
         fail("toolchain manifest custody drift")
     require_all(source, [
         "(def core/security::evidence-verify-authority", "(quote :package)",
-        "(quote :transparency)", "(quote :dsse)", "selfhost/evidence-verify::fact-passes?",
-        "(quote :at-least)", "transparency/cycle", "transparency/truncated-chain",
+        "(quote :transparency)", "(quote :dsse)", "selfhost/evidence-verify-package::evaluate",
+        "vector-equal?", ":observed-h", "transparency/cycle", "transparency/truncated-chain",
         "transparency/link-mismatch", "bench/evidence-verification", profile["requestKind"],
         profile["resultKind"], ":request-h (selfhost/hash::hash-term request)",
     ], "GenesisCode authority")
-    if "core/effect::" in source or "core/host::" in source:
+    require_all(package_source, [
+        "acceptance-valid?", "acceptance-store-has?", "obligations-loop",
+        "store-valid?", "policy-shape-valid?", "signature-set-loop",
+        "signature-valid?", "key-admitted-loop?", "policy/signature-threshold",
+        "policy/signature-set-closure", "evidence/acceptance-schema-or-reference",
+        "((selfhost/evidence-verify-package::field key) (quote :key-valid))\n              false)",
+        "acceptance-store-has? store acceptance-h 0",
+        "(((selfhost/evidence-verify-package::key-admitted-loop? keys)\n                                    ((selfhost/evidence-verify-package::field term) (quote :pk))) 0)",
+    ], "GenesisCode package authority")
+    if any(token in source + package_source for token in ("core/effect::", "core/host::")):
         fail("authority source contains an ambient host/effect operation")
 
     bridge = text(root, "crates/gc_obligations/src/evidence_verify_authority.rs", overrides)
@@ -174,12 +193,24 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     bench = text(root, "crates/gc_cli_driver/src/cmd_bench.rs", overrides)
     require_all(verify, [
         "verify_package_with_policy_and_authority", "EvidenceVerifyAuthority::load(authority_artifact)",
-        ".package(facts)", "read_last_acceptance(&pkg_dir)", "ErrorKind::NotFound",
+        ".package(PackageVerificationRequest", "read_last_acceptance(&pkg_dir)", "ErrorKind::NotFound",
+        "observe_dep_hashes", "observe_store_payload", "verify_acceptance_signature_mechanism",
+        "RegistryPolicy::observe", "proposed_signature_artifacts", "proposed_referenced_artifacts",
+        "\":signature\",",
         "malformed acceptance pointer",
     ], "package route")
+    if verify.count("observe_store_payload(") != 4:
+        fail("package route does not bind acceptance and signature terms to single-read observations")
+    for residual in (
+        "check_dep_hashes", "verify_acceptance_kind", "AcceptanceSignature::from_term",
+        "rec.verify(&allowed)", "mechanism_fact", "store.verify_hex",
+    ):
+        if residual in verify:
+            fail(f"package route retains host semantic residual {residual!r}")
     require_all(transparency, [
         "MAX_TRANSPARENCY_ENTRIES: usize = 16_384", "read_head_observation",
-        "ErrorKind::NotFound", "malformed transparency head", "BTreeSet", ".transparency(",
+        "ErrorKind::NotFound", "malformed transparency head", "BTreeSet", ".observe_bytes(",
+        "observed_hash", ".transparency(",
     ], "transparency route")
     verify_transparency = transparency[
         transparency.index("pub fn verify_transparency_log"):transparency.index("fn read_head_observation")
@@ -195,7 +226,8 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     require_all(bench, [
         'require_explicit_selfhost_artifact(cli, "GenesisBench evidence verification authority")',
         "EvidenceVerifyAuthority::load(&artifact)", ".dsse(gc_obligations::DsseVerificationFacts",
-        "if !decision.verified", "signature_valid",
+        "if !decision.verified", "signature_valid", "envelope_fields.sort()",
+        "signature_fields.sort()",
     ], "GenesisBench route")
 
     verifier_manifest = text(root, "tools/genesis-evidence-verifier/Cargo.toml", overrides)
@@ -209,27 +241,26 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     if len(rows) != 1:
         fail("SD-EVIDENCE-VERIFY ledger row missing or duplicated")
     row = rows[0]
-    if (row.get("currentLevel") != "H0" or row.get("fallbackReachability") != "host-authoritative"
+    if (row.get("currentLevel") != "H2" or row.get("fallbackReachability") != "none-proven"
             or relative not in row.get("producingImplementationPaths", [])
-            or "crates/gc_obligations/src/verify.rs" not in row.get("producingImplementationPaths", [])
-            or "crates/gc_obligations/src/verify.rs" not in row.get("productionAuthorityPaths", [])
+            or package_relative not in row.get("producingImplementationPaths", [])
+            or "crates/gc_obligations/src/verify.rs" in row.get("producingImplementationPaths", [])
+            or "crates/gc_obligations/src/verify.rs" in row.get("productionAuthorityPaths", [])
             or profile["spec"] not in row.get("specAuthorityPaths", [])
             or profile["independentVerifier"] not in row.get("verifierPaths", [])):
-        fail("SD-EVIDENCE-VERIFY truthful partial custody drift")
-    require_all(verify, [
-        "check_dep_hashes", "verify_acceptance_kind", "AcceptanceSignature::from_term",
-        "rec.verify(&allowed)", "mechanism_fact",
-    ], "declared package semantic residual")
+        fail("SD-EVIDENCE-VERIFY H2 custody drift")
 
     if check_artifact:
         artifact = artifact_path or (root / profile["artifact"])
         data = artifact.read_bytes()
-        if relative.encode() not in data or profile["binding"].encode() not in data:
+        if (relative.encode() not in data or package_relative.encode() not in data
+                or profile["binding"].encode() not in data):
             fail("authority source or binding absent from admitted artifact")
 
 
 def mutation_controls(root: Path, profile) -> int:
     source = (root / profile["sourceModule"]).read_text()
+    package_source = (root / profile["packageSourceModule"]).read_text()
     bridge_path = "crates/gc_obligations/src/evidence_verify_authority.rs"
     bridge = (root / bridge_path).read_text()
     verify_path = "crates/gc_obligations/src/verify.rs"
@@ -244,27 +275,38 @@ def mutation_controls(root: Path, profile) -> int:
     manifest = (root / manifest_path).read_text()
     mutations = [
         ({profile["sourceModule"]: source.replace("(quote :package)", "(quote :removed)", 1)}, "package phase"),
+        ({profile["packageSourceModule"]: package_source.replace("acceptance-store-has? store acceptance-h 0", "removed-store-has? store acceptance-h 0", 1)}, "acceptance store binding"),
+        ({profile["packageSourceModule"]: package_source.replace("(((selfhost/evidence-verify-package::key-admitted-loop? keys)\n                                    ((selfhost/evidence-verify-package::field term) (quote :pk))) 0)", "false", 1)}, "key admission"),
+        ({profile["packageSourceModule"]: package_source.replace("policy/signature-threshold", "policy/removed-threshold", 1)}, "signature threshold"),
+        ({profile["packageSourceModule"]: package_source.replace("((selfhost/evidence-verify-package::field key) (quote :key-valid))\n              false)", "true\n              false)", 1)}, "key mechanism admission"),
+        ({profile["packageSourceModule"]: package_source.replace("policy/signature-set-closure", "policy/removed-set-closure", 1)}, "signature-set closure"),
         ({profile["sourceModule"]: source.replace("transparency/cycle", "transparency/removed", 1)}, "cycle"),
-        ({profile["sourceModule"]: source.replace("(quote :at-least)", "(quote :equal)", 1)}, "threshold"),
         ({profile["sourceModule"]: source.replace(":request-h (selfhost/hash::hash-term request)", ":request-h nil", 1)}, "request binding"),
         ({manifest_path: manifest.replace(f'    "{profile["sourceModule"]}"\n', "", 1)}, "module custody"),
         ({manifest_path: manifest.replace(f"    {profile['binding']}\n", "", 1)}, "binding custody"),
         ({bridge_path: bridge.replace("SelfhostBootstrapMode::ArtifactOnly", "SelfhostBootstrapMode::Embedded", 1)}, "artifact only"),
         ({bridge_path: bridge.replace("max_vec_len: Some(16_384)", "max_vec_len: None", 1)}, "vector bound"),
         ({bridge_path: bridge.replace("decode_result(term, request_hash)", "Ok(term)", 1)}, "result decoder"),
-        ({verify_path: verify.replace(".package(facts)", ".package(Vec::new())", 1)}, "package facts"),
+        ({verify_path: verify.replace(".package(PackageVerificationRequest", ".package(removed", 1)}, "package request"),
+        ({verify_path: verify.replace("\":signature\",", "\":removed\",", 1)}, "signature store observation"),
+        ({verify_path: verify.replace("observe_store_payload(&store, \":acceptance\"", "observe_store(&store, \":acceptance\"", 1)}, "acceptance single-read binding"),
         ({verify_path: verify.replace("ErrorKind::NotFound", "ErrorKind::Other", 1)}, "pointer distinction"),
         ({transparency_path: transparency.replace("MAX_TRANSPARENCY_ENTRIES: usize = 16_384", "MAX_TRANSPARENCY_ENTRIES: usize = usize::MAX", 1)}, "chain bound"),
         ({transparency_path: transparency.replace("malformed transparency head", "empty transparency head", 1)}, "malformed head"),
+        ({transparency_path: transparency.replace("store.observe_bytes(hex)", "store.observe_hex(hex)", 1)}, "transparency single-read binding"),
         ({security_path: security.replace("verify_package_with_policy_and_authority(", "verify_package_with_policy(", 1)}, "package route"),
         ({security_path: security.replace("verify_transparency_log(&store, &pkg_dir, &artifact)", "verify_transparency_log(&store, &pkg_dir)", 1)}, "transparency route"),
         ({bench_path: bench.replace("if !decision.verified", "if false", 1)}, "DSSE custody"),
+        ({bench_path: bench.replace("envelope_fields.sort()", "envelope_fields.clear()", 1)}, "DSSE envelope inventory"),
     ]
     passed = 0
     for overrides, name in mutations:
         mutated = copy.deepcopy(profile)
         if profile["sourceModule"] in overrides:
             mutated["sourceSha256"] = source_identity(profile["sourceModule"], overrides[profile["sourceModule"]].encode())
+        if profile["packageSourceModule"] in overrides:
+            mutated["packageSourceSha256"] = source_identity(
+                profile["packageSourceModule"], overrides[profile["packageSourceModule"]].encode())
         try:
             static_check(root, mutated, overrides, check_artifact=False)
         except CheckError:
@@ -280,6 +322,9 @@ def update(root: Path, profile_path: Path, schema_path: Path) -> None:
     validate_profile(profile, schema, check_identity=False)
     relative = profile["sourceModule"]
     profile["sourceSha256"] = source_identity(relative, (root / relative).read_bytes())
+    package_relative = profile["packageSourceModule"]
+    profile["packageSourceSha256"] = source_identity(
+        package_relative, (root / package_relative).read_bytes())
     profile["contentIdentitySha256"] = canonical_identity(profile)
     profile_path.write_text(json.dumps(profile, indent=2) + "\n")
 

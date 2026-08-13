@@ -32,9 +32,50 @@ pub struct EvidenceFact {
 #[derive(Debug, Clone)]
 pub struct TransparencyEntryObservation {
     pub hash: [u8; 32],
-    pub store_valid: bool,
+    pub observed_hash: Option<[u8; 32]>,
     pub load_error: Option<String>,
     pub term: Term,
+}
+
+#[derive(Debug, Clone)]
+pub struct StoreHashObservation {
+    pub role: &'static str,
+    pub required_hash: String,
+    pub observed_hash: Option<String>,
+    pub load_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PolicyKeyObservation {
+    pub encoded: String,
+    pub decoded: Option<[u8; 32]>,
+    pub decode_error: Option<String>,
+    pub key_valid: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegistryPolicyObservation {
+    pub version: u64,
+    pub min_signatures: u64,
+    pub allowed_keys: Vec<PolicyKeyObservation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SignatureObservation {
+    pub artifact_hash: String,
+    pub crypto_valid: bool,
+    pub term: Term,
+}
+
+#[derive(Debug, Clone)]
+pub struct PackageVerificationRequest {
+    pub facts: Vec<EvidenceFact>,
+    pub acceptance_hash: Option<[u8; 32]>,
+    pub acceptance: Term,
+    pub store: Vec<StoreHashObservation>,
+    pub policy: Option<RegistryPolicyObservation>,
+    pub signature_set: Term,
+    pub signatures: Vec<SignatureObservation>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,11 +83,12 @@ pub struct EvidenceDecision {
     pub verified: bool,
     pub errors: Vec<String>,
     pub checked: usize,
+    pub valid_signatures: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct DsseVerificationFacts<'a> {
-    pub envelope_closed: bool,
+    pub envelope_fields: &'a [String],
     pub expected_key_id: &'a str,
     pub expected_payload_type: &'a str,
     pub key_id: &'a str,
@@ -54,7 +96,7 @@ pub struct DsseVerificationFacts<'a> {
     pub payload_hash: [u8; 32],
     pub payload_type: &'a str,
     pub signature_count: usize,
-    pub signature_fields_closed: bool,
+    pub signature_fields: &'a [String],
     pub signature_key_id: &'a str,
     pub signature_valid: bool,
 }
@@ -94,12 +136,48 @@ impl EvidenceVerifyAuthority {
 
     pub fn package(
         &mut self,
-        facts: Vec<EvidenceFact>,
+        package: PackageVerificationRequest,
     ) -> Result<EvidenceDecision, EvidenceVerifyError> {
-        let checked = facts.len();
-        let facts = Term::Vector(facts.into_iter().map(fact_term).collect());
-        let data = self.decide(request(":package", [(":facts", facts)]))?;
-        decode_decision(data, checked)
+        let data = self.decide(request(
+            ":package",
+            [
+                (":acceptance", package.acceptance),
+                (
+                    ":acceptance-h",
+                    package.acceptance_hash.map(bytes32).unwrap_or(Term::Nil),
+                ),
+                (
+                    ":facts",
+                    Term::Vector(package.facts.into_iter().map(fact_term).collect()),
+                ),
+                (
+                    ":policy",
+                    package.policy.map(policy_term).unwrap_or(Term::Nil),
+                ),
+                (":signature-set", package.signature_set),
+                (
+                    ":signatures",
+                    Term::Vector(
+                        package
+                            .signatures
+                            .into_iter()
+                            .map(signature_observation_term)
+                            .collect(),
+                    ),
+                ),
+                (
+                    ":store",
+                    Term::Vector(
+                        package
+                            .store
+                            .into_iter()
+                            .map(store_observation_term)
+                            .collect(),
+                    ),
+                ),
+            ],
+        ))?;
+        decode_package_decision(data)
     }
 
     pub fn transparency(
@@ -132,6 +210,7 @@ impl EvidenceVerifyAuthority {
             verified: required_bool(fields, ":verified", "transparency decision")?,
             errors: required_strings(fields, ":errors", "transparency decision")?,
             checked,
+            valid_signatures: 0,
         })
     }
 
@@ -142,7 +221,10 @@ impl EvidenceVerifyAuthority {
         let data = self.decide(request(
             ":dsse",
             [
-                (":envelope-closed", Term::Bool(facts.envelope_closed)),
+                (
+                    ":envelope-fields",
+                    string_vector(facts.envelope_fields.iter().cloned()),
+                ),
                 (
                     ":expected-key-id",
                     Term::Str(facts.expected_key_id.to_string()),
@@ -157,8 +239,8 @@ impl EvidenceVerifyAuthority {
                 (":payload-type", Term::Str(facts.payload_type.to_string())),
                 (":signature-count", Term::Int(facts.signature_count.into())),
                 (
-                    ":signature-fields-closed",
-                    Term::Bool(facts.signature_fields_closed),
+                    ":signature-fields",
+                    string_vector(facts.signature_fields.iter().cloned()),
                 ),
                 (
                     ":signature-key-id",
@@ -219,6 +301,10 @@ fn bytes32(value: [u8; 32]) -> Term {
     Term::Bytes(value.to_vec().into())
 }
 
+fn string_vector(values: impl IntoIterator<Item = String>) -> Term {
+    Term::Vector(values.into_iter().map(Term::Str).collect())
+}
+
 fn request(phase: &'static str, entries: impl IntoIterator<Item = (&'static str, Term)>) -> Term {
     let mut fields = vec![
         (":kind", Term::Str(REQUEST_KIND.to_string())),
@@ -246,8 +332,69 @@ fn transparency_entry_term(entry: TransparencyEntryObservation) -> Term {
             ":load-error",
             entry.load_error.map(Term::Str).unwrap_or(Term::Nil),
         ),
-        (":store-valid", Term::Bool(entry.store_valid)),
+        (
+            ":observed-h",
+            entry.observed_hash.map(bytes32).unwrap_or(Term::Nil),
+        ),
         (":term", entry.term),
+    ])
+}
+
+fn store_observation_term(observation: StoreHashObservation) -> Term {
+    map([
+        (
+            ":load-error",
+            observation.load_error.map(Term::Str).unwrap_or(Term::Nil),
+        ),
+        (
+            ":observed-h",
+            observation
+                .observed_hash
+                .map(Term::Str)
+                .unwrap_or(Term::Nil),
+        ),
+        (":required-h", Term::Str(observation.required_hash)),
+        (":role", Term::symbol(observation.role)),
+    ])
+}
+
+fn policy_term(policy: RegistryPolicyObservation) -> Term {
+    map([
+        (
+            ":allowed-keys",
+            Term::Vector(
+                policy
+                    .allowed_keys
+                    .into_iter()
+                    .map(policy_key_term)
+                    .collect(),
+            ),
+        ),
+        (":min-signatures", Term::Int(policy.min_signatures.into())),
+        (":version", Term::Int(policy.version.into())),
+    ])
+}
+
+fn policy_key_term(observation: PolicyKeyObservation) -> Term {
+    map([
+        (
+            ":decode-error",
+            observation.decode_error.map(Term::Str).unwrap_or(Term::Nil),
+        ),
+        (
+            ":decoded",
+            observation.decoded.map(bytes32).unwrap_or(Term::Nil),
+        ),
+        (":encoded", Term::Str(observation.encoded)),
+        (":key-valid", Term::Bool(observation.key_valid)),
+    ])
+}
+
+fn signature_observation_term(observation: SignatureObservation) -> Term {
+    map([
+        (":artifact-h", Term::Str(observation.artifact_hash)),
+        (":crypto-valid", Term::Bool(observation.crypto_valid)),
+        (":term", observation.term),
     ])
 }
 
@@ -326,6 +473,29 @@ fn decode_decision(data: Term, checked: usize) -> Result<EvidenceDecision, Evide
         verified,
         errors,
         checked,
+        valid_signatures: 0,
+    })
+}
+
+fn decode_package_decision(data: Term) -> Result<EvidenceDecision, EvidenceVerifyError> {
+    let fields = exact_map(
+        &data,
+        "package evidence decision",
+        &[":checked", ":errors", ":valid-signatures", ":verified"],
+    )?;
+    let checked = required_usize(fields, ":checked", "package evidence decision")?;
+    let valid_signatures =
+        required_usize(fields, ":valid-signatures", "package evidence decision")?;
+    let errors = required_strings(fields, ":errors", "package evidence decision")?;
+    let verified = required_bool(fields, ":verified", "package evidence decision")?;
+    if verified != errors.is_empty() {
+        return Err(authority_error("authority verdict/error inconsistency"));
+    }
+    Ok(EvidenceDecision {
+        verified,
+        errors,
+        checked,
+        valid_signatures,
     })
 }
 
@@ -441,111 +611,4 @@ fn hex32(value: [u8; 32]) -> String {
         .into_iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    fn fixture_authority() -> EvidenceVerifyAuthority {
-        let artifact = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
-            .map(PathBuf::from)
-            .unwrap_or_else(|| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../..")
-                    .join("selfhost/toolchain.gc")
-            });
-        EvidenceVerifyAuthority::load(&artifact).expect("load evidence authority")
-    }
-
-    fn transparency_term(previous: [u8; 32]) -> Term {
-        map([
-            (":acceptance-artifact", Term::Str("aa".repeat(32))),
-            (
-                ":kind",
-                Term::Str("genesis/transparency-entry-v0.2".to_string()),
-            ),
-            (":package-artifact", Term::Str("bb".repeat(32))),
-            (":prev-h", bytes32(previous)),
-            (":signature-artifact", Term::Str("cc".repeat(32))),
-            (":signer-pk-b64", Term::Str("fixture-key".to_string())),
-        ])
-    }
-
-    #[test]
-    fn package_identity_and_mechanism_facts_control_consumed_verdict() {
-        let mut authority = fixture_authority();
-        let accepted = authority
-            .package(vec![EvidenceFact {
-                class: ":identity",
-                code: "fixture/identity".to_string(),
-                mechanism_ok: true,
-                observed: Term::Str("same".to_string()),
-                required: Term::Str("same".to_string()),
-            }])
-            .expect("valid fact request");
-        assert!(accepted.verified);
-
-        let rejected = authority
-            .package(vec![EvidenceFact {
-                class: ":identity",
-                code: "fixture/identity".to_string(),
-                mechanism_ok: true,
-                observed: Term::Str("changed".to_string()),
-                required: Term::Str("same".to_string()),
-            }])
-            .expect("semantic denial is a valid authority result");
-        assert_eq!(rejected.errors, vec!["fixture/identity"]);
-        assert!(!rejected.verified);
-    }
-
-    #[test]
-    fn transparency_authority_rejects_cycles_even_when_mechanisms_report_valid() {
-        let mut authority = fixture_authority();
-        let hash = [7; 32];
-        let observation = TransparencyEntryObservation {
-            hash,
-            store_valid: true,
-            load_error: None,
-            term: transparency_term(hash),
-        };
-        let decision = authority
-            .transparency(Some(hash), None, vec![observation.clone(), observation])
-            .expect("cycle request");
-        assert!(!decision.verified);
-        assert_eq!(decision.errors, vec!["transparency/cycle"]);
-    }
-
-    #[test]
-    fn dsse_authority_requires_every_closed_identity_and_crypto_fact() {
-        let mut authority = fixture_authority();
-        let valid = DsseVerificationFacts {
-            envelope_closed: true,
-            expected_key_id: "sha256:key",
-            expected_payload_type: "fixture/type",
-            key_id: "sha256:key",
-            key_valid: true,
-            payload_hash: [9; 32],
-            payload_type: "fixture/type",
-            signature_count: 1,
-            signature_fields_closed: true,
-            signature_key_id: "sha256:key",
-            signature_valid: true,
-        };
-        assert!(
-            authority
-                .dsse(valid.clone())
-                .expect("valid DSSE facts")
-                .verified
-        );
-        let mut invalid = valid;
-        invalid.signature_valid = false;
-        assert!(
-            !authority
-                .dsse(invalid)
-                .expect("invalid DSSE facts")
-                .verified
-        );
-    }
 }

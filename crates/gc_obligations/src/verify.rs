@@ -1,11 +1,13 @@
 use std::path::Path;
 
-use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+use gc_coreform::{Term, parse_term};
 use gc_kernel::{MemLimits, StepLimit};
 
 use crate::{
-    AcceptanceSignature, EvidenceFact, EvidenceStore, EvidenceVerifyAuthority, ObligationError,
-    PackageManifest, RegistryPolicy, load_signature_set, signatures_file_path,
+    EvidenceFact, EvidenceStore, EvidenceVerifyAuthority, ObligationError, PackageManifest,
+    PackageVerificationRequest, PolicyKeyObservation, RegistryPolicy, RegistryPolicyObservation,
+    SignatureObservation, StoreHashObservation, signatures_file_path,
+    verify_acceptance_signature_mechanism,
 };
 
 #[derive(Debug, Clone)]
@@ -70,7 +72,6 @@ pub fn verify_package_with_policy_and_authority(
     let mut checked_modules = 0usize;
     let mut checked_artifacts = 0usize;
     let mut checked_signatures = 0usize;
-    let mut valid_signatures = 0usize;
     let checked_deps = manifest.dependencies.len();
 
     // Modules: pinned hashes must exist and match computed hashes.
@@ -100,18 +101,25 @@ pub fn verify_package_with_policy_and_authority(
                 ));
             }
         }
-        Err(e) => facts.push(mechanism_fact("package/module-load", false, e.to_string())),
+        Err(e) => facts.push(transport_fact("package/module-load", false, e.to_string())),
     }
 
-    // Dependencies: pinned package hashes must exist and match.
-    if let Err(e) = super::check_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend, limits) {
-        facts.push(mechanism_fact(
-            "package/dependency-integrity",
+    // Dependencies: transport every computed and declared hash; GenesisCode compares them.
+    match super::observe_dep_hashes(&pkg_dir, &manifest.dependencies, &frontend, limits) {
+        Ok(observations) => {
+            for (name, required, observed) in observations {
+                facts.push(identity_fact(
+                    &format!("package/dependency-hash-mismatch:{name}"),
+                    Term::Str(observed),
+                    required.map(Term::Str).unwrap_or(Term::Nil),
+                ));
+            }
+        }
+        Err(error) => facts.push(transport_fact(
+            "package/dependency-load",
             false,
-            e.to_string(),
-        ));
-    } else {
-        facts.push(mechanism_fact("package/dependency-integrity", true, ""));
+            error.to_string(),
+        )),
     }
 
     // Evidence: verify the latest acceptance artifact (or caller-specified) and any referenced
@@ -122,55 +130,50 @@ pub fn verify_package_with_policy_and_authority(
         match read_last_acceptance(&pkg_dir) {
             Ok(value) => value,
             Err(error) => {
-                facts.push(mechanism_fact("evidence/last-acceptance", false, error));
+                facts.push(transport_fact("evidence/last-acceptance", false, error));
                 None
             }
         }
     };
+    let mut store_observations = Vec::new();
+    let mut acceptance = Term::Nil;
+    let mut acceptance_hash = None;
     if let Some(hex) = acceptance_artifact.as_deref() {
-        if let Err(e) = store.verify_hex(hex) {
-            facts.push(mechanism_fact(
-                "evidence/acceptance-store-integrity",
+        match hex32_to_bytes(hex) {
+            Ok(hash) => acceptance_hash = Some(hash),
+            Err(()) => facts.push(transport_fact(
+                "evidence/acceptance-hash",
                 false,
-                e.to_string(),
-            ));
-        } else {
-            checked_artifacts = checked_artifacts.saturating_add(1);
-            facts.push(mechanism_fact(
-                "evidence/acceptance-store-integrity",
-                true,
-                "",
-            ));
+                "invalid acceptance hash",
+            )),
         }
+        let (observation, payload) = observe_store_payload(&store, ":acceptance", hex);
+        if observation.observed_hash.is_some() {
+            checked_artifacts = checked_artifacts.saturating_add(1);
+        }
+        let load_error = observation.load_error.clone();
+        store_observations.push(observation);
 
-        match read_term_from_store(&store, hex) {
+        match payload
+            .as_deref()
+            .ok_or_else(|| {
+                ObligationError::Store(
+                    load_error.unwrap_or_else(|| "acceptance payload unavailable".to_string()),
+                )
+            })
+            .and_then(|bytes| parse_observed_term(bytes, &store.path_for(hex)))
+        {
             Ok(t) => {
-                if let Err(es) = verify_acceptance_kind(&t) {
-                    for error in es {
-                        facts.push(mechanism_fact("evidence/acceptance-schema", false, error));
+                for artifact in proposed_referenced_artifacts(&t) {
+                    let observation = observe_store(&store, ":acceptance-reference", &artifact);
+                    if observation.observed_hash.is_some() {
+                        checked_artifacts = checked_artifacts.saturating_add(1);
                     }
-                } else {
-                    facts.push(mechanism_fact("evidence/acceptance-schema", true, ""));
+                    store_observations.push(observation);
                 }
-                for a in referenced_artifacts(&t) {
-                    match store.verify_hex(&a) {
-                        Ok(()) => {
-                            checked_artifacts = checked_artifacts.saturating_add(1);
-                            facts.push(mechanism_fact(
-                                "evidence/referenced-artifact-integrity",
-                                true,
-                                "",
-                            ));
-                        }
-                        Err(e) => facts.push(mechanism_fact(
-                            "evidence/referenced-artifact-integrity",
-                            false,
-                            e.to_string(),
-                        )),
-                    }
-                }
+                acceptance = t;
             }
-            Err(e) => facts.push(mechanism_fact(
+            Err(e) => facts.push(transport_fact(
                 "evidence/acceptance-load",
                 false,
                 e.to_string(),
@@ -179,111 +182,87 @@ pub fn verify_package_with_policy_and_authority(
     }
 
     // Registry policy enforcement (optional).
-    let mut policy_min_signatures: Option<u64> = None;
+    let mut policy_min_signatures = None;
+    let mut policy_observation = None;
+    let mut signature_set = Term::Nil;
+    let mut signature_observations = Vec::new();
     if let Some(policy_path) = policy {
-        match RegistryPolicy::load(policy_path) {
+        match RegistryPolicy::observe(policy_path) {
             Ok(pol) => {
                 policy_min_signatures = Some(pol.min_signatures);
+                let allowed_keys = pol
+                    .allowed_public_keys
+                    .iter()
+                    .cloned()
+                    .zip(pol.decoded_public_keys())
+                    .map(|(encoded, decoded)| match decoded {
+                        Ok(decoded) => PolicyKeyObservation {
+                            encoded,
+                            decoded: Some(decoded),
+                            decode_error: None,
+                            key_valid: ed25519_dalek::VerifyingKey::from_bytes(&decoded).is_ok(),
+                        },
+                        Err(error) => PolicyKeyObservation {
+                            encoded,
+                            decoded: None,
+                            decode_error: Some(error),
+                            key_valid: false,
+                        },
+                    })
+                    .collect();
+                policy_observation = Some(RegistryPolicyObservation {
+                    version: pol.version,
+                    min_signatures: pol.min_signatures,
+                    allowed_keys,
+                });
                 if pol.min_signatures > 0 {
-                    let acc_hex = acceptance_artifact.as_deref();
-                    if acc_hex.is_none() {
-                        facts.push(presence_fact("policy/acceptance-required", false, true));
-                    }
-
-                    let acc_bytes = acc_hex.and_then(|h| hex32_to_bytes(h).ok());
-                    if acc_hex.is_some() && acc_bytes.is_none() {
-                        facts.push(mechanism_fact(
-                            "policy/acceptance-hash",
-                            false,
-                            "invalid acceptance hash",
-                        ));
-                    }
-
-                    match (pol.allowed_verifying_keys(), acc_hex, acc_bytes) {
-                        (Ok(allowed), Some(_acc_hex), Some(acc_bytes)) => {
-                            let sigset_path = signatures
-                                .map(|p| p.to_path_buf())
-                                .unwrap_or_else(|| signatures_file_path(&pkg_dir));
-                            match load_signature_set(&sigset_path) {
-                                Ok(sigs) => {
-                                    for sh in sigs {
-                                        match store.verify_hex(&sh) {
-                                            Ok(()) => {
-                                                checked_artifacts =
-                                                    checked_artifacts.saturating_add(1)
-                                            }
-                                            Err(e) => {
-                                                facts.push(mechanism_fact(
-                                                    "policy/signature-store-integrity",
-                                                    false,
-                                                    e.to_string(),
-                                                ));
-                                                continue;
-                                            }
-                                        }
-                                        checked_signatures = checked_signatures.saturating_add(1);
-                                        match read_term_from_store(&store, &sh) {
-                                            Ok(t) => {
-                                                match AcceptanceSignature::from_term(&t) {
-                                                    Ok(rec) => {
-                                                        if rec.acceptance_hash != acc_bytes {
-                                                            facts.push(identity_fact(
-                                                            "policy/signature-acceptance-mismatch",
-                                                            Term::Bytes(rec.acceptance_hash.to_vec().into()),
-                                                            Term::Bytes(acc_bytes.to_vec().into()),
-                                                        ));
-                                                            continue;
-                                                        }
-                                                        if rec.verify(&allowed).is_ok() {
-                                                            valid_signatures =
-                                                                valid_signatures.saturating_add(1);
-                                                            facts.push(crypto_fact(
-                                                                "policy/signature-invalid",
-                                                                true,
-                                                            ));
-                                                        } else {
-                                                            facts.push(crypto_fact(
-                                                                "policy/signature-invalid",
-                                                                false,
-                                                            ));
-                                                        }
-                                                    }
-                                                    Err(e) => facts.push(mechanism_fact(
-                                                        "policy/signature-schema",
-                                                        false,
-                                                        e.to_string(),
-                                                    )),
-                                                }
-                                            }
-                                            Err(e) => facts.push(mechanism_fact(
-                                                "policy/signature-load",
-                                                false,
-                                                e.to_string(),
-                                            )),
-                                        }
-                                    }
+                    let sigset_path = signatures
+                        .map(|p| p.to_path_buf())
+                        .unwrap_or_else(|| signatures_file_path(&pkg_dir));
+                    match read_term_file(&sigset_path) {
+                        Ok(term) => {
+                            for artifact_hash in proposed_signature_artifacts(&term) {
+                                let (observation, payload) =
+                                    observe_store_payload(&store, ":signature", &artifact_hash);
+                                if observation.observed_hash.is_some() {
+                                    checked_artifacts = checked_artifacts.saturating_add(1);
                                 }
-                                Err(e) => facts.push(mechanism_fact(
-                                    "policy/signature-set",
-                                    false,
-                                    e.to_string(),
-                                )),
+                                let load_error = observation.load_error.clone();
+                                store_observations.push(observation);
+                                checked_signatures = checked_signatures.saturating_add(1);
+                                match payload
+                                    .as_deref()
+                                    .ok_or_else(|| {
+                                        ObligationError::Store(load_error.unwrap_or_else(|| {
+                                            "signature payload unavailable".to_string()
+                                        }))
+                                    })
+                                    .and_then(|bytes| {
+                                        parse_observed_term(bytes, &store.path_for(&artifact_hash))
+                                    }) {
+                                    Ok(term) => signature_observations.push(SignatureObservation {
+                                        artifact_hash,
+                                        crypto_valid: verify_acceptance_signature_mechanism(&term),
+                                        term,
+                                    }),
+                                    Err(error) => facts.push(transport_fact(
+                                        "policy/signature-load",
+                                        false,
+                                        error.to_string(),
+                                    )),
+                                }
                             }
-
-                            facts.push(at_least_fact(
-                                "policy/signature-threshold",
-                                valid_signatures,
-                                pol.min_signatures as usize,
-                            ));
+                            signature_set = term;
                         }
-                        (Err(e), _, _) => {
-                            facts.push(mechanism_fact("policy/key-decode", false, e.to_string()))
-                        }
-                        (_, _, _) => {}
+                        Err(error) => facts.push(transport_fact(
+                            "policy/signature-set-load",
+                            false,
+                            error.to_string(),
+                        )),
                     }
                 }
             }
-            Err(e) => facts.push(mechanism_fact("policy/load", false, e.to_string())),
+            Err(e) => facts.push(transport_fact("policy/load", false, e.to_string())),
         }
     }
 
@@ -305,26 +284,31 @@ pub fn verify_package_with_policy_and_authority(
                     if !looks_like_hex32(&name) {
                         continue;
                     }
-                    match store.verify_hex(&name) {
-                        Ok(()) => {
-                            checked_artifacts = checked_artifacts.saturating_add(1);
-                            facts.push(mechanism_fact("evidence/store-scan", true, ""));
-                        }
-                        Err(e) => {
-                            facts.push(mechanism_fact("evidence/store-scan", false, e.to_string()))
-                        }
+                    let observation = observe_store(&store, ":scan", &name);
+                    if observation.observed_hash.is_some() {
+                        checked_artifacts = checked_artifacts.saturating_add(1);
                     }
+                    store_observations.push(observation);
                 }
             }
-            Err(e) => facts.push(mechanism_fact("evidence/store-scan", false, e.to_string())),
+            Err(e) => facts.push(transport_fact("evidence/store-scan", false, e.to_string())),
         }
     }
 
     let mut authority = EvidenceVerifyAuthority::load(authority_artifact)
         .map_err(|error| ObligationError::Store(error.to_string()))?;
     let decision = authority
-        .package(facts)
+        .package(PackageVerificationRequest {
+            facts,
+            acceptance_hash,
+            acceptance,
+            store: store_observations,
+            policy: policy_observation,
+            signature_set,
+            signatures: signature_observations,
+        })
         .map_err(|error| ObligationError::Store(error.to_string()))?;
+    let valid_signatures = decision.valid_signatures;
     Ok(PackageVerifyResult {
         ok: decision.verified,
         errors: decision.errors,
@@ -387,37 +371,7 @@ fn identity_fact(code: &str, observed: Term, required: Term) -> EvidenceFact {
     }
 }
 
-fn presence_fact(code: &str, observed: bool, required: bool) -> EvidenceFact {
-    EvidenceFact {
-        class: ":presence",
-        code: code.to_string(),
-        mechanism_ok: true,
-        observed: Term::Bool(observed),
-        required: Term::Bool(required),
-    }
-}
-
-fn crypto_fact(code: &str, valid: bool) -> EvidenceFact {
-    EvidenceFact {
-        class: ":crypto",
-        code: code.to_string(),
-        mechanism_ok: true,
-        observed: Term::Bool(valid),
-        required: Term::Bool(true),
-    }
-}
-
-fn at_least_fact(code: &str, observed: usize, required: usize) -> EvidenceFact {
-    EvidenceFact {
-        class: ":at-least",
-        code: code.to_string(),
-        mechanism_ok: true,
-        observed: Term::Int(observed.into()),
-        required: Term::Int(required.into()),
-    }
-}
-
-fn mechanism_fact(code: &str, valid: bool, detail: impl Into<String>) -> EvidenceFact {
+fn transport_fact(code: &str, valid: bool, detail: impl Into<String>) -> EvidenceFact {
     EvidenceFact {
         class: ":schema",
         code: if valid {
@@ -435,36 +389,28 @@ fn looks_like_hex32(s: &str) -> bool {
     s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
-fn read_term_from_store(store: &EvidenceStore, hex: &str) -> Result<Term, ObligationError> {
-    let p = store.path_for(hex);
-    let s = std::fs::read_to_string(&p)?;
-    parse_term(&s).map_err(|e| ObligationError::Store(format!("bad artifact {}: {e}", p.display())))
+fn parse_observed_term(bytes: &[u8], path: &Path) -> Result<Term, ObligationError> {
+    let source = std::str::from_utf8(bytes).map_err(|error| {
+        ObligationError::Store(format!("bad artifact {}: {error}", path.display()))
+    })?;
+    parse_term(source).map_err(|error| {
+        ObligationError::Store(format!("bad artifact {}: {error}", path.display()))
+    })
 }
 
-fn verify_acceptance_kind(t: &Term) -> Result<(), Vec<String>> {
-    let mut errors = Vec::new();
-    let Term::Map(m) = t else {
-        return Err(vec!["acceptance artifact must be a map".to_string()]);
-    };
-    let kind = m.get(&TermOrdKey(Term::symbol(":kind")));
-    if !matches!(kind, Some(Term::Str(s)) if s == "genesis/acceptance-v0.2") {
-        errors.push(format!(
-            "acceptance artifact has wrong :kind: expected \"genesis/acceptance-v0.2\", got {}",
-            kind.map(print_term).unwrap_or_else(|| "nil".to_string())
-        ));
-    }
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        Err(errors)
-    }
+fn read_term_file(path: &Path) -> Result<Term, ObligationError> {
+    let source = std::fs::read_to_string(path)?;
+    parse_term(&source).map_err(|error| {
+        ObligationError::Store(format!("bad artifact {}: {error}", path.display()))
+    })
 }
 
-fn referenced_artifacts(t: &Term) -> Vec<String> {
+fn proposed_referenced_artifacts(t: &Term) -> Vec<String> {
     let Term::Map(m) = t else {
         return Vec::new();
     };
-    let Some(Term::Vector(obs)) = m.get(&TermOrdKey(Term::symbol(":obligations"))) else {
+    let Some(Term::Vector(obs)) = m.get(&gc_coreform::TermOrdKey(Term::symbol(":obligations")))
+    else {
         return Vec::new();
     };
     let mut out = Vec::new();
@@ -472,7 +418,8 @@ fn referenced_artifacts(t: &Term) -> Vec<String> {
         let Term::Map(om) = o else {
             continue;
         };
-        let Some(Term::Str(hex)) = om.get(&TermOrdKey(Term::symbol(":artifact"))) else {
+        let Some(Term::Str(hex)) = om.get(&gc_coreform::TermOrdKey(Term::symbol(":artifact")))
+        else {
             continue;
         };
         if looks_like_hex32(hex) {
@@ -480,4 +427,52 @@ fn referenced_artifacts(t: &Term) -> Vec<String> {
         }
     }
     out
+}
+
+fn proposed_signature_artifacts(term: &Term) -> Vec<String> {
+    let Term::Vector(values) = term else {
+        return Vec::new();
+    };
+    values
+        .iter()
+        .filter_map(|value| match value {
+            Term::Str(hash) if looks_like_hex32(hash) => Some(hash.clone()),
+            _ => None,
+        })
+        .collect()
+}
+
+fn observe_store(
+    store: &EvidenceStore,
+    role: &'static str,
+    required_hash: &str,
+) -> StoreHashObservation {
+    observe_store_payload(store, role, required_hash).0
+}
+
+fn observe_store_payload(
+    store: &EvidenceStore,
+    role: &'static str,
+    required_hash: &str,
+) -> (StoreHashObservation, Option<Vec<u8>>) {
+    match store.observe_bytes(required_hash) {
+        Ok((bytes, observed_hash)) => (
+            StoreHashObservation {
+                role,
+                required_hash: required_hash.to_string(),
+                observed_hash: Some(observed_hash),
+                load_error: None,
+            },
+            Some(bytes),
+        ),
+        Err(error) => (
+            StoreHashObservation {
+                role,
+                required_hash: required_hash.to_string(),
+                observed_hash: None,
+                load_error: Some(error.to_string()),
+            },
+            None,
+        ),
+    }
 }

@@ -1,5 +1,7 @@
 mod error;
 mod evidence_verify_authority;
+#[cfg(test)]
+mod evidence_verify_authority_tests;
 mod frontend;
 mod obligation_authority;
 mod obligation_cache;
@@ -39,7 +41,9 @@ use num_traits::ToPrimitive;
 pub use crate::error::ObligationError;
 pub use crate::evidence_verify_authority::{
     DsseVerificationFacts, EvidenceDecision, EvidenceFact, EvidenceVerifyAuthority,
-    EvidenceVerifyError, TransparencyEntryObservation,
+    EvidenceVerifyError, PackageVerificationRequest, PolicyKeyObservation,
+    RegistryPolicyObservation, SignatureObservation, StoreHashObservation,
+    TransparencyEntryObservation,
 };
 pub use crate::frontend::{
     CoreformFrontend, SelfhostFrontendConfig, coreform_frontend_is_rust, default_coreform_frontend,
@@ -60,7 +64,7 @@ use crate::obligation_translation::obligation_translation_validation;
 pub use crate::registry_policy::{RegistryPolicy, RegistryPolicyError};
 pub use crate::signing::{
     AcceptanceSignature, KeyFile, SigningError, load_signature_set, parse_hash32,
-    read_acceptance_hash_from_last, signatures_file_path,
+    read_acceptance_hash_from_last, signatures_file_path, verify_acceptance_signature_mechanism,
 };
 #[cfg(feature = "parity-oracle")]
 pub use crate::signing::{sign_acceptance_hash, write_signature_set};

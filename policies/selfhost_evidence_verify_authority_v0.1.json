@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-13",
   "binding": "core/security::evidence-verify-authority",
-  "contentIdentitySha256": "502ca038baddd38dbbf6ea346b50372af25e92692a68adac313e1bcc11585f1a",
+  "contentIdentitySha256": "f226266c6cb496a3ffca74d7a6e8ea35a8afead1b0206f7541edba2609ec6596",
   "decisionInventory": [
     "package-module-dependency-integrity-verdict",
     "acceptance-artifact-schema-and-reference-verdict",
@@ -19,17 +19,15 @@
   ],
   "hostOracle": {
     "removalTask": "R4.2.d",
-    "required": true
+    "required": false
   },
   "independentVerifier": "scripts/lib/selfhost_evidence_verify_authority.py",
   "kind": "genesis/selfhost-evidence-verify-authority-v0.1",
   "nonclaims": [
     "bootstrap-fixpoint",
-    "h1-h2-package-authority",
     "h3-h4-closure",
     "independent-verifier-replacement",
     "package-lock-and-resolution-authority",
-    "r4-2-d-closure",
     "registry-or-benchmark-publication-readiness",
     "release-qualification",
     "sh-c-closure"
@@ -38,6 +36,8 @@
     "genesis",
     "genesis_wasi"
   ],
+  "packageSourceModule": "selfhost/evidence_verify_package_v1.gc",
+  "packageSourceSha256": "57b4ab38ff9333f3e8bb9de26ea23173467877cbf8bbb79275fd3488ff858442",
   "requestKind": "genesis/evidence-verification-authority-request-v0.1",
   "resultKind": "genesis/evidence-verification-authority-result-v0.1",
   "runtimeEvidence": {
@@ -48,7 +48,7 @@
   },
   "schema": "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json",
   "sourceModule": "selfhost/evidence_verify_authority_v1.gc",
-  "sourceSha256": "d36d18d7976d733614ae36d9a1938d05228909d948e41cf8d84d5351891ebcec",
+  "sourceSha256": "392dea213bc123269facfccb86f07cbc9fdae10c32cf87c6048120c7d6adf4c9",
   "spec": "docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

@@ -109,7 +109,7 @@ pub fn verify_transparency_log(
         if observations.len() >= MAX_TRANSPARENCY_ENTRIES {
             observations.push(TransparencyEntryObservation {
                 hash: hex32_to_bytes(hex).unwrap_or([0; 32]),
-                store_valid: false,
+                observed_hash: None,
                 load_error: Some("transparency chain exceeds finite entry limit".to_string()),
                 term: Term::Nil,
             });
@@ -120,21 +120,37 @@ pub fn verify_transparency_log(
             Err(error) => {
                 observations.push(TransparencyEntryObservation {
                     hash: [0; 32],
-                    store_valid: false,
+                    observed_hash: None,
                     load_error: Some(error),
                     term: Term::Nil,
                 });
                 break;
             }
         };
-        let store_valid = store.verify_hex(hex).is_ok();
-        let (term, load_error) = match read_term_from_store(store, hex) {
-            Ok(term) => (term, None),
-            Err(error) => (Term::Nil, Some(error.to_string())),
+        let (observed_hash, term, load_error) = match store.observe_bytes(hex) {
+            Ok((bytes, observed)) => {
+                let observed_hash = match hex32_to_bytes(&observed) {
+                    Ok(hash) => Some(hash),
+                    Err(error) => {
+                        observations.push(TransparencyEntryObservation {
+                            hash,
+                            observed_hash: None,
+                            load_error: Some(error),
+                            term: Term::Nil,
+                        });
+                        break;
+                    }
+                };
+                match parse_observed_term(&bytes, &store.path_for(hex)) {
+                    Ok(term) => (observed_hash, term, None),
+                    Err(error) => (observed_hash, Term::Nil, Some(error.to_string())),
+                }
+            }
+            Err(error) => (None, Term::Nil, Some(error.to_string())),
         };
         observations.push(TransparencyEntryObservation {
             hash,
-            store_valid,
+            observed_hash,
             load_error,
             term: term.clone(),
         });
@@ -187,10 +203,13 @@ fn proposed_previous_hash(term: &Term) -> Option<String> {
     }
 }
 
-fn read_term_from_store(store: &EvidenceStore, hex: &str) -> Result<Term, TransparencyError> {
-    let p = store.path_for(hex);
-    let s = fs::read_to_string(&p)?;
-    parse_term(&s).map_err(|e| TransparencyError::Log(format!("bad artifact {}: {e}", p.display())))
+fn parse_observed_term(bytes: &[u8], path: &Path) -> Result<Term, TransparencyError> {
+    let source = std::str::from_utf8(bytes).map_err(|error| {
+        TransparencyError::Log(format!("bad artifact {}: {error}", path.display()))
+    })?;
+    parse_term(source).map_err(|error| {
+        TransparencyError::Log(format!("bad artifact {}: {error}", path.display()))
+    })
 }
 
 #[cfg(feature = "parity-oracle")]

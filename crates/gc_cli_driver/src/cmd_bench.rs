@@ -449,25 +449,8 @@ fn crypto_verify(
     let object = value
         .as_object()
         .ok_or_else(|| crypto_error("bench/crypto-envelope", "envelope must be an object"))?;
-    let expected_fields = ["payload", "payloadType", "signatures"]
-        .into_iter()
-        .collect::<BTreeSet<_>>();
-    if object.keys().map(String::as_str).collect::<BTreeSet<_>>() != expected_fields {
-        return Err(crypto_error(
-            "bench/crypto-envelope",
-            "envelope fields are not closed",
-        ));
-    }
-    if object
-        .get("payloadType")
-        .and_then(serde_json::Value::as_str)
-        != Some(payload_type)
-    {
-        return Err(crypto_error(
-            "bench/crypto-envelope",
-            "envelope payload type mismatch",
-        ));
-    }
+    let mut envelope_fields = object.keys().cloned().collect::<Vec<_>>();
+    envelope_fields.sort();
     let public_vec = Base64::decode_vec(public_b64)
         .map_err(|error| crypto_error("bench/crypto-key", format!("decode public key: {error}")))?;
     let public: [u8; 32] = public_vec.try_into().map_err(|_| {
@@ -490,11 +473,8 @@ fn crypto_verify(
     let signature_object = signatures[0]
         .as_object()
         .ok_or_else(|| crypto_error("bench/crypto-envelope", "signature must be an object"))?;
-    let signature_fields_closed = signature_object
-        .keys()
-        .map(String::as_str)
-        .collect::<BTreeSet<_>>()
-        == ["keyid", "sig"].into_iter().collect();
+    let mut signature_fields = signature_object.keys().cloned().collect::<Vec<_>>();
+    signature_fields.sort();
     let signature_key_id = signature_object
         .get("keyid")
         .and_then(serde_json::Value::as_str)
@@ -543,7 +523,7 @@ fn crypto_verify(
         .map_err(|error| crypto_error("bench/crypto-authority", error.to_string()))?;
     let decision = authority
         .dsse(gc_obligations::DsseVerificationFacts {
-            envelope_closed: true,
+            envelope_fields: &envelope_fields,
             expected_key_id: expected_keyid,
             expected_payload_type: payload_type,
             key_id: &observed_key_id,
@@ -554,7 +534,7 @@ fn crypto_verify(
                 .and_then(serde_json::Value::as_str)
                 .unwrap_or(""),
             signature_count: signatures.len(),
-            signature_fields_closed,
+            signature_fields: &signature_fields,
             signature_key_id,
             signature_valid,
         })

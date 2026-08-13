@@ -225,6 +225,32 @@ impl AcceptanceSignature {
     }
 }
 
+/// Execute only the Ed25519 mechanism over fields proposed by an untrusted term.
+/// Schema, identity, and key-policy admission are independently decided by GenesisCode.
+pub fn verify_acceptance_signature_mechanism(term: &Term) -> bool {
+    let Term::Map(fields) = term else {
+        return false;
+    };
+    let Ok(acceptance_hash) = bytes32_field(fields, ":acceptance-h") else {
+        return false;
+    };
+    let Ok(public_key) = bytes32_field(fields, ":pk") else {
+        return false;
+    };
+    let Ok(signature) = bytes64_field(fields, ":sig") else {
+        return false;
+    };
+    let Ok(public_key) = VerifyingKey::from_bytes(&public_key) else {
+        return false;
+    };
+    public_key
+        .verify_strict(
+            &acceptance_message(&acceptance_hash),
+            &Signature::from_bytes(&signature),
+        )
+        .is_ok()
+}
+
 pub fn acceptance_message(acceptance_hash: &[u8; 32]) -> Vec<u8> {
     let mut msg = Vec::with_capacity(16 + 32);
     msg.extend_from_slice(b"GCv0.2\0acceptance\0");

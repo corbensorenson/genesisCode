@@ -1,0 +1,616 @@
+(def selfhost/evidence-verify-package::tag core/data::tag)
+
+(def selfhost/evidence-verify-package::nil? core/list::is-nil?)
+
+(def selfhost/evidence-verify-package::not (fn (value) (if value false true)))
+
+(def selfhost/evidence-verify-package::map?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :map))))
+
+(def selfhost/evidence-verify-package::vec?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :vec))))
+
+(def selfhost/evidence-verify-package::str?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :str))))
+
+(def selfhost/evidence-verify-package::sym?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :sym))))
+
+(def selfhost/evidence-verify-package::bytes?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :bytes))))
+
+(def selfhost/evidence-verify-package::bool?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :bool))))
+
+(def selfhost/evidence-verify-package::int?
+  (fn (value) ((core/sym::eq? (selfhost/evidence-verify-package::tag value)) (quote :int))))
+
+(def selfhost/evidence-verify-package::field
+  (fn (map) (fn (key) (if (selfhost/evidence-verify-package::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/evidence-verify-package::has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (if ((core/eq? ((core/vec::get ((core/vec::get entries) index)) 0)) key)
+            true
+            (((selfhost/evidence-verify-package::has-key-loop? entries) key)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/evidence-verify-package::has-key?
+  (fn (map)
+    (fn (key)
+      (((selfhost/evidence-verify-package::has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/evidence-verify-package::has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            ((selfhost/evidence-verify-package::has-key? map) ((core/vec::get keys) index))
+            (((selfhost/evidence-verify-package::has-keys-loop? map) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/evidence-verify-package::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/evidence-verify-package::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/evidence-verify-package::has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/evidence-verify-package::hash32?
+  (fn (value)
+    (if (selfhost/evidence-verify-package::bytes? value)
+      ((core/int::eq? (core/bytes::len value)) 32)
+      false)))
+
+(def selfhost/evidence-verify-package::hash64?
+  (fn (value)
+    (if (selfhost/evidence-verify-package::bytes? value)
+      ((core/int::eq? (core/bytes::len value)) 64)
+      false)))
+
+(def selfhost/evidence-verify-package::hex32?
+  (fn (value)
+    (if (selfhost/evidence-verify-package::str? value)
+      (if ((core/int::eq? (core/str::len value)) 64)
+        (let ((decoded (core/bytes::from-hex value)))
+          (if (core/error::is? decoded)
+            false
+            ((core/int::eq? (core/bytes::len decoded)) 32)))
+        false)
+      false)))
+
+(def selfhost/evidence-verify-package::strings-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/evidence-verify-package::str? ((core/vec::get values) index))
+          ((selfhost/evidence-verify-package::strings-loop? values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/evidence-verify-package::strings?
+  (fn (value)
+    (if (selfhost/evidence-verify-package::vec? value)
+      ((selfhost/evidence-verify-package::strings-loop? value) 0)
+      false)))
+
+(def selfhost/evidence-verify-package::member-loop?
+  (fn (values)
+    (fn (wanted)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          false
+          (if ((core/eq? ((core/vec::get values) index)) wanted)
+            true
+            (((selfhost/evidence-verify-package::member-loop? values) wanted)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/evidence-verify-package::member?
+  (fn (values) (fn (wanted) (((selfhost/evidence-verify-package::member-loop? values) wanted) 0))))
+
+(def selfhost/evidence-verify-package::push-error
+  (fn (errors) (fn (code) ((core/vec::push errors) code))))
+
+(def selfhost/evidence-verify-package::fact-valid?
+  (fn (fact)
+    (if
+      ((selfhost/evidence-verify-package::exact-map? fact)
+        [:class :code :mechanism-ok :observed :required])
+      (if (selfhost/evidence-verify-package::sym?
+            ((selfhost/evidence-verify-package::field fact) (quote :class)))
+        (if (selfhost/evidence-verify-package::str?
+              ((selfhost/evidence-verify-package::field fact) (quote :code)))
+          (selfhost/evidence-verify-package::bool?
+            ((selfhost/evidence-verify-package::field fact) (quote :mechanism-ok)))
+          false)
+        false)
+      false)))
+
+(def selfhost/evidence-verify-package::fact-passes?
+  (fn (fact)
+    (if ((selfhost/evidence-verify-package::field fact) (quote :mechanism-ok))
+      (let ((class ((selfhost/evidence-verify-package::field fact) (quote :class))))
+        (if ((core/sym::eq? class) (quote :at-least))
+          (if (selfhost/evidence-verify-package::int?
+                ((selfhost/evidence-verify-package::field fact) (quote :observed)))
+            (if (selfhost/evidence-verify-package::int?
+                  ((selfhost/evidence-verify-package::field fact) (quote :required)))
+              (selfhost/evidence-verify-package::not
+                ((core/int::lt?
+                    ((selfhost/evidence-verify-package::field fact) (quote :observed)))
+                  ((selfhost/evidence-verify-package::field fact) (quote :required))))
+              false)
+            false)
+          (if ((core/sym::eq? class) (quote :identity))
+            ((core/eq? ((selfhost/evidence-verify-package::field fact) (quote :observed)))
+              ((selfhost/evidence-verify-package::field fact) (quote :required)))
+            (if ((core/sym::eq? class) (quote :presence))
+              ((core/eq? ((selfhost/evidence-verify-package::field fact) (quote :observed)))
+                ((selfhost/evidence-verify-package::field fact) (quote :required)))
+              (if ((core/sym::eq? class) (quote :schema))
+                ((core/eq? ((selfhost/evidence-verify-package::field fact) (quote :observed)))
+                  ((selfhost/evidence-verify-package::field fact) (quote :required)))
+                (if ((core/sym::eq? class) (quote :crypto))
+                  ((core/eq? ((selfhost/evidence-verify-package::field fact) (quote :observed)))
+                    ((selfhost/evidence-verify-package::field fact) (quote :required)))
+                  false))))))
+      false)))
+
+(def selfhost/evidence-verify-package::facts-loop
+  (fn (facts)
+    (fn (index)
+      (fn (errors)
+        (if ((core/int::eq? index) (core/vec::len facts))
+          errors
+          (let ((fact ((core/vec::get facts) index)))
+            (if (selfhost/evidence-verify-package::not
+                  (selfhost/evidence-verify-package::fact-valid? fact))
+              (((selfhost/evidence-verify-package::facts-loop facts) ((core/int::add index) 1))
+                ((selfhost/evidence-verify-package::push-error errors) "evidence/fact-malformed"))
+              (if (selfhost/evidence-verify-package::fact-passes? fact)
+                (((selfhost/evidence-verify-package::facts-loop facts) ((core/int::add index) 1)) errors)
+                (((selfhost/evidence-verify-package::facts-loop facts) ((core/int::add index) 1))
+                  ((selfhost/evidence-verify-package::push-error errors)
+                    ((selfhost/evidence-verify-package::field fact) (quote :code))))))))))))
+
+(def selfhost/evidence-verify-package::store-valid?
+  (fn (item)
+    (if
+      ((selfhost/evidence-verify-package::exact-map? item)
+        [:load-error :observed-h :required-h :role])
+      (if (selfhost/evidence-verify-package::sym?
+            ((selfhost/evidence-verify-package::field item) (quote :role)))
+        (if (selfhost/evidence-verify-package::hex32?
+              ((selfhost/evidence-verify-package::field item) (quote :required-h)))
+          (if (selfhost/evidence-verify-package::nil?
+                ((selfhost/evidence-verify-package::field item) (quote :load-error)))
+            (if (selfhost/evidence-verify-package::hex32?
+                  ((selfhost/evidence-verify-package::field item) (quote :observed-h)))
+              ((core/eq? ((selfhost/evidence-verify-package::field item) (quote :observed-h)))
+                ((selfhost/evidence-verify-package::field item) (quote :required-h)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/evidence-verify-package::store-loop
+  (fn (items)
+    (fn (index)
+      (fn (errors)
+        (if ((core/int::eq? index) (core/vec::len items))
+          errors
+          (if (selfhost/evidence-verify-package::store-valid? ((core/vec::get items) index))
+            (((selfhost/evidence-verify-package::store-loop items) ((core/int::add index) 1)) errors)
+            (((selfhost/evidence-verify-package::store-loop items) ((core/int::add index) 1))
+              ((selfhost/evidence-verify-package::push-error errors) "evidence/store-integrity"))))))))
+
+(def selfhost/evidence-verify-package::store-has?
+  (fn (store)
+    (fn (role)
+      (fn (hash)
+        (fn (index)
+          (if ((core/int::eq? index) (core/vec::len store))
+            false
+            (let ((item ((core/vec::get store) index)))
+              (if ((core/sym::eq? ((selfhost/evidence-verify-package::field item) (quote :role))) role)
+                (if ((core/eq? ((selfhost/evidence-verify-package::field item) (quote :required-h))) hash)
+                  true
+                  ((((selfhost/evidence-verify-package::store-has? store) role) hash)
+                    ((core/int::add index) 1)))
+                ((((selfhost/evidence-verify-package::store-has? store) role) hash)
+                  ((core/int::add index) 1))))))))))
+
+(def selfhost/evidence-verify-package::obligation-valid?
+  (fn (obligation)
+    (if (selfhost/evidence-verify-package::map? obligation)
+      (let
+        ((name ((selfhost/evidence-verify-package::field obligation) (quote :name)))
+          (ok ((selfhost/evidence-verify-package::field obligation) (quote :ok)))
+          (artifact ((selfhost/evidence-verify-package::field obligation) (quote :artifact)))
+          (errors ((selfhost/evidence-verify-package::field obligation) (quote :errors))))
+        (if (selfhost/evidence-verify-package::sym? name)
+          (if (selfhost/evidence-verify-package::bool? ok)
+            (if (if (selfhost/evidence-verify-package::nil? artifact)
+                  true
+                  (selfhost/evidence-verify-package::hex32? artifact))
+              (if (if (selfhost/evidence-verify-package::nil? errors)
+                    true
+                    (selfhost/evidence-verify-package::strings? errors))
+                (if (selfhost/evidence-verify-package::nil? artifact)
+                  (if (selfhost/evidence-verify-package::nil? errors)
+                    ((selfhost/evidence-verify-package::exact-map? obligation) [:name :ok])
+                    ((selfhost/evidence-verify-package::exact-map? obligation)
+                      [:errors :name :ok]))
+                  (if (selfhost/evidence-verify-package::nil? errors)
+                    ((selfhost/evidence-verify-package::exact-map? obligation)
+                      [:artifact :name :ok])
+                    ((selfhost/evidence-verify-package::exact-map? obligation)
+                      [:artifact :errors :name :ok])))
+                false)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/evidence-verify-package::obligations-loop
+  (fn (obligations)
+    (fn (store)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len obligations))
+          true
+          (let ((obligation ((core/vec::get obligations) index)))
+            (if (selfhost/evidence-verify-package::obligation-valid? obligation)
+              (let ((artifact ((selfhost/evidence-verify-package::field obligation) (quote :artifact))))
+                (if (if (selfhost/evidence-verify-package::nil? artifact)
+                      true
+                      (((selfhost/evidence-verify-package::store-has? store)
+                          (quote :acceptance-reference)) artifact 0))
+                  (((selfhost/evidence-verify-package::obligations-loop obligations) store)
+                    ((core/int::add index) 1))
+                  false))
+              false)))))))
+
+(def selfhost/evidence-verify-package::acceptance-valid?
+  (fn (acceptance)
+    (fn (acceptance-h)
+      (fn (store)
+        (if (selfhost/evidence-verify-package::nil? acceptance-h)
+          (selfhost/evidence-verify-package::nil? acceptance)
+          (if (selfhost/evidence-verify-package::hash32? acceptance-h)
+            (if (selfhost/evidence-verify-package::acceptance-store-has? store acceptance-h 0)
+              (if
+              ((selfhost/evidence-verify-package::exact-map? acceptance)
+                [:kind :obligations :ok :package])
+              (let
+                ((kind ((selfhost/evidence-verify-package::field acceptance) (quote :kind)))
+                  (ok ((selfhost/evidence-verify-package::field acceptance) (quote :ok)))
+                  (package ((selfhost/evidence-verify-package::field acceptance) (quote :package)))
+                  (obligations
+                    ((selfhost/evidence-verify-package::field acceptance) (quote :obligations))))
+                (if ((core/eq? kind) "genesis/acceptance-v0.2")
+                  (if (selfhost/evidence-verify-package::bool? ok)
+                    (if
+                      ((selfhost/evidence-verify-package::exact-map? package) [:name :version])
+                      (if (selfhost/evidence-verify-package::str?
+                            ((selfhost/evidence-verify-package::field package) (quote :name)))
+                        (if (selfhost/evidence-verify-package::str?
+                              ((selfhost/evidence-verify-package::field package) (quote :version)))
+                          (if (selfhost/evidence-verify-package::vec? obligations)
+                            (((selfhost/evidence-verify-package::obligations-loop obligations) store) 0)
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false))
+                false)
+              false)
+            false))))))
+
+(def selfhost/evidence-verify-package::acceptance-store-has?
+  (fn (store acceptance-h index)
+    (if ((core/int::eq? index) (core/vec::len store))
+      false
+      (let ((item ((core/vec::get store) index)))
+        (if ((core/sym::eq?
+                ((selfhost/evidence-verify-package::field item) (quote :role)))
+              (quote :acceptance))
+          (let
+            ((decoded
+                (core/bytes::from-hex
+                  ((selfhost/evidence-verify-package::field item) (quote :required-h)))))
+            (if (core/error::is? decoded)
+              false
+              ((core/eq? decoded) acceptance-h)))
+          (selfhost/evidence-verify-package::acceptance-store-has?
+            store acceptance-h ((core/int::add index) 1)))))))
+
+(def selfhost/evidence-verify-package::key-valid?
+  (fn (key)
+    (if
+      ((selfhost/evidence-verify-package::exact-map? key)
+        [:decode-error :decoded :encoded :key-valid])
+      (if (selfhost/evidence-verify-package::str?
+            ((selfhost/evidence-verify-package::field key) (quote :encoded)))
+        (if (selfhost/evidence-verify-package::nil?
+              ((selfhost/evidence-verify-package::field key) (quote :decode-error)))
+          (if (selfhost/evidence-verify-package::hash32?
+                ((selfhost/evidence-verify-package::field key) (quote :decoded)))
+            (if (selfhost/evidence-verify-package::bool?
+                  ((selfhost/evidence-verify-package::field key) (quote :key-valid)))
+              ((selfhost/evidence-verify-package::field key) (quote :key-valid))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/evidence-verify-package::keys-loop?
+  (fn (keys)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len keys))
+        true
+        (if (selfhost/evidence-verify-package::key-valid? ((core/vec::get keys) index))
+          ((selfhost/evidence-verify-package::keys-loop? keys) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/evidence-verify-package::key-admitted-loop?
+  (fn (keys)
+    (fn (public-key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          false
+          (if ((core/eq?
+                  ((selfhost/evidence-verify-package::field ((core/vec::get keys) index))
+                    (quote :decoded))) public-key)
+            true
+            (((selfhost/evidence-verify-package::key-admitted-loop? keys) public-key)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/evidence-verify-package::signature-valid?
+  (fn (observation)
+    (fn (acceptance-h)
+      (fn (keys)
+        (fn (signature-set)
+          (if
+            ((selfhost/evidence-verify-package::exact-map? observation)
+              [:artifact-h :crypto-valid :term])
+            (let
+              ((artifact-h
+                  ((selfhost/evidence-verify-package::field observation) (quote :artifact-h)))
+                (crypto-valid
+                  ((selfhost/evidence-verify-package::field observation) (quote :crypto-valid)))
+                (term ((selfhost/evidence-verify-package::field observation) (quote :term))))
+              (if (selfhost/evidence-verify-package::hex32? artifact-h)
+                (if ((selfhost/evidence-verify-package::member? signature-set) artifact-h)
+                  (if
+                    ((selfhost/evidence-verify-package::exact-map? term)
+                      [:acceptance-h :alg :kind :pk :sig])
+                    (if ((core/eq? ((selfhost/evidence-verify-package::field term) (quote :kind)))
+                          "genesis/acceptance-signature-v0.2")
+                      (if ((core/eq? ((selfhost/evidence-verify-package::field term) (quote :alg)))
+                            "ed25519")
+                        (if ((core/eq?
+                                ((selfhost/evidence-verify-package::field term)
+                                  (quote :acceptance-h))) acceptance-h)
+                          (if (selfhost/evidence-verify-package::hash32?
+                                ((selfhost/evidence-verify-package::field term) (quote :pk)))
+                            (if (selfhost/evidence-verify-package::hash64?
+                                  ((selfhost/evidence-verify-package::field term) (quote :sig)))
+                              (if
+                                (((selfhost/evidence-verify-package::key-admitted-loop? keys)
+                                    ((selfhost/evidence-verify-package::field term) (quote :pk))) 0)
+                                (if (selfhost/evidence-verify-package::bool? crypto-valid)
+                                  crypto-valid
+                                  false)
+                                false)
+                              false)
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false))
+            false))))))
+
+(def selfhost/evidence-verify-package::signatures-loop
+  (fn (signatures)
+    (fn (acceptance-h)
+      (fn (keys)
+        (fn (signature-set)
+          (fn (index)
+            (fn (seen)
+              (fn (count)
+                (fn (errors)
+                  (if ((core/int::eq? index) (core/vec::len signatures))
+                    {:count count :errors errors}
+                    (let
+                      ((observation ((core/vec::get signatures) index))
+                        (artifact-h
+                          ((selfhost/evidence-verify-package::field observation)
+                            (quote :artifact-h))))
+                      (if ((selfhost/evidence-verify-package::has-key? seen) artifact-h)
+                        ((((((((selfhost/evidence-verify-package::signatures-loop signatures)
+                                        acceptance-h) keys) signature-set)
+                                  ((core/int::add index) 1)) seen) count)
+                          ((selfhost/evidence-verify-package::push-error errors)
+                            "policy/signature-duplicate"))
+                        (let ((next-seen (((core/map::put seen) artifact-h) true)))
+                          (if
+                            ((((selfhost/evidence-verify-package::signature-valid? observation)
+                                  acceptance-h) keys) signature-set)
+                            ((((((((selfhost/evidence-verify-package::signatures-loop signatures)
+                                            acceptance-h) keys) signature-set)
+                                      ((core/int::add index) 1)) next-seen)
+                                ((core/int::add count) 1)) errors)
+                            ((((((((selfhost/evidence-verify-package::signatures-loop signatures)
+                                            acceptance-h) keys) signature-set)
+                                      ((core/int::add index) 1)) next-seen) count)
+                              ((selfhost/evidence-verify-package::push-error errors)
+                                "policy/signature-invalid"))))))))))))))))
+
+(def selfhost/evidence-verify-package::signature-set-loop
+  (fn (signature-set)
+    (fn (signatures)
+      (fn (index)
+        (fn (seen)
+          (if ((core/int::eq? index) (core/vec::len signature-set))
+            true
+            (let ((artifact-h ((core/vec::get signature-set) index)))
+              (if (selfhost/evidence-verify-package::hex32? artifact-h)
+                (if ((selfhost/evidence-verify-package::has-key? seen) artifact-h)
+                  false
+                  (if
+                    (selfhost/evidence-verify-package::signature-observed?
+                      signatures artifact-h 0)
+                    ((((selfhost/evidence-verify-package::signature-set-loop signature-set)
+                          signatures) ((core/int::add index) 1))
+                      (((core/map::put seen) artifact-h) true))
+                    false))
+                false))))))))
+
+(def selfhost/evidence-verify-package::signature-observed?
+  (fn (signatures artifact-h index)
+    (if ((core/int::eq? index) (core/vec::len signatures))
+      false
+      (if ((core/eq?
+              ((selfhost/evidence-verify-package::field ((core/vec::get signatures) index))
+                (quote :artifact-h))) artifact-h)
+        true
+        (selfhost/evidence-verify-package::signature-observed?
+          signatures artifact-h ((core/int::add index) 1))))))
+
+(def selfhost/evidence-verify-package::policy-shape-valid?
+  (fn (policy)
+    (if
+      ((selfhost/evidence-verify-package::exact-map? policy)
+        [:allowed-keys :min-signatures :version])
+      (let
+        ((version ((selfhost/evidence-verify-package::field policy) (quote :version)))
+          (minimum ((selfhost/evidence-verify-package::field policy) (quote :min-signatures)))
+          (keys ((selfhost/evidence-verify-package::field policy) (quote :allowed-keys))))
+        (if (selfhost/evidence-verify-package::int? version)
+          (if ((core/int::eq? version) 1)
+            (if (selfhost/evidence-verify-package::int? minimum)
+              (if (selfhost/evidence-verify-package::not ((core/int::lt? minimum) 0))
+                (if (selfhost/evidence-verify-package::vec? keys)
+                  ((selfhost/evidence-verify-package::keys-loop? keys) 0)
+                  false)
+                false)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/evidence-verify-package::empty-signatures-result
+  (fn (signature-set signatures errors)
+    (if (selfhost/evidence-verify-package::nil? signature-set)
+      (if ((core/int::eq? (core/vec::len signatures)) 0)
+        {:count 0 :errors errors}
+        {:count 0 :errors
+          ((selfhost/evidence-verify-package::push-error errors) "policy/unexpected-signatures")})
+      {:count 0 :errors
+        ((selfhost/evidence-verify-package::push-error errors)
+          "policy/unexpected-signature-set")})))
+
+(def selfhost/evidence-verify-package::verified-signatures-result
+  (fn (acceptance-h keys minimum signature-set signatures errors)
+    (if (selfhost/evidence-verify-package::vec? signature-set)
+      (if
+        ((((selfhost/evidence-verify-package::signature-set-loop signature-set) signatures) 0) {})
+        (let
+          ((start
+              (((((selfhost/evidence-verify-package::signatures-loop signatures)
+                        acceptance-h) keys) signature-set) 0)))
+          (let ((with-seen (start {})))
+            (let ((with-count (with-seen 0)))
+              (let ((result (with-count errors)))
+                (let
+                  ((count ((selfhost/evidence-verify-package::field result) (quote :count)))
+                    (next-errors
+                      ((selfhost/evidence-verify-package::field result) (quote :errors))))
+                  (if ((core/int::lt? count) minimum)
+                    {:count count :errors
+                      ((selfhost/evidence-verify-package::push-error next-errors)
+                        "policy/signature-threshold")}
+                    {:count count :errors next-errors}))))))
+        {:count 0 :errors
+          ((selfhost/evidence-verify-package::push-error errors)
+            "policy/signature-set-closure")})
+      {:count 0 :errors
+        ((selfhost/evidence-verify-package::push-error errors)
+          "policy/signature-set-schema")})))
+
+(def selfhost/evidence-verify-package::positive-policy-evaluate
+  (fn (acceptance-h keys minimum signature-set signatures errors)
+    (if (selfhost/evidence-verify-package::nil? acceptance-h)
+      {:count 0 :errors
+        ((selfhost/evidence-verify-package::push-error errors) "policy/acceptance-required")}
+      (if ((core/int::eq? (core/vec::len keys)) 0)
+        {:count 0 :errors
+          ((selfhost/evidence-verify-package::push-error errors)
+            "policy/allowed-keys-required")}
+        (selfhost/evidence-verify-package::verified-signatures-result
+          acceptance-h keys minimum signature-set signatures errors)))))
+
+(def selfhost/evidence-verify-package::policy-evaluate
+  (fn (policy acceptance-h signature-set signatures errors)
+    (if (selfhost/evidence-verify-package::nil? policy)
+      (selfhost/evidence-verify-package::empty-signatures-result
+        signature-set signatures errors)
+      (if (selfhost/evidence-verify-package::policy-shape-valid? policy)
+        (let
+          ((minimum ((selfhost/evidence-verify-package::field policy) (quote :min-signatures)))
+            (keys ((selfhost/evidence-verify-package::field policy) (quote :allowed-keys))))
+          (if ((core/int::eq? minimum) 0)
+            (selfhost/evidence-verify-package::empty-signatures-result
+              signature-set signatures errors)
+            (selfhost/evidence-verify-package::positive-policy-evaluate
+              acceptance-h keys minimum signature-set signatures errors)))
+        {:count 0 :errors
+          ((selfhost/evidence-verify-package::push-error errors) "policy/schema")}))))
+
+(def selfhost/evidence-verify-package::evaluate
+  (fn (request)
+    (let
+      ((facts ((selfhost/evidence-verify-package::field request) (quote :facts)))
+        (store ((selfhost/evidence-verify-package::field request) (quote :store)))
+        (acceptance ((selfhost/evidence-verify-package::field request) (quote :acceptance)))
+        (acceptance-h ((selfhost/evidence-verify-package::field request) (quote :acceptance-h)))
+        (policy ((selfhost/evidence-verify-package::field request) (quote :policy)))
+        (signature-set ((selfhost/evidence-verify-package::field request) (quote :signature-set)))
+        (signatures ((selfhost/evidence-verify-package::field request) (quote :signatures))))
+      (let ((fact-errors (((selfhost/evidence-verify-package::facts-loop facts) 0) [])))
+        (let ((store-errors (((selfhost/evidence-verify-package::store-loop store) 0) fact-errors)))
+          (let
+            ((acceptance-errors
+                (if (((selfhost/evidence-verify-package::acceptance-valid? acceptance)
+                        acceptance-h) store)
+                  store-errors
+                  ((selfhost/evidence-verify-package::push-error store-errors)
+                    "evidence/acceptance-schema-or-reference"))))
+            (let
+              ((policy-result
+                  (selfhost/evidence-verify-package::policy-evaluate
+                    policy acceptance-h signature-set signatures acceptance-errors)))
+              (let
+                ((errors ((selfhost/evidence-verify-package::field policy-result) (quote :errors)))
+                  (count ((selfhost/evidence-verify-package::field policy-result) (quote :count))))
+                {
+                  :checked
+                    ((core/int::add (core/vec::len facts))
+                      ((core/int::add (core/vec::len store)) (core/vec::len signatures)))
+                  :errors errors
+                  :valid-signatures count
+                  :verified ((core/int::eq? (core/vec::len errors)) 0)}))))))))
