@@ -1,0 +1,49 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::resolution-identity-authority",
+  "contentIdentitySha256": "d0c54c8118fabbd219df0ab70d85fd0b8efb9a2945dd3986e20850e439b46d3d",
+  "decisionInventory": [
+    "closed-requirement-identity-map",
+    "deterministic-coreform-term-print",
+    "newline-delimited-identity-bytes",
+    "raw-blake3-requirement-fingerprint",
+    "closed-enum-and-optional-field-admission",
+    "request-bound-result-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "typed-requirement-term-transport",
+    "strict-result-contradiction-checking",
+    "effect-log-and-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_resolution_identity_authority.py",
+  "kind": "genesis/selfhost-pkg-resolution-identity-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "graph-resolution-authority",
+    "h2-package-resolution",
+    "r4-2-e-closure",
+    "registry-authority",
+    "release-qualification",
+    "selector-resolution-authority",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/pkg-resolution-identity-request-v0.1",
+  "resultKind": "genesis/pkg-resolution-identity-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_resolution_identity_authority_v1.gc",
+  "sourceSha256": "87ac19da44dfd30ac8a7a4a4f057b1215a87f24ca4c5ece99de9fbfaec472878",
+  "spec": "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

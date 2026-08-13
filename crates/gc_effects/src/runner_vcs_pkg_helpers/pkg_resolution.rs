@@ -138,6 +138,7 @@ pub(crate) fn resolve_requirement(
     timeout_ms: Option<u64>,
     _name: &str,
     req: &gc_pkg::Requirement,
+    identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<gc_pkg::LockedEntry, Value> {
@@ -197,7 +198,14 @@ pub(crate) fn resolve_requirement(
                 error_tok,
                 op,
             )?;
-            let fp = compute_requirement_fingerprint(req, Some(&h), None);
+            let fp = compute_requirement_fingerprint(
+                identity_authority,
+                req,
+                Some(&h),
+                None,
+                error_tok,
+                op,
+            )?;
             Ok(gc_pkg::LockedEntry {
                 commit: None,
                 snapshot: h,
@@ -241,7 +249,14 @@ pub(crate) fn resolve_requirement(
                 error_tok,
                 op,
             )?;
-            let fp = compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&h));
+            let fp = compute_requirement_fingerprint(
+                identity_authority,
+                req,
+                Some(snapshot.as_str()),
+                Some(&h),
+                error_tok,
+                op,
+            )?;
             Ok(gc_pkg::LockedEntry {
                 commit: Some(h),
                 snapshot,
@@ -321,8 +336,14 @@ pub(crate) fn resolve_requirement(
                 error_tok,
                 op,
             )?;
-            let fp =
-                compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&commit_hex));
+            let fp = compute_requirement_fingerprint(
+                identity_authority,
+                req,
+                Some(snapshot.as_str()),
+                Some(&commit_hex),
+                error_tok,
+                op,
+            )?;
             Ok(gc_pkg::LockedEntry {
                 commit: Some(commit_hex),
                 snapshot,
@@ -441,8 +462,14 @@ pub(crate) fn resolve_requirement(
                 error_tok,
                 op,
             )?;
-            let fp =
-                compute_requirement_fingerprint(req, Some(snapshot.as_str()), Some(&commit_hex));
+            let fp = compute_requirement_fingerprint(
+                identity_authority,
+                req,
+                Some(snapshot.as_str()),
+                Some(&commit_hex),
+                error_tok,
+                op,
+            )?;
             Ok(gc_pkg::LockedEntry {
                 commit: Some(commit_hex),
                 snapshot,

@@ -1,6 +1,43 @@
 use super::*;
 
 pub(crate) fn compute_requirement_fingerprint(
+    authority: Option<&mut PkgResolutionIdentityAuthority>,
+    req: &gc_pkg::Requirement,
+    snapshot: Option<&str>,
+    commit: Option<&str>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<String, Value> {
+    if let Some(authority) = authority {
+        return authority
+            .fingerprint(req, snapshot, commit)
+            .map_err(|error| {
+                mk_error(
+                    error_tok,
+                    "core/pkg/authority-error",
+                    error.to_string(),
+                    Some(op),
+                )
+            });
+    }
+
+    #[cfg(any(test, feature = "parity-oracle"))]
+    return Ok(compute_requirement_fingerprint_parity(
+        req, snapshot, commit,
+    ));
+
+    #[cfg(not(any(test, feature = "parity-oracle")))]
+    Err(mk_error(
+        error_tok,
+        "core/pkg/authority-error",
+        "package resolution requires the artifact-loaded GenesisCode identity authority"
+            .to_string(),
+        Some(op),
+    ))
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn compute_requirement_fingerprint_parity(
     req: &gc_pkg::Requirement,
     snapshot: Option<&str>,
     commit: Option<&str>,
@@ -174,6 +211,7 @@ pub(crate) fn validate_commit_artifact_closure(
 }
 
 pub(crate) fn validate_locked_entries_strict(
+    mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     store: &ArtifactStore,
     requirements: &BTreeMap<String, gc_pkg::Requirement>,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
@@ -351,8 +389,14 @@ pub(crate) fn validate_locked_entries_strict(
         }
 
         if let Some(fp) = &le.environment_fingerprint {
-            let expected_fp =
-                compute_requirement_fingerprint(req, Some(&le.snapshot), le.commit.as_deref());
+            let expected_fp = compute_requirement_fingerprint(
+                identity_authority.as_deref_mut(),
+                req,
+                Some(&le.snapshot),
+                le.commit.as_deref(),
+                error_tok,
+                op,
+            )?;
             if fp != &expected_fp {
                 return Err(mk_error(
                     error_tok,

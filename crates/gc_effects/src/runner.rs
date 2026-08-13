@@ -12,6 +12,7 @@ use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
 use crate::pkg_lock_read_authority::PkgLockReadAuthority;
 use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
+use crate::pkg_resolution_identity_authority::PkgResolutionIdentityAuthority;
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
 use crate::refs_authority::RefsAuthority;
@@ -206,6 +207,7 @@ pub fn run(
     let mut refs_authority = None;
     let mut pkg_lock_read_authority = None;
     let mut pkg_lock_write_authority = None;
+    let mut pkg_resolution_identity_authority = None;
 
     macro_rules! run_try {
         ($result:expr) => {
@@ -338,6 +340,19 @@ pub fn run(
                                 .transpose()
                         );
                     }
+                    if pkg_resolution_identity_authority.is_none()
+                        && matches!(
+                            req.op.as_str(),
+                            "core/pkg-low::lock" | "core/pkg-low::update" | "core/pkg-low::install"
+                        )
+                    {
+                        pkg_resolution_identity_authority = run_try!(
+                            policy
+                                .selfhost_authority_config()
+                                .map(PkgResolutionIdentityAuthority::load)
+                                .transpose()
+                        );
+                    }
                     let resp = if let Some(task_resp) = task_runtime_call(
                         &mut task_runtime,
                         policy,
@@ -402,6 +417,7 @@ pub fn run(
                             refs_authority.as_mut(),
                             pkg_lock_read_authority.as_mut(),
                             pkg_lock_write_authority.as_mut(),
+                            pkg_resolution_identity_authority.as_mut(),
                             &mut artifact_budget_state,
                             store_authority.as_mut(),
                             &mut bridge_runtime,

@@ -10,6 +10,7 @@ pub(super) fn handle_pkg_install(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
     error_tok: SealId,
@@ -89,6 +90,7 @@ pub(super) fn handle_pkg_install(
                 timeout_ms,
                 name,
                 req,
+                identity_authority.as_deref_mut(),
                 error_tok,
                 op,
             ) {

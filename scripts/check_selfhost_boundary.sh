@@ -203,6 +203,14 @@ python3 scripts/lib/selfhost_pkg_lock_read_authority.py \
   --schema docs/spec/SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e package identity is partial: GenesisCode owns canonical requirement
+# fingerprints; selector parsing, graph solving, and registry mechanisms remain H0.
+python3 scripts/lib/selfhost_pkg_resolution_identity_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_resolution_identity_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \

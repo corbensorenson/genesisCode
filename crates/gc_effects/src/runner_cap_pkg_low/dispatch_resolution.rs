@@ -21,6 +21,7 @@ pub(super) fn dispatch_resolution(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -187,6 +188,7 @@ pub(super) fn dispatch_resolution(
                     timeout_ms,
                     name,
                     req,
+                    identity_authority.as_deref_mut(),
                     error_tok,
                     op,
                 ) {
@@ -201,6 +203,7 @@ pub(super) fn dispatch_resolution(
 
             if strict
                 && let Err(v) = validate_locked_entries_strict(
+                    identity_authority.as_deref_mut(),
                     store,
                     &l.requirements,
                     &out_locked,
@@ -405,6 +408,7 @@ pub(super) fn dispatch_resolution(
                     timeout_ms,
                     name,
                     req,
+                    identity_authority.as_deref_mut(),
                     error_tok,
                     op,
                 ) {
@@ -457,6 +461,7 @@ pub(super) fn dispatch_resolution(
             }
             if strict
                 && let Err(v) = validate_locked_entries_strict(
+                    identity_authority.as_deref_mut(),
                     store,
                     &l.requirements,
                     &l.locked,
@@ -573,7 +578,16 @@ pub(super) fn dispatch_resolution(
         }
 
         "core/pkg-low::install" => install_verify::handle_pkg_install(
-            payload, pol, policy, store, refs, budget, timeout_ms, error_tok, op,
+            payload,
+            pol,
+            policy,
+            store,
+            refs,
+            identity_authority,
+            budget,
+            timeout_ms,
+            error_tok,
+            op,
         ),
 
         "core/pkg-low::verify" => {
@@ -676,6 +690,7 @@ mod tests {
             &Term::Nil,
             None,
             &CapsPolicy::empty(),
+            None,
             None,
             None,
             &mut budget,

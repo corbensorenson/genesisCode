@@ -111,6 +111,7 @@ fn call_model_provider(runtime: &mut HostBridgeRuntime, policy: &CapsPolicy) -> 
         None,
         None,
         None,
+        None,
         &mut budget,
         None,
         runtime,

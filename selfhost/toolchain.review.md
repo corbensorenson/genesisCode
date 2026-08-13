@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `02cdf5c7b96685914f5f328e73d687280a22ae93bcaf894467fe4e2dd206f7ce`
-- Freshness artifact hash: `02cdf5c7b96685914f5f328e73d687280a22ae93bcaf894467fe4e2dd206f7ce`
-- Freshness source hash: `077a3ce5e28551f702246f5b353d238b0b405b1eea6eca0635a6afdb301fe00b`
-- Source aggregate hash (module path + module sha256): `279044e3b9eefd0d3fbfaaa08a74970367cfa4596a42d7f5cea7eee9f86221af`
+- Artifact sha256: `6921291f1776b8b5605f73a499674be9fe586303d58e5d692ded462f991c099b`
+- Freshness artifact hash: `6921291f1776b8b5605f73a499674be9fe586303d58e5d692ded462f991c099b`
+- Freshness source hash: `bda4093f50800d35cd42433a4da3e5385d23a5b33bd2db25be264a1891b0b722`
+- Source aggregate hash (module path + module sha256): `be8afdbf37e91b51f4cdee953840ab1a8f109d5c9161420e89bc53b51cf900d7`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `91`
+- Module count: `92`
 
 ## Module Summary
 
@@ -88,6 +88,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/refs_authority_v1.gc` | 191 | 8348 | 18 | `e960ef5bc80f891a` |
 | `selfhost/pkg_lock_read_authority_v1.gc` | 384 | 18032 | 34 | `ab97365a6cafcdf4` |
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
+| `selfhost/pkg_resolution_identity_authority_v1.gc` | 178 | 7186 | 18 | `f3c5d8a07fd1917e` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -182,6 +183,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/refs_authority_v1.gc`: `selfhost/refs::tag`, `selfhost/refs::nil?`, `selfhost/refs::map?`, `selfhost/refs::str?`, `selfhost/refs::bool?`, `selfhost/refs::sym?`, `selfhost/refs::starts-with?`, `selfhost/refs::refs-loop?`
 - `selfhost/pkg_lock_read_authority_v1.gc`: `selfhost/pkg-lock-read::tag`, `selfhost/pkg-lock-read::map?`, `selfhost/pkg-lock-read::vec?`, `selfhost/pkg-lock-read::str?`, `selfhost/pkg-lock-read::int?`, `selfhost/pkg-lock-read::nil?`, `selfhost/pkg-lock-read::ok`, `selfhost/pkg-lock-read::bad`
 - `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`
+- `selfhost/pkg_resolution_identity_authority_v1.gc`: `selfhost/pkg-resolution-id::tag`, `selfhost/pkg-resolution-id::map?`, `selfhost/pkg-resolution-id::str?`, `selfhost/pkg-resolution-id::sym?`, `selfhost/pkg-resolution-id::int?`, `selfhost/pkg-resolution-id::nil?`, `selfhost/pkg-resolution-id::map-has-key-loop?`, `selfhost/pkg-resolution-id::map-has-keys-loop?`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

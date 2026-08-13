@@ -1,0 +1,178 @@
+; Partial R4.2.e authority for canonical package requirement fingerprints.
+
+(def selfhost/pkg-resolution-id::tag core/data::tag)
+
+(def selfhost/pkg-resolution-id::map?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-resolution-id::tag value)) (quote :map))))
+
+(def selfhost/pkg-resolution-id::str?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-resolution-id::tag value)) (quote :str))))
+
+(def selfhost/pkg-resolution-id::sym?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-resolution-id::tag value)) (quote :sym))))
+
+(def selfhost/pkg-resolution-id::int?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-resolution-id::tag value)) (quote :int))))
+
+(def selfhost/pkg-resolution-id::nil?
+  (fn (value) ((core/sym::eq? (selfhost/pkg-resolution-id::tag value)) (quote :nil))))
+
+(def selfhost/pkg-resolution-id::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/pkg-resolution-id::map-has-key-loop? entries) key)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/pkg-resolution-id::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if
+            (((selfhost/pkg-resolution-id::map-has-key-loop? (core/map::entries map))
+                ((core/vec::get keys) index)) 0)
+            (((selfhost/pkg-resolution-id::map-has-keys-loop? map) keys)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/pkg-resolution-id::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/pkg-resolution-id::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/pkg-resolution-id::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/pkg-resolution-id::optional-string?
+  (fn (value)
+    (if (selfhost/pkg-resolution-id::nil? value) true (selfhost/pkg-resolution-id::str? value))))
+
+(def selfhost/pkg-resolution-id::update-policy?
+  (fn (value)
+    (if (selfhost/pkg-resolution-id::sym? value)
+      (if ((core/sym::eq? value) (quote :manual))
+        true
+        ((core/sym::eq? value) (quote :auto)))
+      false)))
+
+(def selfhost/pkg-resolution-id::strategy?
+  (fn (value)
+    (if (selfhost/pkg-resolution-id::sym? value)
+      (if ((core/sym::eq? value) (quote :pinned))
+        true
+        (if ((core/sym::eq? value) (quote :track-ref))
+          true
+          ((core/sym::eq? value) (quote :tag-policy))))
+      false)))
+
+(def selfhost/pkg-resolution-id::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (fingerprint)
+            {
+              :code code
+              :fingerprint fingerprint
+              :kind "genesis/pkg-resolution-identity-result-v0.1"
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1}))))))
+
+(def selfhost/pkg-resolution-id::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-resolution-id::result request-h) false)
+          "core/pkg/bad-authority-request") message) nil))))
+
+(def selfhost/pkg-resolution-id::fingerprint
+  (fn (request)
+    (let
+      ((identity
+        {
+          :commit ((core/map::get request) (quote :commit))
+          :registry ((core/map::get request) (quote :registry))
+          :selector ((core/map::get request) (quote :selector))
+          :snapshot ((core/map::get request) (quote :snapshot))
+          :strategy ((core/map::get request) (quote :strategy))
+          :tag-policy ((core/map::get request) (quote :tag-policy))
+          :update-policy ((core/map::get request) (quote :update-policy))}))
+      (let ((printed (selfhost/printer::print-term identity)))
+        (let ((bytes (core/str::to-utf8 printed)))
+          (core/bytes::to-hex
+            (core/crypto::blake3 ((core/bytes::concat bytes) b"\n"))))))))
+
+(def selfhost/pkg-resolution-id::accept
+  (fn (request-h)
+    (fn (request)
+      (((((selfhost/pkg-resolution-id::result request-h) true) nil) nil)
+        (selfhost/pkg-resolution-id::fingerprint request)))))
+
+(def selfhost/pkg-resolution-id::valid-request-fields?
+  (fn (request)
+    (if (selfhost/pkg-resolution-id::str? ((core/map::get request) (quote :selector)))
+      (if
+        (selfhost/pkg-resolution-id::update-policy?
+          ((core/map::get request) (quote :update-policy)))
+        (if
+          (selfhost/pkg-resolution-id::strategy?
+            ((core/map::get request) (quote :strategy)))
+          (if
+            (selfhost/pkg-resolution-id::optional-string?
+              ((core/map::get request) (quote :tag-policy)))
+            (if
+              (selfhost/pkg-resolution-id::optional-string?
+                ((core/map::get request) (quote :registry)))
+              (if
+                (selfhost/pkg-resolution-id::optional-string?
+                  ((core/map::get request) (quote :snapshot)))
+                (selfhost/pkg-resolution-id::optional-string?
+                  ((core/map::get request) (quote :commit)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def core/pkg::resolution-identity-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-resolution-id::map? request)
+        (if
+          ((selfhost/pkg-resolution-id::exact-map? request)
+            [:commit :kind :op :registry :selector :snapshot :strategy :tag-policy :update-policy :v])
+          (let ((kind ((core/map::get request) (quote :kind))))
+            (if
+              (if (selfhost/pkg-resolution-id::str? kind)
+                ((core/eq? kind) "genesis/pkg-resolution-identity-request-v0.1")
+                false)
+              (let ((op ((core/map::get request) (quote :op))))
+                (if
+                  (if (selfhost/pkg-resolution-id::sym? op)
+                    ((core/sym::eq? op) (quote :requirement-fingerprint))
+                    false)
+                  (let ((version ((core/map::get request) (quote :v))))
+                    (if
+                      (if (selfhost/pkg-resolution-id::int? version)
+                        ((core/int::eq? version) 1)
+                        false)
+                      (if (selfhost/pkg-resolution-id::valid-request-fields? request)
+                        ((selfhost/pkg-resolution-id::accept request-h) request)
+                        ((selfhost/pkg-resolution-id::reject request-h)
+                          "request identity fields are invalid"))
+                      ((selfhost/pkg-resolution-id::reject request-h) "request :v must be 1")))
+                  ((selfhost/pkg-resolution-id::reject request-h)
+                    "request :op must be :requirement-fingerprint")))
+              ((selfhost/pkg-resolution-id::reject request-h) "request :kind mismatch")))
+          ((selfhost/pkg-resolution-id::reject request-h) "request fields mismatch"))
+        ((selfhost/pkg-resolution-id::reject request-h) "request must be map")))))
