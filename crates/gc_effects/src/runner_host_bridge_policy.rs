@@ -31,6 +31,19 @@ fn bridge_authority<'a>(
         })
 }
 
+pub(crate) fn bridge_profile_active(pol: Option<&OpPolicy>) -> bool {
+    let Some(policy) = pol else {
+        return false;
+    };
+    policy
+        .authorized_bridge_identity
+        .as_ref()
+        .map(|authority| authority.active)
+        // A present policy without authority must enter the bridge path, where
+        // the existing accessors return a sealed bridge-policy error.
+        .unwrap_or(true)
+}
+
 pub(crate) fn wasi_bridge_profile_enabled(
     pol: Option<&OpPolicy>,
     family: &str,
@@ -324,6 +337,7 @@ mod authority_tests {
             authorized_network: None,
             authorized_crypto: None,
             authorized_bridge_identity: Some(AuthorizedBridgeIdentityPolicy {
+                active: false,
                 allowlist: AuthorizedBridgeAllowlist::Absent,
                 args: Vec::new(),
                 command: None,
@@ -410,6 +424,7 @@ mod authority_tests {
         authority.args = vec!["authorized-arg".to_string()];
         authority.transport = AuthorizedBridgeTransport::PersistentStdio;
         authority.wasi_profile = false;
+        authority.active = false;
 
         assert_eq!(
             bridge_cmd(Some(&authorized), "host/plugin").unwrap(),
@@ -424,5 +439,13 @@ mod authority_tests {
             BridgeTransport::PersistentStdio
         );
         assert!(!wasi_bridge_profile_enabled(Some(&authorized), "host/plugin").unwrap());
+        assert!(!bridge_profile_active(Some(&authorized)));
+
+        authorized
+            .authorized_bridge_identity
+            .as_mut()
+            .expect("test authority")
+            .active = true;
+        assert!(bridge_profile_active(Some(&authorized)));
     }
 }

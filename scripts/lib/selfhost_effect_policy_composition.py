@@ -83,6 +83,7 @@ DECISIONS = [
     "global-store-remote-target-policy",
     "per-operation-allow-precedence",
     "per-operation-base-directory-selection",
+    "per-operation-bridge-activation-policy",
     "per-operation-bridge-command-allowlist-policy",
     "per-operation-bridge-digest-pin-policy",
     "per-operation-bridge-invocation-policy",
@@ -133,11 +134,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.14",
+        "requestKind": "genesis/effect-policy-authority-request-v0.15",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
-        "resultKind": "genesis/effect-policy-authority-result-v0.14",
+        "resultKind": "genesis/effect-policy-authority-result-v0.15",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -155,7 +156,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.19",
+        "version": "0.1.20",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -499,6 +500,7 @@ def static_check(root: Path, profile):
     if bridge_production.count("fn bridge_cmd_allowlist(") != 1:
         fail("bridge command allowlist authority consumer inventory drift")
     for consumer in (
+        "fn bridge_profile_active(",
         "fn wasi_bridge_profile_enabled(",
         "fn bridge_cmd(",
         "fn bridge_args(",
@@ -522,6 +524,7 @@ def static_check(root: Path, profile):
     if bridge_source.count("(def selfhost/effect-bridge::allowlist-policy\n") != 1:
         fail("bridge command allowlist policy binding inventory drift")
     for binding in (
+        "active?",
         "args-policy",
         "command-policy",
         "transport-policy",
@@ -529,6 +532,20 @@ def static_check(root: Path, profile):
     ):
         if bridge_source.count(f"(def selfhost/effect-bridge::{binding}\n") != 1:
             fail(f"bridge invocation policy binding inventory drift: {binding}")
+    for relative in (
+        "crates/gc_effects/src/runner_capability_dispatch.rs",
+        "crates/gc_effects/src/runner_editor_host.rs",
+        "crates/gc_effects/src/runner_browser_host.rs",
+        "crates/gc_effects/src/runner_gpu_host.rs",
+        "crates/gc_effects/src/runner_gfx_host.rs",
+        "crates/gc_effects/src/runner_xr_host.rs",
+    ):
+        consumer = (root / relative).read_text()
+        if consumer.count("fn has_explicit_bridge_profile(") != 1:
+            fail(f"bridge activation consumer inventory drift: {relative}")
+        body = consumer.split("fn has_explicit_bridge_profile(", 1)[1].split("\n}", 1)[0]
+        if body.count("bridge_profile_active(pol)") != 1 or ".extra" in body:
+            fail(f"bridge activation bypasses authority state: {relative}")
     for token in (
         "policy.store.remote",
         "policy.store.remote_allow",

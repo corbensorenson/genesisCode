@@ -75,23 +75,7 @@ pub(crate) fn editor_host_call(
 }
 
 fn has_explicit_bridge_profile(pol: Option<&OpPolicy>) -> bool {
-    let Some(pol) = pol else {
-        return false;
-    };
-    let has_nonempty_str = |key: &str| {
-        pol.extra
-            .get(key)
-            .and_then(|v| v.as_str())
-            .is_some_and(|s| !s.trim().is_empty())
-    };
-    has_nonempty_str("bridge_cmd")
-        || has_nonempty_str("wasi_bridge_response")
-        || has_nonempty_str("wasi_bridge_response_file")
-        || pol
-            .extra
-            .get("wasi_bridge_profile")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
+    crate::runner_host_bridge::runner_host_bridge_policy::bridge_profile_active(pol)
 }
 
 fn is_first_party_editor_op(op: &str) -> bool {

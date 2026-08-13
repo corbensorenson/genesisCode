@@ -31,6 +31,14 @@ pub(super) fn input(table: &toml::value::Table) -> Term {
                 TermOrdKey(Term::symbol(":wasi-profile")),
                 network::optional_bool_input(table.get("wasi_bridge_profile")),
             ),
+            (
+                TermOrdKey(Term::symbol(":wasi-response")),
+                network::optional_string_input(table.get("wasi_bridge_response")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":wasi-response-file")),
+                network::optional_string_input(table.get("wasi_bridge_response_file")),
+            ),
         ]
         .into_iter()
         .collect(),
@@ -78,6 +86,16 @@ pub(super) fn legacy(op: &str, policy: Option<&OpPolicy>) -> AuthorizedBridgeIde
     let wasi_profile = get("wasi_bridge_profile")
         .and_then(toml::Value::as_bool)
         .unwrap_or(false);
+    let active = command
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
+        || get("wasi_bridge_response")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|value| !value.trim().is_empty())
+        || get("wasi_bridge_response_file")
+            .and_then(toml::Value::as_str)
+            .is_some_and(|value| !value.trim().is_empty())
+        || wasi_profile;
     let allowlist = match get("bridge_cmd_allowlist") {
         None => AuthorizedBridgeAllowlist::Absent,
         Some(value) => match value.as_array() {
@@ -110,6 +128,7 @@ pub(super) fn legacy(op: &str, policy: Option<&OpPolicy>) -> AuthorizedBridgeIde
             .unwrap_or(AuthorizedBridgeDigest::InvalidDigest),
     };
     AuthorizedBridgeIdentityPolicy {
+        active,
         allowlist,
         args,
         command: command.clone(),
@@ -241,6 +260,7 @@ pub(super) fn decode(
         ));
     };
     let expected: BTreeSet<_> = [
+        ":active",
         ":allowlist",
         ":args",
         ":command",
@@ -257,6 +277,14 @@ pub(super) fn decode(
             "result :bridge-identity-policy field set mismatch",
         ));
     }
+    let active = match map.get(&TermOrdKey(Term::symbol(":active"))) {
+        Some(Term::Bool(value)) => *value,
+        _ => {
+            return Err(authority_error(
+                "result :bridge-identity-policy :active must be bool",
+            ));
+        }
+    };
     let pin_required = match map.get(&TermOrdKey(Term::symbol(":pin-required"))) {
         Some(Term::Bool(value)) => *value,
         _ => {
@@ -364,6 +392,7 @@ pub(super) fn decode(
         }
     };
     Ok(AuthorizedBridgeIdentityPolicy {
+        active,
         allowlist,
         args,
         command,

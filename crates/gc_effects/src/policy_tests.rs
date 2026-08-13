@@ -82,6 +82,7 @@ fn optional_value_policy(status: &str, value: Term) -> Term {
 
 fn bridge_identity_policy_term(digest: Term, pin_required: Term) -> Term {
     Term::Map(BTreeMap::from([
+        (TermOrdKey(Term::symbol(":active")), Term::Bool(false)),
         (
             TermOrdKey(Term::symbol(":allowlist")),
             string_list_policy(":absent", Term::Nil),
@@ -1188,6 +1189,7 @@ bridge_cmd_sha256 = " SHA256:{} "
             .unwrap()
             .authorized_bridge_identity,
         Some(AuthorizedBridgeIdentityPolicy {
+            active: true,
             allowlist: AuthorizedBridgeAllowlist::Absent,
             args: Vec::new(),
             command: Some("/opt/genesis/plugin-bridge".to_string()),
@@ -1245,6 +1247,7 @@ fn selfhost_authority_preserves_bridge_digest_states_and_wasi_precedence() {
                 .unwrap()
                 .authorized_bridge_identity,
             Some(AuthorizedBridgeIdentityPolicy {
+                active: true,
                 allowlist: AuthorizedBridgeAllowlist::Absent,
                 args: Vec::new(),
                 command: Some("/opt/genesis/ffi-bridge".to_string()),
@@ -1271,6 +1274,7 @@ fn selfhost_authority_rejects_malformed_bridge_digest_decisions() {
     assert_eq!(
         decode_bridge_identity_policy(&valid(), "host/ffi::call", true).unwrap(),
         AuthorizedBridgeIdentityPolicy {
+            active: false,
             allowlist: AuthorizedBridgeAllowlist::Absent,
             args: Vec::new(),
             command: None,
@@ -1440,6 +1444,7 @@ wasi_bridge_profile = true
             .unwrap()
             .authorized_bridge_identity,
         Some(AuthorizedBridgeIdentityPolicy {
+            active: true,
             allowlist: AuthorizedBridgeAllowlist::Absent,
             args: vec![" --mode ".to_string(), "".to_string()],
             command: Some(" bridge-bin ".to_string()),
@@ -1460,6 +1465,7 @@ fn selfhost_authority_preserves_bridge_invocation_compatibility_defaults() {
             Vec::<String>::new(),
             AuthorizedBridgeTransport::SpawnPerOp,
             false,
+            false,
         ),
         (
             "bridge_transport = \" udp-magic \"",
@@ -1467,9 +1473,26 @@ fn selfhost_authority_preserves_bridge_invocation_compatibility_defaults() {
             Vec::<String>::new(),
             AuthorizedBridgeTransport::Invalid("udp-magic".to_string()),
             false,
+            false,
+        ),
+        (
+            "wasi_bridge_response = \" {:ok true} \"",
+            None,
+            Vec::<String>::new(),
+            AuthorizedBridgeTransport::SpawnPerOp,
+            false,
+            true,
+        ),
+        (
+            "wasi_bridge_response_file = \" ./response.gc \"",
+            None,
+            Vec::<String>::new(),
+            AuthorizedBridgeTransport::SpawnPerOp,
+            false,
+            true,
         ),
     ];
-    for (settings, command, args, transport, wasi_profile) in cases {
+    for (settings, command, args, transport, wasi_profile, active) in cases {
         let td = tempfile::tempdir().unwrap();
         let caps = td.path().join("caps.toml");
         std::fs::write(&caps, format!("[op.\"gpu/compute::limits\"]\n{settings}\n")).unwrap();
@@ -1489,6 +1512,7 @@ fn selfhost_authority_preserves_bridge_invocation_compatibility_defaults() {
         assert_eq!(authority.args, args, "settings: {settings}");
         assert_eq!(authority.transport, transport, "settings: {settings}");
         assert_eq!(authority.wasi_profile, wasi_profile, "settings: {settings}");
+        assert_eq!(authority.active, active, "settings: {settings}");
     }
 }
 
@@ -1501,6 +1525,7 @@ fn selfhost_authority_rejects_malformed_bridge_invocation_decisions() {
         Term::Bool(false),
     );
     let mutations = [
+        (":active", Term::Nil),
         (":args", Term::Vector(vec![Term::Int(7.into())])),
         (":command", Term::Bool(false)),
         (

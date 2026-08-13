@@ -246,6 +246,7 @@ pub(crate) enum AuthorizedBridgeTransport {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AuthorizedBridgeIdentityPolicy {
+    pub active: bool,
     pub allowlist: AuthorizedBridgeAllowlist,
     pub args: Vec<String>,
     pub command: Option<String>,

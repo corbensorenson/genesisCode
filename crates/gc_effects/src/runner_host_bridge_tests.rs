@@ -121,6 +121,7 @@ bridge_cmd_sha256 = "sha256:{}"
         .op_policy("host/ffi::call")
         .and_then(|op| op.authorized_bridge_identity.as_ref())
         .expect("materialized bridge identity policy");
+    assert!(authority.active);
     assert!(authority.pin_required);
     assert_eq!(
         authority.digest,

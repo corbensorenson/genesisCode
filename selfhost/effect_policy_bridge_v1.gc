@@ -25,7 +25,7 @@
   (fn (value)
     (if
       ((selfhost/effect-policy::exact-map? value)
-        [:allowlist :args :command :digest :transport :wasi-profile])
+        [:allowlist :args :command :digest :transport :wasi-profile :wasi-response :wasi-response-file])
       (if (selfhost/effect-network::list-input?
             ((core/map::get value) (quote :allowlist)))
         (if (selfhost/effect-network::list-input?
@@ -36,8 +36,14 @@
                   ((core/map::get value) (quote :digest)))
               (if (selfhost/effect-network::optional-string-input?
                     ((core/map::get value) (quote :transport)))
-                (selfhost/effect-network::optional-bool-input?
-                  ((core/map::get value) (quote :wasi-profile)))
+                (if (selfhost/effect-network::optional-bool-input?
+                      ((core/map::get value) (quote :wasi-profile)))
+                  (if (selfhost/effect-network::optional-string-input?
+                        ((core/map::get value) (quote :wasi-response)))
+                    (selfhost/effect-network::optional-string-input?
+                      ((core/map::get value) (quote :wasi-response-file)))
+                    false)
+                  false)
                 false)
               false)
             false)
@@ -106,6 +112,26 @@
   (fn (raw)
     (if ((core/sym::eq? (core/data::tag raw)) (quote :bool)) raw false)))
 
+(def selfhost/effect-bridge::nonempty-string?
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (selfhost/policy::non-empty-str? (selfhost/policy::trim raw))
+      false)))
+
+(def selfhost/effect-bridge::active?
+  (fn (bridge)
+    (if (selfhost/effect-bridge::nonempty-string?
+          ((core/map::get bridge) (quote :command)))
+      true
+      (if (selfhost/effect-bridge::nonempty-string?
+            ((core/map::get bridge) (quote :wasi-response)))
+        true
+        (if (selfhost/effect-bridge::nonempty-string?
+              ((core/map::get bridge) (quote :wasi-response-file)))
+          true
+          (selfhost/effect-bridge::wasi-profile-policy
+            ((core/map::get bridge) (quote :wasi-profile))))))))
+
 (def selfhost/effect-bridge::family-requires-pin?
   (fn (op)
     (if ((selfhost/effect-bridge::starts-with? op) "host/plugin::")
@@ -158,9 +184,10 @@
       (let
         ((bridge
           (if (selfhost/policy::nil? override)
-            {:allowlist nil :args nil :command nil :digest nil :transport nil :wasi-profile nil}
+            {:allowlist nil :args nil :command nil :digest nil :transport nil :wasi-profile nil :wasi-response nil :wasi-response-file nil}
             ((core/map::get override) (quote :bridge-identity-policy)))))
         {
+          :active (selfhost/effect-bridge::active? bridge)
           :allowlist
             (selfhost/effect-bridge::allowlist-policy
               ((core/map::get bridge) (quote :allowlist)))
