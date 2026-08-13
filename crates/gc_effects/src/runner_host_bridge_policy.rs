@@ -2,7 +2,10 @@
 use sha2::{Digest, Sha256};
 
 use super::*;
-use crate::policy::{AuthorizedBridgeAllowlist, AuthorizedBridgeDigest};
+use crate::policy::{
+    AuthorizedBridgeAllowlist, AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy,
+    AuthorizedBridgeTransport,
+};
 
 #[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,31 +14,49 @@ pub(crate) enum BridgeTransport {
     PersistentStdio,
 }
 
-pub(crate) fn wasi_bridge_profile_enabled(pol: Option<&OpPolicy>) -> bool {
-    cfg!(target_os = "wasi")
-        || pol
-            .and_then(|p| p.extra.get("wasi_bridge_profile"))
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
-}
-
-#[cfg(not(target_os = "wasi"))]
-pub(crate) fn bridge_cmd(pol: Option<&OpPolicy>) -> Option<String> {
-    pol.and_then(|p| p.extra.get("bridge_cmd"))
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string)
-}
-
-#[cfg(not(target_os = "wasi"))]
-pub(crate) fn bridge_args(pol: Option<&OpPolicy>) -> Vec<String> {
-    pol.and_then(|p| p.extra.get("bridge_args"))
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|x| x.as_str().map(ToString::to_string))
-                .collect::<Vec<_>>()
+fn bridge_authority<'a>(
+    pol: Option<&'a OpPolicy>,
+    family: &str,
+) -> Result<Option<&'a AuthorizedBridgeIdentityPolicy>, BridgeError> {
+    let Some(policy) = pol else {
+        return Ok(None);
+    };
+    policy
+        .authorized_bridge_identity
+        .as_ref()
+        .map(Some)
+        .ok_or_else(|| BridgeError {
+            code: format!("{family}/bridge-policy"),
+            message: "bridge identity authority state is unavailable".to_string(),
         })
-        .unwrap_or_default()
+}
+
+pub(crate) fn wasi_bridge_profile_enabled(
+    pol: Option<&OpPolicy>,
+    family: &str,
+) -> Result<bool, BridgeError> {
+    if cfg!(target_os = "wasi") {
+        return Ok(true);
+    }
+    Ok(bridge_authority(pol, family)?.is_some_and(|authority| authority.wasi_profile))
+}
+
+#[cfg(not(target_os = "wasi"))]
+pub(crate) fn bridge_cmd(
+    pol: Option<&OpPolicy>,
+    family: &str,
+) -> Result<Option<String>, BridgeError> {
+    Ok(bridge_authority(pol, family)?.and_then(|authority| authority.command.clone()))
+}
+
+#[cfg(not(target_os = "wasi"))]
+pub(crate) fn bridge_args(
+    pol: Option<&OpPolicy>,
+    family: &str,
+) -> Result<Vec<String>, BridgeError> {
+    Ok(bridge_authority(pol, family)?
+        .map(|authority| authority.args.clone())
+        .unwrap_or_default())
 }
 
 #[cfg(not(target_os = "wasi"))]
@@ -43,19 +64,13 @@ pub(crate) fn bridge_transport(
     pol: Option<&OpPolicy>,
     family: &str,
 ) -> Result<BridgeTransport, BridgeError> {
-    let Some(raw) = pol
-        .and_then(|p| p.extra.get("bridge_transport"))
-        .and_then(|v| v.as_str())
-    else {
-        return Ok(BridgeTransport::SpawnPerOp);
-    };
-    match raw.trim() {
-        "" | "spawn-per-op" => Ok(BridgeTransport::SpawnPerOp),
-        "persistent-stdio" => Ok(BridgeTransport::PersistentStdio),
-        other => Err(BridgeError {
+    match bridge_authority(pol, family)?.map(|authority| &authority.transport) {
+        None | Some(AuthorizedBridgeTransport::SpawnPerOp) => Ok(BridgeTransport::SpawnPerOp),
+        Some(AuthorizedBridgeTransport::PersistentStdio) => Ok(BridgeTransport::PersistentStdio),
+        Some(AuthorizedBridgeTransport::Invalid(value)) => Err(BridgeError {
             code: format!("{family}/bridge-policy"),
             message: format!(
-                "bridge_transport must be one of: spawn-per-op, persistent-stdio (got `{other}`)"
+                "bridge_transport must be one of: spawn-per-op, persistent-stdio (got `{value}`)"
             ),
         }),
     }
@@ -310,8 +325,12 @@ mod authority_tests {
             authorized_crypto: None,
             authorized_bridge_identity: Some(AuthorizedBridgeIdentityPolicy {
                 allowlist: AuthorizedBridgeAllowlist::Absent,
+                args: Vec::new(),
+                command: None,
                 pin_required: true,
                 digest,
+                transport: AuthorizedBridgeTransport::SpawnPerOp,
+                wasi_profile: false,
             }),
             authorized_plugin: None,
             authorized_ffi: None,
@@ -359,5 +378,51 @@ mod authority_tests {
             .expect("test authority")
             .allowlist = AuthorizedBridgeAllowlist::EmptyEntry;
         assert!(bridge_cmd_allowlist(Some(&authorized), "host/plugin").is_err());
+    }
+
+    #[cfg(not(target_os = "wasi"))]
+    #[test]
+    fn bridge_invocation_consumes_authority_before_raw_policy() {
+        let mut authorized = policy(AuthorizedBridgeDigest::Absent, "unused");
+        authorized.extra.extend([
+            (
+                "bridge_cmd".to_string(),
+                toml::Value::String("raw-command".to_string()),
+            ),
+            (
+                "bridge_args".to_string(),
+                toml::Value::Array(vec![toml::Value::String("raw-arg".to_string())]),
+            ),
+            (
+                "bridge_transport".to_string(),
+                toml::Value::String("udp-magic".to_string()),
+            ),
+            (
+                "wasi_bridge_profile".to_string(),
+                toml::Value::Boolean(true),
+            ),
+        ]);
+        let authority = authorized
+            .authorized_bridge_identity
+            .as_mut()
+            .expect("test authority");
+        authority.command = Some("authorized-command".to_string());
+        authority.args = vec!["authorized-arg".to_string()];
+        authority.transport = AuthorizedBridgeTransport::PersistentStdio;
+        authority.wasi_profile = false;
+
+        assert_eq!(
+            bridge_cmd(Some(&authorized), "host/plugin").unwrap(),
+            Some("authorized-command".to_string())
+        );
+        assert_eq!(
+            bridge_args(Some(&authorized), "host/plugin").unwrap(),
+            vec!["authorized-arg".to_string()]
+        );
+        assert_eq!(
+            bridge_transport(Some(&authorized), "host/plugin").unwrap(),
+            BridgeTransport::PersistentStdio
+        );
+        assert!(!wasi_bridge_profile_enabled(Some(&authorized), "host/plugin").unwrap());
     }
 }

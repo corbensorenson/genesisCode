@@ -34,9 +34,11 @@ The authority also owns the plugin, command, and optional schema-ID allowlist
 states consumed by `host/plugin::command` and `editor/plugin::command`.
 It additionally owns whether a configured process bridge requires an executable
 digest pin and canonicalizes the optional SHA-256 value into a closed typed
-state. Allowlist matching, command resolution, executable hashing and digest
-comparison, schema validation, bridge execution, cancellation, transport, and
-model-provider lifecycle remain host mechanisms.
+state. It also owns command and fixed-argument selection, compatibility argument
+filtering, transport-mode selection and invalid-mode classification, and
+configured WASI-profile activation. Allowlist matching, command path resolution,
+executable hashing and digest comparison, schema validation, bridge transport
+execution, cancellation, and model-provider lifecycle remain host mechanisms.
 The authority also owns the ABI-ID, library, symbol, and optional schema-ID
 allowlist states plus the buffer and call-payload positive-bound states shared by
 `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin`.
@@ -62,7 +64,7 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed six-field map with kind
-`genesis/effect-policy-authority-request-v0.13`, version `13`, the operation string,
+`genesis/effect-policy-authority-request-v0.14`, version `14`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
@@ -104,16 +106,23 @@ closed invalid observation transport; both bounds use an exact integer or
 uses `false` only when the key is absent, and transports a present non-boolean as
 `:invalid-type`. GenesisCode owns the resulting fail-closed admission decision;
 malformed opt-in cannot silently disable signed-policy enforcement.
-The nested bridge identity map has exactly `:allowlist`, `:command`, `:digest`,
-and `:wasi-profile`. The allowlist uses exact string or closed invalid-observation
-transport; the command and digest use exact optional-string transport; the WASI
-flag uses exact optional-boolean transport. GenesisCode preserves allowlist order
+The nested bridge identity map has exactly `:allowlist`, `:args`, `:command`,
+`:digest`, `:transport`, and `:wasi-profile`. The allowlist and argument vector
+use exact string or closed invalid-observation transport; command, digest, and
+transport use exact optional-string transport; the WASI flag uses exact
+optional-boolean transport. GenesisCode preserves allowlist order
 and duplicates, trims every entry, preserves an empty array as a valid deny-all
 list, and distinguishes a wrong container, a non-string entry, and an empty
-trimmed entry. GenesisCode trims the command, requires a pin for non-WASI
-`host/plugin::*`, `host/ffi::*`, and `editor/*` process bridges, accepts only an
-optional exact `sha256:` or `SHA256:` prefix, validates 64 hexadecimal digits,
-and emits the digest in lowercase.
+trimmed entry. For compatibility, GenesisCode preserves the command and string
+arguments byte-for-byte, maps a malformed argument container to an empty vector,
+and skips non-string argument entries. It defaults absent, malformed, blank, and
+explicit `spawn-per-op` transport values to spawn-per-operation, selects
+`persistent-stdio` exactly after trimming, and preserves any other trimmed token
+as an invalid decision. It enables the configured WASI profile only for a literal
+true boolean. GenesisCode separately trims the command to decide whether a pin
+is required for a non-WASI `host/plugin::*`, `host/ffi::*`, or `editor/*` process
+bridge, accepts only an optional exact `sha256:` or `SHA256:` prefix, validates
+64 hexadecimal digits, and emits the digest in lowercase.
 
 Before those per-operation requests, the inventory authority receives a closed
 four-field `genesis/effect-policy-inventory-request-v0.1` map containing version
@@ -126,12 +135,12 @@ oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
 The authority returns a closed fifteen-field
-`genesis/effect-policy-authority-result-v0.13` map containing the exact operation,
+`genesis/effect-policy-authority-result-v0.14` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
 private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`, private
-`:bridge-identity-policy`, lowercase canonical request hash, and version `13`.
+`:bridge-identity-policy`, lowercase canonical request hash, and version `14`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -169,28 +178,35 @@ five-field map containing `:status`, `:policy-artifact-h`,
 the exact evidence mode `deterministic`; every other status carries four `nil`
 metadata values. The host independently rejects contradictory status/value pairs.
 The bridge identity result is an exact
-`{:allowlist ... :digest ... :pin-required ...}` map. Its allowlist is an exact
+`{:allowlist ... :args ... :command ... :digest ... :pin-required ...
+:transport ... :wasi-profile ...}` map. Its allowlist is an exact
 `{:status ... :values ...}` state with status `:absent`, `:invalid-type`,
 `:invalid-entry`, `:empty-entry`, or `:valid`; only `:valid` carries an ordered
 vector of canonical nonempty strings, and that vector may be empty to preserve
-deny-all semantics. Its digest is an exact `{:status ... :value ...}` state with status `:absent`,
-`:invalid-type`, `:empty`, `:invalid-digest`, or `:valid`; only `:valid` carries a
-lowercase 64-hex value. The pin flag is an exact boolean and cannot be true for
-an operation outside the three admitted bridge families.
-The host rejects
-unknown fields, identity drift, request-hash substitution, invalid path types,
+deny-all semantics. Its digest is an exact `{:status ... :value ...}` state with
+status `:absent`, `:invalid-type`, `:empty`, `:invalid-digest`, or `:valid`; only
+`:valid` carries a lowercase 64-hex value. The pin flag is an exact boolean and
+cannot be true for an operation outside the three admitted bridge families.
+Arguments are an exact string vector, command is `nil` or an exact string, and
+WASI profile is a boolean.
+Transport is an exact `{:status ... :value ...}` state: `:spawn-per-op` and
+`:persistent-stdio` carry `nil`, while only `:invalid` carries a canonical
+nonempty token that is neither supported mode. The host rejects unknown fields,
+identity drift, request-hash substitution, invalid path types,
 denied non-nil state, admitted non-map capabilities or private policies,
 noncanonical false/zero/negative/overflowing controls, contradictory status/limit
 pairs, noncanonical or contradictory process-program, database, network, crypto,
-plugin, FFI, or bridge identity states, operation substitution inside the capability, and any result that
-contradicts its retained compatibility oracle. After validation, the host
+plugin, FFI, or bridge identity states, operation substitution inside the
+capability, and any result that contradicts its retained compatibility oracle.
+After validation, the host
 installs the GenesisCode-selected base directory, create-directories flag,
 timeout, per-operation log limit, closed max-byte state, closed normalized
 process-program state, closed database allowlist/bound states, closed network
 allowlist/option/bind/bound states, closed crypto allowlist/bound states, and
 closed plugin and FFI allowlist/bound/signed-metadata states plus the closed
-bridge command allowlist, digest requirement, and canonical digest into enforcement;
-its separately parsed values are used only by the compatibility oracle.
+bridge command allowlist, command, arguments, transport, WASI profile, digest
+requirement, and canonical digest into enforcement; its separately parsed values
+are used only by the compatibility oracle.
 
 The resource authority receives a closed eight-field
 `genesis/effect-resource-policy-request-v0.4` map. It contains version `4`, the
@@ -294,14 +310,16 @@ all twelve byte-limit states before raw compatibility fields. Rust performs
 allowlist matching, key lookup/custody, payload measurement, limit enforcement,
 and cryptographic execution without selecting the policy state.
 Plugin dispatch consumes installed GenesisCode plugin, command, optional
-schema-ID, bridge command allowlist, digest requirement, and canonical digest states before raw
-compatibility fields. Rust performs matching, executable hashing and digest
-comparison, schema validation, and bridge execution without selecting those
-policy states.
+schema-ID, bridge command allowlist, invocation configuration, digest
+requirement, and canonical digest states before raw compatibility fields. Rust
+performs matching, executable hashing and digest comparison, schema validation,
+and bridge execution without selecting those policy states.
 FFI dispatch consumes installed GenesisCode ABI-ID, library, symbol, optional
 schema-ID, buffer-bound, call-payload-bound, and closed signed-policy states
-plus the installed bridge command allowlist, digest requirement, and canonical
-digest without a raw metadata, allowlist, or digest fallback. Rust maps rejected authority states to sealed
+plus the installed bridge command allowlist, digest requirement, canonical
+digest, and invocation configuration without a raw metadata, allowlist, command,
+argument, transport, profile, or digest fallback. Rust maps rejected authority
+states to sealed
 policy errors and performs provenance/signature verification, matching,
 bridge-identity validation, schema validation, payload measurement, bound
 enforcement, and bridge execution without selecting those policy states.
@@ -354,22 +372,24 @@ Plugin allowlist configuration is no longer residual: GenesisCode owns the
 complete plugin, command, and optional schema-ID list states shared by host and
 editor plugin commands. It also owns process-bridge digest-pin requirement
 selection, digest normalization, and bridge command allowlist normalization and
-malformed-state precedence shared by plugin and FFI bridges. Command/profile and transport selection, executable path
-resolution, hashing and digest comparison, schema implementation, matching,
-model-provider lifecycle, cancellation, and replay remain in the named host
-residuals.
+malformed-state precedence shared by plugin and FFI bridges. GenesisCode also
+owns command/argument selection, compatibility filtering, transport selection
+and invalid-mode classification, and configured WASI-profile activation.
+Executable path resolution, transport execution, hashing and digest comparison,
+schema implementation, matching, model-provider lifecycle, cancellation, and
+replay remain in the named host residuals.
 FFI allowlist, byte-bound, and signed-policy admission is no longer residual: GenesisCode
 owns ABI-ID, library, symbol, optional schema-ID, buffer-size, and call-payload
 states across all three FFI operations. It also owns malformed opt-in rejection,
 required-field precedence, hash-form admission, key-ID admission, deterministic
 evidence-mode admission, and the closed accepted metadata tuple. The retained
-`bridge-command-profile-transport-and-model-provider-lifecycle` residual covers
+`bridge-identity-validation-execution-and-model-provider-lifecycle` residual covers
 signed-policy artifact provenance and cryptographic signature validation,
-command/profile and transport selection, executable
-path resolution, hashing and digest comparison, schema implementation, matching,
+executable path resolution, transport execution, hashing and digest comparison,
+schema implementation, matching,
 model-provider lifecycle, cancellation, and replay; it does not cover the
-migrated FFI, plugin, bridge-allowlist, digest-requirement, or
-digest-normalization decisions.
+migrated FFI, plugin, bridge-allowlist, invocation-selection,
+digest-requirement, or digest-normalization decisions.
 
 This contract does not promote `SD-EFFECT-POLICY`, close R4.2.d or SH-C, establish
 H2/H3/H4, authorize release, or authorize GenesisBench, Genesis Foundry,

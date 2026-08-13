@@ -238,10 +238,21 @@ pub(crate) enum AuthorizedBridgeAllowlist {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum AuthorizedBridgeTransport {
+    SpawnPerOp,
+    PersistentStdio,
+    Invalid(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AuthorizedBridgeIdentityPolicy {
     pub allowlist: AuthorizedBridgeAllowlist,
+    pub args: Vec<String>,
+    pub command: Option<String>,
     pub pin_required: bool,
     pub digest: AuthorizedBridgeDigest,
+    pub transport: AuthorizedBridgeTransport,
+    pub wasi_profile: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

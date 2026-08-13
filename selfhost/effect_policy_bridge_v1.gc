@@ -23,15 +23,23 @@
 
 (def selfhost/effect-bridge::input-valid?
   (fn (value)
-    (if ((selfhost/effect-policy::exact-map? value) [:allowlist :command :digest :wasi-profile])
+    (if
+      ((selfhost/effect-policy::exact-map? value)
+        [:allowlist :args :command :digest :transport :wasi-profile])
       (if (selfhost/effect-network::list-input?
             ((core/map::get value) (quote :allowlist)))
-        (if (selfhost/effect-network::optional-string-input?
-            ((core/map::get value) (quote :command)))
+        (if (selfhost/effect-network::list-input?
+              ((core/map::get value) (quote :args)))
           (if (selfhost/effect-network::optional-string-input?
-                ((core/map::get value) (quote :digest)))
-            (selfhost/effect-network::optional-bool-input?
-              ((core/map::get value) (quote :wasi-profile)))
+              ((core/map::get value) (quote :command)))
+            (if (selfhost/effect-network::optional-string-input?
+                  ((core/map::get value) (quote :digest)))
+              (if (selfhost/effect-network::optional-string-input?
+                    ((core/map::get value) (quote :transport)))
+                (selfhost/effect-network::optional-bool-input?
+                  ((core/map::get value) (quote :wasi-profile)))
+                false)
+              false)
             false)
           false)
         false)
@@ -60,6 +68,43 @@
       (if (selfhost/policy::vec? raw)
         (((selfhost/effect-bridge::allowlist-policy-loop raw) 0) [])
         {:status (quote :invalid-type) :values nil}))))
+
+(def selfhost/effect-bridge::args-policy-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (let ((value ((core/vec::get values) index)))
+            (((selfhost/effect-bridge::args-policy-loop values)
+               ((core/int::add index) 1))
+              (if (selfhost/policy::str? value) ((core/vec::push out) value) out))))))))
+
+(def selfhost/effect-bridge::args-policy
+  (fn (raw)
+    (if (selfhost/policy::vec? raw)
+      (((selfhost/effect-bridge::args-policy-loop raw) 0) [])
+      [])))
+
+(def selfhost/effect-bridge::command-policy
+  (fn (raw) (if (selfhost/policy::str? raw) raw nil)))
+
+(def selfhost/effect-bridge::transport-policy
+  (fn (raw)
+    (if (selfhost/policy::str? raw)
+      (let ((value (selfhost/policy::trim raw)))
+        (if (selfhost/policy::non-empty-str? value)
+          (if ((core/eq? value) "spawn-per-op")
+            {:status (quote :spawn-per-op) :value nil}
+            (if ((core/eq? value) "persistent-stdio")
+              {:status (quote :persistent-stdio) :value nil}
+              {:status (quote :invalid) :value value}))
+          {:status (quote :spawn-per-op) :value nil}))
+      {:status (quote :spawn-per-op) :value nil})))
+
+(def selfhost/effect-bridge::wasi-profile-policy
+  (fn (raw)
+    (if ((core/sym::eq? (core/data::tag raw)) (quote :bool)) raw false)))
 
 (def selfhost/effect-bridge::family-requires-pin?
   (fn (op)
@@ -113,13 +158,25 @@
       (let
         ((bridge
           (if (selfhost/policy::nil? override)
-            {:allowlist nil :command nil :digest nil :wasi-profile nil}
+            {:allowlist nil :args nil :command nil :digest nil :transport nil :wasi-profile nil}
             ((core/map::get override) (quote :bridge-identity-policy)))))
         {
           :allowlist
             (selfhost/effect-bridge::allowlist-policy
               ((core/map::get bridge) (quote :allowlist)))
+          :args
+            (selfhost/effect-bridge::args-policy
+              ((core/map::get bridge) (quote :args)))
+          :command
+            (selfhost/effect-bridge::command-policy
+              ((core/map::get bridge) (quote :command)))
           :digest
             (selfhost/effect-bridge::digest-policy
               ((core/map::get bridge) (quote :digest)))
-          :pin-required ((selfhost/effect-bridge::pin-required? op) bridge)}))))
+          :pin-required ((selfhost/effect-bridge::pin-required? op) bridge)
+          :transport
+            (selfhost/effect-bridge::transport-policy
+              ((core/map::get bridge) (quote :transport)))
+          :wasi-profile
+            (selfhost/effect-bridge::wasi-profile-policy
+              ((core/map::get bridge) (quote :wasi-profile)))}))))

@@ -57,7 +57,7 @@ pub(crate) fn call_host_bridge(
     let _ = runtime;
 
     let max_bytes = runner_host_bridge_policy::bridge_max_bytes(pol, family)?;
-    if runner_host_bridge_policy::wasi_bridge_profile_enabled(pol) {
+    if runner_host_bridge_policy::wasi_bridge_profile_enabled(pol, family)? {
         return runner_host_bridge_wasi::run_wasi_bridge_profile(
             family, op, payload, pol, max_bytes,
         );
@@ -74,7 +74,7 @@ pub(crate) fn call_host_bridge(
     #[cfg(not(target_os = "wasi"))]
     {
         let transport = runner_host_bridge_policy::bridge_transport(pol, family)?;
-        let Some(cmd_raw) = runner_host_bridge_policy::bridge_cmd(pol) else {
+        let Some(cmd_raw) = runner_host_bridge_policy::bridge_cmd(pol, family)? else {
             return Err(BridgeError {
                 code: format!("{family}/bridge-required"),
                 message: format!("{op} requires `{}` in caps.toml op policy", "bridge_cmd"),
@@ -89,7 +89,7 @@ pub(crate) fn call_host_bridge(
             message: e.to_string(),
         })?;
         runner_host_bridge_policy::enforce_bridge_identity(family, &cmd_raw, &cmd_path, pol)?;
-        let args = runner_host_bridge_policy::bridge_args(pol);
+        let args = runner_host_bridge_policy::bridge_args(pol, family)?;
         let timeout_ms = pol.and_then(|p| p.timeout_ms).filter(|ms| *ms > 0);
         #[cfg(not(target_os = "wasi"))]
         if timeout_ms.is_some() && !hard_process_tree_termination_supported() {

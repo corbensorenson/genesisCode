@@ -85,6 +85,7 @@ DECISIONS = [
     "per-operation-base-directory-selection",
     "per-operation-bridge-command-allowlist-policy",
     "per-operation-bridge-digest-pin-policy",
+    "per-operation-bridge-invocation-policy",
     "per-operation-crypto-policy",
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
@@ -102,7 +103,7 @@ DECISIONS = [
 RESIDUALS = {
     "device-and-graphics-policy",
     "effect-execution-and-hard-cancellation",
-    "bridge-command-profile-transport-and-model-provider-lifecycle",
+    "bridge-identity-validation-execution-and-model-provider-lifecycle",
     "global-store-credential-tls-and-transport-policy",
     "path-and-secret-resolution",
     "replay-execution-and-validation",
@@ -132,11 +133,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.13",
+        "requestKind": "genesis/effect-policy-authority-request-v0.14",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.4",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.4",
-        "resultKind": "genesis/effect-policy-authority-result-v0.13",
+        "resultKind": "genesis/effect-policy-authority-result-v0.14",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -154,7 +155,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.18",
+        "version": "0.1.19",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -479,8 +480,12 @@ def static_check(root: Path, profile):
         (bridge_production, "host bridge"),
     ):
         for token in (
+            'extra.get("bridge_args")',
+            'extra.get("bridge_cmd")',
             'extra.get("bridge_cmd_allowlist")',
             'extra.get("bridge_cmd_sha256")',
+            'extra.get("bridge_transport")',
+            'extra.get("wasi_bridge_profile")',
             "plugin_bridge_digest_pin_is_required",
             "ffi_bridge_digest_pin_is_required",
             "normalize_sha256_hex",
@@ -493,6 +498,14 @@ def static_check(root: Path, profile):
         fail("bridge digest enforcement authority consumer inventory drift")
     if bridge_production.count("fn bridge_cmd_allowlist(") != 1:
         fail("bridge command allowlist authority consumer inventory drift")
+    for consumer in (
+        "fn wasi_bridge_profile_enabled(",
+        "fn bridge_cmd(",
+        "fn bridge_args(",
+        "fn bridge_transport(",
+    ):
+        if bridge_production.count(consumer) != 1:
+            fail(f"bridge invocation authority consumer inventory drift: {consumer}")
     if plugin_policy.count("bridge_digest_pin_is_missing(pol)") != 1:
         fail("plugin bridge digest authority consumer inventory drift")
     if ffi_dispatch.count("bridge_digest_pin_is_missing(pol)") != 1:
@@ -508,6 +521,14 @@ def static_check(root: Path, profile):
             fail(f"bridge policy authority binding inventory drift: {binding}")
     if bridge_source.count("(def selfhost/effect-bridge::allowlist-policy\n") != 1:
         fail("bridge command allowlist policy binding inventory drift")
+    for binding in (
+        "args-policy",
+        "command-policy",
+        "transport-policy",
+        "wasi-profile-policy",
+    ):
+        if bridge_source.count(f"(def selfhost/effect-bridge::{binding}\n") != 1:
+            fail(f"bridge invocation policy binding inventory drift: {binding}")
     for token in (
         "policy.store.remote",
         "policy.store.remote_allow",
@@ -638,6 +659,9 @@ def static_check(root: Path, profile):
         "selfhost_authority_rejects_malformed_bridge_digest_decisions",
         "selfhost_authority_normalizes_bridge_allowlist_without_changing_empty_semantics",
         "selfhost_authority_rejects_malformed_bridge_allowlist_decisions",
+        "selfhost_authority_owns_bridge_invocation_configuration",
+        "selfhost_authority_preserves_bridge_invocation_compatibility_defaults",
+        "selfhost_authority_rejects_malformed_bridge_invocation_decisions",
     ):
         if tests.count(f"fn {name}()") != 1:
             fail(f"missing focused authority control: {name}")
@@ -691,6 +715,10 @@ def static_check(root: Path, profile):
         "fn bridge_allowlist_enforcement_consumes_authority_before_raw_policy()"
     ) != 1:
         fail("missing focused bridge allowlist authority precedence control")
+    if bridge_policy.count(
+        "fn bridge_invocation_consumes_authority_before_raw_policy()"
+    ) != 1:
+        fail("missing focused bridge invocation authority precedence control")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-EFFECT-POLICY"]

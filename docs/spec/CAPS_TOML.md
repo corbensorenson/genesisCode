@@ -172,6 +172,7 @@ Supported keys:
     - `persistent-stdio`: keep a per-op bridge process/session alive and exchange framed request/response payloads over persistent stdio.
   - `persistent-stdio` requires the bridge executable to support repeated framed request processing in a single process lifetime.
   - `timeout_ms` terminates and evicts a timed-out `persistent-stdio` session; the uncertain request is never retried.
+  - artifact-backed production loads use GenesisCode authority protocol v0.14 to select the command, compatibility-filter fixed arguments, select or reject the transport, and activate an explicitly configured WASI profile before host execution.
 - `first_party_profile` (string): optional profile selector for first-party host backends.
   - currently used by `gfx/window::*`, `gfx/input::*`, `gfx/audio::*`.
   - supported values:
@@ -201,12 +202,12 @@ Supported keys:
     - enforced by `scripts/check_agent_gpu_profile_contract.sh`.
 - `bridge_cmd_allowlist` (array<string>): optional explicit identity allowlist for bridge binaries.
   - entries may match configured `bridge_cmd`, resolved absolute path, or executable filename.
-  - GenesisCode authority protocol v0.13 trims entries while preserving order and duplicates, treats `[]` as a valid deny-all list, and rejects non-string or empty entries before host matching.
+  - GenesisCode authority protocol v0.14 trims entries while preserving order and duplicates, treats `[]` as a valid deny-all list, and rejects non-string or empty entries before host matching.
 - `bridge_cmd_sha256` (string): executable digest pin (64 hex; optional `sha256:` prefix).
   - required for `host/plugin::command` and `editor/plugin::command` when `bridge_cmd` transport is configured.
   - required for `host/ffi::call`, `host/ffi::buffer-pin`, and `host/ffi::buffer-unpin` when `bridge_cmd` transport is configured.
   - mismatches are denied with deterministic sealed error `<family>/bridge-identity-denied`.
-  - artifact-backed production loads use GenesisCode authority protocol v0.13 to
+  - artifact-backed production loads use GenesisCode authority protocol v0.14 to
     decide whether the pin is required and to trim, validate, and lowercase the
     configured digest before any plugin or FFI bridge preflight or execution.
     Rust retains command resolution, executable hashing, digest comparison,
@@ -228,7 +229,7 @@ Supported keys:
 - `allow_bind_ports` (array<int>): required bind-port allowlist for inbound network listeners (`io/net::tcp-listen`, `io/net::http-listen`).
 - `max_request_bytes` (int): required positive request-size bound for inbound accept/listen flows (`io/net::tcp-accept`, `io/net::http-listen`, `io/net::ws-accept`).
 
-For artifact-only production policy loads, GenesisCode authority protocol v0.13
+For artifact-only production policy loads, GenesisCode authority protocol v0.14
 normalizes `url_allow`, `remote_allow`, `allow_http`, `wasi_network_profile`,
 `allow_bind_hosts`, `allow_bind_ports`, and `max_request_bytes` into closed typed
 states before any network, sync, publication, or store-remote consumer runs.

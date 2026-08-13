@@ -126,6 +126,16 @@ bridge_cmd_sha256 = "sha256:{}"
         authority.digest,
         AuthorizedBridgeDigest::Valid("ab".repeat(32))
     );
+    assert_eq!(
+        authority.command,
+        Some("/opt/genesis/ffi-bridge".to_string())
+    );
+    assert!(authority.args.is_empty());
+    assert_eq!(
+        authority.transport,
+        crate::policy::AuthorizedBridgeTransport::SpawnPerOp
+    );
+    assert!(!authority.wasi_profile);
 }
 
 #[cfg(all(not(target_os = "wasi"), unix))]

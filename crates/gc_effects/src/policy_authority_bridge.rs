@@ -1,6 +1,7 @@
 use super::*;
 use crate::policy::{
     AuthorizedBridgeAllowlist, AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy,
+    AuthorizedBridgeTransport,
 };
 
 pub(super) fn input(table: &toml::value::Table) -> Term {
@@ -11,8 +12,16 @@ pub(super) fn input(table: &toml::value::Table) -> Term {
                 database::string_list_input(table.get("bridge_cmd_allowlist")),
             ),
             (
+                TermOrdKey(Term::symbol(":args")),
+                database::string_list_input(table.get("bridge_args")),
+            ),
+            (
                 TermOrdKey(Term::symbol(":command")),
                 network::optional_string_input(table.get("bridge_cmd")),
+            ),
+            (
+                TermOrdKey(Term::symbol(":transport")),
+                network::optional_string_input(table.get("bridge_transport")),
             ),
             (
                 TermOrdKey(Term::symbol(":digest")),
@@ -46,9 +55,26 @@ fn normalize_digest(raw: &str) -> Option<String> {
 pub(super) fn legacy(op: &str, policy: Option<&OpPolicy>) -> AuthorizedBridgeIdentityPolicy {
     let extra = policy.map(|policy| &policy.extra);
     let get = |key| extra.and_then(|extra| extra.get(key));
-    let command_present = get("bridge_cmd")
+    let command = get("bridge_cmd")
         .and_then(toml::Value::as_str)
-        .is_some_and(|value| !value.trim().is_empty());
+        .map(ToString::to_string);
+    let args = get("bridge_args")
+        .and_then(toml::Value::as_array)
+        .map(|values| {
+            values
+                .iter()
+                .filter_map(|value| value.as_str().map(ToString::to_string))
+                .collect()
+        })
+        .unwrap_or_default();
+    let transport = match get("bridge_transport").and_then(toml::Value::as_str) {
+        None => AuthorizedBridgeTransport::SpawnPerOp,
+        Some(raw) => match raw.trim() {
+            "" | "spawn-per-op" => AuthorizedBridgeTransport::SpawnPerOp,
+            "persistent-stdio" => AuthorizedBridgeTransport::PersistentStdio,
+            other => AuthorizedBridgeTransport::Invalid(other.to_string()),
+        },
+    };
     let wasi_profile = get("wasi_bridge_profile")
         .and_then(toml::Value::as_bool)
         .unwrap_or(false);
@@ -85,8 +111,14 @@ pub(super) fn legacy(op: &str, policy: Option<&OpPolicy>) -> AuthorizedBridgeIde
     };
     AuthorizedBridgeIdentityPolicy {
         allowlist,
-        pin_required: bridge_family_requires_pin(op) && command_present && !wasi_profile,
+        args,
+        command: command.clone(),
+        pin_required: bridge_family_requires_pin(op)
+            && command.is_some_and(|value| !value.trim().is_empty())
+            && !wasi_profile,
         digest,
+        transport,
+        wasi_profile,
     }
 }
 
@@ -144,6 +176,51 @@ fn decode_allowlist(term: &Term) -> Result<AuthorizedBridgeAllowlist, EffectsErr
     }
 }
 
+fn decode_transport(term: &Term) -> Result<AuthorizedBridgeTransport, EffectsError> {
+    let Term::Map(map) = term else {
+        return Err(authority_error(
+            "result :bridge-identity-policy :transport must be a data map",
+        ));
+    };
+    let expected: BTreeSet<_> = [":status", ":value"]
+        .into_iter()
+        .map(|key| TermOrdKey(Term::symbol(key)))
+        .collect();
+    if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
+        return Err(authority_error(
+            "result :bridge-identity-policy :transport field set mismatch",
+        ));
+    }
+    let status = match map.get(&TermOrdKey(Term::symbol(":status"))) {
+        Some(Term::Symbol(status)) => status.as_str(),
+        _ => {
+            return Err(authority_error(
+                "result :bridge-identity-policy :transport :status must be a symbol",
+            ));
+        }
+    };
+    let value = map
+        .get(&TermOrdKey(Term::symbol(":value")))
+        .ok_or_else(|| {
+            authority_error("result :bridge-identity-policy :transport is missing :value")
+        })?;
+    match (status, value) {
+        (":spawn-per-op", Term::Nil) => Ok(AuthorizedBridgeTransport::SpawnPerOp),
+        (":persistent-stdio", Term::Nil) => Ok(AuthorizedBridgeTransport::PersistentStdio),
+        (":invalid", Term::Str(value))
+            if !value.is_empty()
+                && value.trim() == value
+                && value != "spawn-per-op"
+                && value != "persistent-stdio" =>
+        {
+            Ok(AuthorizedBridgeTransport::Invalid(value.clone()))
+        }
+        _ => Err(authority_error(
+            "result :bridge-identity-policy :transport status contradicts its value",
+        )),
+    }
+}
+
 pub(super) fn decode(
     term: &Term,
     op: &str,
@@ -163,10 +240,18 @@ pub(super) fn decode(
             "admitted result :bridge-identity-policy must be a data map",
         ));
     };
-    let expected: BTreeSet<_> = [":allowlist", ":digest", ":pin-required"]
-        .into_iter()
-        .map(|key| TermOrdKey(Term::symbol(key)))
-        .collect();
+    let expected: BTreeSet<_> = [
+        ":allowlist",
+        ":args",
+        ":command",
+        ":digest",
+        ":pin-required",
+        ":transport",
+        ":wasi-profile",
+    ]
+    .into_iter()
+    .map(|key| TermOrdKey(Term::symbol(key)))
+    .collect();
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
         return Err(authority_error(
             "result :bridge-identity-policy field set mismatch",
@@ -191,6 +276,31 @@ pub(super) fn decode(
                 authority_error("result :bridge-identity-policy is missing :allowlist")
             })?,
     )?;
+    let args = match map.get(&TermOrdKey(Term::symbol(":args"))) {
+        Some(Term::Vector(values)) if values.iter().all(|value| matches!(value, Term::Str(_))) => {
+            values
+                .iter()
+                .filter_map(|value| match value {
+                    Term::Str(value) => Some(value.clone()),
+                    _ => None,
+                })
+                .collect()
+        }
+        _ => {
+            return Err(authority_error(
+                "result :bridge-identity-policy :args must be a string vector",
+            ));
+        }
+    };
+    let command = match map.get(&TermOrdKey(Term::symbol(":command"))) {
+        Some(Term::Nil) => None,
+        Some(Term::Str(value)) => Some(value.clone()),
+        _ => {
+            return Err(authority_error(
+                "result :bridge-identity-policy :command must be nil or string",
+            ));
+        }
+    };
     let digest_term = map
         .get(&TermOrdKey(Term::symbol(":digest")))
         .ok_or_else(|| authority_error("result :bridge-identity-policy is missing :digest"))?;
@@ -239,9 +349,27 @@ pub(super) fn decode(
             ));
         }
     };
+    let transport = decode_transport(
+        map.get(&TermOrdKey(Term::symbol(":transport")))
+            .ok_or_else(|| {
+                authority_error("result :bridge-identity-policy is missing :transport")
+            })?,
+    )?;
+    let wasi_profile = match map.get(&TermOrdKey(Term::symbol(":wasi-profile"))) {
+        Some(Term::Bool(value)) => *value,
+        _ => {
+            return Err(authority_error(
+                "result :bridge-identity-policy :wasi-profile must be bool",
+            ));
+        }
+    };
     Ok(AuthorizedBridgeIdentityPolicy {
         allowlist,
+        args,
+        command,
         pin_required,
         digest,
+        transport,
+        wasi_profile,
     })
 }
