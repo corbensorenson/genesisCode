@@ -14,7 +14,8 @@ use super::{
     AuthorizedBridgeIdentityPolicy, AuthorizedCryptoPolicy, AuthorizedDatabasePolicy,
     AuthorizedFfiPolicy, AuthorizedGfxProfile, AuthorizedGpuPolicy, AuthorizedMaxBytes,
     AuthorizedNetworkPolicy, AuthorizedPluginPolicy, AuthorizedProcessPrograms,
-    AuthorizedStoreRemotePolicy, AuthorizedXrPolicy, CapsPolicy, OpPolicy,
+    AuthorizedStoreCredentials, AuthorizedStoreRemotePolicy, AuthorizedXrPolicy, CapsPolicy,
+    OpPolicy,
 };
 
 #[path = "policy_authority_bridge.rs"]
@@ -35,6 +36,8 @@ pub(super) mod gpu;
 mod limit;
 #[path = "policy_authority_network.rs"]
 mod network;
+#[path = "policy_authority_override.rs"]
+mod operation_override;
 #[path = "policy_authority_plugin.rs"]
 mod plugin;
 #[path = "policy_authority_process.rs"]
@@ -83,6 +86,12 @@ pub(super) fn legacy_store_credentials_policy(
     raw: &super::StorePolicy,
 ) -> super::AuthorizedStoreCredentials {
     store_credentials::legacy(store, raw)
+}
+
+pub(super) fn legacy_sync_credentials_policy(
+    operation: Option<&toml::value::Table>,
+) -> super::AuthorizedStoreCredentials {
+    store_credentials::legacy_operation(operation)
 }
 
 #[cfg(test)]
@@ -156,27 +165,6 @@ fn hex32(hash: [u8; 32]) -> String {
     out
 }
 
-fn optional_bool(value: Option<&toml::Value>) -> Term {
-    value
-        .and_then(toml::Value::as_bool)
-        .map(Term::Bool)
-        .unwrap_or(Term::Nil)
-}
-
-fn optional_int(value: Option<&toml::Value>) -> Term {
-    value
-        .and_then(toml::Value::as_integer)
-        .map(|number| Term::Int(number.into()))
-        .unwrap_or(Term::Nil)
-}
-
-fn optional_str(value: Option<&toml::Value>) -> Term {
-    value
-        .and_then(toml::Value::as_str)
-        .map(|text| Term::Str(text.to_string()))
-        .unwrap_or(Term::Nil)
-}
-
 fn max_bytes_input(value: Option<&toml::Value>) -> Term {
     match value {
         None => Term::Nil,
@@ -192,70 +180,6 @@ pub(super) fn decode_max_bytes_policy(
     allowed: bool,
 ) -> Result<AuthorizedMaxBytes, EffectsError> {
     limit::decode(term, allowed)
-}
-
-fn override_term(value: Option<&toml::Value>) -> Result<Term, EffectsError> {
-    let Some(value) = value else {
-        return Ok(Term::Nil);
-    };
-    let table = value
-        .as_table()
-        .ok_or_else(|| authority_error("operation override must be a table"))?;
-    Ok(Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":allow")),
-                optional_bool(table.get("allow")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":base-dir")),
-                optional_str(table.get("base_dir")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":create-dirs")),
-                optional_bool(table.get("create_dirs")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":bridge-identity-policy")),
-                bridge::input(table),
-            ),
-            (
-                TermOrdKey(Term::symbol(":crypto-policy")),
-                crypto::input(table),
-            ),
-            (TermOrdKey(Term::symbol(":ffi-policy")), ffi::input(table)),
-            (
-                TermOrdKey(Term::symbol(":database-policy")),
-                database::input(table),
-            ),
-            (
-                TermOrdKey(Term::symbol(":log-inline-max-bytes")),
-                optional_int(table.get("log_inline_max_bytes")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":max-bytes")),
-                max_bytes_input(table.get("max_bytes")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":network-policy")),
-                network::input(table),
-            ),
-            (
-                TermOrdKey(Term::symbol(":plugin-policy")),
-                plugin::input(table),
-            ),
-            (
-                TermOrdKey(Term::symbol(":process-programs")),
-                process::input(table.get("allow_programs")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":timeout-ms")),
-                optional_int(table.get("timeout_ms")),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    ))
 }
 
 fn inventory_request_term(baseline: &[String], override_ops: &[String]) -> Term {
@@ -363,6 +287,7 @@ struct AuthorizedOperation {
     database: AuthorizedDatabasePolicy,
     network: AuthorizedNetworkPolicy,
     crypto: AuthorizedCryptoPolicy,
+    credentials: AuthorizedStoreCredentials,
     gfx: AuthorizedGfxProfile,
     gpu: AuthorizedGpuPolicy,
     xr: AuthorizedXrPolicy,
@@ -375,6 +300,7 @@ fn decode_result(
     term: Term,
     op: &str,
     request_hash: [u8; 32],
+    override_table: Option<&toml::value::Table>,
 ) -> Result<AuthorizedOperation, EffectsError> {
     let Term::Map(map) = term else {
         return Err(authority_error("result must be a data map"));
@@ -385,6 +311,7 @@ fn decode_result(
         ":bridge-identity-policy",
         ":cap",
         ":crypto-policy",
+        ":credential-policy",
         ":database-policy",
         ":ffi-policy",
         ":gfx-policy",
@@ -405,8 +332,8 @@ fn decode_result(
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected_keys {
         return Err(authority_error("result field set mismatch"));
     }
-    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.19")
-        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &19.into())
+    if !matches!(map.get(&TermOrdKey(Term::symbol(":kind"))), Some(Term::Str(kind)) if kind == "genesis/effect-policy-authority-result-v0.20")
+        || !matches!(map.get(&TermOrdKey(Term::symbol(":v"))), Some(Term::Int(version)) if version == &20.into())
         || !matches!(map.get(&TermOrdKey(Term::symbol(":op"))), Some(Term::Str(actual)) if actual == op)
         || !matches!(map.get(&TermOrdKey(Term::symbol(":request-h"))), Some(Term::Str(actual)) if actual == &hex32(request_hash))
     {
@@ -467,6 +394,19 @@ fn decode_result(
             .ok_or_else(|| authority_error("result is missing :crypto-policy"))?,
         allowed,
     )?;
+    let credential_term = map
+        .get(&TermOrdKey(Term::symbol(":credential-policy")))
+        .ok_or_else(|| authority_error("result is missing :credential-policy"))?;
+    let credentials = if allowed && store_credentials::operation_applies(op) {
+        store_credentials::decode_operation(credential_term, override_table)?
+    } else {
+        if credential_term != &Term::Nil {
+            return Err(authority_error(
+                "result :credential-policy contradicts denied operation",
+            ));
+        }
+        store_credentials::legacy_operation(None)
+    };
     let gpu = gpu::decode(
         map.get(&TermOrdKey(Term::symbol(":gpu-policy")))
             .ok_or_else(|| authority_error("result is missing :gpu-policy"))?,
@@ -504,6 +444,7 @@ fn decode_result(
         database,
         network,
         crypto,
+        credentials,
         gfx,
         gpu,
         xr,
@@ -619,7 +560,7 @@ pub(super) fn authorize_policy(
         let request = request::term(
             &op,
             &baseline,
-            override_term(overrides.get(&op))?,
+            operation_override::term(&op, overrides.get(&op))?,
             gfx::input(override_table),
             gpu::input(override_table, gpu_default.as_deref()),
             xr::input(override_table),
@@ -630,7 +571,7 @@ pub(super) fn authorize_policy(
             .apply(&mut context, Value::data(request))
             .map_err(|error| authority_error(format!("authority apply failed: {error}")))?;
         let term = plain_authority_result(value, &context, "operation")?;
-        let authorized = decode_result(term, &op, request_hash)?;
+        let authorized = decode_result(term, &op, request_hash, override_table)?;
         let expected = legacy_ops.get(&op);
         if authorized.allowed != expected.is_some()
             || expected.is_some_and(|policy| authorized.cap != cap::legacy(&op, policy))
@@ -641,6 +582,16 @@ pub(super) fn authorize_policy(
             || authorized.database != database::legacy(expected)
             || authorized.network != network::legacy(expected)
             || authorized.crypto != crypto::legacy(expected)
+            || authorized.credentials
+                != store_credentials::legacy_operation(if authorized.allowed {
+                    if store_credentials::operation_applies(&op) {
+                        override_table
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                })
             || authorized.gfx != gfx::legacy(expected)
             || authorized.gpu != gpu::legacy(expected, gpu_default.as_deref())
             || authorized.xr != xr::legacy(expected, authorized.bridge_identity.active)
@@ -666,6 +617,7 @@ pub(super) fn authorize_policy(
             op_policy.authorized_database = Some(authorized.database);
             op_policy.authorized_network = Some(authorized.network);
             op_policy.authorized_crypto = Some(authorized.crypto);
+            op_policy.authorized_sync_credentials = Some(authorized.credentials);
             op_policy.authorized_gfx_profile = Some(authorized.gfx);
             op_policy.authorized_gpu = Some(authorized.gpu);
             op_policy.authorized_xr_policy = Some(authorized.xr);

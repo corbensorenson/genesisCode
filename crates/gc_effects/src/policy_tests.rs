@@ -2780,6 +2780,123 @@ auth_token_env = "SAFE_TOKEN_ENV"
 }
 
 #[test]
+fn selfhost_authority_owns_per_operation_sync_credentials() {
+    use super::policy_authority::store_credentials::{
+        input as credential_input, term as credential_term,
+    };
+
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    let source = r#"
+[op."core/sync::pull"]
+remote_allow = ["https://registry.example/v1/"]
+auth_token = "operation-secret-never-in-authority-term"
+mtls_ca_pem = "certs/sync-ca.pem"
+"#;
+    std::fs::write(&caps, source).unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    let authorized = policy
+        .op_policy("core/sync::pull")
+        .unwrap()
+        .authorized_sync_credentials
+        .as_ref()
+        .unwrap();
+    assert_eq!(
+        authorized,
+        &AuthorizedStoreCredentials::Valid {
+            bearer: AuthorizedSecretSource::Inline(
+                "operation-secret-never-in-authority-term".to_string()
+            ),
+            basic_username: None,
+            basic_password: AuthorizedSecretSource::Absent,
+            mtls_ca_pem: Some(td.path().join("certs/sync-ca.pem")),
+            mtls_identity_pem: None,
+        }
+    );
+
+    let document: toml::Value = toml::from_str(source).unwrap();
+    let operation = document
+        .get("op")
+        .and_then(toml::Value::as_table)
+        .and_then(|operations| operations.get("core/sync::pull"))
+        .and_then(toml::Value::as_table);
+    let redacted = gc_coreform::print_term(&credential_input(operation));
+    assert!(!redacted.contains("operation-secret-never-in-authority-term"));
+    assert!(redacted.contains(":auth-token :present"));
+    let closed = gc_coreform::print_term(&credential_term(authorized).unwrap());
+    assert!(!closed.contains("operation-secret-never-in-authority-term"));
+    assert!(closed.contains(":bearer-source :inline"));
+}
+
+#[test]
+fn operation_credential_decoder_rejects_substitution_and_open_results() {
+    use super::policy_authority::store_credentials::{
+        decode_operation, legacy_operation, term as credential_term,
+    };
+
+    let document: toml::Value = toml::from_str(
+        r#"
+[op."core/sync::pull"]
+remote_allow = ["https://registry.example/v1/"]
+auth_token_env = "SAFE_SYNC_TOKEN"
+"#,
+    )
+    .unwrap();
+    let operation = document
+        .get("op")
+        .and_then(toml::Value::as_table)
+        .and_then(|operations| operations.get("core/sync::pull"))
+        .and_then(toml::Value::as_table);
+    let expected = legacy_operation(operation);
+    let valid = credential_term(&expected).unwrap();
+    assert_eq!(decode_operation(&valid, operation).unwrap(), expected);
+
+    let mut substituted = valid.clone();
+    credential_policy_field(
+        &mut substituted,
+        ":bearer-env",
+        Term::Str("ATTACKER_ENV".to_string()),
+    );
+    decode_operation(&substituted, operation)
+        .expect_err("operation credential environment substitution must fail closed");
+
+    let Term::Map(mut open) = valid else {
+        return;
+    };
+    open.insert(TermOrdKey(Term::symbol(":extra")), Term::Nil);
+    decode_operation(&Term::Map(open), operation)
+        .expect_err("open operation credential result must fail closed");
+}
+
+#[test]
+fn selfhost_authority_denies_operation_without_credential_state() {
+    let td = tempfile::tempdir().unwrap();
+    let caps = td.path().join("caps.toml");
+    std::fs::write(
+        &caps,
+        r#"
+[op."core/sync::pull"]
+allow = false
+remote_allow = ["https://registry.example/v1/"]
+auth_token = "must-not-be-installed"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load_with_selfhost_authority(
+        &caps,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&selfhost_artifact()),
+    )
+    .unwrap();
+    assert!(policy.op_policy("core/sync::pull").is_none());
+}
+
+#[test]
 fn selfhost_authority_normalizes_nonpositive_global_resource_limits() {
     let td = tempfile::tempdir().unwrap();
     let caps = td.path().join("caps.toml");

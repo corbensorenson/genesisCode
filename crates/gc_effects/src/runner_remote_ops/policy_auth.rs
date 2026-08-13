@@ -1,7 +1,8 @@
 static FORCE_WASI_REMOTE_PROFILE: AtomicBool = AtomicBool::new(false);
 
 use crate::policy::{
-    AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedStringList,
+    AuthorizedOptionalBool, AuthorizedOptionalString, AuthorizedStoreCredentials,
+    AuthorizedStringList,
 };
 
 #[path = "policy_auth_store.rs"]
@@ -21,13 +22,7 @@ pub(super) struct SyncPolicy {
     pub(super) remote_allow: Vec<String>,
     pub(super) allow_http: bool,
     pub(super) wasi_network_profile: Option<String>,
-    pub(super) auth_token: Option<String>,
-    pub(super) auth_token_env: Option<String>,
-    pub(super) basic_username: Option<String>,
-    pub(super) basic_password: Option<String>,
-    pub(super) basic_password_env: Option<String>,
-    pub(super) mtls_ca_pem: Option<std::path::PathBuf>,
-    pub(super) mtls_identity_pem: Option<std::path::PathBuf>,
+    pub(super) credentials: AuthorizedStoreCredentials,
     pub(super) transfer_workers: usize,
     pub(super) max_artifact_bytes: usize,
     pub(super) max_batch_bytes: usize,
@@ -100,13 +95,9 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
     let mut remote_allow: Vec<String> = Vec::new();
     let mut allow_http = false;
     let wasi_network_profile: Option<String> = parse_wasi_network_profile(pol)?;
-    let mut auth_token: Option<String> = None;
-    let mut auth_token_env: Option<String> = None;
-    let mut basic_username: Option<String> = None;
-    let mut basic_password: Option<String> = None;
-    let mut basic_password_env: Option<String> = None;
-    let mut mtls_ca_pem: Option<std::path::PathBuf> = None;
-    let mut mtls_identity_pem: Option<std::path::PathBuf> = None;
+    let credentials = pol
+        .and_then(|policy| policy.authorized_sync_credentials.clone())
+        .ok_or_else(|| "per-operation sync credential policy authority is missing".to_string())?;
     let mut transfer_workers: usize = 4;
     let mut max_artifact_bytes: usize = HARD_REMOTE_ARTIFACT_MAX_BYTES;
     let mut max_batch_bytes: usize = HARD_SYNC_PULL_BATCH_MAX_BYTES;
@@ -144,41 +135,6 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
             {
                 allow_http = b;
             }
-        }
-        if let Some(v) = pol.extra.get("auth_token")
-            && let Some(s) = v.as_str()
-        {
-            auth_token = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("auth_token_env")
-            && let Some(s) = v.as_str()
-        {
-            auth_token_env = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("basic_username")
-            && let Some(s) = v.as_str()
-        {
-            basic_username = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("basic_password")
-            && let Some(s) = v.as_str()
-        {
-            basic_password = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("basic_password_env")
-            && let Some(s) = v.as_str()
-        {
-            basic_password_env = Some(s.to_string());
-        }
-        if let Some(v) = pol.extra.get("mtls_ca_pem")
-            && let Some(s) = v.as_str()
-        {
-            mtls_ca_pem = Some(std::path::PathBuf::from(s));
-        }
-        if let Some(v) = pol.extra.get("mtls_identity_pem")
-            && let Some(s) = v.as_str()
-        {
-            mtls_identity_pem = Some(std::path::PathBuf::from(s));
         }
         if let Some(v) = pol.extra.get("transfer_workers")
             && let Some(n) = v.as_integer()
@@ -220,13 +176,7 @@ pub(super) fn sync_policy_from_op(pol: Option<&OpPolicy>) -> Result<SyncPolicy, 
         remote_allow,
         allow_http,
         wasi_network_profile,
-        auth_token,
-        auth_token_env,
-        basic_username,
-        basic_password,
-        basic_password_env,
-        mtls_ca_pem,
-        mtls_identity_pem,
+        credentials,
         transfer_workers,
         max_artifact_bytes,
         max_batch_bytes,
@@ -402,40 +352,7 @@ fn read_pem_path(path: &std::path::Path) -> Result<Vec<u8>, String> {
 }
 
 pub(super) fn sync_registry_auth(sp: &SyncPolicy) -> Result<gc_registry::RegistryAuth, String> {
-    let bearer_token = resolve_auth_token(sp.auth_token.as_deref(), sp.auth_token_env.as_deref())?;
-    let basic_password = resolve_basic_password(
-        sp.basic_password.as_deref(),
-        sp.basic_password_env.as_deref(),
-    )?;
-    let basic_username = sp.basic_username.clone();
-    if bearer_token.is_some() && basic_username.is_some() {
-        return Err(
-            "auth_token/auth_token_env and basic_username are mutually exclusive".to_string(),
-        );
-    }
-    if basic_username.is_none() && basic_password.is_some() {
-        return Err("basic_password/basic_password_env requires basic_username".to_string());
-    }
-    let basic_password = if basic_username.is_some() {
-        Some(basic_password.unwrap_or_default())
-    } else {
-        None
-    };
-    let mtls_ca_pem = match sp.mtls_ca_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    let mtls_identity_pem = match sp.mtls_identity_pem.as_deref() {
-        Some(path) => Some(read_pem_path(path)?),
-        None => None,
-    };
-    Ok(gc_registry::RegistryAuth {
-        bearer_token,
-        basic_username,
-        basic_password,
-        mtls_ca_pem,
-        mtls_identity_pem,
-    })
+    policy_auth_store::registry_auth_from_authority(&sp.credentials, "")
 }
 
 pub(super) fn store_remote_client(
@@ -493,6 +410,7 @@ mod network_authority_tests {
     use super::*;
     use crate::policy::{
         AuthorizedBindPorts, AuthorizedMaxBytes, AuthorizedNetworkPolicy,
+        AuthorizedSecretSource, AuthorizedStoreCredentialError,
     };
 
     fn make_policy(network: AuthorizedNetworkPolicy) -> OpPolicy {
@@ -527,6 +445,13 @@ mod network_authority_tests {
             authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: None,
+            authorized_sync_credentials: Some(AuthorizedStoreCredentials::Valid {
+                bearer: AuthorizedSecretSource::Absent,
+                basic_username: None,
+                basic_password: AuthorizedSecretSource::Absent,
+                mtls_ca_pem: None,
+                mtls_identity_pem: None,
+            }),
         }
     }
 
@@ -572,6 +497,56 @@ mod network_authority_tests {
         assert_eq!(
             parse_wasi_network_profile(Some(&policy)).unwrap_err(),
             "wasi_network_profile must be a string"
+        );
+    }
+
+    #[test]
+    fn sync_auth_consumes_authority_before_poisoned_raw_fields() {
+        let mut network = base_network();
+        network.remote_allow =
+            AuthorizedStringList::Valid(vec!["https://safe.example/v1/".to_string()]);
+        let mut policy = make_policy(network);
+        policy.extra.insert(
+            "auth_token_env".to_string(),
+            TomlValue::String("POISONED_ENV".to_string()),
+        );
+        policy.extra.insert(
+            "basic_username".to_string(),
+            TomlValue::String("poisoned-user".to_string()),
+        );
+        policy.authorized_sync_credentials = Some(AuthorizedStoreCredentials::Valid {
+            bearer: AuthorizedSecretSource::Inline("authorized-secret".to_string()),
+            basic_username: None,
+            basic_password: AuthorizedSecretSource::Absent,
+            mtls_ca_pem: None,
+            mtls_identity_pem: None,
+        });
+
+        let selected = sync_policy_from_op(Some(&policy)).unwrap();
+        let auth = sync_registry_auth(&selected).unwrap();
+        assert_eq!(auth.bearer_token.as_deref(), Some("authorized-secret"));
+        assert_eq!(auth.basic_username, None);
+    }
+
+    #[test]
+    fn sync_auth_fails_closed_without_or_with_rejected_authority() {
+        let mut network = base_network();
+        network.remote_allow =
+            AuthorizedStringList::Valid(vec!["https://safe.example/v1/".to_string()]);
+        let mut policy = make_policy(network);
+        policy.authorized_sync_credentials = None;
+        assert_eq!(
+            sync_policy_from_op(Some(&policy)).unwrap_err(),
+            "per-operation sync credential policy authority is missing"
+        );
+
+        policy.authorized_sync_credentials = Some(AuthorizedStoreCredentials::Invalid(
+            AuthorizedStoreCredentialError::AuthTokenInvalidType,
+        ));
+        let selected = sync_policy_from_op(Some(&policy)).unwrap();
+        assert_eq!(
+            sync_registry_auth(&selected).unwrap_err(),
+            "auth_token must be a string"
         );
     }
 

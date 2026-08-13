@@ -433,6 +433,7 @@ pub(super) fn apply_op_cfg(
             authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: None,
+            authorized_sync_credentials: None,
         },
     );
     Ok(())

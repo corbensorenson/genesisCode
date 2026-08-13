@@ -4,28 +4,28 @@ use crate::policy::{
 
 use super::{read_pem_path, resolve_auth_token, resolve_basic_password};
 
-fn store_credential_error(error: AuthorizedStoreCredentialError) -> String {
+fn credential_error(error: AuthorizedStoreCredentialError, field_prefix: &str) -> String {
     match error {
         AuthorizedStoreCredentialError::AuthTokenInvalidType => {
-            "store.auth_token must be a string".to_string()
+            format!("{field_prefix}auth_token must be a string")
         }
         AuthorizedStoreCredentialError::AuthTokenEnvInvalidType => {
-            "store.auth_token_env must be a string".to_string()
+            format!("{field_prefix}auth_token_env must be a string")
         }
         AuthorizedStoreCredentialError::BasicUsernameInvalidType => {
-            "store.basic_username must be a string".to_string()
+            format!("{field_prefix}basic_username must be a string")
         }
         AuthorizedStoreCredentialError::BasicPasswordInvalidType => {
-            "store.basic_password must be a string".to_string()
+            format!("{field_prefix}basic_password must be a string")
         }
         AuthorizedStoreCredentialError::BasicPasswordEnvInvalidType => {
-            "store.basic_password_env must be a string".to_string()
+            format!("{field_prefix}basic_password_env must be a string")
         }
         AuthorizedStoreCredentialError::MtlsCaPemInvalidType => {
-            "store.mtls_ca_pem must be a string".to_string()
+            format!("{field_prefix}mtls_ca_pem must be a string")
         }
         AuthorizedStoreCredentialError::MtlsIdentityPemInvalidType => {
-            "store.mtls_identity_pem must be a string".to_string()
+            format!("{field_prefix}mtls_identity_pem must be a string")
         }
         AuthorizedStoreCredentialError::AuthTokenSourceConflict => {
             "auth_token and auth_token_env are mutually exclusive".to_string()
@@ -62,16 +62,14 @@ fn resolve_authorized_password(source: &AuthorizedSecretSource) -> Result<Option
     }
 }
 
-pub(in crate::runner) fn store_registry_auth(
-    policy: &CapsPolicy,
+pub(super) fn registry_auth_from_authority(
+    authorized: &AuthorizedStoreCredentials,
+    field_prefix: &str,
 ) -> Result<gc_registry::RegistryAuth, String> {
-    let authorized = policy
-        .authorized_store_credentials()
-        .ok_or_else(|| "global store credential policy authority is missing".to_string())?;
     let (bearer, basic_username, basic_password, mtls_ca_pem, mtls_identity_pem) =
         match authorized {
             AuthorizedStoreCredentials::Invalid(error) => {
-                return Err(store_credential_error(*error));
+                return Err(credential_error(*error, field_prefix));
             }
             AuthorizedStoreCredentials::Valid {
                 bearer,
@@ -104,4 +102,13 @@ pub(in crate::runner) fn store_registry_auth(
         mtls_ca_pem,
         mtls_identity_pem,
     })
+}
+
+pub(in crate::runner) fn store_registry_auth(
+    policy: &CapsPolicy,
+) -> Result<gc_registry::RegistryAuth, String> {
+    let authorized = policy
+        .authorized_store_credentials()
+        .ok_or_else(|| "global store credential policy authority is missing".to_string())?;
+    registry_auth_from_authority(authorized, "store.")
 }

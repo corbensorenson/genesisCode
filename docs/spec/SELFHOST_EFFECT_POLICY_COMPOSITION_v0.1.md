@@ -24,6 +24,12 @@ independent `url_allow` and `remote_allow` normalization, `allow_http`,
 `wasi_network_profile`, listener host and port allowlists, and
 `max_request_bytes`. URL/authority parsing, matching, target-specific WASI
 backend availability, transport, and byte enforcement remain host mechanisms.
+The same per-operation authority owns the seven sync/publication credential and
+mTLS-path field states, conflict/dependency precedence, bearer/Basic source
+selection, Basic username, and path admission. Inline secrets cross the boundary
+only as `:present`; their bytes are retained by Rust and injected only after the
+closed result selects `:inline`. Environment lookup, path joining, PEM reads,
+and client construction remain host mechanisms.
 The authority also owns the complete per-operation crypto policy consumed by
 `core/crypto::{hash,sign,verify,kdf,aead-seal,aead-open}`: algorithm and key-ID
 allowlist normalization plus twelve operation-specific byte-limit states.
@@ -85,12 +91,12 @@ decisions are GenesisCode-owned and independently verified is forbidden.
 ## Closed Protocol
 
 Each request is a closed nine-field map with kind
-`genesis/effect-policy-authority-request-v0.19`, version `19`, the operation string,
+`genesis/effect-policy-authority-request-v0.20`, version `20`, the operation string,
 the complete ordered baseline allow vector, a positive host
 `:platform-max-bytes` observation equal to the target `usize` maximum, and either
 `nil` or an exact override map containing `:allow`, `:base-dir`, `:create-dirs`,
 `:timeout-ms`, `:log-inline-max-bytes`, `:max-bytes`, `:process-programs`,
-`:database-policy`, `:network-policy`, `:crypto-policy`, `:plugin-policy`,
+`:database-policy`, `:network-policy`, `:credential-policy`, `:crypto-policy`, `:plugin-policy`,
 `:ffi-policy`, and `:bridge-identity-policy`.
 The top-level `:gfx-policy` observation is an exact five-field map containing
 `:production-default`, `:profile`, `:profile-alias`, `:runtime-profile`, and
@@ -198,14 +204,14 @@ host rejects malformed, oversized, duplicate, unsorted, substituted, or
 oracle-contradicting inventory results and uses only the validated GenesisCode
 inventory to drive per-operation composition.
 
-The authority returns a closed eighteen-field
-`genesis/effect-policy-authority-result-v0.19` map containing the exact operation,
+The authority returns a closed nineteen-field
+`genesis/effect-policy-authority-result-v0.20` map containing the exact operation,
 boolean admission decision, selected `:base-dir`, canonical capability map when
 admitted or `nil` when denied, private `:max-bytes-policy` and
 `:process-program-policy`, private `:database-policy`, private `:network-policy`,
-private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`, private
+private `:credential-policy`, private `:crypto-policy`, private `:plugin-policy`, private `:ffi-policy`, private
 `:bridge-identity-policy`, private `:gfx-policy`, private `:gpu-policy`, private
-`:xr-policy`, lowercase canonical request hash, and version `19`.
+`:xr-policy`, lowercase canonical request hash, and version `20`.
 For an admitted operation, the private byte policy is
 an exact `{:limit ... :status ...}` map. Its status is exactly `:absent`,
 `:invalid-type`, `:nonpositive`, `:platform-overflow`, or `:valid`; only `:valid`
@@ -221,7 +227,7 @@ the closed positive-limit state above. Only valid lists carry nonempty trimmed
 strings, and only valid bounds carry positive platform-sized integers. Denied
 operations must carry no base directory, capability, byte policy,
 process-program policy, database policy, network policy, crypto policy, plugin
-policy, FFI policy, GFX policy, GPU policy, XR policy, or bridge identity policy. The network result preserves independent URL and remote list states,
+policy, credential policy, FFI policy, GFX policy, GPU policy, XR policy, or bridge identity policy. The network result preserves independent URL and remote list states,
 closed optional boolean/string
 states, a closed bind-port state (`:absent`, `:invalid-type`, `:invalid-entry`,
 `:out-of-range`, `:empty`, or `:valid`), and a closed request-byte bound. Only a
@@ -482,17 +488,18 @@ per-operation target allowlists, HTTP permission, WASI profile normalization,
 bind host/port states, and inbound request-size state across network, sync,
 publication, and store-remote operation policies. GenesisCode also owns global
 store remote target selection, allowlist normalization, malformed-state
-classification, and HTTP permission. Global store credential and TLS-path policy
-is no longer residual: GenesisCode owns all seven field-type states, conflict and
+classification, and HTTP permission. Global store and per-operation
+sync/publication credential and TLS-path policy are no longer residual:
+GenesisCode owns all seven field-type states, conflict and
 dependency precedence, bearer/Basic source selection, Basic username, and mTLS
 path admission without receiving inline secret bytes. Secret/environment lookup,
 relative-path resolution, PEM reads, TLS/client construction, retry/worker
 settings, URL parsing and normalization, matching, WASI backend discovery,
 DNS/socket/HTTP/WebSocket execution, cancellation, and measurement remain bounded
 mechanisms in the named path/secret, bridge-lifecycle, execution, and replay
-residuals. Per-operation sync credential fields remain under
-`path-and-secret-resolution`; this decision retires only the global `[store]`
-credential/TLS policy family.
+residuals. The `path-and-secret-resolution` residual now contains only those
+bounded host mechanisms; it contains no remaining global or per-operation
+credential-source, conflict, dependency, username, or TLS-path admission choice.
 Crypto policy configuration is no longer residual: GenesisCode owns algorithm
 and key-ID list normalization and all twelve positive-limit states across hash,
 sign, verify, KDF, AEAD sealing, and AEAD opening. Algorithm/key matching, key

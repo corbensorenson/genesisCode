@@ -101,6 +101,7 @@ mod authority_tests {
             authorized_bridge_identity: None,
             authorized_plugin: Some(plugin),
             authorized_ffi: None,
+            authorized_sync_credentials: None,
         }
     }
 

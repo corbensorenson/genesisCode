@@ -127,6 +127,7 @@ mod tests {
             authorized_bridge_identity: None,
             authorized_plugin: None,
             authorized_ffi: Some(ffi),
+            authorized_sync_credentials: None,
         }
     }
 

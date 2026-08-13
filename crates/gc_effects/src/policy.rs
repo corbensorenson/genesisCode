@@ -351,6 +351,7 @@ pub struct OpPolicy {
     pub(crate) authorized_bridge_identity: Option<AuthorizedBridgeIdentityPolicy>,
     pub(crate) authorized_plugin: Option<AuthorizedPluginPolicy>,
     pub(crate) authorized_ffi: Option<AuthorizedFfiPolicy>,
+    pub(crate) authorized_sync_credentials: Option<AuthorizedStoreCredentials>,
 }
 
 impl CapsPolicy {
@@ -490,6 +491,7 @@ impl CapsPolicy {
                         authorized_bridge_identity: None,
                         authorized_plugin: None,
                         authorized_ffi: None,
+                        authorized_sync_credentials: None,
                     },
                 );
             }
@@ -506,6 +508,11 @@ impl CapsPolicy {
         // loads replace and verify it through the self-host authority.
         let gpu_default = policy_authority::gpu::observed_default();
         for (op, op_policy) in &mut ops {
+            let override_table = tbl
+                .get("op")
+                .and_then(toml::Value::as_table)
+                .and_then(|operations| operations.get(op))
+                .and_then(toml::Value::as_table);
             let bridge = policy_authority::legacy_bridge_identity_policy(op, Some(op_policy));
             op_policy.authorized_xr_policy =
                 Some(policy_authority::xr::legacy(Some(op_policy), bridge.active));
@@ -516,6 +523,9 @@ impl CapsPolicy {
             ));
             op_policy.authorized_gfx_profile = Some(policy_authority::gfx::legacy(Some(op_policy)));
             op_policy.authorized_ffi = Some(policy_authority::legacy_ffi_policy(Some(op_policy)));
+            op_policy.authorized_sync_credentials = Some(
+                policy_authority::legacy_sync_credentials_policy(override_table),
+            );
         }
 
         for (k, v) in tbl {
@@ -648,6 +658,22 @@ impl CapsPolicy {
                         })?;
                         *v = toml::Value::String(resolved.to_string());
                     }
+                }
+            }
+            if let Some(AuthorizedStoreCredentials::Valid {
+                mtls_ca_pem,
+                mtls_identity_pem,
+                ..
+            }) = &mut p.authorized_sync_credentials
+            {
+                if mtls_ca_pem.as_ref().is_some_and(|path| path.is_relative()) {
+                    *mtls_ca_pem = mtls_ca_pem.take().map(|path| base.join(path));
+                }
+                if mtls_identity_pem
+                    .as_ref()
+                    .is_some_and(|path| path.is_relative())
+                {
+                    *mtls_identity_pem = mtls_identity_pem.take().map(|path| base.join(path));
                 }
             }
         }

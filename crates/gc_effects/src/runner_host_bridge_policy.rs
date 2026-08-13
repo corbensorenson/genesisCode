@@ -351,6 +351,7 @@ mod authority_tests {
             }),
             authorized_plugin: None,
             authorized_ffi: None,
+            authorized_sync_credentials: None,
         }
     }
 

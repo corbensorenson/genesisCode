@@ -3,6 +3,49 @@ use crate::policy::{
     AuthorizedSecretSource, AuthorizedStoreCredentialError, AuthorizedStoreCredentials, StorePolicy,
 };
 
+#[derive(Debug)]
+struct RawCredentials {
+    auth_token: Option<String>,
+    auth_token_env: Option<String>,
+    basic_username: Option<String>,
+    basic_password: Option<String>,
+    basic_password_env: Option<String>,
+    mtls_ca_pem: Option<PathBuf>,
+    mtls_identity_pem: Option<PathBuf>,
+}
+
+impl RawCredentials {
+    fn from_table(table: Option<&toml::value::Table>) -> Self {
+        let string = |key| {
+            table
+                .and_then(|table| table.get(key))
+                .and_then(toml::Value::as_str)
+                .map(str::to_string)
+        };
+        Self {
+            auth_token: string("auth_token"),
+            auth_token_env: string("auth_token_env"),
+            basic_username: string("basic_username"),
+            basic_password: string("basic_password"),
+            basic_password_env: string("basic_password_env"),
+            mtls_ca_pem: string("mtls_ca_pem").map(PathBuf::from),
+            mtls_identity_pem: string("mtls_identity_pem").map(PathBuf::from),
+        }
+    }
+
+    fn from_store(store: &StorePolicy) -> Self {
+        Self {
+            auth_token: store.auth_token.clone(),
+            auth_token_env: store.auth_token_env.clone(),
+            basic_username: store.basic_username.clone(),
+            basic_password: store.basic_password.clone(),
+            basic_password_env: store.basic_password_env.clone(),
+            mtls_ca_pem: store.mtls_ca_pem.clone(),
+            mtls_identity_pem: store.mtls_identity_pem.clone(),
+        }
+    }
+}
+
 const DETAIL_KEYS: [&str; 7] = [
     ":bearer-env",
     ":bearer-source",
@@ -13,6 +56,13 @@ const DETAIL_KEYS: [&str; 7] = [
     ":mtls-identity-pem",
 ];
 
+pub(super) fn operation_applies(op: &str) -> bool {
+    matches!(
+        op,
+        "core/sync::pull" | "core/sync::push" | "core/pkg-low::publish"
+    )
+}
+
 fn secret_input(value: Option<&toml::Value>) -> Term {
     match value {
         None => Term::Nil,
@@ -21,7 +71,7 @@ fn secret_input(value: Option<&toml::Value>) -> Term {
     }
 }
 
-pub(super) fn input(table: Option<&toml::value::Table>) -> Term {
+pub(in crate::policy) fn input(table: Option<&toml::value::Table>) -> Term {
     let get = |key| table.and_then(|table| table.get(key));
     Term::Map(
         [
@@ -72,6 +122,19 @@ fn present(table: Option<&toml::value::Table>, key: &str) -> bool {
 pub(super) fn legacy(
     table: Option<&toml::value::Table>,
     raw: &StorePolicy,
+) -> AuthorizedStoreCredentials {
+    legacy_raw(table, &RawCredentials::from_store(raw))
+}
+
+pub(in crate::policy) fn legacy_operation(
+    table: Option<&toml::value::Table>,
+) -> AuthorizedStoreCredentials {
+    legacy_raw(table, &RawCredentials::from_table(table))
+}
+
+fn legacy_raw(
+    table: Option<&toml::value::Table>,
+    raw: &RawCredentials,
 ) -> AuthorizedStoreCredentials {
     let malformed = [
         (
@@ -318,10 +381,29 @@ pub(in crate::policy) fn decode(
     term: &Term,
     raw: &StorePolicy,
 ) -> Result<AuthorizedStoreCredentials, EffectsError> {
+    decode_raw(
+        term,
+        &RawCredentials::from_store(raw),
+        "resource result :store",
+    )
+}
+
+pub(in crate::policy) fn decode_operation(
+    term: &Term,
+    table: Option<&toml::value::Table>,
+) -> Result<AuthorizedStoreCredentials, EffectsError> {
+    decode_raw(term, &RawCredentials::from_table(table), "operation result")
+}
+
+fn decode_raw(
+    term: &Term,
+    raw: &RawCredentials,
+    scope: &str,
+) -> Result<AuthorizedStoreCredentials, EffectsError> {
     let Term::Map(map) = term else {
-        return Err(authority_error(
-            "resource result :store :credential-policy must be a data map",
-        ));
+        return Err(authority_error(format!(
+            "{scope} :credential-policy must be a data map"
+        )));
     };
     let expected: BTreeSet<_> = DETAIL_KEYS
         .into_iter()
@@ -329,9 +411,9 @@ pub(in crate::policy) fn decode(
         .map(|key| TermOrdKey(Term::symbol(key)))
         .collect();
     if map.keys().cloned().collect::<BTreeSet<_>>() != expected {
-        return Err(authority_error(
-            "resource result :store :credential-policy field set mismatch",
-        ));
+        return Err(authority_error(format!(
+            "{scope} :credential-policy field set mismatch"
+        )));
     }
     let status = match field(map, ":status")? {
         Term::Symbol(status) => status.as_str(),

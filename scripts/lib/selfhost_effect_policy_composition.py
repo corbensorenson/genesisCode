@@ -88,6 +88,7 @@ DECISIONS = [
     "per-operation-bridge-command-allowlist-policy",
     "per-operation-bridge-digest-pin-policy",
     "per-operation-bridge-invocation-policy",
+    "per-operation-credential-and-tls-policy",
     "per-operation-crypto-policy",
     "per-operation-database-policy",
     "per-operation-enforcement-control-selection",
@@ -137,11 +138,11 @@ def validate(profile, schema, check_identity=True):
         "kind": "genesis/selfhost-effect-policy-composition-v0.1",
         "maxPolicyOperations": 4096,
         "productionEntrypoints": ["genesis", "genesis_wasi"],
-        "requestKind": "genesis/effect-policy-authority-request-v0.19",
+        "requestKind": "genesis/effect-policy-authority-request-v0.20",
         "resourceBinding": "core/effects::resource-policy-authority",
         "resourceRequestKind": "genesis/effect-resource-policy-request-v0.5",
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.5",
-        "resultKind": "genesis/effect-policy-authority-result-v0.19",
+        "resultKind": "genesis/effect-policy-authority-result-v0.20",
         "runtimeEvidence": {
             "allocationLimit": 20_000_000,
             "stepLimit": 20_000_000,
@@ -162,7 +163,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.25",
+        "version": "0.1.26",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -272,6 +273,9 @@ def static_check(root: Path, profile):
     network_boundary_path = root / "crates/gc_effects/src/policy_authority_network.rs"
     if network_boundary_path.is_symlink() or not network_boundary_path.is_file():
         fail("effect-policy network host boundary is missing or symlinked")
+    override_boundary_path = root / "crates/gc_effects/src/policy_authority_override.rs"
+    if override_boundary_path.is_symlink() or not override_boundary_path.is_file():
+        fail("effect-policy operation override boundary is missing or symlinked")
     cap_boundary_path = root / "crates/gc_effects/src/policy_authority_cap.rs"
     if cap_boundary_path.is_symlink() or not cap_boundary_path.is_file():
         fail("effect-policy capability host boundary is missing or symlinked")
@@ -309,6 +313,7 @@ def static_check(root: Path, profile):
         + process_boundary_path.read_text()
         + database_boundary_path.read_text()
         + network_boundary_path.read_text()
+        + override_boundary_path.read_text()
         + cap_boundary_path.read_text()
         + crypto_boundary_path.read_text()
         + ffi_boundary_path.read_text()
@@ -347,6 +352,7 @@ def static_check(root: Path, profile):
         "op_policy.authorized_database = Some(authorized.database);",
         "op_policy.authorized_network = Some(authorized.network);",
         "op_policy.authorized_crypto = Some(authorized.crypto);",
+        "op_policy.authorized_sync_credentials = Some(authorized.credentials);",
         "op_policy.authorized_ffi = Some(authorized.ffi);",
         "op_policy.authorized_plugin = Some(authorized.plugin);",
         "op_policy.authorized_gfx_profile = Some(authorized.gfx);",
@@ -363,6 +369,8 @@ def static_check(root: Path, profile):
         "super::store_credentials::decode(map_field(store_map, \":credential-policy\")?, raw_store)",
         "inline bearer decision has no retained inline token",
         "environment bearer decision substituted its environment name",
+        "store_credentials::decode_operation(",
+        "store_credentials::legacy_operation(if authorized.allowed",
         "store credential decision substituted an mTLS path",
     ]
     for token in required_authority:
@@ -468,6 +476,22 @@ def static_check(root: Path, profile):
         body = remote_policy.split(start, 1)[1].split(end, 1)[0]
         if "authorized_network" not in body or body.find("authorized_network") >= body.find("pol.extra"):
             fail(f"remote enforcement consults raw policy before authority state: {start}")
+    sync_policy = remote_policy.split("pub(super) fn sync_policy_from_op", 1)[1].split(
+        "pub(super) fn sync_normalize_and_check_remote", 1
+    )[0]
+    if "authorized_sync_credentials" not in sync_policy:
+        fail("sync credential consumer does not require installed authority state")
+    for key in (
+        "auth_token",
+        "auth_token_env",
+        "basic_username",
+        "basic_password",
+        "basic_password_env",
+        "mtls_ca_pem",
+        "mtls_identity_pem",
+    ):
+        if f'pol.extra.get("{key}")' in sync_policy:
+            fail(f"sync credential consumer rereads raw policy field: {key}")
     crypto_policy = (
         root / "crates/gc_effects/src/runner_capability_dispatch/crypto.rs"
     ).read_text()
@@ -718,11 +742,23 @@ def static_check(root: Path, profile):
         fail("store remote target authority consumer inventory drift")
     if remote_production.count("fn store_registry_auth(") != 1:
         fail("store credential authority consumer inventory drift")
+    if remote_production.count("fn registry_auth_from_authority(") != 1:
+        fail("shared credential authority consumer inventory drift")
     store_auth = remote_production.split("fn store_registry_auth(", 1)[1].split(
         "pub(super) fn sync_registry_auth", 1
     )[0]
     if "authorized_store_credentials()" not in store_auth or "policy.store." in store_auth:
         fail("store credential consumer bypasses installed authority state")
+    focused_tests = remote_policy + (root / "crates/gc_effects/src/policy_tests.rs").read_text()
+    for name in (
+        "sync_auth_consumes_authority_before_poisoned_raw_fields",
+        "sync_auth_fails_closed_without_or_with_rejected_authority",
+        "selfhost_authority_owns_per_operation_sync_credentials",
+        "selfhost_authority_denies_operation_without_credential_state",
+        "operation_credential_decoder_rejects_substitution_and_open_results",
+    ):
+        if focused_tests.count(f"fn {name}()") != 1:
+            fail(f"missing focused sync credential authority control: {name}")
     store_resource = (
         root / "selfhost/effect_policy_resource_authority_v1.gc"
     ).read_text()

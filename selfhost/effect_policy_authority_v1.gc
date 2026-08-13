@@ -96,8 +96,17 @@
           ((selfhost/effect-policy::all-true-loop? values) ((core/int::add index) 1))
           false)))))
 
+(def selfhost/effect-policy::credential-operation?
+  (fn (op)
+    (if ((core/eq? op) "core/sync::pull")
+      true
+      (if ((core/eq? op) "core/sync::push")
+        true
+        ((core/eq? op) "core/pkg-low::publish")))))
+
 (def selfhost/effect-policy::override-valid?
-  (fn (override)
+  (fn (op)
+    (fn (override)
     (if (selfhost/policy::nil? override)
       true
       (if
@@ -108,6 +117,7 @@
             :bridge-identity-policy
             :create-dirs
             :crypto-policy
+            :credential-policy
             :database-policy
             :ffi-policy
             :log-inline-max-bytes
@@ -128,6 +138,11 @@
                ((core/map::get override) (quote :create-dirs)))
              (selfhost/effect-crypto::input-valid?
                ((core/map::get override) (quote :crypto-policy)))
+             (if (selfhost/effect-policy::credential-operation? op)
+               (selfhost/effect-store-credential::input-valid?
+                 ((core/map::get override) (quote :credential-policy)))
+               (selfhost/policy::nil?
+                 ((core/map::get override) (quote :credential-policy))))
              (selfhost/effect-policy::database-input-valid?
                ((core/map::get override) (quote :database-policy)))
              (selfhost/effect-ffi::input-valid?
@@ -144,7 +159,7 @@
                ((core/map::get override) (quote :process-programs)))
              (selfhost/effect-policy::optional-int?
                ((core/map::get override) (quote :timeout-ms)))]) 0)
-        false))))
+        false)))))
 
 (def selfhost/effect-policy::process-program-input-valid-loop?
   (fn (values)
@@ -238,6 +253,23 @@
            nil
            ((core/map::get override) (quote :max-bytes))))
         platform-max))))
+
+(def selfhost/effect-policy::credential-policy
+  (fn (op)
+    (fn (override)
+      (if (selfhost/effect-policy::credential-operation? op)
+        (selfhost/effect-store-credential::policy
+          (if (selfhost/policy::nil? override)
+            {
+              :auth-token nil
+              :auth-token-env nil
+              :basic-password nil
+              :basic-password-env nil
+              :basic-username nil
+              :mtls-ca-pem nil
+              :mtls-identity-pem nil}
+            ((core/map::get override) (quote :credential-policy))))
+        nil))))
 
 (def selfhost/effect-policy::positive-limit-policy
   (fn (raw)
@@ -348,8 +380,8 @@
             (platform-max ((core/map::get request) (quote :platform-max-bytes)))
             (xr-policy ((core/map::get request) (quote :xr-policy))))
           (if
-              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.19")
-              (if (selfhost/policy::int? version) ((core/int::eq? version) 19) false)
+              (if ((core/eq? kind) "genesis/effect-policy-authority-request-v0.20")
+              (if (selfhost/policy::int? version) ((core/int::eq? version) 20) false)
               false)
             (if
               (if (selfhost/policy::vec? baseline)
@@ -360,7 +392,7 @@
                   false)
                 false)
               (if
-                (if (selfhost/effect-policy::override-valid? override)
+                (if ((selfhost/effect-policy::override-valid? op) override)
                   (if (selfhost/effect-gpu::input-valid? gpu-policy)
                     (if (selfhost/effect-gfx::input-valid? gfx-policy)
                       (selfhost/effect-xr::input-valid? xr-policy)
@@ -390,6 +422,10 @@
                         (if allowed
                           ((selfhost/effect-crypto::policy override) platform-max)
                           nil)
+                      :credential-policy
+                        (if allowed
+                          ((selfhost/effect-policy::credential-policy op) override)
+                          nil)
                       :database-policy
                         (if allowed
                           ((selfhost/effect-policy::database-policy override) platform-max)
@@ -406,7 +442,7 @@
                         (if allowed
                           (selfhost/effect-gpu::policy gpu-policy)
                           nil)
-                      :kind "genesis/effect-policy-authority-result-v0.19"
+                      :kind "genesis/effect-policy-authority-result-v0.20"
                       :max-bytes-policy
                         (if allowed
                           ((selfhost/effect-policy::max-bytes-policy override) platform-max)
@@ -425,7 +461,7 @@
                           (selfhost/effect-policy::process-program-policy override)
                           nil)
                       :request-h (selfhost/hash::hash-term request)
-                      :v 19
+                      :v 20
                       :xr-policy
                         (if allowed
                           ((selfhost/effect-xr::policy xr-policy)

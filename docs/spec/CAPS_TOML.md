@@ -360,8 +360,18 @@ reachable only through the explicit compatibility/oracle path during R4.2.d.
     mechanisms.
 - `auth_token` (string): optional bearer token for remote auth.
 - `auth_token_env` (string): optional env var name for bearer token (mutually exclusive with `auth_token`).
+- `basic_username` (string): optional Basic-auth username (mutually exclusive with bearer auth).
+- `basic_password` (string): optional inline Basic password (mutually exclusive with `basic_password_env`; requires `basic_username`).
+- `basic_password_env` (string): optional env var name for the Basic password (mutually exclusive with `basic_password`; requires `basic_username`).
 - `mtls_ca_pem` (string): optional PEM path for trusted CA roots.
 - `mtls_identity_pem` (string): optional PEM path for client cert+key.
+  - File-backed production policy loads transport all seven field states through
+    `core/effects::policy-authority`. Inline secret values are represented only
+    as `:present`; GenesisCode selects the source, resolves conflict/dependency
+    precedence, admits username and TLS paths, and returns a closed decision.
+    Rust injects retained inline bytes only after strict decode. Environment
+    lookup, relative-path joining, PEM reads, and client construction remain
+    bounded host mechanisms, and sync dispatch has no raw credential fallback.
 
 String allowlist wildcard semantics:
 - For string allowlists, `*` matches any value.
