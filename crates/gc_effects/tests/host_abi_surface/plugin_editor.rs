@@ -1,6 +1,7 @@
 use super::common::{allow_policy_for, mk_single_effect_program, sealed_error_code};
+use crate::replay;
 use gc_coreform::{hash_module, parse_module};
-use gc_effects::{CapsPolicy, Decision, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, Decision, EffectLog, run};
 use gc_kernel::{EvalCtx, eval_module, value_hash};
 use gc_prelude::build_prelude;
 

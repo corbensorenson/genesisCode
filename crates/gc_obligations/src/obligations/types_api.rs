@@ -320,6 +320,7 @@ pub fn test_package_with_step_limit_and_frontend(
             &manifest,
             &modules,
             &test_runs,
+            &frontend,
             limits,
         )?)
     } else {

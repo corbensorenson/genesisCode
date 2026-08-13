@@ -519,8 +519,14 @@ def static_check(root: Path, profile):
         fail("lint authority dispatch drift")
     if lint_host.count("ObligationAuthorityOperation::AiStyle") != 1:
         fail("AI-style authority dispatch drift")
-    if replay_host.count("gc_effects::replay_with_store(") != 1:
+    if replay_host.count("replay_effect_program(") != 1:
         fail("replay execution host-fact collection drift")
+    if coverage_execution.count("replay_effect_program(") != 1:
+        fail("coverage replay execution host-fact collection drift")
+    if unit_host.count("gc_effects::replay_with_selfhost_authority(") != 1:
+        fail("production replay execution authority drift")
+    if unit_host.count("gc_effects::replay_with_store(") != 1:
+        fail("parity replay execution oracle drift")
     if "ReplayEntryObservation" not in replay_host or "ReplayObservation" not in replay_host:
         fail("closed replay observation transport drift")
     property_execution = property_host.split("pub(super) fn obligation_property_tests(", 1)[1].split(

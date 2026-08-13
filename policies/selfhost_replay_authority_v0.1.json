@@ -1,0 +1,58 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/effects::replay-authority",
+  "contentIdentitySha256": "a1e7d3dcbc5798c0abd40ab7f7a3385c5ab884af91b641d1721ad439b9f3d1df",
+  "decisionInventory": [
+    "program-hash-identity",
+    "ordered-entry-presence-and-exhaustion",
+    "entry-index",
+    "operation-identity",
+    "payload-hash-identity",
+    "continuation-hash-identity",
+    "request-hash-identity",
+    "decision-cap-consistency",
+    "response-load-admission",
+    "response-hash-identity",
+    "schedule-step-identity",
+    "task-id-identity",
+    "parent-task-identity",
+    "await-edge-identity"
+  ],
+  "hostMechanisms": [
+    "canonical-hash-observation",
+    "continuation-application-after-acceptance",
+    "effect-program-step-and-seal-validation",
+    "log-structure-decoding",
+    "response-artifact-loading-and-codec"
+  ],
+  "hostOracle": {
+    "removalTask": "R4.2.d",
+    "required": false
+  },
+  "independentVerifier": "scripts/lib/selfhost_replay_authority.py",
+  "kind": "genesis/selfhost-replay-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "h3-h4-closure",
+    "r4-2-d-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "signing-and-evidence-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/effect-replay-authority-request-v0.1",
+  "resultKind": "genesis/effect-replay-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 32000000,
+    "stepLimit": 20000000
+  },
+  "schema": "docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/effect_replay_authority_v1.gc",
+  "sourceSha256": "7a7472815b1204395aec5c539596d2de232afa3accb3b81a1739dab8c068ba57",
+  "spec": "docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

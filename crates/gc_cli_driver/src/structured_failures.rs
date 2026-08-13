@@ -331,6 +331,17 @@ pub(super) fn effects_context(operation: &'static str, error: &gc_effects::Effec
                 .fact("reason", reason.clone())
                 .into_value()
         }
+        gc_effects::EffectsError::ReplayRejected { code, message } => {
+            FailureContext::new("replay", "authority-rejection", operation)
+                .fact("authority_code", code.clone())
+                .fact("reason", message.clone())
+                .into_value()
+        }
+        gc_effects::EffectsError::ReplayAuthority(reason) => {
+            FailureContext::new("replay", "authority-boundary", operation)
+                .fact("reason", reason.clone())
+                .into_value()
+        }
         gc_effects::EffectsError::Cleanup {
             subsystem,
             reason,

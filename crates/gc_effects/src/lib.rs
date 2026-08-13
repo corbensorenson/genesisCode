@@ -3,6 +3,7 @@ mod lock;
 mod log;
 mod policy;
 mod refs;
+mod replay_authority;
 mod runner;
 mod runner_browser_host;
 mod runner_editor_host;
@@ -35,7 +36,9 @@ pub use crate::log::{
 };
 pub use crate::policy::{CapsPolicy, OpPolicy};
 pub use crate::refs::{RefEntry, RefsDb, SetResult};
-pub use crate::runner::{RunResult, replay, replay_with_store, run};
+pub use crate::runner::{RunResult, replay_with_selfhost_authority, run};
+#[cfg(any(test, feature = "parity-oracle"))]
+pub use crate::runner::{replay, replay_with_store};
 pub use crate::store::ArtifactStore;
 
 #[cfg(not(target_os = "wasi"))]

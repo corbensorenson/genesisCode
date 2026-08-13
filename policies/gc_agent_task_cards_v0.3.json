@@ -44,8 +44,8 @@
     },
     {
       "authorities": [
-        {"anchors": ["v0.2 uses `3`", "Replay validates request/response hashes"], "path": "docs/spec/GCLOG.md"},
-        {"anchors": ["Every performed effect appends a deterministic log entry", "fail on executable mismatches"], "path": "docs/spec/SEALS_DISPATCH_REPLAY.md"},
+        {"anchors": ["v0.2 uses `3`", "GenesisCode authority validates request/response hashes"], "path": "docs/spec/GCLOG.md"},
+        {"anchors": ["Every performed effect appends a deterministic log entry", "fail on every logged-fact mismatch"], "path": "docs/spec/SEALS_DISPATCH_REPLAY.md"},
         {"anchors": ["GCLOG_CURRENT_VERSION", "pub struct EffectLogEntry"], "path": "crates/gc_effects/src/log.rs"}
       ],
       "commands": ["genesis run program.gc --caps caps.toml --log run.gclog", "genesis replay program.gc --log run.gclog"],

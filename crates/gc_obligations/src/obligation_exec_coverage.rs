@@ -203,8 +203,7 @@ pub(crate) fn obligation_coverage(
 
         match (value, &t.effect_log) {
             (v @ Value::EffectProgram(_), Some(log)) => {
-                let _ = gc_effects::replay_with_store(&mut ctx, v, log, Some(&effect_store))
-                    .map_err(|e| ObligationError::Test(format!("replay failed: {e}")))?;
+                let _ = replay_effect_program(&mut ctx, v, log, &effect_store, frontend)?;
             }
             (Value::EffectProgram(_), None) => {
                 missing_effect_logs.push(t.id.test_name.clone());

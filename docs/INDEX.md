@@ -194,8 +194,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked policy-alias authority profile.
 - `policies/selfhost_policy_alias_authority_v0.1.json` - content-addressed policy-alias decision inventory, source identity, production entrypoints, error taxonomy, limits, and nonclaims.
 - `scripts/selfhost_policy_alias_authority_guard.sh` - focused native/WASI runtime, production-graph, non-mutation, Unicode-trim, and mutation-control guard.
-- `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md` - normative partial R4.2.d baseline admission, per-operation precedence, canonical log-cap descriptor, live host-oracle, and residual-decision contract; it explicitly makes no H2 claim.
-- `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json` - closed schema for the partial effect-policy composition profile.
+- `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md` - normative H2 R4.2.d effect-policy composition and bounded host-mechanism contract.
+- `docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json` - closed schema for the H2 effect-policy composition profile.
+- `docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.md` - normative H2 R4.2.d effect-log replay decision and bounded host-mechanism contract.
+- `docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.schema.json` - closed schema for the H2 replay-authority profile.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.
 - `scripts/selfhost_effect_policy_composition_guard.sh` - focused profile, mutation, admission, cap, and operation-inventory-bound guard.
 - `docs/spec/SELFHOST_OBLIGATION_AUTHORITY_v0.1.md` - normative partial R4.2.d primitive-fact, unit-expectation, resource-budget, strict-decoder, and residual-obligation contract; it does not promote `SD-OBLIGATION`.

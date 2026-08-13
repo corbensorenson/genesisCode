@@ -6,7 +6,10 @@ use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 
-use gc_effects::{CapsPolicy, Decision, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, Decision, EffectLog, run};
+#[path = "support/replay.rs"]
+mod replay_support;
+use replay_support::replay;
 
 #[derive(Debug, Default)]
 struct RegistryState {

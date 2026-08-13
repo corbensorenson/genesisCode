@@ -1,5 +1,6 @@
+use crate::replay;
 use gc_coreform::{hash_module, parse_module};
-use gc_effects::{CapsPolicy, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, EffectLog, run};
 use gc_kernel::{EvalCtx, eval_module, value_hash};
 use gc_prelude::build_prelude;
 use tempfile::tempdir;

@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "27bf871c6bad6a899f683521297e3e038ed0bdc1311a8f58702b1459041e156b",
+  "contentIdentitySha256": "cc914944a33f5847938ecb7508bf94657b67dfc460a78e1bae1ccdd380aaf4e5",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1131,40 +1131,46 @@
       "commandSelectors": [
         "replay"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
+      "currentLevel": "H2",
+      "fallbackReachability": "none-proven",
       "hostBindingPaths": [
-        "crates/gc_effects/src"
+        "crates/gc_effects/src",
+        "crates/gc_obligations/src"
       ],
       "id": "SD-REPLAY",
       "internalOnly": false,
       "limitations": [
-        "Replay checker remains Rust-authoritative"
+        "H2 is scoped to genesis/selfhost-replay-authority-v0.1; Rust retains structural log decoding, sealed effect-program stepping, canonical hash observation, response artifact loading/codec, and continuation application after acceptance, while the legacy semantic checker is compile-time parity-only and H3/H4 are not claimed"
       ],
       "migrationTasks": [
         "R4.2.d"
       ],
       "producingImplementationPaths": [
-        "crates/gc_effects/src/runner.rs",
-        "crates/gc_effects/src/log.rs"
+        "selfhost/effect_replay_authority_v1.gc"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_effects/src"
+        "selfhost/toolchain.gc",
+        "selfhost/effect_replay_authority_v1.gc"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
         "docs/spec/SEALS_DISPATCH_REPLAY.md",
-        "docs/spec/GCLOG.md"
+        "docs/spec/GCLOG.md",
+        "docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.md",
+        "policies/selfhost_replay_authority_v0.1.json"
       ],
       "stage0Domains": [
         "S0-H"
       ],
       "testPaths": [
-        "crates/gc_effects/src/tests.rs"
+        "crates/gc_effects/src/tests.rs",
+        "crates/gc_effects/src/replay_authority.rs"
       ],
       "title": "Strict deterministic effect-log replay",
       "verifierPaths": [
-        "scripts/check_host_abi_conformance.sh"
+        "scripts/check_host_abi_conformance.sh",
+        "scripts/check_selfhost_boundary.sh",
+        "scripts/lib/selfhost_replay_authority.py"
       ]
     },
     {

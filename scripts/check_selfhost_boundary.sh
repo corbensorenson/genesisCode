@@ -138,6 +138,14 @@ python3 scripts/lib/selfhost_effect_policy_composition.py \
   --schema docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json \
   --self-test
 
+# R4.2.d exact replay semantics are H2: production consumes the request-bound
+# GenesisCode verdict and the legacy Rust checker is parity-harness-only.
+python3 scripts/lib/selfhost_replay_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_replay_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.d obligation authority is partial: eight closed decisions, including lint
 # and AI-style with side-artifact reconstruction, are self-hosted while 12 remain.
 python3 scripts/lib/selfhost_obligation_authority.py \

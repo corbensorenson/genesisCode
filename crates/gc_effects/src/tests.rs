@@ -28,6 +28,39 @@ fn mk_prog() -> (Vec<Term>, [u8; 32]) {
     mk_prog_for("sys/time::now", "nil")
 }
 
+fn replay_authority_artifact() -> std::path::PathBuf {
+    let workspace = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let configured = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+        .or_else(|| std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT"))
+        .map(std::path::PathBuf::from);
+    match configured {
+        Some(path) if path.is_absolute() => path,
+        Some(path) => workspace.join(path),
+        None => workspace.join("selfhost/toolchain.gc"),
+    }
+}
+
+fn replay_with_production_authority(
+    forms: &[Term],
+    program_hash: [u8; 32],
+    log: &EffectLog,
+) -> Result<Value, EffectsError> {
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program =
+        eval_module(&mut context, &mut environment, forms).expect("evaluate replay program");
+    replay_with_selfhost_authority(
+        &mut context,
+        program,
+        log,
+        None,
+        program_hash,
+        gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+        Some(replay_authority_artifact().as_path()),
+    )
+}
+
 fn sealed_error_payload_map<'a>(value: &'a Value, ctx: &EvalCtx) -> &'a BTreeMap<TermOrdKey, Term> {
     let Value::Sealed { token, payload } = value else {
         panic!("expected sealed error, got {}", value.debug_repr());
@@ -194,6 +227,88 @@ fn allowed_unhandled_operation_logs_and_replays_sealed_unknown_op_error() {
     let replay_value =
         replay(&mut replay_ctx, replay_program, &output.log).expect("replay unknown operation");
     assert_eq!(value_hash(&output.value), value_hash(&replay_value));
+}
+
+#[test]
+fn production_replay_authority_rejects_every_serialized_fact_mutation() {
+    let (forms, program_hash) = mk_prog();
+    let mut run_context = EvalCtx::new();
+    let prelude = build_prelude(&mut run_context);
+    let mut environment = prelude.env;
+    let program =
+        eval_module(&mut run_context, &mut environment, &forms).expect("evaluate program");
+    let output = run(
+        &mut run_context,
+        &CapsPolicy::empty(),
+        program,
+        program_hash,
+        "gc_effects-test".to_string(),
+    )
+    .expect("produce replay log");
+
+    replay_with_production_authority(&forms, program_hash, &output.log)
+        .expect("production authority accepts an authentic log");
+
+    let mut mutations: Vec<(&str, EffectLog)> = Vec::new();
+    let mut changed = output.log.clone();
+    changed.program_hash[0] ^= 1;
+    mutations.push(("program-hash", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].i = 9;
+    mutations.push(("index", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].op = "sys/time::other".to_string();
+    mutations.push(("op", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].payload_h[0] ^= 1;
+    mutations.push(("payload-h", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].cont_h[0] ^= 1;
+    mutations.push(("cont-h", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].req_h[0] ^= 1;
+    mutations.push(("req-h", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].decision = Decision::Allow;
+    mutations.push(("decision", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].cap = Term::Map(BTreeMap::new());
+    mutations.push(("cap", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].resp_h[0] ^= 1;
+    mutations.push(("resp-h", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].schedule_step = Some(0);
+    mutations.push(("schedule-step", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].task_id = Some("invented-task".to_string());
+    mutations.push(("task-id", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].parent_task = Some("invented-parent".to_string());
+    mutations.push(("parent-task", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].await_edge = Some("invented-await".to_string());
+    mutations.push(("await-edge", changed));
+    let mut changed = output.log.clone();
+    changed.entries.clear();
+    mutations.push(("missing-entry", changed));
+    let mut changed = output.log.clone();
+    changed.entries.push(changed.entries[0].clone());
+    mutations.push(("remaining-entry", changed));
+    let mut changed = output.log.clone();
+    changed.entries[0].resp = LoggedResp::OkArtifact {
+        artifact: "0".repeat(64),
+    };
+    mutations.push(("response-load", changed));
+
+    for (fact, changed) in mutations {
+        let error = replay_with_production_authority(&forms, program_hash, &changed)
+            .expect_err("tampered replay log must be rejected");
+        assert!(
+            matches!(error, EffectsError::ReplayRejected { .. }),
+            "{fact} mutation reached a non-authoritative failure: {error}"
+        );
+    }
 }
 
 #[test]

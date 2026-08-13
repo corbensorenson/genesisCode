@@ -511,22 +511,6 @@ pub(super) fn cmd_replay(
             structured_failures::effects_context("replay/decode-log", &e),
         )
     })?;
-    if log.program_hash != program_hash {
-        return Err(cli_err_with_context(
-            EX_REPLAY_MISMATCH,
-            "replay/program-hash-mismatch",
-            "program hash mismatch: log is for different program",
-            structured_failures::FailureContext::new(
-                "replay",
-                "program-hash-mismatch",
-                "replay/verify-program",
-            )
-            .fact("expected_program_hash", hex32(program_hash))
-            .fact("logged_program_hash", hex32(log.program_hash))
-            .into_value(),
-        ));
-    }
-
     let (prog, eval_backend) = eval_module_default(&mut ctx, &mut env, &forms).map_err(|e| {
         cli_err_with_context(
             EX_EVAL,
@@ -542,13 +526,64 @@ pub(super) fn cmd_replay(
         ),
         None => None,
     };
-    let v = gc_effects::replay_with_store(&mut ctx, prog, &log, store.as_ref()).map_err(|e| {
-        let code = match e {
-            gc_effects::EffectsError::ReplayMismatch(_) => "replay/mismatch",
+    let replayed = match engine {
+        #[cfg(feature = "parity-harness")]
+        FmtEngine::Rust => {
+            if log.program_hash != program_hash {
+                return Err(cli_err_with_context(
+                    EX_REPLAY_MISMATCH,
+                    "replay/program-hash-mismatch",
+                    "program hash mismatch: log is for different program",
+                    structured_failures::FailureContext::new(
+                        "replay",
+                        "program-hash-mismatch",
+                        "replay/verify-program",
+                    )
+                    .fact("expected_program_hash", hex32(program_hash))
+                    .fact("logged_program_hash", hex32(log.program_hash))
+                    .into_value(),
+                ));
+            }
+            gc_effects::replay_with_store(&mut ctx, prog, &log, store.as_ref())
+        }
+        FmtEngine::Selfhost => {
+            let artifact = require_explicit_selfhost_artifact(cli, "replay authority")?;
+            gc_effects::replay_with_selfhost_authority(
+                &mut ctx,
+                prog,
+                &log,
+                store.as_ref(),
+                program_hash,
+                resolved_selfhost_bootstrap_mode(cli),
+                Some(artifact.as_path()),
+            )
+        }
+    };
+    let v = replayed.map_err(|error| {
+        if let gc_effects::EffectsError::ReplayRejected { code, message } = &error
+            && code == "replay/program-hash-mismatch"
+        {
+            return cli_err_with_context(
+                EX_REPLAY_MISMATCH,
+                "replay/program-hash-mismatch",
+                message,
+                structured_failures::FailureContext::new(
+                    "replay",
+                    "program-hash-mismatch",
+                    "replay/verify-program",
+                )
+                .fact("expected_program_hash", hex32(program_hash))
+                .fact("logged_program_hash", hex32(log.program_hash))
+                .into_value(),
+            );
+        }
+        let code = match error {
+            gc_effects::EffectsError::ReplayMismatch(_)
+            | gc_effects::EffectsError::ReplayRejected { .. } => "replay/mismatch",
             _ => "replay/error",
         };
-        let context = structured_failures::effects_context("replay/execute", &e);
-        cli_err_with_context(EX_REPLAY_MISMATCH, code, format!("{e}"), context)
+        let context = structured_failures::effects_context("replay/execute", &error);
+        cli_err_with_context(EX_REPLAY_MISMATCH, code, format!("{error}"), context)
     })?;
     let (value, value_format) = render_value_for_cli(&ctx, &v);
     let env = JsonEnvelope {

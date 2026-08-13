@@ -1,7 +1,10 @@
 use gc_coreform::{Term, TermOrdKey, hash_module, parse_module};
-use gc_effects::{CapsPolicy, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, EffectLog, run};
+#[path = "support/replay.rs"]
+mod replay_support;
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
+use replay_support::replay;
 use std::time::Instant;
 
 fn run_and_replay_hash(src: &str, policy_toml: &str) -> ([u8; 32], [u8; 32], Value) {

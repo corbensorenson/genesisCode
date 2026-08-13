@@ -67,6 +67,7 @@
     "selfhost/effect_policy_xr_v1.gc"
     "selfhost/effect_policy_resource_authority_v1.gc"
     "selfhost/effect_policy_authority_v1.gc"
+    "selfhost/effect_replay_authority_v1.gc"
     "selfhost/obligation_authority_core_v1.gc"
     "selfhost/obligation_authority_typecheck_v1.gc"
     "selfhost/obligation_authority_determinism_v1.gc"
@@ -146,6 +147,7 @@
     core/effects::policy-inventory-authority
     core/effects::policy-authority
     core/effects::resource-policy-authority
+    core/effects::replay-authority
     core/cli::obligation-authority
   ]
 }

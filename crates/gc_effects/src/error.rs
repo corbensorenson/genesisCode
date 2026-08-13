@@ -29,6 +29,12 @@ pub enum EffectsError {
     #[error("replay mismatch: {0}")]
     ReplayMismatch(String),
 
+    #[error("replay authority rejected [{code}]: {message}")]
+    ReplayRejected { code: String, message: String },
+
+    #[error("replay authority error: {0}")]
+    ReplayAuthority(String),
+
     #[error("runtime cleanup failed in {subsystem}: {reason}")]
     Cleanup {
         subsystem: String,

@@ -1,0 +1,478 @@
+(def selfhost/replay::tag core/data::tag)
+
+(def selfhost/replay::nil? core/list::is-nil?)
+
+(def selfhost/replay::not (fn (value) (if value false true)))
+
+(def selfhost/replay::map? (fn (value) ((core/sym::eq? (selfhost/replay::tag value)) (quote :map))))
+
+(def selfhost/replay::int? (fn (value) ((core/sym::eq? (selfhost/replay::tag value)) (quote :int))))
+
+(def selfhost/replay::str? (fn (value) ((core/sym::eq? (selfhost/replay::tag value)) (quote :str))))
+
+(def selfhost/replay::sym? (fn (value) ((core/sym::eq? (selfhost/replay::tag value)) (quote :sym))))
+
+(def selfhost/replay::bytes?
+  (fn (value) ((core/sym::eq? (selfhost/replay::tag value)) (quote :bytes))))
+
+(def selfhost/replay::field
+  (fn (map) (fn (key) (if (selfhost/replay::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/replay::map-has-key-loop?
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((entry ((core/vec::get entries) index)))
+            (if ((core/eq? ((core/vec::get entry) 0)) key)
+              true
+              (((selfhost/replay::map-has-key-loop? entries) key) ((core/int::add index) 1)))))))))
+
+(def selfhost/replay::map-has-key?
+  (fn (map) (fn (key) (((selfhost/replay::map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/replay::map-has-keys-loop?
+  (fn (map)
+    (fn (keys)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len keys))
+          true
+          (if ((selfhost/replay::map-has-key? map) ((core/vec::get keys) index))
+            (((selfhost/replay::map-has-keys-loop? map) keys) ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/replay::exact-map?
+  (fn (value)
+    (fn (keys)
+      (if (selfhost/replay::map? value)
+        (if ((core/int::eq? (core/map::len value)) (core/vec::len keys))
+          (((selfhost/replay::map-has-keys-loop? value) keys) 0)
+          false)
+        false))))
+
+(def selfhost/replay::nonnegative-int?
+  (fn (value)
+    (if (selfhost/replay::int? value) (selfhost/replay::not ((core/int::lt? value) 0)) false)))
+
+(def selfhost/replay::optional-str?
+  (fn (value) (if (selfhost/replay::nil? value) true (selfhost/replay::str? value))))
+
+(def selfhost/replay::optional-nonnegative-int?
+  (fn (value) (if (selfhost/replay::nil? value) true (selfhost/replay::nonnegative-int? value))))
+
+(def selfhost/replay::hash32?
+  (fn (value)
+    (if (selfhost/replay::bytes? value) ((core/int::eq? (core/bytes::len value)) 32) false)))
+
+(def selfhost/replay::starts-with?
+  (fn (value)
+    (fn (prefix)
+      (let ((bytes (core/str::to-utf8 value)))
+        (let ((prefix-bytes (core/str::to-utf8 prefix)))
+          (let ((length (core/bytes::len bytes)))
+            (let ((prefix-length (core/bytes::len prefix-bytes)))
+              (if ((core/int::lt? length) prefix-length)
+                false
+                ((core/eq? (((core/bytes::slice bytes) 0) prefix-length)) prefix-bytes)))))))))
+
+(def selfhost/replay::task-like?
+  (fn (op)
+    (let ((text (core/sym::to-str op)))
+      (if ((selfhost/replay::starts-with? text) "core/task::")
+        true
+        ((selfhost/replay::starts-with? text) "editor/task::")))))
+
+(def selfhost/replay::first-present
+  (fn (primary) (fn (fallback) (if (selfhost/replay::nil? primary) fallback primary))))
+
+(def selfhost/replay::expected-schedule
+  (fn (index)
+    (fn (op)
+      (fn (payload)
+        (fn (response)
+          (let ((schedule-step (if (selfhost/replay::task-like? op) index nil)))
+            (if ((core/sym::eq? op) (quote core/task::spawn))
+              {
+                :await-edge nil
+                :parent-task
+                  ((selfhost/replay::first-present ((selfhost/replay::field payload) (quote :parent-task)))
+                    ((selfhost/replay::field payload) (quote :scope)))
+                :schedule-step schedule-step
+                :task-id ((selfhost/replay::field response) (quote :task-id))}
+              (if ((core/sym::eq? op) (quote editor/task::spawn))
+                {
+                  :await-edge nil
+                  :parent-task
+                    ((selfhost/replay::first-present ((selfhost/replay::field payload) (quote :parent-task)))
+                      ((selfhost/replay::field payload) (quote :scope)))
+                  :schedule-step schedule-step
+                  :task-id ((selfhost/replay::field response) (quote :task-id))}
+                (if ((core/sym::eq? op) (quote core/task::channel-open))
+                  {
+                    :await-edge nil
+                    :parent-task nil
+                    :schedule-step schedule-step
+                    :task-id ((selfhost/replay::field response) (quote :channel-id))}
+                  (if ((core/sym::eq? op) (quote core/task::await))
+                    (let ((task-id ((selfhost/replay::field payload) (quote :task-id))))
+                      {
+                        :await-edge task-id
+                        :parent-task nil
+                        :schedule-step schedule-step
+                        :task-id task-id})
+                    (if ((core/sym::eq? op) (quote core/task::scope))
+                      {
+                        :await-edge nil
+                        :parent-task ((selfhost/replay::field payload) (quote :scope))
+                        :schedule-step schedule-step
+                        :task-id nil}
+                      (if (selfhost/replay::channel-target-op? op)
+                        {
+                          :await-edge nil
+                          :parent-task nil
+                          :schedule-step schedule-step
+                          :task-id ((selfhost/replay::field payload) (quote :channel-id))}
+                        (if (selfhost/replay::task-target-op? op)
+                          {
+                            :await-edge nil
+                            :parent-task nil
+                            :schedule-step schedule-step
+                            :task-id ((selfhost/replay::field payload) (quote :task-id))}
+                          {
+                            :await-edge nil
+                            :parent-task nil
+                            :schedule-step schedule-step
+                            :task-id nil})))))))))))))
+
+(def selfhost/replay::channel-target-op?
+  (fn (op)
+    (if ((core/sym::eq? op) (quote core/task::channel-send))
+      true
+      (if ((core/sym::eq? op) (quote core/task::channel-recv))
+        true
+        (if ((core/sym::eq? op) (quote core/task::channel-close))
+          true
+          ((core/sym::eq? op) (quote core/task::channel-status)))))))
+
+(def selfhost/replay::task-target-op?
+  (fn (op)
+    (if ((core/sym::eq? op) (quote core/task::cancel))
+      true
+      (if ((core/sym::eq? op) (quote core/task::status))
+        true
+        (if ((core/sym::eq? op) (quote editor/task::poll))
+          true
+          ((core/sym::eq? op) (quote editor/task::cancel)))))))
+
+(def selfhost/replay::header-request-valid?
+  (fn (request)
+    (if
+      ((selfhost/replay::exact-map? request)
+        [
+          :expected-program-h
+          :kind
+          :logged-program-h
+          :phase
+          :v])
+      (if (selfhost/replay::hash32? ((selfhost/replay::field request) (quote :expected-program-h)))
+        (selfhost/replay::hash32? ((selfhost/replay::field request) (quote :logged-program-h)))
+        false)
+      false)))
+
+(def selfhost/replay::pure-request-valid?
+  (fn (request)
+    (if
+      ((selfhost/replay::exact-map? request)
+        [
+          :entry-count
+          :index
+          :kind
+          :phase
+          :v])
+      (if (selfhost/replay::nonnegative-int? ((selfhost/replay::field request) (quote :index)))
+        (selfhost/replay::nonnegative-int? ((selfhost/replay::field request) (quote :entry-count)))
+        false)
+      false)))
+
+(def selfhost/replay::expected-valid?
+  (fn (expected)
+    (if
+      ((selfhost/replay::exact-map? expected)
+        [
+          :cont-h
+          :op
+          :payload
+          :payload-h
+          :req-h
+          :resp-h
+          :response
+          :response-error
+          :response-status])
+      (if (selfhost/replay::sym? ((selfhost/replay::field expected) (quote :op)))
+        (if (selfhost/replay::hash32? ((selfhost/replay::field expected) (quote :payload-h)))
+          (if (selfhost/replay::hash32? ((selfhost/replay::field expected) (quote :cont-h)))
+            (if (selfhost/replay::hash32? ((selfhost/replay::field expected) (quote :req-h)))
+              (let ((status ((selfhost/replay::field expected) (quote :response-status))))
+                (if ((core/sym::eq? status) (quote :loaded))
+                  (if (selfhost/replay::hash32? ((selfhost/replay::field expected) (quote :resp-h)))
+                    (selfhost/replay::nil?
+                      ((selfhost/replay::field expected) (quote :response-error)))
+                    false)
+                  (if ((core/sym::eq? status) (quote :load-error))
+                    (if (selfhost/replay::nil? ((selfhost/replay::field expected) (quote :resp-h)))
+                      (selfhost/replay::str?
+                        ((selfhost/replay::field expected) (quote :response-error)))
+                      false)
+                    (if ((core/sym::eq? status) (quote :unavailable))
+                      (if
+                        (selfhost/replay::nil? ((selfhost/replay::field expected) (quote :resp-h)))
+                        (selfhost/replay::nil?
+                          ((selfhost/replay::field expected) (quote :response-error)))
+                        false)
+                      false))))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/replay::logged-valid?
+  (fn (logged)
+    (if
+      ((selfhost/replay::exact-map? logged)
+        [
+          :await-edge
+          :cap
+          :cont-h
+          :decision
+          :i
+          :op
+          :parent-task
+          :payload-h
+          :req-h
+          :resp-h
+          :schedule-step
+          :task-id])
+      (if (selfhost/replay::nonnegative-int? ((selfhost/replay::field logged) (quote :i)))
+        (if (selfhost/replay::sym? ((selfhost/replay::field logged) (quote :op)))
+          (if (selfhost/replay::hash32? ((selfhost/replay::field logged) (quote :payload-h)))
+            (if (selfhost/replay::hash32? ((selfhost/replay::field logged) (quote :cont-h)))
+              (if (selfhost/replay::hash32? ((selfhost/replay::field logged) (quote :req-h)))
+                (if (selfhost/replay::hash32? ((selfhost/replay::field logged) (quote :resp-h)))
+                  (if
+                    (if
+                      ((core/sym::eq? ((selfhost/replay::field logged) (quote :decision)))
+                        (quote :allow))
+                      true
+                      ((core/sym::eq? ((selfhost/replay::field logged) (quote :decision)))
+                        (quote :deny)))
+                    (if
+                      (selfhost/replay::optional-str?
+                        ((selfhost/replay::field logged) (quote :task-id)))
+                      (if
+                        (selfhost/replay::optional-str?
+                          ((selfhost/replay::field logged) (quote :parent-task)))
+                        (if
+                          (selfhost/replay::optional-nonnegative-int?
+                            ((selfhost/replay::field logged) (quote :schedule-step)))
+                          (selfhost/replay::optional-str?
+                            ((selfhost/replay::field logged) (quote :await-edge)))
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/replay::perform-request-valid?
+  (fn (request)
+    (if
+      ((selfhost/replay::exact-map? request)
+        [
+          :expected
+          :index
+          :kind
+          :log-version
+          :logged
+          :phase
+          :v])
+      (if (selfhost/replay::nonnegative-int? ((selfhost/replay::field request) (quote :index)))
+        (if
+          (selfhost/replay::nonnegative-int? ((selfhost/replay::field request) (quote :log-version)))
+          (if
+            (selfhost/replay::expected-valid? ((selfhost/replay::field request) (quote :expected)))
+            (let ((logged ((selfhost/replay::field request) (quote :logged))))
+              (if (selfhost/replay::nil? logged) true (selfhost/replay::logged-valid? logged)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/replay::result
+  (fn (request)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          {
+            :code code
+            :kind "genesis/effect-replay-authority-result-v0.1"
+            :message message
+            :ok ok
+            :request-h (selfhost/hash::hash-term request)
+            :v 1})))))
+
+(def selfhost/replay::accept (fn (request) ((((selfhost/replay::result request) true) nil) nil)))
+
+(def selfhost/replay::reject
+  (fn (request)
+    (fn (code) (fn (message) ((((selfhost/replay::result request) false) code) message)))))
+
+(def selfhost/replay::cap-error
+  (fn (version)
+    (fn (op)
+      (fn (decision)
+        (fn (cap)
+          (if ((core/sym::eq? decision) (quote :deny))
+            (if (selfhost/replay::nil? cap) nil ":cap mismatch: deny decisions must carry nil cap")
+            (if ((core/sym::eq? decision) (quote :allow))
+              (if (if ((core/int::lt? version) 3) (selfhost/replay::nil? cap) false)
+                nil
+                (if (selfhost/replay::map? cap)
+                  (if ((core/eq? ((selfhost/replay::field cap) (quote :op))) op)
+                    nil
+                    ":cap mismatch: allow cap must carry the replayed operation")
+                  ":cap mismatch: allow decisions must carry a cap map"))
+              ":decision mismatch: expected :allow or :deny")))))))
+
+(def selfhost/replay::perform-error
+  (fn (request)
+    (let ((index ((selfhost/replay::field request) (quote :index))))
+      (let ((version ((selfhost/replay::field request) (quote :log-version))))
+        (let ((expected ((selfhost/replay::field request) (quote :expected))))
+          (let ((logged ((selfhost/replay::field request) (quote :logged))))
+            (if (selfhost/replay::nil? logged)
+              "log ended before program finished"
+              (if
+                ((core/sym::eq? ((selfhost/replay::field expected) (quote :response-status)))
+                  (quote :load-error))
+                ((selfhost/replay::field expected) (quote :response-error))
+                (if
+                  (selfhost/replay::not
+                    ((core/eq? ((selfhost/replay::field logged) (quote :i))) index))
+                  "entry index mismatch"
+                  (let ((op ((selfhost/replay::field expected) (quote :op))))
+                    (if
+                      (selfhost/replay::not
+                        ((core/eq? ((selfhost/replay::field logged) (quote :op))) op))
+                      "op mismatch"
+                      (if
+                        (selfhost/replay::not
+                          ((core/eq? ((selfhost/replay::field logged) (quote :payload-h)))
+                            ((selfhost/replay::field expected) (quote :payload-h))))
+                        "payload hash mismatch"
+                        (if
+                          (selfhost/replay::not
+                            ((core/eq? ((selfhost/replay::field logged) (quote :cont-h)))
+                              ((selfhost/replay::field expected) (quote :cont-h))))
+                          "continuation hash mismatch"
+                          (if
+                            (selfhost/replay::not
+                              ((core/eq? ((selfhost/replay::field logged) (quote :req-h)))
+                                ((selfhost/replay::field expected) (quote :req-h))))
+                            "request hash mismatch"
+                            (let
+                              (
+                                (cap-error
+                                  ((((selfhost/replay::cap-error version) op) ((selfhost/replay::field logged) (quote :decision)))
+                                    ((selfhost/replay::field logged) (quote :cap)))))
+                              (if (selfhost/replay::not (selfhost/replay::nil? cap-error))
+                                cap-error
+                                (if
+                                  (selfhost/replay::not
+                                    ((core/eq? ((selfhost/replay::field logged) (quote :resp-h)))
+                                      ((selfhost/replay::field expected) (quote :resp-h))))
+                                  "response hash mismatch"
+                                  (if ((core/int::lt? version) 3)
+                                    nil
+                                    (let
+                                      (
+                                        (schedule
+                                          (
+                                            (((selfhost/replay::expected-schedule index) op)
+                                              ((selfhost/replay::field expected) (quote :payload)))
+                                            ((selfhost/replay::field expected) (quote :response)))))
+                                      (if
+                                        (selfhost/replay::not
+                                          ((core/eq? ((selfhost/replay::field logged) (quote :schedule-step)))
+                                            ((selfhost/replay::field schedule)
+                                              (quote :schedule-step))))
+                                        "schedule-step mismatch"
+                                        (if
+                                          (selfhost/replay::not
+                                            ((core/eq? ((selfhost/replay::field logged) (quote :task-id)))
+                                              ((selfhost/replay::field schedule) (quote :task-id))))
+                                          "task-id mismatch"
+                                          (if
+                                            (selfhost/replay::not
+                                              ((core/eq? ((selfhost/replay::field logged) (quote :parent-task)))
+                                                ((selfhost/replay::field schedule)
+                                                  (quote :parent-task))))
+                                            "parent-task mismatch"
+                                            (if
+                                              (selfhost/replay::not
+                                                ((core/eq? ((selfhost/replay::field logged) (quote :await-edge)))
+                                                  ((selfhost/replay::field schedule)
+                                                    (quote :await-edge))))
+                                              "await-edge mismatch"
+                                              nil)))))))))))))))))))))))
+
+(def core/effects::replay-authority
+  (fn (request)
+    (if (selfhost/replay::not (selfhost/replay::map? request))
+      (((selfhost/replay::reject request) "replay/request") "replay authority request must be a map")
+      (if
+        (selfhost/replay::not
+          ((core/eq? ((selfhost/replay::field request) (quote :kind)))
+            "genesis/effect-replay-authority-request-v0.1"))
+        (((selfhost/replay::reject request) "replay/request")
+          "replay authority request kind mismatch")
+        (if (selfhost/replay::not ((core/eq? ((selfhost/replay::field request) (quote :v))) 1))
+          (((selfhost/replay::reject request) "replay/request")
+            "replay authority request version mismatch")
+          (let ((phase ((selfhost/replay::field request) (quote :phase))))
+            (if ((core/sym::eq? phase) (quote :header))
+              (if (selfhost/replay::header-request-valid? request)
+                (if
+                  ((core/eq? ((selfhost/replay::field request) (quote :expected-program-h)))
+                    ((selfhost/replay::field request) (quote :logged-program-h)))
+                  (selfhost/replay::accept request)
+                  (((selfhost/replay::reject request) "replay/program-hash-mismatch")
+                    "program hash mismatch: log is for different program"))
+                (((selfhost/replay::reject request) "replay/request")
+                  "replay header request field set or types mismatch"))
+              (if ((core/sym::eq? phase) (quote :pure))
+                (if (selfhost/replay::pure-request-valid? request)
+                  (if
+                    ((core/int::eq? ((selfhost/replay::field request) (quote :index)))
+                      ((selfhost/replay::field request) (quote :entry-count)))
+                    (selfhost/replay::accept request)
+                    (((selfhost/replay::reject request) "replay/remaining-entries")
+                      "program finished with remaining log entries"))
+                  (((selfhost/replay::reject request) "replay/request")
+                    "replay pure request field set or types mismatch"))
+                (if ((core/sym::eq? phase) (quote :perform))
+                  (if (selfhost/replay::perform-request-valid? request)
+                    (let ((error (selfhost/replay::perform-error request)))
+                      (if (selfhost/replay::nil? error)
+                        (selfhost/replay::accept request)
+                        (((selfhost/replay::reject request) "replay/mismatch") error)))
+                    (((selfhost/replay::reject request) "replay/request")
+                      "replay perform request field set or types mismatch"))
+                  (((selfhost/replay::reject request) "replay/request")
+                    "unknown replay authority phase"))))))))))

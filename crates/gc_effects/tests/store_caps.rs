@@ -1,7 +1,10 @@
 use gc_coreform::{Term, TermOrdKey, hash_module, parse_module, parse_term};
-use gc_effects::{CapsPolicy, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, EffectLog, run};
+#[path = "support/replay.rs"]
+mod replay_support;
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
+use replay_support::replay;
 
 fn eval_prog(forms: &[Term]) -> (EvalCtx, Value) {
     let mut ctx = EvalCtx::new();

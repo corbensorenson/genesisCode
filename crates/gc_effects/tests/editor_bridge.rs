@@ -1,7 +1,10 @@
 use gc_coreform::{Term, TermOrdKey, hash_module, parse_module};
-use gc_effects::{CapsPolicy, replay, run};
+use gc_effects::{CapsPolicy, run};
+#[path = "support/replay.rs"]
+mod replay_support;
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
+use replay_support::replay;
 use sha2::{Digest, Sha256};
 
 fn parse_and_eval(ctx: &mut EvalCtx, src: &str) -> (Value, [u8; 32]) {

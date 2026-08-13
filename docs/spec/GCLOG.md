@@ -37,7 +37,7 @@ Each entry is a map with keys:
 Notes:
 - `:version` is mandatory. Missing or unknown versions fail before entry interpretation; only explicit versions `2` and `3` are accepted under migration `M-GCLOG-2-TO-3`.
 - `:cap` is intended for stable, non-secret configuration metadata. The v0.2 toolchain does not record filesystem paths (such as `base_dir`) in logs to avoid nondeterminism and path leakage.
-- Replay validates request/response hashes and deterministic scheduler metadata, and enforces `:decision`/`:cap` structural consistency (`allow` => cap map with `:op`, `deny` => `nil` cap).
+- Production replay submits all logged facts and canonical runtime observations to the artifact-loaded `core/effects::replay-authority` defined by `SELFHOST_REPLAY_AUTHORITY_v0.1.md`. That GenesisCode authority validates request/response hashes and deterministic scheduler metadata and enforces `:decision`/`:cap` structural consistency (`allow` => cap map with `:op`, `deny` => `nil` cap). The legacy Rust checker is parity-harness-only and is not a production fallback.
 
 ## Response Schema (`:resp`)
 

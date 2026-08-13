@@ -1,12 +1,11 @@
-use std::collections::BTreeMap;
-use std::path::Path;
-
 use blake3::Hasher;
 use gc_coreform::{HASH_DOMAIN_PREFIX, Term, TermOrdKey, hash_term, print_term};
 use gc_kernel::{Apply, EffectProgram, EffectRequest, EvalCtx, SealId, Value, value_hash};
 use gc_prelude::build_prelude;
 use num_bigint::BigInt;
 use num_traits::ToPrimitive;
+use std::collections::BTreeMap;
+use std::path::Path;
 
 use crate::error::EffectsError;
 use crate::lock::ExclusiveLock;
@@ -86,6 +85,8 @@ mod runner_cleanup;
 mod runner_gc_ops;
 #[path = "runner_remote_ops.rs"]
 mod runner_remote_ops;
+#[path = "runner_replay_authority.rs"]
+mod runner_replay_authority;
 #[path = "runner_response_budget.rs"]
 pub(crate) mod runner_response_budget;
 #[path = "runner_runtime_budget.rs"]
@@ -101,6 +102,7 @@ use runner_capability_dispatch::*;
 use runner_cleanup::finalize_run_with_runtime_cleanup;
 use runner_gc_ops::*;
 use runner_remote_ops::*;
+pub use runner_replay_authority::replay_with_selfhost_authority;
 use runner_response_budget::*;
 use runner_runtime_budget::*;
 use runner_vcs_pkg_helpers::*;
@@ -416,10 +418,12 @@ pub fn run(
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub fn replay(ctx: &mut EvalCtx, program: Value, log: &EffectLog) -> Result<Value, EffectsError> {
     replay_with_store(ctx, program, log, None)
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub fn replay_with_store(
     ctx: &mut EvalCtx,
     program: Value,
@@ -535,6 +539,7 @@ pub fn replay_with_store(
     }
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 fn replay_validate_decision_cap(
     idx: usize,
     op: &str,

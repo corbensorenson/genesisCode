@@ -34,4 +34,4 @@ This directory is the *normative* behavior surface. If code changes semantics, u
 - Effect programs are represented as `Pure(v)` or `Perform(op, payload, k)`.
 - Runner is deny-by-default per capability policy.
 - Every performed effect appends a deterministic log entry.
-- `replay(program, log)` must consume entries in order and fail on executable mismatches (index/op/hash/scheduler metadata) and on `:decision`/`:cap` structural mismatches.
+- Production `replay(program, log)` must consume entries in order and fail on every logged-fact mismatch: header program hash, index, operation, payload/continuation/request/response hashes, scheduler metadata, and `:decision`/`:cap` structure. The artifact-loaded GenesisCode binding `core/effects::replay-authority` owns these verdicts under `SELFHOST_REPLAY_AUTHORITY_v0.1.md`; Rust may provide only the bounded observations and mechanisms named there and must not retain a production semantic fallback.

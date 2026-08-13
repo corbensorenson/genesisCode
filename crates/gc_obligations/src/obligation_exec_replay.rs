@@ -9,6 +9,7 @@ pub(crate) fn replay_observations(
     manifest: &PackageManifest,
     modules: &[LoadedModule],
     tests: &[TestRun],
+    frontend: &CoreformFrontend,
     limits: KernelLimits,
 ) -> Result<Vec<ReplayObservation>, ObligationError> {
     let effect_store = gc_effects::ArtifactStore::open(&pkg_dir.join(".genesis").join("store"))
@@ -60,9 +61,7 @@ pub(crate) fn replay_observations(
             .map_err(|error| ObligationError::Test(format!("test apply failed: {error}")))?;
         let is_program = matches!(program, Value::EffectProgram(_));
         let replay_hash = if is_program {
-            let replayed =
-                gc_effects::replay_with_store(&mut ctx, program, log, Some(&effect_store))
-                    .map_err(|error| ObligationError::Test(format!("replay failed: {error}")))?;
+            let replayed = replay_effect_program(&mut ctx, program, log, &effect_store, frontend)?;
             Some(value_hash(&replayed))
         } else {
             None

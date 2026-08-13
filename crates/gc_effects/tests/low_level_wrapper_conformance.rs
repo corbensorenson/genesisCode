@@ -1,7 +1,10 @@
 use gc_coreform::{Term, TermOrdKey, hash_module, parse_module};
-use gc_effects::{CapsPolicy, Decision, EffectLog, replay, run};
+use gc_effects::{CapsPolicy, Decision, EffectLog, run};
+#[path = "support/replay.rs"]
+mod replay_support;
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
+use replay_support::replay;
 
 fn sealed_error_code(value: &Value, error_tok: gc_kernel::SealId) -> Option<String> {
     let Value::Sealed { token, payload } = value else {

@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `e9758ee60e907a2a3871e28bccf317801c69c2e8eb689df1d64d9d145e847ba2`
-- Freshness artifact hash: `e9758ee60e907a2a3871e28bccf317801c69c2e8eb689df1d64d9d145e847ba2`
-- Freshness source hash: `9be579e33f047f6be1275a946de92931b8d7ef97768a00117b4dcb67c9d1bb00`
-- Source aggregate hash (module path + module sha256): `64a0cbd1e0ed2ad5bf6caf577f6153ee75c1a10fb1b78be181fec26bca7a26f8`
+- Artifact sha256: `7f035627016e8fdb671b22de60e9d5ad92554b3142c69251825dc3bb916cce0c`
+- Freshness artifact hash: `7f035627016e8fdb671b22de60e9d5ad92554b3142c69251825dc3bb916cce0c`
+- Freshness source hash: `8ea95ab229d0f69782a441cda857bd50ac078e9fc60ba1011c9e7f478b8d16fd`
+- Source aggregate hash (module path + module sha256): `86339ca3cd7cfa3f53f54d507021c3644439b23ed9e68805ac710a32ad3e3bac`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `81`
+- Module count: `82`
 
 ## Module Summary
 
@@ -81,6 +81,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/effect_policy_xr_v1.gc` | 256 | 9277 | 17 | `b6bd4ea63cdd5d80` |
 | `selfhost/effect_policy_resource_authority_v1.gc` | 448 | 20709 | 25 | `2a38003c2a503624` |
 | `selfhost/effect_policy_authority_v1.gc` | 478 | 20480 | 24 | `24a82741ffbeb2bd` |
+| `selfhost/effect_replay_authority_v1.gc` | 478 | 22055 | 34 | `0bcdb0a048345043` |
 | `selfhost/obligation_authority_core_v1.gc` | 570 | 24016 | 50 | `859184a3ee1f4dba` |
 | `selfhost/obligation_authority_typecheck_v1.gc` | 63 | 2820 | 3 | `f73f4ec01ba35a78` |
 | `selfhost/obligation_authority_determinism_v1.gc` | 218 | 9254 | 13 | `96bfc11b26ae5a5b` |
@@ -165,6 +166,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/effect_policy_xr_v1.gc`: `selfhost/effect-xr::identity-input-valid?`, `selfhost/effect-xr::list-input-valid?`, `selfhost/effect-xr::bool-input-valid?`, `selfhost/effect-xr::limit-input-valid?`, `selfhost/effect-xr::input-valid?`, `selfhost/effect-xr::selected`, `selfhost/effect-xr::normalized-string`, `selfhost/effect-xr::production?`
 - `selfhost/effect_policy_resource_authority_v1.gc`: `selfhost/effect-policy::optional-bool?`, `selfhost/effect-policy::optional-int?`, `selfhost/effect-policy::optional-str?`, `selfhost/effect-policy::map-has-key-loop?`, `selfhost/effect-policy::map-has-key?`, `selfhost/effect-policy::map-has-keys-loop?`, `selfhost/effect-policy::exact-map?`, `selfhost/effect-policy::optional-nonnegative-int?`
 - `selfhost/effect_policy_authority_v1.gc`: `selfhost/effect-policy::baseline-contains-loop?`, `selfhost/effect-policy::baseline-contains?`, `selfhost/effect-policy::inventory-add-loop`, `selfhost/effect-policy::inventory-add`, `selfhost/effect-policy::inventory-keys-loop`, `selfhost/effect-policy::inventory-keys`, `core/effects::policy-inventory-authority`, `selfhost/effect-policy::all-true-loop?`
+- `selfhost/effect_replay_authority_v1.gc`: `selfhost/replay::tag`, `selfhost/replay::nil?`, `selfhost/replay::not`, `selfhost/replay::map?`, `selfhost/replay::int?`, `selfhost/replay::str?`, `selfhost/replay::sym?`, `selfhost/replay::bytes?`
 - `selfhost/obligation_authority_core_v1.gc`: `selfhost/obligation::REQUEST_KIND`, `selfhost/obligation::RESULT_KIND`, `selfhost/obligation::error`, `selfhost/obligation::tag?`, `selfhost/obligation::map?`, `selfhost/obligation::vec?`, `selfhost/obligation::str?`, `selfhost/obligation::sym?`
 - `selfhost/obligation_authority_typecheck_v1.gc`: `selfhost/obligation::strict-typecheck-meta`, `selfhost/obligation::typecheck-modules-loop`, `selfhost/obligation::typecheck`
 - `selfhost/obligation_authority_determinism_v1.gc`: `selfhost/obligation::determinism-caps-symbols-loop`, `selfhost/obligation::determinism-module-caps`, `selfhost/obligation::determinism-pure-module?`, `selfhost/obligation::debug-escape-symbol-bytes-loop`, `selfhost/obligation::debug-symbol`, `selfhost/obligation::debug-symbols-loop`, `selfhost/obligation::debug-symbol-set`, `selfhost/obligation::determinism-static-error`

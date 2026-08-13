@@ -1468,7 +1468,12 @@ def main(argv: Sequence[str]) -> int:
     mode.add_argument("--plan", action="store_true", help="print selected node IDs")
     mode.add_argument("--self-test", action="store_true")
     parser.add_argument("--all", action="store_true", help="select every automatic node")
-    parser.add_argument("--path", action="append", default=[], help="select closure for one changed path")
+    parser.add_argument(
+        "--path",
+        action="append",
+        default=[],
+        help="select closure for one path in addition to every dirty overlay path",
+    )
     parser.add_argument("--git-base", help="include committed changes since this Git revision")
     parser.add_argument("--root", type=Path, default=ROOT)
     args = parser.parse_args(argv)
@@ -1495,7 +1500,9 @@ def main(argv: Sequence[str]) -> int:
         if args.all:
             selected = [node for node in topological(nodes) if node["mode"] == "automatic"]
         else:
-            paths = paths or changed_paths(root, args.git_base)
+            # Staging always overlays the complete worktree patch. Selection must
+            # therefore cover every dirty input even when callers name one path.
+            paths = sorted(set(paths) | set(changed_paths(root, args.git_base)))
             selected = closure_for_paths(
                 nodes,
                 paths,

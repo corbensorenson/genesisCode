@@ -21,6 +21,44 @@ pub(crate) use obligation_exec_coverage::{
 pub(super) use obligation_exec_coverage_finalize::coverage_authority_observation;
 pub(super) use obligation_exec_replay::{replay_observations, run_replay_authority};
 
+pub(super) fn replay_effect_program(
+    ctx: &mut EvalCtx,
+    program: Value,
+    log: &EffectLog,
+    store: &gc_effects::ArtifactStore,
+    frontend: &CoreformFrontend,
+) -> Result<Value, ObligationError> {
+    match frontend {
+        CoreformFrontend::Selfhost(config) => {
+            let program_hash = value_hash(&program);
+            gc_effects::replay_with_selfhost_authority(
+                ctx,
+                program,
+                log,
+                Some(store),
+                program_hash,
+                config.bootstrap_mode,
+                config.artifact.as_deref(),
+            )
+            .map_err(|error| ObligationError::Test(format!("replay failed: {error}")))
+        }
+        CoreformFrontend::Rust => {
+            #[cfg(feature = "replay-parity-oracle")]
+            {
+                gc_effects::replay_with_store(ctx, program, log, Some(store))
+                    .map_err(|error| ObligationError::Test(format!("replay failed: {error}")))
+            }
+            #[cfg(not(feature = "replay-parity-oracle"))]
+            {
+                let _ = (ctx, program, log, store);
+                Err(ObligationError::Test(
+                    "Rust replay oracle is disabled outside the parity harness".to_string(),
+                ))
+            }
+        }
+    }
+}
+
 pub(super) fn obligation_property_tests(
     store: &EvidenceStore,
     pkg_dir: &Path,

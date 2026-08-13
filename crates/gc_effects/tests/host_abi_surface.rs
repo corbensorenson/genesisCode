@@ -8,3 +8,6 @@ mod conformance;
 mod io_runtime;
 #[path = "host_abi_surface/plugin_editor.rs"]
 mod plugin_editor;
+#[path = "support/replay.rs"]
+mod replay_support;
+use replay_support::replay;

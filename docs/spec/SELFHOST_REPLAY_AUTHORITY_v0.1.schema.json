@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-replay-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "hostMechanisms",
+    "hostOracle",
+    "independentVerifier",
+    "kind",
+    "nonclaims",
+    "productionEntrypoints",
+    "requestKind",
+    "resultKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModule",
+    "sourceSha256",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": { "const": "selfhost/toolchain.gc" },
+    "auditDate": { "type": "string", "format": "date" },
+    "binding": { "const": "core/effects::replay-authority" },
+    "contentIdentitySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "decisionInventory": {
+      "const": [
+        "program-hash-identity",
+        "ordered-entry-presence-and-exhaustion",
+        "entry-index",
+        "operation-identity",
+        "payload-hash-identity",
+        "continuation-hash-identity",
+        "request-hash-identity",
+        "decision-cap-consistency",
+        "response-load-admission",
+        "response-hash-identity",
+        "schedule-step-identity",
+        "task-id-identity",
+        "parent-task-identity",
+        "await-edge-identity"
+      ]
+    },
+    "hostMechanisms": {
+      "const": [
+        "canonical-hash-observation",
+        "continuation-application-after-acceptance",
+        "effect-program-step-and-seal-validation",
+        "log-structure-decoding",
+        "response-artifact-loading-and-codec"
+      ]
+    },
+    "hostOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["removalTask", "required"],
+      "properties": {
+        "removalTask": { "const": "R4.2.d" },
+        "required": { "const": false }
+      }
+    },
+    "independentVerifier": { "const": "scripts/lib/selfhost_replay_authority.py" },
+    "kind": { "const": "genesis/selfhost-replay-authority-v0.1" },
+    "nonclaims": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string" }
+    },
+    "productionEntrypoints": { "const": ["genesis", "genesis_wasi"] },
+    "requestKind": { "const": "genesis/effect-replay-authority-request-v0.1" },
+    "resultKind": { "const": "genesis/effect-replay-authority-result-v0.1" },
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allocationLimit", "stepLimit"],
+      "properties": {
+        "allocationLimit": { "const": 32000000 },
+        "stepLimit": { "const": 20000000 }
+      }
+    },
+    "schema": { "const": "docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.schema.json" },
+    "sourceModule": { "const": "selfhost/effect_replay_authority_v1.gc" },
+    "sourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "spec": { "const": "docs/spec/SELFHOST_REPLAY_AUTHORITY_v0.1.md" },
+    "version": { "const": "0.1.0" }
+  }
+}
