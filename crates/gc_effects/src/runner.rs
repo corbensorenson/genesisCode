@@ -334,7 +334,7 @@ pub fn run(
                         );
                     }
                     if pkg_lock_read_authority.is_none()
-                        && PkgLockReadAuthority::required_for_operation(&req.op)
+                        && PkgLockReadAuthority::required_for_request(&req.op, &req.payload)
                     {
                         pkg_lock_read_authority = run_try!(
                             policy

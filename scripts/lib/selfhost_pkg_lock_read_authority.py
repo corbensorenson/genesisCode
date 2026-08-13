@@ -180,7 +180,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("runner does not lazily load lock read authority")
     if '"core/pkg-low::load-lock"' not in adapter:
         fail("lock read authority lazy route is missing load-lock")
-    if "PkgLockReadAuthority::required_for_operation(&req.op)" not in runner:
+    if "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)" not in runner:
         fail("runner does not use the closed lock authority operation set")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
@@ -246,7 +246,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024", "const LEGACY_LOCK_BYTES: u64 = 4 * 1024 * 1024", "bound")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.read_toml(&bytes)?", "legacy_read(&bytes)?", "route")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::load-lock"', '"core/pkg-low::legacy-load-lock"', "lazy-route-set")
-    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_operation(&req.op)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
+    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
 
     controls = 0
     for changed_profile, overrides, name in mutations:

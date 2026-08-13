@@ -11,6 +11,16 @@ pub(crate) enum PkgLockOpsDecision {
     Error { code: String, message: String },
 }
 
+pub(crate) struct PkgBridgeLockFacts<'a> {
+    pub(crate) dep: &'a str,
+    pub(crate) registry: Option<&'a str>,
+    pub(crate) commit: &'a str,
+    pub(crate) snapshot: &'a str,
+    pub(crate) provenance_root: &'a str,
+    pub(crate) conversion_evidence: &'a str,
+    pub(crate) attestation: &'a str,
+}
+
 impl PkgLockReadAuthority {
     pub(crate) fn init_lock(&mut self, payload: &Term) -> Result<PkgLockOpsDecision, EffectsError> {
         self.apply_lock_op(":init", Term::Nil, payload.clone())
@@ -42,6 +52,41 @@ impl PkgLockReadAuthority {
             });
         };
         self.apply_lock_op(":list", document, payload.clone())
+    }
+
+    pub(crate) fn bridge_lock_toml(
+        &mut self,
+        bytes: &[u8],
+        facts: PkgBridgeLockFacts<'_>,
+    ) -> Result<PkgLockOpsDecision, EffectsError> {
+        let Some(document) = decode_toml_document(bytes)? else {
+            return Ok(PkgLockOpsDecision::Error {
+                code: "core/pkg/bad-lock".to_string(),
+                message: "lock file is not valid UTF-8 TOML".to_string(),
+            });
+        };
+        let payload = map([
+            (":attestation", Term::Str(facts.attestation.to_string())),
+            (":commit", Term::Str(facts.commit.to_string())),
+            (
+                ":conversion-evidence",
+                Term::Str(facts.conversion_evidence.to_string()),
+            ),
+            (":dep", Term::Str(facts.dep.to_string())),
+            (
+                ":provenance-root",
+                Term::Str(facts.provenance_root.to_string()),
+            ),
+            (
+                ":registry",
+                facts
+                    .registry
+                    .map(|value| Term::Str(value.to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (":snapshot", Term::Str(facts.snapshot.to_string())),
+        ]);
+        self.apply_lock_op(":bridge-lock", document, payload)
     }
 
     fn apply_lock_op(
@@ -125,7 +170,7 @@ fn decode_ops_result(
     require_nil(fields, ":code")?;
     require_nil(fields, ":message")?;
     match operation {
-        ":init" | ":add" => {
+        ":init" | ":add" | ":bridge-lock" => {
             require_nil(fields, ":value")?;
             let bytes = required_bytes(fields, ":bytes")?;
             std::str::from_utf8(&bytes)
@@ -343,6 +388,87 @@ mod tests {
     }
 
     #[test]
+    fn bridge_lock_matches_legacy_behavior_for_unicode_dependency_names() {
+        let mut authority = PkgLockReadAuthority::load(&artifact_config()).unwrap();
+        let dep = "dep/é.包";
+        let commit = "a".repeat(64);
+        let snapshot = "b".repeat(64);
+        let provenance_root = "c".repeat(64);
+        let conversion_evidence = "d".repeat(64);
+        let attestation = "e".repeat(64);
+        let mut legacy = gc_pkg::GenesisLock::empty("demo");
+        let source = legacy.to_toml_canonical().into_bytes();
+
+        let PkgLockOpsDecision::Write { bytes, lock_hash } = authority
+            .bridge_lock_toml(
+                &source,
+                PkgBridgeLockFacts {
+                    dep,
+                    registry: Some("upstream"),
+                    commit: &commit,
+                    snapshot: &snapshot,
+                    provenance_root: &provenance_root,
+                    conversion_evidence: &conversion_evidence,
+                    attestation: &attestation,
+                },
+            )
+            .unwrap()
+        else {
+            panic!("expected bridge lock write");
+        };
+
+        let selector = format!("commit:{commit}");
+        legacy.set_requirement_with_metadata(
+            dep,
+            &selector,
+            gc_pkg::UpdatePolicy::Manual,
+            Some("upstream".to_string()),
+            Some(gc_pkg::ResolutionStrategy::Pinned),
+            None,
+        );
+        legacy.locked.insert(
+            dep.to_string(),
+            gc_pkg::LockedEntry {
+                commit: Some(commit.clone()),
+                snapshot: snapshot.clone(),
+                registry: Some("upstream".to_string()),
+                source_selector: selector,
+                resolved_ref: None,
+                exports_hash: None,
+                environment_fingerprint: None,
+            },
+        );
+        let dep_fragment: String = dep
+            .chars()
+            .map(|ch| {
+                if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                    ch
+                } else {
+                    '_'
+                }
+            })
+            .collect();
+        let dep_hash = blake3::hash(dep.as_bytes()).to_hex().to_string();
+        let dep_key = format!("{dep_fragment}_{}", &dep_hash[..8]);
+        legacy
+            .artifacts
+            .insert(format!("bridge_{dep_key}_provenance_root"), provenance_root);
+        legacy.artifacts.insert(
+            format!("bridge_{dep_key}_conversion_evidence"),
+            conversion_evidence,
+        );
+        legacy
+            .artifacts
+            .insert(format!("bridge_{dep_key}_attestation"), attestation);
+        legacy
+            .artifacts
+            .insert(format!("bridge_{dep_key}_commit"), commit);
+        let expected = legacy.to_toml_canonical().into_bytes();
+        assert_eq!(bytes, expected);
+        assert_eq!(lock_hash, blake3::hash(&expected).to_hex().to_string());
+    }
+
+    #[test]
     fn malformed_inputs_reject_without_host_fallback() {
         let mut authority = PkgLockReadAuthority::load(&artifact_config()).unwrap();
         assert!(matches!(
@@ -354,6 +480,26 @@ mod tests {
                 .add_lock_toml(b"not = [toml", &payload([]))
                 .unwrap(),
             PkgLockOpsDecision::Error { .. }
+        ));
+        let source = gc_pkg::GenesisLock::empty("demo")
+            .to_toml_canonical()
+            .into_bytes();
+        assert!(matches!(
+            authority
+                .bridge_lock_toml(
+                    &source,
+                    PkgBridgeLockFacts {
+                        dep: "dep",
+                        registry: None,
+                        commit: &"A".repeat(64),
+                        snapshot: &"b".repeat(64),
+                        provenance_root: &"c".repeat(64),
+                        conversion_evidence: &"d".repeat(64),
+                        attestation: &"e".repeat(64),
+                    },
+                )
+                .unwrap(),
+            PkgLockOpsDecision::Error { ref code, .. } if code == "core/pkg/bad-payload"
         ));
         assert!(matches!(
             authority

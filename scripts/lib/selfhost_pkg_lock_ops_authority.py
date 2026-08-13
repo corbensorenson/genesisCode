@@ -45,13 +45,17 @@ FIELDS = {
     "productionOperations", "requestKind", "resultKind", "schema", "sourceModule",
     "sourceSha256", "spec", "version",
 }
-OPERATIONS = ["core/pkg-low::init", "core/pkg-low::add", "core/pkg-low::list"]
+OPERATIONS = [
+    "core/pkg-low::init", "core/pkg-low::add", "core/pkg-low::list",
+    "core/pkg-low::bridge",
+]
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
     "binding": "core/pkg::lock-ops-authority",
     "decisionInventory": [
         "direct-lock-initialization-and-default-normalization",
         "requirement-mutation-and-metadata-normalization",
+        "bridge-lock-mutation-and-artifact-identity",
         "complete-lock-normalization-before-operation",
         "canonical-lock-toml-and-content-identity",
         "closed-list-projection", "request-bound-operation-result",
@@ -75,7 +79,8 @@ CONSTANTS = {
     "version": "0.1.0",
 }
 NONCLAIMS = {
-    "bootstrap-fixpoint", "graph-and-semver-mechanism-authority",
+    "bootstrap-fixpoint", "bridge-object-and-conversion-authority",
+    "graph-and-semver-mechanism-authority",
     "h2-package-resolution", "publish-and-registry-authority", "r4-2-e-closure",
     "release-qualification", "selfhost-toml-codec", "sh-c-closure", "workspace-authority",
 }
@@ -139,6 +144,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     adapter = source_text(root, "crates/gc_effects/src/pkg_lock_ops_authority.rs", overrides)
     reader = source_text(root, "crates/gc_effects/src/pkg_lock_read_authority.rs", overrides)
     dispatch = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", overrides)
+    publish = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", overrides)
+    bridge_dispatch = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs", overrides)
     parity = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs", overrides)
     parent = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low.rs", overrides)
     runner = source_text(root, "crates/gc_effects/src/runner.rs", overrides)
@@ -147,6 +154,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for marker in (
         "(def core/pkg::lock-ops-authority", profile["requestKind"], profile["resultKind"],
         "selfhost/pkg-lock-ops::init", "selfhost/pkg-lock-ops::add-to-model",
+        "selfhost/pkg-lock-ops::bridge-to-model", "selfhost/pkg-lock-ops::dep-key",
         "selfhost/pkg-lock-ops::list-requirements-loop", "selfhost/pkg-lock-ops::list-locked-loop",
         "selfhost/pkg-lock-read::normalize-model-document",
         "selfhost/pkg-lock-write::render-lock", "selfhost/pkg-lock-read::exact-map? request",
@@ -170,6 +178,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "pub(crate) enum PkgLockOpsDecision", "pub(crate) fn init_lock",
         "pub(crate) fn add_lock_toml",
         "pub(crate) fn list_lock_toml",
+        "pub(crate) fn bridge_lock_toml", "pub(crate) struct PkgBridgeLockFacts",
         "fn decode_ops_result", "fn validate_list_entries", "OPS_REQUEST_KIND",
         "OPS_RESULT_KIND", "bytes and :lock-h are malformed or contradictory",
     ):
@@ -184,7 +193,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for operation in OPERATIONS:
         if operation not in reader:
             fail(f"runner lazy authority set missing {operation}")
-        if f'"{operation}" =>' not in dispatch:
+        route = publish if operation == "core/pkg-low::bridge" else dispatch
+        if f'"{operation}" =>' not in route:
             fail(f"lock dispatcher missing {operation}")
     for marker in (
         "authority.init_lock(payload)?",
@@ -194,6 +204,25 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ):
         if marker not in dispatch:
             fail(f"production lock ops route missing marker: {marker}")
+    for marker in (
+        "BridgeLockUpdate", "bridge_lock::update_lock(",
+        "lock_path.is_some() && pkg_lock_read_authority.is_none()",
+    ):
+        if marker not in publish:
+            fail(f"bridge dispatcher missing lock authority route: {marker}")
+    for marker in (
+        "PkgBridgeLockFacts", "authority.bridge_lock_toml(&bytes, facts)?",
+        "read_bounded_lock", "atomic_write_text(&write_path, &bytes)",
+    ):
+        if marker not in bridge_dispatch:
+            fail(f"bridge lock mechanism adapter missing marker: {marker}")
+    for marker in (
+        "gc_pkg::GenesisLock", "set_requirement_with_metadata", "to_toml_canonical",
+    ):
+        if marker in publish or marker in bridge_dispatch:
+            fail(f"production bridge lock route retains Rust semantic oracle: {marker}")
+    if publish.index("pkg_lock_read_authority.is_none()") > publish.index("let provenance_term"):
+        fail("bridge lock authority presence is not checked before bridge object side effects")
     fallback = '#[cfg(any(test, feature = "parity-oracle"))]'
     if fallback not in dispatch:
         fail("typed lock operation fallback is not compile-time parity-only")
@@ -212,7 +241,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ):
         if marker not in parity:
             fail(f"parity oracle lost retained legacy marker: {marker}")
-    if "PkgLockReadAuthority::required_for_operation(&req.op)" not in runner:
+    if "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)" not in runner:
         fail("runner does not use the closed lock authority operation set")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
@@ -222,6 +251,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for path in (
         profile["sourceModule"], "crates/gc_effects/src/pkg_lock_ops_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
     ):
         if path not in row.get("productionAuthorityPaths", []):
             fail(f"semantic ledger missing production authority path: {path}")
@@ -250,6 +280,8 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
         "crates/gc_effects/src/runner_cap_pkg_low.rs", "crates/gc_effects/src/runner.rs",
     ]
     sources = {path: source_text(root, path, {}) for path in paths}
@@ -293,9 +325,12 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.init_lock(payload)?", "legacy_init(payload)?", "init-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.add_lock_toml(&bytes, payload)?", "legacy_add(&bytes, payload)?", "add-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", "authority.list_lock_toml(&bytes, payload)?", "legacy_list(&bytes, payload)?", "list-route")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs", "authority.bridge_lock_toml(&bytes, facts)?", "legacy_bridge(&bytes, facts)?", "bridge-route")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", "bridge_lock::update_lock(", "legacy_bridge_lock(", "bridge-dispatch")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", "lock_path.is_some() && pkg_lock_read_authority.is_none()", "false", "bridge-authority-order")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs", "let mut lock = match gc_pkg::GenesisLock::load(&path)", "let mut lock = match gc_pkg::LegacyLock::load(&path)", "parity-oracle")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::list"', '"core/pkg-low::legacy-list"', "lazy-route-set")
-    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_operation(&req.op)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
+    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
 
     controls = 0
     for changed_profile, overrides, name in mutations:
@@ -305,7 +340,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 24:
+    if controls != 27:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-ops-authority: self-test ok (negative_controls={controls})")
     return controls

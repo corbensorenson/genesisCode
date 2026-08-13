@@ -115,6 +115,192 @@
               "missing :workspace string")))
         (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload") "payload must be a map")))))
 
+(def selfhost/pkg-lock-ops::ascii-range?
+  (fn (lower)
+    (fn (upper) (fn (byte) (if ((core/int::lt? lower) byte) ((core/int::lt? byte) upper) false)))))
+
+(def selfhost/pkg-lock-ops::lower-hex-byte?
+  (fn (byte)
+    (if (((selfhost/pkg-lock-ops::ascii-range? 47) 58) byte)
+      true
+      (((selfhost/pkg-lock-ops::ascii-range? 96) 103) byte))))
+
+(def selfhost/pkg-lock-ops::lower-hex-loop?
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len bytes))
+        true
+        (if (selfhost/pkg-lock-ops::lower-hex-byte? ((core/bytes::get bytes) index))
+          ((selfhost/pkg-lock-ops::lower-hex-loop? bytes) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-lock-ops::lower-hex64?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::str? value)
+      (let ((bytes (core/str::to-utf8 value)))
+        (if ((core/int::eq? (core/bytes::len bytes)) 64)
+          ((selfhost/pkg-lock-ops::lower-hex-loop? bytes) 0)
+          false))
+      false)))
+
+(def selfhost/pkg-lock-ops::dep-safe-byte?
+  (fn (byte)
+    (if (((selfhost/pkg-lock-ops::ascii-range? 47) 58) byte)
+      true
+      (if (((selfhost/pkg-lock-ops::ascii-range? 64) 91) byte)
+        true
+        (if (((selfhost/pkg-lock-ops::ascii-range? 96) 123) byte)
+          true
+          (if ((core/int::eq? byte) 45) true ((core/int::eq? byte) 95)))))))
+
+(def selfhost/pkg-lock-ops::utf8-width
+  (fn (byte)
+    (if ((core/int::lt? byte) 128)
+      1
+      (if ((core/int::lt? byte) 224) 2 (if ((core/int::lt? byte) 240) 3 4)))))
+
+(def selfhost/pkg-lock-ops::dep-fragment-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (parts)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          (core/str::from-utf8 (core/bytes::join parts))
+          (let ((byte ((core/bytes::get bytes) index)))
+            (let ((ascii? ((core/int::lt? byte) 128)))
+              (
+                ((selfhost/pkg-lock-ops::dep-fragment-loop bytes)
+                  ((core/int::add index) (if ascii? 1 (selfhost/pkg-lock-ops::utf8-width byte))))
+                ((core/vec::push parts)
+                  (if (if ascii? (selfhost/pkg-lock-ops::dep-safe-byte? byte) false)
+                    (((core/bytes::slice bytes) index) 1)
+                    b"_"))))))))))
+
+(def selfhost/pkg-lock-ops::dep-key
+  (fn (dep)
+    (let ((dep-bytes (core/str::to-utf8 dep)))
+      (let ((fragment (((selfhost/pkg-lock-ops::dep-fragment-loop dep-bytes) 0) [])))
+        (let ((digest-hex (core/bytes::to-hex (core/crypto::blake3 dep-bytes))))
+          (let
+            ((short (core/str::from-utf8 (((core/bytes::slice (core/str::to-utf8 digest-hex)) 0) 8))))
+            ((core/str::concat fragment) ((core/str::concat "_") short))))))))
+
+(def selfhost/pkg-lock-ops::bridge-facts-valid?
+  (fn (facts)
+    (if (selfhost/pkg-lock-read::map? facts)
+      (if
+        ((selfhost/pkg-lock-read::exact-map? facts)
+          [
+            :attestation
+            :commit
+            :conversion-evidence
+            :dep
+            :provenance-root
+            :registry
+            :snapshot])
+        (let ((dep ((core/map::get facts) (quote :dep))))
+          (if (if (selfhost/pkg-lock-read::str? dep) ((core/int::lt? 0) (core/str::len dep)) false)
+            (if
+              (selfhost/pkg-lock-read::valid-optional-string?
+                ((core/map::get facts) (quote :registry)))
+              (if (selfhost/pkg-lock-ops::lower-hex64? ((core/map::get facts) (quote :commit)))
+                (if (selfhost/pkg-lock-ops::lower-hex64? ((core/map::get facts) (quote :snapshot)))
+                  (if
+                    (selfhost/pkg-lock-ops::lower-hex64?
+                      ((core/map::get facts) (quote :provenance-root)))
+                    (if
+                      (selfhost/pkg-lock-ops::lower-hex64?
+                        ((core/map::get facts) (quote :conversion-evidence)))
+                      (selfhost/pkg-lock-ops::lower-hex64?
+                        ((core/map::get facts) (quote :attestation)))
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false))
+        false)
+      false)))
+
+(def selfhost/pkg-lock-ops::bridge-to-model
+  (fn (request-h)
+    (fn (model)
+      (fn (facts)
+        (if (selfhost/pkg-lock-ops::bridge-facts-valid? facts)
+          (let
+            ((dep ((core/map::get facts) (quote :dep)))
+              (commit ((core/map::get facts) (quote :commit)))
+              (snapshot ((core/map::get facts) (quote :snapshot)))
+              (registry ((core/map::get facts) (quote :registry))))
+            (let ((selector ((core/str::concat "commit:") commit)))
+              (let
+                (
+                  (requirement
+                    {
+                      :registry registry
+                      :selector selector
+                      :strategy "pinned"
+                      :tag-policy nil
+                      :update-policy "manual"})
+                  (locked-entry
+                    {
+                      :commit commit
+                      :environment-fingerprint nil
+                      :exports-hash nil
+                      :registry registry
+                      :resolved-ref nil
+                      :snapshot snapshot
+                      :source-selector selector}))
+                (let ((dep-key (selfhost/pkg-lock-ops::dep-key dep)))
+                  (let
+                    ((requirements (((core/map::put ((core/map::get model) (quote :requirements))) dep) requirement))
+                      (locked
+                        (((core/map::put ((core/map::get model) (quote :locked))) dep) locked-entry)))
+                    (let ((artifacts ((core/map::get model) (quote :artifacts))))
+                      (let
+                        (
+                          (artifacts1
+                            (
+                              ((core/map::put artifacts)
+                                ((core/str::concat ((core/str::concat "bridge_") dep-key))
+                                  "_provenance_root"))
+                              ((core/map::get facts) (quote :provenance-root))))
+                          (artifacts2
+                            (
+                              ((core/map::put artifacts1)
+                                ((core/str::concat ((core/str::concat "bridge_") dep-key))
+                                  "_conversion_evidence"))
+                              ((core/map::get facts) (quote :conversion-evidence))))
+                          (artifacts3
+                            (
+                              ((core/map::put artifacts2)
+                                ((core/str::concat ((core/str::concat "bridge_") dep-key))
+                                  "_attestation"))
+                              ((core/map::get facts) (quote :attestation))))
+                          (artifacts4
+                            (((core/map::put artifacts3) ((core/str::concat ((core/str::concat "bridge_") dep-key)) "_commit"))
+                              commit)))
+                        ((selfhost/pkg-lock-ops::render-model request-h)
+                          (
+                            (
+                              (core/map::put
+                                (((core/map::put (((core/map::put model) (quote :requirements)) requirements)) (quote :locked))
+                                  locked))
+                              (quote :artifacts))
+                            artifacts4)))))))))
+          (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-payload")
+            "bridge lock facts are malformed"))))))
+
+(def selfhost/pkg-lock-ops::bridge
+  (fn (request-h)
+    (fn (document)
+      (fn (facts)
+        (let ((normalized (selfhost/pkg-lock-read::normalize-model-document document)))
+          (if ((core/map::get normalized) (quote :ok))
+            (((selfhost/pkg-lock-ops::bridge-to-model request-h) ((core/map::get normalized) (quote :value)))
+              facts)
+            (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-lock")
+              ((core/map::get normalized) (quote :message)))))))))
+
 (def selfhost/pkg-lock-ops::add-to-model
   (fn (request-h)
     (fn (model)
@@ -254,8 +440,11 @@
               ((core/map::get request) (quote :payload)))
             (if ((core/sym::eq? op) (quote :list))
               ((selfhost/pkg-lock-ops::list request-h) ((core/map::get request) (quote :document)))
-              (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
-                "request :op must be :init, :add, or :list"))))))))
+              (if ((core/sym::eq? op) (quote :bridge-lock))
+                (((selfhost/pkg-lock-ops::bridge request-h) ((core/map::get request) (quote :document)))
+                  ((core/map::get request) (quote :payload)))
+                (((selfhost/pkg-lock-ops::reject request-h) "core/pkg/bad-authority-request")
+                  "request :op must be :init, :add, :list, or :bridge-lock")))))))))
 
 (def core/pkg::lock-ops-authority
   (fn (request)

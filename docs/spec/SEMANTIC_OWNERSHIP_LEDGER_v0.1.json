@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "9f1b4a8002db000f80a37fe6d9a9238a9b63f0919a1d43e2b8c09104386033f3",
+  "contentIdentitySha256": "5c4b7b764878ffc81c4fea28c8dbc082e86b15186eb8806065cc330fbb49ac1b",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2003,10 +2003,10 @@
         "Artifact-loaded GenesisCode exclusively normalizes and serializes core/pkg-low::save-lock payloads and decides their canonical BLAKE3 lock identity under genesis/selfhost-pkg-lock-write-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the typed public core/pkg-low::load-lock result under genesis/selfhost-pkg-lock-read-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the complete internal typed lock model consumed by core/pkg-low::{info,lock,update,install,verify} under genesis/selfhost-pkg-lock-model-authority-v0.1",
-        "Artifact-loaded GenesisCode exclusively initializes direct locks with workspace, policy, and default-registry normalization, mutates and canonically serializes core/pkg-low::add requirements after a bounded pure CoreForm runtime-map freeze, and constructs the closed core/pkg-low::list projection under genesis/selfhost-pkg-lock-ops-authority-v0.1",
+        "Artifact-loaded GenesisCode exclusively initializes direct locks with workspace, policy, and default-registry normalization, mutates and canonically serializes core/pkg-low::add requirements, owns conditional core/pkg-low::bridge lock mutation and dependency artifact-key identity after a bounded pure CoreForm runtime-map freeze, and constructs the closed core/pkg-low::list projection under genesis/selfhost-pkg-lock-ops-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively constructs canonical package requirement environment fingerprints for lock, update, and install hydration under genesis/selfhost-pkg-resolution-identity-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively normalizes and classifies effect-route selectors, checks declared strategy and tag-policy coherence, normalizes semver selection policy, and decides existing-lock update admission under genesis/selfhost-pkg-resolution-plan-authority-v0.1",
-        "The generic Rust TOML syntax decoder, publish-side typed lock consumers, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, artifact and commit validation, workspace scaffolding, policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
+        "The generic Rust TOML syntax decoder, bridge provenance/conversion/snapshot/attestation/commit object construction, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, artifact and commit validation, workspace scaffolding, policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -2043,6 +2043,8 @@
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
         "crates/gc_pkg/src"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
@@ -2066,7 +2068,8 @@
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_lock_ops_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
-        "crates/gc_effects/src/pkg_resolution_plan_authority.rs"
+        "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
+        "crates/gc_effects/tests/sync_registry.rs"
       ],
       "title": "Package graph, lock, update, install, and dependency resolution",
       "verifierPaths": [

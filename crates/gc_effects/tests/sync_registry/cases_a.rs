@@ -789,3 +789,48 @@ fn pkg_bridge_rejects_lock_without_dep_name() {
     let r = run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()).unwrap();
     assert!(is_sealed_error(&ctx, &r.value, "core/pkg/bad-payload"));
 }
+
+#[test]
+fn pkg_bridge_missing_lock_authority_fails_before_store_side_effects() {
+    let td = tempfile::tempdir().unwrap();
+    let workspace_dir = td.path().join("workspace");
+    std::fs::create_dir_all(&workspace_dir).unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_pkg_bridge_without_selfhost(&workspace_dir, &store_dir, &refs_path);
+    std::fs::write(
+        workspace_dir.join("genesis.lock"),
+        gc_pkg::GenesisLock::empty("workspace").to_toml_canonical(),
+    )
+    .unwrap();
+    let payload = parse_term(
+        r#"{
+          :ecosystem "crates"
+          :name "serde"
+          :version "1.0.217"
+          :source "serde@1.0.217"
+          :source-hash "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+          :key-id "mirror-key"
+          :public-key "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+          :lock "genesis.lock"
+          :dep-name "serde"
+          :registry "upstream"
+        }"#,
+    )
+    .unwrap();
+    let (forms, h) = mk_prog("core/pkg-low::bridge", &payload);
+    let mut ctx = EvalCtx::new();
+    let prelude = build_prelude(&mut ctx);
+    let mut env = prelude.env;
+    let prog = eval_module(&mut ctx, &mut env, &forms).unwrap();
+    let error = match run(&mut ctx, &caps, prog, h, "gc_effects-test".to_string()) {
+        Ok(_) => panic!("bridge lock mutation should require selfhost authority"),
+        Err(error) => error,
+    };
+    assert!(
+        error
+            .to_string()
+            .contains("requires the artifact-loaded GenesisCode")
+    );
+    assert_eq!(std::fs::read_dir(&store_dir).unwrap().count(), 0);
+}

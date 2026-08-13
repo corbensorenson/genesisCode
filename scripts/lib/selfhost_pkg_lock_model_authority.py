@@ -192,7 +192,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("install or verify retains typed Rust lock parser")
     if "selfhost package lock model authority is unavailable" not in resolution:
         fail("production missing-authority path does not fail closed")
-    if "PkgLockReadAuthority::required_for_operation(&req.op)" not in runner:
+    if "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)" not in runner:
         fail("runner does not use the closed lock authority operation set")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
@@ -266,7 +266,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "authority.read_model_toml(&bytes)", "legacy_read(&bytes)", "authority-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "load_lock_model(", "legacy_lock_model(", "install-route")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::verify"', '"core/pkg-low::legacy-verify"', "lazy-route-set")
-    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_operation(&req.op)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
+    source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
 
     controls = 0
     for changed_profile, overrides, name in mutations:

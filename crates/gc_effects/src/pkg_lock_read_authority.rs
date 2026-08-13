@@ -12,7 +12,7 @@ mod model;
 pub(crate) use model::PkgLockModelDecision;
 #[path = "pkg_lock_ops_authority.rs"]
 mod ops;
-pub(crate) use ops::PkgLockOpsDecision;
+pub(crate) use ops::{PkgBridgeLockFacts, PkgLockOpsDecision};
 
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";
@@ -34,7 +34,7 @@ pub(crate) enum PkgLockReadDecision {
 }
 
 impl PkgLockReadAuthority {
-    pub(crate) fn required_for_operation(op: &str) -> bool {
+    pub(crate) fn required_for_request(op: &str, payload: &Term) -> bool {
         matches!(
             op,
             "core/pkg-low::load-lock"
@@ -46,7 +46,15 @@ impl PkgLockReadAuthority {
                 | "core/pkg-low::update"
                 | "core/pkg-low::install"
                 | "core/pkg-low::verify"
-        )
+        ) || op == "core/pkg-low::bridge"
+            && matches!(
+                payload,
+                Term::Map(fields)
+                    if matches!(
+                        fields.get(&TermOrdKey(Term::symbol(":lock"))),
+                        Some(Term::Str(_))
+                    )
+            )
     }
 
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
@@ -511,5 +519,21 @@ rationale = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
             Term::Str("0".repeat(64)),
         );
         assert!(decode_result(Term::Map(unbound), request_hash).is_err());
+    }
+
+    #[test]
+    fn bridge_requires_authority_only_for_string_lock_requests() {
+        assert!(PkgLockReadAuthority::required_for_request(
+            "core/pkg-low::bridge",
+            &map([(":lock", Term::Str("genesis.lock".to_string()))]),
+        ));
+        assert!(!PkgLockReadAuthority::required_for_request(
+            "core/pkg-low::bridge",
+            &map([]),
+        ));
+        assert!(!PkgLockReadAuthority::required_for_request(
+            "core/pkg-low::bridge",
+            &map([(":lock", Term::Int(1.into()))]),
+        ));
     }
 }

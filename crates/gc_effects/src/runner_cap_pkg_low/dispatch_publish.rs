@@ -1,4 +1,8 @@
 use super::*;
+use crate::pkg_lock_read_authority::PkgLockReadAuthority;
+
+#[path = "dispatch_publish/bridge_lock.rs"]
+mod bridge_lock;
 
 #[expect(
     clippy::too_many_arguments,
@@ -11,6 +15,7 @@ pub(super) fn dispatch_publish(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
     bridge_runtime: &mut HostBridgeRuntime,
     error_tok: SealId,
@@ -592,6 +597,9 @@ pub(super) fn dispatch_publish(
                     Some(op),
                 ));
             }
+            if lock_path.is_some() && pkg_lock_read_authority.is_none() {
+                return Err(bridge_lock::authority_unavailable());
+            }
 
             let provenance_term = Term::Map(
                 [
@@ -1085,7 +1093,7 @@ pub(super) fn dispatch_publish(
                 Err(v) => return Ok(v),
             };
 
-            let mut lock_h: Option<String> = None;
+            let mut lock_h = None;
             if let Some(lock_s) = lock_path {
                 let Some(dep) = dep_name.clone() else {
                     return Ok(mk_error(
@@ -1095,97 +1103,28 @@ pub(super) fn dispatch_publish(
                         Some(op),
                     ));
                 };
-                let base_dir = effective_base_dir(pol)?;
-                let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/missing-lock",
-                            format!("{e}"),
-                            Some(op),
-                        ));
-                    }
+                let update = bridge_lock::BridgeLockUpdate {
+                    lock: &lock_s,
+                    dep: &dep,
+                    registry: registry_alias.as_deref(),
+                    commit: &commit_h,
+                    snapshot: &snapshot_h,
+                    provenance_root: &provenance_root,
+                    conversion_evidence: &conversion_evidence,
+                    attestation: &attestation_h,
                 };
-                let mut lock = match gc_pkg::GenesisLock::load(&lock_path) {
-                    Ok(l) => l,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/pkg/bad-lock",
-                            format!("{e}"),
-                            Some(op),
-                        ));
-                    }
-                };
-                lock.set_requirement_with_metadata(
-                    &dep,
-                    &format!("commit:{commit_h}"),
-                    gc_pkg::UpdatePolicy::Manual,
-                    registry_alias.clone(),
-                    Some(gc_pkg::ResolutionStrategy::Pinned),
-                    None,
-                );
-                lock.locked.insert(
-                    dep.clone(),
-                    gc_pkg::LockedEntry {
-                        commit: Some(commit_h.clone()),
-                        snapshot: snapshot_h.clone(),
-                        registry: registry_alias.clone(),
-                        source_selector: format!("commit:{commit_h}"),
-                        resolved_ref: None,
-                        exports_hash: None,
-                        environment_fingerprint: None,
+                lock_h = Some(
+                    match bridge_lock::update_lock(
+                        update,
+                        pol,
+                        pkg_lock_read_authority,
+                        error_tok,
+                        op,
+                    )? {
+                        Ok(lock_hash) => lock_hash,
+                        Err(error) => return Ok(error),
                     },
                 );
-                let dep_key_fragment: String = dep
-                    .chars()
-                    .map(|ch| {
-                        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
-                            ch
-                        } else {
-                            '_'
-                        }
-                    })
-                    .collect();
-                let dep_key_hash = blake3::hash(dep.as_bytes()).to_hex().to_string();
-                let dep_key = format!("{dep_key_fragment}_{}", &dep_key_hash[..8]);
-                lock.artifacts.insert(
-                    format!("bridge_{dep_key}_provenance_root"),
-                    provenance_root.clone(),
-                );
-                lock.artifacts.insert(
-                    format!("bridge_{dep_key}_conversion_evidence"),
-                    conversion_evidence.clone(),
-                );
-                lock.artifacts.insert(
-                    format!("bridge_{dep_key}_attestation"),
-                    attestation_h.clone(),
-                );
-                lock.artifacts
-                    .insert(format!("bridge_{dep_key}_commit"), commit_h.clone());
-                let lock_bytes = lock.to_toml_canonical();
-                let lock_hash = blake3::hash(lock_bytes.as_bytes()).to_hex().to_string();
-                let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
-                    Ok(p) => p,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/caps/path-escape",
-                            format!("{e}"),
-                            Some(op),
-                        ));
-                    }
-                };
-                if let Err(e) = atomic_write_text(&lock_write_path, lock_bytes.as_bytes()) {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/pkg/io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-                lock_h = Some(lock_hash);
             }
 
             let mut out = BTreeMap::new();

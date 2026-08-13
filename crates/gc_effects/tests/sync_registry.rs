@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
-use gc_prelude::build_prelude;
+use gc_prelude::{SelfhostBootstrapMode, build_prelude};
 
 use gc_effects::{CapsPolicy, Decision, EffectLog, run};
 #[path = "support/replay.rs"]
@@ -684,7 +684,37 @@ fn mk_caps_for_pkg_bridge(
     store_dir: &std::path::Path,
     refs_path: &std::path::Path,
 ) -> CapsPolicy {
-    let s = format!(
+    let s = pkg_bridge_caps_source(base_dir, store_dir, refs_path);
+    let artifact = std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/toolchain.gc")
+        })
+        .canonicalize()
+        .expect("canonical selfhost artifact path");
+    CapsPolicy::from_toml_str_with_selfhost_authority(
+        &s,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .expect("selfhost-authorized caps")
+}
+
+fn mk_caps_for_pkg_bridge_without_selfhost(
+    base_dir: &std::path::Path,
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+) -> CapsPolicy {
+    CapsPolicy::from_toml_str(&pkg_bridge_caps_source(base_dir, store_dir, refs_path))
+        .expect("caps")
+}
+
+fn pkg_bridge_caps_source(
+    base_dir: &std::path::Path,
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+) -> String {
+    format!(
         r#"
 allow = ["core/pkg-low::bridge", "core/crypto::sign"]
 
@@ -708,8 +738,7 @@ wasi_bridge_response = "{{:ok true :signature b\"0123456789abcdef0123456789abcde
         base_dir = base_dir.display(),
         store_dir = store_dir.display(),
         refs_path = refs_path.display(),
-    );
-    CapsPolicy::from_toml_str(&s).expect("caps")
+    )
 }
 
 fn mk_prog(op: &str, payload: &Term) -> (Vec<Term>, [u8; 32]) {

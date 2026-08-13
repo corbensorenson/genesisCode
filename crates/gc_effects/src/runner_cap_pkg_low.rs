@@ -88,6 +88,7 @@ pub(super) fn capability_pkg_low(
             policy,
             store,
             refs,
+            pkg_lock_read_authority,
             budget,
             bridge_runtime,
             error_tok,
