@@ -70,6 +70,7 @@ mod cmd_source;
 mod cmd_store;
 mod cmd_sync;
 mod cmd_vcs;
+mod commit_authority;
 mod commit_contract;
 mod diagnostics;
 mod gc_contract;

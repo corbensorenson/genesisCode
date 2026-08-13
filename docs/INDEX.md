@@ -206,6 +206,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json` - closed schema for the partial evidence-verification profile.
 - `docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md` - normative partial R4.2.e store-put semantic authority, exact-write host boundary, resource contract, and non-closure scope.
 - `docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial store-authority profile.
+- `docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.md` - normative partial R4.2.e native commit construction/inspection authority and residual host boundary.
+- `docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial commit-authority profile.
+- `policies/selfhost_commit_authority_v0.1.json` - content-addressed native commit decision inventory, host mechanisms, and explicit nonclaims.
+- `scripts/lib/selfhost_commit_authority.py` - independent source/artifact custody, production-route, ledger, negative-control, and mutation verifier.
 - `policies/selfhost_evidence_verify_authority_v0.1.json` - content-addressed verification decisions, bounded host mechanisms, runtime limits, and nonclaims.
 - `scripts/lib/selfhost_evidence_verify_authority.py` - independent source/artifact custody, route-reachability, no-fallback, separation, ledger, and mutation verifier.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.

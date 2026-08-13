@@ -27,39 +27,6 @@ pub(super) fn cmd_commit(
             sign,
             store,
         } => {
-            if target_id.trim().is_empty() {
-                return Err(cli_err(
-                    EX_PARSE,
-                    "commit/new",
-                    "invalid --target-id: empty value",
-                ));
-            }
-            if message.trim().is_empty() {
-                return Err(cli_err(
-                    EX_PARSE,
-                    "commit/new",
-                    "invalid --message: empty value",
-                ));
-            }
-            for o in obligations {
-                if o.trim().is_empty() {
-                    return Err(cli_err(
-                        EX_PARSE,
-                        "commit/new",
-                        "invalid --obligation: empty value",
-                    ));
-                }
-            }
-            for h in evidence {
-                gc_vcs::validate_hex_hash(h).map_err(|e| {
-                    cli_err(
-                        EX_PARSE,
-                        "commit/new",
-                        format!("invalid --evidence hash `{h}`: {e}"),
-                    )
-                })?;
-            }
-
             let (base_snapshot, parents) =
                 resolve_base_snapshot(cli, &policy, &mut logs, base.as_str())?;
             let patch_hash = resolve_patch_hash(cli, &policy, &mut logs, patch.as_str())?;
@@ -71,20 +38,23 @@ pub(super) fn cmd_commit(
                 patch_hash.as_str(),
             )?;
 
-            let artifact = build_commit_artifact(
-                *target_kind,
-                target_id,
-                &parents,
-                &base_snapshot,
-                &patch_hash,
-                &result_snapshot,
-                obligations,
-                evidence,
-                message,
-                why.as_deref(),
-                author.as_deref(),
-                sign.as_deref(),
-            );
+            let artifact = commit_authority::make(
+                cli,
+                commit_make_payload(
+                    *target_kind,
+                    target_id,
+                    &parents,
+                    &base_snapshot,
+                    &patch_hash,
+                    &result_snapshot,
+                    obligations,
+                    evidence,
+                    message,
+                    why.as_deref(),
+                    author.as_deref(),
+                    sign.as_deref(),
+                ),
+            )?;
             let mut commit_hash = hex32(*blake3::hash(print_term(&artifact).as_bytes()).as_bytes());
 
             if *store {
@@ -142,8 +112,7 @@ pub(super) fn cmd_commit(
                     "store get response missing :artifact",
                 )
             })?;
-            gc_vcs::Commit::from_term(&artifact)
-                .map_err(|e| cli_err(EX_PARSE, "commit/show", format!("invalid commit: {e}")))?;
+            let artifact = commit_authority::validate(cli, artifact, "commit/show")?;
 
             let mut out = BTreeMap::new();
             out.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -272,18 +241,31 @@ fn resolve_base_snapshot(
                 "store get returned no :artifact for base ref commit",
             )
         })?;
-        let commit = gc_vcs::Commit::from_term(&artifact).map_err(|e| {
-            cli_err(
-                EX_PARSE,
-                "commit/new",
-                format!("base ref commit artifact is invalid: {e}"),
-            )
-        })?;
-        Ok((commit.result, vec![parent_hash]))
+        let commit = commit_authority::validate(cli, artifact, "commit/new base ref")?;
+        let result = match &commit {
+            Term::Map(fields) => match fields.get(&TermOrdKey(Term::symbol(":result"))) {
+                Some(Term::Str(result)) => result.clone(),
+                _ => {
+                    return Err(cli_err(
+                        EX_INTERNAL,
+                        "selfhost/bad-return",
+                        "validated base commit omitted :result",
+                    ));
+                }
+            },
+            _ => {
+                return Err(cli_err(
+                    EX_INTERNAL,
+                    "selfhost/bad-return",
+                    "validated base commit was not a map",
+                ));
+            }
+        };
+        Ok((result, vec![parent_hash]))
     } else {
         gc_vcs::validate_hex_hash(base)
             .map_err(|e| cli_err(EX_PARSE, "commit/new", format!("invalid --base: {e}")))?;
-        Ok((base.to_ascii_lowercase(), Vec::new()))
+        Ok((base.to_string(), Vec::new()))
     }
 }
 
@@ -294,7 +276,7 @@ fn resolve_patch_hash(
     patch: &str,
 ) -> Result<String, CliError> {
     if gc_vcs::validate_hex_hash(patch).is_ok() {
-        return Ok(patch.to_ascii_lowercase());
+        return Ok(patch.to_string());
     }
 
     let patch_path = PathBuf::from(patch);
@@ -341,7 +323,7 @@ fn apply_patch_for_result(
     clippy::too_many_arguments,
     reason = "commit artifact assembly requires explicit fields"
 )]
-fn build_commit_artifact(
+fn commit_make_payload(
     target_kind: CommitTargetKind,
     target_id: &str,
     parents: &[String],
@@ -355,77 +337,69 @@ fn build_commit_artifact(
     author: Option<&str>,
     sign: Option<&str>,
 ) -> Term {
-    let mut target = BTreeMap::new();
-    target.insert(
-        TermOrdKey(Term::symbol(":kind")),
-        Term::symbol(match target_kind {
-            CommitTargetKind::Package => ":package",
-            CommitTargetKind::Module => ":module",
-            CommitTargetKind::Contract => ":contract",
-            CommitTargetKind::Workspace => ":workspace",
-        }),
-    );
-    target.insert(
-        TermOrdKey(Term::symbol(":name")),
-        Term::Str(target_id.to_string()),
-    );
-
-    let mut m = BTreeMap::new();
-    m.insert(
-        TermOrdKey(Term::symbol(":type")),
-        Term::symbol(":vcs/commit"),
-    );
-    m.insert(TermOrdKey(Term::symbol(":v")), Term::Int(1.into()));
-    m.insert(
-        TermOrdKey(Term::symbol(":parents")),
-        Term::Vector(parents.iter().cloned().map(Term::Str).collect()),
-    );
-    m.insert(TermOrdKey(Term::symbol(":target")), Term::Map(target));
-    m.insert(
-        TermOrdKey(Term::symbol(":base")),
-        Term::Str(base_snapshot.to_string()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":patch")),
-        Term::Str(patch_hash.to_string()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":result")),
-        Term::Str(result_snapshot.to_string()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":obligations")),
-        Term::Vector(obligations.iter().cloned().map(Term::Str).collect()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":evidence")),
-        Term::Vector(evidence.iter().cloned().map(Term::Str).collect()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":attestations")),
-        Term::Vector(Vec::new()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":message")),
-        Term::Str(message.to_string()),
-    );
-    if let Some(why) = why {
-        m.insert(TermOrdKey(Term::symbol(":why")), Term::Str(why.to_string()));
-    }
-    if author.is_some() || sign.is_some() {
-        let mut am = BTreeMap::new();
-        if let Some(name) = author {
-            am.insert(
-                TermOrdKey(Term::symbol(":name")),
-                Term::Str(name.to_string()),
-            );
-        }
-        if let Some(id) = sign {
-            am.insert(TermOrdKey(Term::symbol(":id")), Term::Str(id.to_string()));
-        }
-        m.insert(TermOrdKey(Term::symbol(":author")), Term::Map(am));
-    }
-    Term::Map(m)
+    Term::Map(
+        [
+            (
+                TermOrdKey(Term::symbol(":author")),
+                author
+                    .map(|value| Term::Str(value.to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":base")),
+                Term::Str(base_snapshot.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":evidence")),
+                Term::Vector(evidence.iter().cloned().map(Term::Str).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":message")),
+                Term::Str(message.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":obligations")),
+                Term::Vector(obligations.iter().cloned().map(Term::Str).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":parents")),
+                Term::Vector(parents.iter().cloned().map(Term::Str).collect()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":patch")),
+                Term::Str(patch_hash.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":result")),
+                Term::Str(result_snapshot.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":sign")),
+                sign.map(|value| Term::Str(value.to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+            (
+                TermOrdKey(Term::symbol(":target-id")),
+                Term::Str(target_id.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":target-kind")),
+                Term::symbol(match target_kind {
+                    CommitTargetKind::Package => ":package",
+                    CommitTargetKind::Module => ":module",
+                    CommitTargetKind::Contract => ":contract",
+                    CommitTargetKind::Workspace => ":workspace",
+                }),
+            ),
+            (
+                TermOrdKey(Term::symbol(":why")),
+                why.map(|value| Term::Str(value.to_string()))
+                    .unwrap_or(Term::Nil),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )
 }
 
 fn run_effect_forms(

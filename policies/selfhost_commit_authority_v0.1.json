@@ -1,0 +1,49 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/commit::authority",
+  "contentIdentitySha256": "c0500da19e2cf86d3019f2493a612d925af2de1095245588d627d4235fb87327",
+  "decisionInventory": [
+    "native-commit-object-construction",
+    "native-commit-object-field-closure",
+    "native-commit-object-identity-admission",
+    "native-commit-object-inspection-admission",
+    "native-commit-author-metadata-construction",
+    "request-bound-result-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "cli-argument-transport",
+    "ref-and-store-mechanisms",
+    "patch-application-mechanism",
+    "artifact-hash-contradiction-check",
+    "diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_commit_authority.py",
+  "kind": "genesis/selfhost-commit-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "h2-sd-canon-identity",
+    "h2-sd-commit",
+    "internal-package-registry-vcs-commit-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-commit-cli-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/commit-authority-request-v0.1",
+  "resultKind": "genesis/commit-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/commit_authority_v1.gc",
+  "sourceSha256": "2369dea00c778642e10d0d510c53ed646a26fb305b4c96372e1909342e262d3c",
+  "spec": "docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

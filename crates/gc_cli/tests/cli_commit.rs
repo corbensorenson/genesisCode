@@ -142,7 +142,21 @@ fn commit_new_and_show_roundtrip_with_ref_base_and_patch_file() {
             "--patch",
         ])
         .arg(&patch_file)
-        .args(["--message", "new commit", "--store"])
+        .args([
+            "--message",
+            "new commit",
+            "--why",
+            "exercise self-hosted construction",
+            "--obligation",
+            "core/obligation::unit-tests",
+            "--evidence",
+            &"a".repeat(64),
+            "--author",
+            "Agent One",
+            "--sign",
+            "key:test",
+            "--store",
+        ])
         .assert()
         .success()
         .get_output()
@@ -180,6 +194,28 @@ fn commit_new_and_show_roundtrip_with_ref_base_and_patch_file() {
         panic!("parents must be vector");
     };
     assert_eq!(parents, &vec![Term::Str(seed_commit_h.clone())]);
+    assert_eq!(
+        artifact.get(&TermOrdKey(Term::symbol(":why"))),
+        Some(&Term::Str("exercise self-hosted construction".to_string()))
+    );
+    assert_eq!(
+        artifact.get(&TermOrdKey(Term::symbol(":evidence"))),
+        Some(&Term::Vector(vec![Term::Str("a".repeat(64))]))
+    );
+    let Term::Map(author) = artifact
+        .get(&TermOrdKey(Term::symbol(":author")))
+        .expect("author map")
+    else {
+        panic!("author must be map");
+    };
+    assert_eq!(
+        author.get(&TermOrdKey(Term::symbol(":name"))),
+        Some(&Term::Str("Agent One".to_string()))
+    );
+    assert_eq!(
+        author.get(&TermOrdKey(Term::symbol(":id"))),
+        Some(&Term::Str("key:test".to_string()))
+    );
 
     let show_out = cargo_bin_cmd!("genesis")
         .current_dir(dir)
@@ -237,4 +273,28 @@ fn commit_new_rejects_unset_base_ref() {
         .stderr(predicates::str::contains(
             "base ref `refs/heads/main` is unset",
         ));
+}
+
+#[test]
+fn commit_show_rejects_open_commit_objects() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let hash = "a".repeat(64);
+    let open_commit = format!(
+        r#"{{
+  :type :vcs/commit :v 1 :parents [] :base "{hash}" :patch "{hash}" :result "{hash}"
+  :obligations [] :evidence [] :attestations [] :message "open" :extra true
+}}"#
+    );
+    let commit_hash = store_put(dir, &caps, &open_commit, "open_commit.gc");
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["commit", "--caps"])
+        .arg(&caps)
+        .args(["show", &commit_hash])
+        .assert()
+        .code(10)
+        .stderr(predicates::str::contains("core/vcs/bad-commit"));
 }

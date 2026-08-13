@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "ef7c8f8fb09a1ce55ac57099090852aaf55f3b2c057ba1c48128533b273b78d8",
+  "contentIdentitySha256": "53bccf7461f6ea6d7b514d09f04b09b9fff7f9fe90d20ab3ae30111bf0a60a8a",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1861,26 +1861,32 @@
       "currentLevel": "H0",
       "fallbackReachability": "reachable-parity-harness",
       "hostBindingPaths": [
-        "crates/gc_effects/src"
+        "crates/gc_cli_driver/src"
       ],
       "id": "SD-COMMIT",
       "internalOnly": false,
       "limitations": [
-        "Host constructs and stores accepted commit objects"
+        "Artifact-loaded GenesisCode exclusively constructs and validates canonical v1 commit objects for native commit new/show under genesis/selfhost-commit-authority-v0.1",
+        "Ref resolution, patch/store/signing mechanisms, command orchestration, WASI commit CLI support, and internal package/registry/VCS commit construction and decoding remain host-authoritative, so SD-COMMIT remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
       ],
       "producingImplementationPaths": [
         "selfhost/toolchain.gc",
+        "selfhost/commit_authority_v1.gc",
+        "crates/gc_cli_driver/src/commit_authority.rs",
         "crates/gc_cli_driver/src/cmd_commit.rs"
       ],
       "productionAuthorityPaths": [
-        "crates/gc_effects/src"
+        "selfhost/commit_authority_v1.gc",
+        "crates/gc_cli_driver/src/commit_authority.rs",
+        "crates/gc_cli_driver/src/cmd_commit.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/CLI.md"
+        "docs/spec/CLI.md",
+        "docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
         "S0-A"
@@ -1890,7 +1896,8 @@
       ],
       "title": "Commit object construction and inspection",
       "verifierPaths": [
-        "crates/gc_cli/tests/cli_commit.rs"
+        "crates/gc_cli/tests/cli_commit.rs",
+        "scripts/lib/selfhost_commit_authority.py"
       ]
     },
     {

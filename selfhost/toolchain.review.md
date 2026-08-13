@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `0d15677f4bfe5554822cf93d749431214a2c46f4cb4647a8dbc1acae362c9537`
-- Freshness artifact hash: `0d15677f4bfe5554822cf93d749431214a2c46f4cb4647a8dbc1acae362c9537`
-- Freshness source hash: `cf62865cd1ff73b5936dda6f01dc87eec026d535dfa2bebd742fe333ddacea43`
-- Source aggregate hash (module path + module sha256): `a217f94fbfdea54d5e2b3f3720ea99018a7a859fd8ee285f30fc17301c9a4f63`
+- Artifact sha256: `9fc4d84336cbc0df736904af806de2b6d7f50921e10dc155061606a37ec81335`
+- Freshness artifact hash: `9fc4d84336cbc0df736904af806de2b6d7f50921e10dc155061606a37ec81335`
+- Freshness source hash: `9d07e5a4791b511bada2efcff62c2aa96bc044e58a436861be280f80262afe99`
+- Source aggregate hash (module path + module sha256): `d2b07956aeab862fb8aac382da0b88868c61c1acb46ad0e89b28496ed2016d0a`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `87`
+- Module count: `88`
 
 ## Module Summary
 
@@ -84,6 +84,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/effect_replay_authority_v1.gc` | 478 | 22055 | 34 | `0bcdb0a048345043` |
 | `selfhost/store_authority_v1.gc` | 594 | 28092 | 47 | `25ef1f00102c5137` |
 | `selfhost/store_verify_authority_v1.gc` | 374 | 18313 | 24 | `0588486a78bd068c` |
+| `selfhost/commit_authority_v1.gc` | 344 | 16401 | 24 | `dba6fc77d9fa18bb` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -174,6 +175,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/effect_replay_authority_v1.gc`: `selfhost/replay::tag`, `selfhost/replay::nil?`, `selfhost/replay::not`, `selfhost/replay::map?`, `selfhost/replay::int?`, `selfhost/replay::str?`, `selfhost/replay::sym?`, `selfhost/replay::bytes?`
 - `selfhost/store_authority_v1.gc`: `selfhost/store-authority::tag`, `selfhost/store-authority::nil?`, `selfhost/store-authority::map?`, `selfhost/store-authority::int?`, `selfhost/store-authority::str?`, `selfhost/store-authority::bool?`, `selfhost/store-authority::bytes?`, `selfhost/store-authority::field`
 - `selfhost/store_verify_authority_v1.gc`: `selfhost/store-verify::vec?`, `selfhost/store-verify::sym?`, `selfhost/store-verify::single`, `selfhost/store-verify::hash-vectors-equal-loop?`, `selfhost/store-verify::hash-vectors-equal?`, `selfhost/store-verify::result`, `selfhost/store-verify::reject`, `selfhost/store-verify::error`
+- `selfhost/commit_authority_v1.gc`: `selfhost/commit::vec?`, `selfhost/commit::sym?`, `selfhost/commit::nonempty-str?`, `selfhost/commit::optional-nonempty-str?`, `selfhost/commit::hash-vector-loop?`, `selfhost/commit::hash-vector?`, `selfhost/commit::obligation?`, `selfhost/commit::obligation-vector-loop?`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

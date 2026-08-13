@@ -170,6 +170,15 @@ python3 scripts/lib/selfhost_store_authority.py \
   --artifact selfhost/toolchain.gc \
   --self-test
 
+# R4.2.e commit authority is partial: GenesisCode constructs and validates
+# native commit objects while internal package/registry/VCS consumers remain H0.
+python3 scripts/lib/selfhost_commit_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_commit_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json \
+  --artifact selfhost/toolchain.gc \
+  --self-test
+
 # R4.2.d obligation authority is H2 for every declared obligation kind; Rust
 # retains bounded observations, execution mechanisms, and contradiction checks.
 python3 scripts/lib/selfhost_obligation_authority.py \

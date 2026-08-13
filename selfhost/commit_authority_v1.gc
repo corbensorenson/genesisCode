@@ -1,0 +1,344 @@
+(def selfhost/commit::vec?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :vec))))
+
+(def selfhost/commit::sym?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :sym))))
+
+(def selfhost/commit::nonempty-str?
+  (fn (value)
+    (if (selfhost/store-authority::str? value)
+      ((core/int::lt? 0) (core/str::len (selfhost/policy::trim value)))
+      false)))
+
+(def selfhost/commit::optional-nonempty-str?
+  (fn (value)
+    (if (selfhost/store-authority::nil? value)
+      true
+      (selfhost/commit::nonempty-str? value))))
+
+(def selfhost/commit::hash-vector-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/store-authority::hash? ((core/vec::get values) index))
+          ((selfhost/commit::hash-vector-loop? values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/commit::hash-vector?
+  (fn (values)
+    (if (selfhost/commit::vec? values)
+      ((selfhost/commit::hash-vector-loop? values) 0)
+      false)))
+
+(def selfhost/commit::obligation?
+  (fn (value)
+    (if (selfhost/commit::sym? value)
+      true
+      (selfhost/commit::nonempty-str? value))))
+
+(def selfhost/commit::obligation-vector-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/commit::obligation? ((core/vec::get values) index))
+          ((selfhost/commit::obligation-vector-loop? values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/commit::obligation-vector?
+  (fn (values)
+    (if (selfhost/commit::vec? values)
+      ((selfhost/commit::obligation-vector-loop? values) 0)
+      false)))
+
+(def selfhost/commit::target-kind?
+  (fn (value)
+    (if (selfhost/commit::sym? value)
+      (if ((core/sym::eq? value) (quote :package))
+        true
+        (if ((core/sym::eq? value) (quote :module))
+          true
+          (if ((core/sym::eq? value) (quote :contract))
+            true
+            ((core/sym::eq? value) (quote :workspace)))))
+      false)))
+
+(def selfhost/commit::target?
+  (fn (value)
+    (if ((selfhost/store-authority::exact-map? value) [:kind :name])
+      (if
+        (selfhost/commit::target-kind?
+          ((selfhost/store-authority::field value) (quote :kind)))
+        (selfhost/commit::nonempty-str?
+          ((selfhost/store-authority::field value) (quote :name)))
+        false)
+      false)))
+
+(def selfhost/commit::author?
+  (fn (value)
+    (if (selfhost/store-authority::map? value)
+      (let
+        ((name ((selfhost/store-authority::field value) (quote :name)))
+          (id ((selfhost/store-authority::field value) (quote :id))))
+        (if ((core/int::eq? (core/map::len value)) 1)
+          (if (selfhost/store-authority::nil? name)
+            (selfhost/commit::nonempty-str? id)
+            (if (selfhost/store-authority::nil? id)
+              (selfhost/commit::nonempty-str? name)
+              false))
+          (if ((core/int::eq? (core/map::len value)) 2)
+            (if (selfhost/commit::nonempty-str? name)
+              (selfhost/commit::nonempty-str? id)
+              false)
+            false)))
+      false)))
+
+(def selfhost/commit::allowed-key?
+  (fn (key)
+    (if ((core/eq? key) (quote :attestations))
+      true
+      (if ((core/eq? key) (quote :author))
+        true
+        (if ((core/eq? key) (quote :base))
+          true
+          (if ((core/eq? key) (quote :evidence))
+            true
+            (if ((core/eq? key) (quote :message))
+              true
+              (if ((core/eq? key) (quote :obligations))
+                true
+                (if ((core/eq? key) (quote :parents))
+                  true
+                  (if ((core/eq? key) (quote :patch))
+                    true
+                    (if ((core/eq? key) (quote :result))
+                      true
+                      (if ((core/eq? key) (quote :target))
+                        true
+                        (if ((core/eq? key) (quote :type))
+                          true
+                          (if ((core/eq? key) (quote :v))
+                            true
+                            ((core/eq? key) (quote :why))))))))))))))))
+
+(def selfhost/commit::allowed-fields-loop?
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        true
+        (if (selfhost/commit::allowed-key? ((core/vec::get ((core/vec::get entries) index)) 0))
+          ((selfhost/commit::allowed-fields-loop? entries) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/commit::required-fields?
+  (fn (value)
+    (((selfhost/store-authority::map-has-keys-loop? value)
+        [:attestations :base :evidence :message :obligations :parents :patch :result :type :v]) 0)))
+
+(def selfhost/commit::commit?
+  (fn (value)
+    (if (selfhost/store-authority::map? value)
+      (let
+        ((size (core/map::len value))
+          (type ((selfhost/store-authority::field value) (quote :type)))
+          (version ((selfhost/store-authority::field value) (quote :v)))
+          (parents ((selfhost/store-authority::field value) (quote :parents)))
+          (base ((selfhost/store-authority::field value) (quote :base)))
+          (patch ((selfhost/store-authority::field value) (quote :patch)))
+          (result ((selfhost/store-authority::field value) (quote :result)))
+          (obligations ((selfhost/store-authority::field value) (quote :obligations)))
+          (evidence ((selfhost/store-authority::field value) (quote :evidence)))
+          (attestations ((selfhost/store-authority::field value) (quote :attestations)))
+          (message ((selfhost/store-authority::field value) (quote :message)))
+          (target ((selfhost/store-authority::field value) (quote :target)))
+          (why ((selfhost/store-authority::field value) (quote :why)))
+          (author ((selfhost/store-authority::field value) (quote :author))))
+        (if (if ((core/int::lt? size) 10) false ((core/int::lt? 13) size))
+          false
+          (if (selfhost/commit::required-fields? value)
+            (if ((selfhost/commit::allowed-fields-loop? (core/map::entries value)) 0)
+              (if (if (selfhost/commit::sym? type) ((core/sym::eq? type) (quote :vcs/commit)) false)
+                (if (if (selfhost/store-authority::int? version) ((core/int::eq? version) 1) false)
+                  (if (selfhost/commit::hash-vector? parents)
+                    (if
+                      (if (selfhost/store-authority::nil? base)
+                        true
+                        (selfhost/store-authority::hash? base))
+                      (if (selfhost/store-authority::hash? patch)
+                        (if (selfhost/store-authority::hash? result)
+                          (if (selfhost/commit::obligation-vector? obligations)
+                            (if (selfhost/commit::hash-vector? evidence)
+                              (if (selfhost/commit::hash-vector? attestations)
+                                (if (selfhost/store-authority::str? message)
+                                  (if
+                                    (if (selfhost/store-authority::nil? target)
+                                      true
+                                      (selfhost/commit::target? target))
+                                    (if (selfhost/commit::optional-nonempty-str? why)
+                                      (if (selfhost/store-authority::nil? author)
+                                        true
+                                        (selfhost/commit::author? author))
+                                      false)
+                                    false)
+                                  false)
+                                false)
+                              false)
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)))
+      false)))
+
+(def selfhost/commit::result
+  (fn (request)
+    (fn (ok)
+      (fn (artifact)
+        (fn (code)
+          (fn (message)
+            {
+              :artifact artifact
+              :code code
+              :kind "genesis/commit-authority-result-v0.1"
+              :message message
+              :ok ok
+              :request-h (selfhost/hash::hash-term request)
+              :v 1}))))))
+
+(def selfhost/commit::reject
+  (fn (request)
+    (fn (message)
+      (((((selfhost/commit::result request) false) nil) "core/commit/bad-request") message))))
+
+(def selfhost/commit::bad-commit
+  (fn (request)
+    (fn (message)
+      (((((selfhost/commit::result request) false) nil) "core/vcs/bad-commit") message))))
+
+(def selfhost/commit::accept
+  (fn (request)
+    (fn (artifact)
+      (((((selfhost/commit::result request) true) artifact) nil) nil))))
+
+(def selfhost/commit::make-author-map
+  (fn (author)
+    (fn (sign)
+      (if (selfhost/store-authority::nil? author)
+        (if (selfhost/store-authority::nil? sign) nil {:id sign})
+        (if (selfhost/store-authority::nil? sign) {:name author} {:id sign :name author})))))
+
+(def selfhost/commit::make
+  (fn (request)
+    (let
+      ((payload ((selfhost/store-authority::field request) (quote :payload))))
+      (if
+        ((selfhost/store-authority::exact-map? payload)
+          [:author :base :evidence :message :obligations :parents :patch :result :sign :target-id
+            :target-kind :why])
+        (let
+          ((author ((selfhost/store-authority::field payload) (quote :author)))
+            (base ((selfhost/store-authority::field payload) (quote :base)))
+            (evidence ((selfhost/store-authority::field payload) (quote :evidence)))
+            (message ((selfhost/store-authority::field payload) (quote :message)))
+            (obligations ((selfhost/store-authority::field payload) (quote :obligations)))
+            (parents ((selfhost/store-authority::field payload) (quote :parents)))
+            (patch ((selfhost/store-authority::field payload) (quote :patch)))
+            (result ((selfhost/store-authority::field payload) (quote :result)))
+            (sign ((selfhost/store-authority::field payload) (quote :sign)))
+            (target-id ((selfhost/store-authority::field payload) (quote :target-id)))
+            (target-kind ((selfhost/store-authority::field payload) (quote :target-kind)))
+            (why ((selfhost/store-authority::field payload) (quote :why))))
+          (if (selfhost/commit::target-kind? target-kind)
+            (if (selfhost/commit::nonempty-str? target-id)
+              (if (selfhost/commit::hash-vector? parents)
+                (if (selfhost/store-authority::hash? base)
+                  (if (selfhost/store-authority::hash? patch)
+                    (if (selfhost/store-authority::hash? result)
+                      (if (selfhost/commit::obligation-vector? obligations)
+                        (if (selfhost/commit::hash-vector? evidence)
+                          (if (selfhost/commit::nonempty-str? message)
+                            (if (selfhost/commit::optional-nonempty-str? why)
+                              (if (selfhost/commit::optional-nonempty-str? author)
+                                (if (selfhost/commit::optional-nonempty-str? sign)
+                                  (let
+                                    ((base-artifact
+                                        {
+                                          :attestations []
+                                          :base base
+                                          :evidence evidence
+                                          :message message
+                                          :obligations obligations
+                                          :parents parents
+                                          :patch patch
+                                          :result result
+                                          :target {:kind target-kind :name target-id}
+                                          :type (quote :vcs/commit)
+                                          :v 1})
+                                      (with-why
+                                        (if (selfhost/store-authority::nil? why)
+                                          base-artifact
+                                          (((core/map::put base-artifact) (quote :why)) why)))
+                                      (author-map ((selfhost/commit::make-author-map author) sign))
+                                      (artifact
+                                        (if (selfhost/store-authority::nil? author-map)
+                                          with-why
+                                          (((core/map::put with-why) (quote :author)) author-map))))
+                                    (if (selfhost/commit::commit? artifact)
+                                      ((selfhost/commit::accept request) artifact)
+                                      ((selfhost/commit::bad-commit request)
+                                        "constructed commit failed canonical validation")))
+                                  ((selfhost/commit::bad-commit request)
+                                    "commit signer id must be nil or a nonempty string"))
+                                ((selfhost/commit::bad-commit request)
+                                  "commit author must be nil or a nonempty string"))
+                              ((selfhost/commit::bad-commit request)
+                                "commit rationale must be nil or a nonempty string"))
+                            ((selfhost/commit::bad-commit request)
+                              "commit message must be a nonempty string"))
+                          ((selfhost/commit::bad-commit request)
+                            "commit evidence must be a vector of lowercase hashes"))
+                        ((selfhost/commit::bad-commit request)
+                          "commit obligations must be a vector of nonempty strings or symbols"))
+                      ((selfhost/commit::bad-commit request) "commit result must be lowercase hex64"))
+                    ((selfhost/commit::bad-commit request) "commit patch must be lowercase hex64"))
+                  ((selfhost/commit::bad-commit request) "commit base must be lowercase hex64"))
+                ((selfhost/commit::bad-commit request)
+                  "commit parents must be a vector of lowercase hashes"))
+              ((selfhost/commit::bad-commit request) "commit target id must be nonempty"))
+            ((selfhost/commit::bad-commit request) "commit target kind is unsupported")))
+        ((selfhost/commit::reject request) "make payload fields mismatch")))))
+
+(def selfhost/commit::validate
+  (fn (request)
+    (let ((payload ((selfhost/store-authority::field request) (quote :payload))))
+      (if ((selfhost/store-authority::exact-map? payload) [:artifact])
+        (let ((artifact ((selfhost/store-authority::field payload) (quote :artifact))))
+          (if (selfhost/commit::commit? artifact)
+            ((selfhost/commit::accept request) artifact)
+            ((selfhost/commit::bad-commit request)
+              "commit must use the closed canonical v1 schema and lowercase identities")))
+        ((selfhost/commit::reject request) "validate payload fields mismatch")))))
+
+(def core/commit::authority
+  (fn (request)
+    (if ((selfhost/store-authority::exact-map? request) [:kind :op :payload :v])
+      (if
+        ((core/eq? ((selfhost/store-authority::field request) (quote :kind)))
+          "genesis/commit-authority-request-v0.1")
+        (if ((core/int::eq? ((selfhost/store-authority::field request) (quote :v))) 1)
+          (let ((op ((selfhost/store-authority::field request) (quote :op))))
+            (if (selfhost/commit::sym? op)
+              (if ((core/sym::eq? op) (quote :make))
+                (selfhost/commit::make request)
+                (if ((core/sym::eq? op) (quote :validate))
+                  (selfhost/commit::validate request)
+                  ((selfhost/commit::reject request) "unsupported commit operation")))
+              ((selfhost/commit::reject request) "commit operation must be a symbol")))
+          ((selfhost/commit::reject request) "commit request version mismatch"))
+        ((selfhost/commit::reject request) "commit request kind mismatch"))
+      ((selfhost/commit::reject request) "commit request fields mismatch"))))
