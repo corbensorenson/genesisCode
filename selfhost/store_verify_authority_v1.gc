@@ -1,0 +1,374 @@
+(def selfhost/store-verify::vec?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :vec))))
+
+(def selfhost/store-verify::sym?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :sym))))
+
+(def selfhost/store-verify::single
+  (fn (value) ((core/vec::push (quote [])) value)))
+
+(def selfhost/store-verify::hash-vectors-equal-loop?
+  (fn (left)
+    (fn (right)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len left))
+          true
+          (if ((core/eq? ((core/vec::get left) index)) ((core/vec::get right) index))
+            (((selfhost/store-verify::hash-vectors-equal-loop? left) right)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/store-verify::hash-vectors-equal?
+  (fn (left)
+    (fn (right)
+      (if ((core/int::eq? (core/vec::len left)) (core/vec::len right))
+        (((selfhost/store-verify::hash-vectors-equal-loop? left) right) 0)
+        false))))
+
+(def selfhost/store-verify::result
+  (fn (request)
+    (fn (ok)
+      (fn (action)
+        (fn (checked)
+          (fn (code)
+            (fn (hash)
+              (fn (hashes)
+                (fn (message)
+                  {
+                    :action action
+                    :checked checked
+                    :code code
+                    :hash hash
+                    :hashes hashes
+                    :kind "genesis/store-verify-authority-result-v0.1"
+                    :message message
+                    :ok ok
+                    :request-h (selfhost/hash::hash-term request)
+                    :v 1})))))))))
+
+(def selfhost/store-verify::reject
+  (fn (request)
+    (fn (message)
+      ((((((((selfhost/store-verify::result request) false) (quote :reject)) nil)
+                  "store/verify-authority-request") nil) nil) message))))
+
+(def selfhost/store-verify::error
+  (fn (request)
+    (fn (code)
+      (fn (message)
+        (fn (hash)
+          (fn (checked)
+            ((((((((selfhost/store-verify::result request) true) (quote :error)) checked) code)
+                    hash) nil) message)))))))
+
+(def selfhost/store-verify::observe-inventory
+  (fn (request)
+    ((((((((selfhost/store-verify::result request) true) (quote :observe-inventory)) nil) nil)
+            nil) nil) nil)))
+
+(def selfhost/store-verify::observe-hashes
+  (fn (request)
+    (fn (hashes)
+      ((((((((selfhost/store-verify::result request) true) (quote :observe-hashes)) nil) nil)
+              nil) hashes) nil))))
+
+(def selfhost/store-verify::return
+  (fn (request)
+    (fn (checked)
+      (fn (hash)
+        ((((((((selfhost/store-verify::result request) true) (quote :return)) checked) nil)
+                hash) nil) nil)))))
+
+(def selfhost/store-verify::bytes-less-loop?
+  (fn (left)
+    (fn (right)
+      (fn (index)
+        (let ((left-len (core/bytes::len left)) (right-len (core/bytes::len right)))
+          (if
+            (if ((core/int::lt? index) left-len) ((core/int::lt? index) right-len) false)
+            (let
+              ((left-byte ((core/bytes::get left) index))
+                (right-byte ((core/bytes::get right) index)))
+              (if ((core/int::lt? left-byte) right-byte)
+                true
+                (if ((core/int::lt? right-byte) left-byte)
+                  false
+                  (((selfhost/store-verify::bytes-less-loop? left) right)
+                    ((core/int::add index) 1)))))
+            ((core/int::lt? left-len) right-len)))))))
+
+(def selfhost/store-verify::bytes-less?
+  (fn (left) (fn (right) (((selfhost/store-verify::bytes-less-loop? left) right) 0))))
+
+(def selfhost/store-verify::entry?
+  (fn (entry)
+    (if ((selfhost/store-authority::exact-map? entry) [:kind :name])
+      (if
+        (selfhost/store-verify::sym?
+          ((selfhost/store-authority::field entry) (quote :kind)))
+        (selfhost/store-authority::bytes?
+          ((selfhost/store-authority::field entry) (quote :name)))
+        false)
+      false)))
+
+(def selfhost/store-verify::canonical-file-hash
+  (fn (entry)
+    (let
+      ((kind ((selfhost/store-authority::field entry) (quote :kind)))
+        (name ((selfhost/store-authority::field entry) (quote :name))))
+      (if ((core/sym::eq? kind) (quote :file))
+        (if ((core/int::eq? (core/bytes::len name)) 64)
+          (if ((selfhost/store-authority::lower-hex-loop? name) 0)
+            (core/str::from-utf8 name)
+            nil)
+          nil)
+        nil))))
+
+(def selfhost/store-verify::select-loop
+  (fn (entries)
+    (fn (index)
+      (fn (previous)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            {:hashes out :ok true}
+            (let ((entry ((core/vec::get entries) index)))
+              (if (selfhost/store-verify::entry? entry)
+                (let ((name ((selfhost/store-authority::field entry) (quote :name))))
+                  (if
+                    (if (selfhost/store-authority::nil? previous)
+                      true
+                      ((selfhost/store-verify::bytes-less? previous) name))
+                    (let ((hash (selfhost/store-verify::canonical-file-hash entry)))
+                      (((((selfhost/store-verify::select-loop entries)
+                                ((core/int::add index) 1)) name)
+                          (if (selfhost/store-authority::nil? hash)
+                            out
+                            ((core/vec::push out) hash)))))
+                    {:hashes [] :ok false}))
+                {:hashes [] :ok false}))))))))
+
+(def selfhost/store-verify::select-hashes
+  (fn (entries)
+    (fn (max-entries)
+      (if (selfhost/store-verify::vec? entries)
+        (if ((core/int::lt? max-entries) (core/vec::len entries))
+          {:hashes [] :ok false}
+          ((((selfhost/store-verify::select-loop entries) 0) nil) []))
+        {:hashes [] :ok false}))))
+
+(def selfhost/store-verify::observation?
+  (fn (observation)
+    (if
+      ((selfhost/store-authority::exact-map? observation)
+        [:hash :observed-bytes :observed-hash :status])
+      (if
+        (selfhost/store-authority::hash?
+          ((selfhost/store-authority::field observation) (quote :hash)))
+        (if
+          (selfhost/store-verify::sym?
+            ((selfhost/store-authority::field observation) (quote :status)))
+          (if
+            (selfhost/store-authority::optional-nonnegative-int?
+              ((selfhost/store-authority::field observation) (quote :observed-bytes)))
+            (let
+              ((observed-hash
+                  ((selfhost/store-authority::field observation) (quote :observed-hash))))
+              (if (selfhost/store-authority::nil? observed-hash)
+                true
+                (selfhost/store-authority::hash? observed-hash)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/store-verify::observed-error
+  (fn (request)
+    (fn (single)
+      (fn (status)
+        (fn (hash)
+          (fn (checked)
+            (if ((core/sym::eq? status) (quote :missing))
+              (((((selfhost/store-verify::error request)
+                        (if single "core/store/not-found" "core/store/corruption"))
+                      (if single "artifact not found" "store entry disappeared during verify"))
+                    hash) checked)
+              (if ((core/sym::eq? status) (quote :resource-limit))
+                (((((selfhost/store-verify::error request) "core/caps/resource-limit")
+                        "store verify exceeded a bounded observation limit") hash) checked)
+                (if ((core/sym::eq? status) (quote :io-error))
+                  (((((selfhost/store-verify::error request) "core/store/io-error")
+                          "artifact store verification read failed") hash) checked)
+                  ((selfhost/store-verify::reject request)
+                    "unsupported verify observation status"))))))))))
+
+(def selfhost/store-verify::check-observations-loop
+  (fn (request)
+    (fn (hashes)
+      (fn (observations)
+        (fn (single)
+          (fn (max-bytes)
+            (fn (max-total)
+              (fn (index)
+                (fn (total)
+                  (if ((core/int::eq? index) (core/vec::len hashes))
+                    (((selfhost/store-verify::return request) index)
+                      (if single ((core/vec::get hashes) 0) nil))
+                    (let
+                      ((hash ((core/vec::get hashes) index))
+                        (observation ((core/vec::get observations) index)))
+                      (if (selfhost/store-verify::observation? observation)
+                        (if
+                          ((core/eq?
+                              ((selfhost/store-authority::field observation) (quote :hash))) hash)
+                          (let
+                            ((status
+                                ((selfhost/store-authority::field observation) (quote :status)))
+                              (observed-bytes
+                                ((selfhost/store-authority::field observation)
+                                  (quote :observed-bytes)))
+                              (observed-hash
+                                ((selfhost/store-authority::field observation)
+                                  (quote :observed-hash))))
+                            (if ((core/sym::eq? status) (quote :present))
+                              (if
+                                (if (selfhost/store-authority::nonnegative-int? observed-bytes)
+                                  (selfhost/store-authority::hash? observed-hash)
+                                  false)
+                                (let ((next-total ((core/int::add total) observed-bytes)))
+                                  (if
+                                    (if ((core/int::lt? max-bytes) observed-bytes)
+                                      true
+                                      ((core/int::lt? max-total) next-total))
+                                    (((((selfhost/store-verify::error request)
+                                              "core/caps/resource-limit")
+                                            "store verify exceeded a bounded observation limit")
+                                          hash) ((core/int::add index) 1))
+                                    (if ((core/eq? hash) observed-hash)
+                                      ((((((((selfhost/store-verify::check-observations-loop
+                                                        request) hashes) observations) single)
+                                                  max-bytes) max-total)
+                                            ((core/int::add index) 1)) next-total)
+                                      (((((selfhost/store-verify::error request)
+                                                "core/store/corruption")
+                                              "artifact bytes hash mismatch") hash)
+                                        ((core/int::add index) 1)))))
+                                ((selfhost/store-verify::reject request)
+                                  "present observation requires byte count and lowercase hash"))
+                              (((((selfhost/store-verify::observed-error request) single) status)
+                                    hash) ((core/int::add index) 1))))
+                          ((selfhost/store-verify::reject request)
+                            "observation hash/order mismatch"))
+                        ((selfhost/store-verify::reject request)
+                          "verify observation fields mismatch")))))))))))))
+
+(def selfhost/store-verify::check-observations
+  (fn (request)
+    (fn (hashes)
+      (fn (single)
+        (let
+          ((observations
+              ((selfhost/store-authority::field request) (quote :observations)))
+            (max-bytes ((selfhost/store-authority::field request) (quote :max-bytes)))
+            (max-total ((selfhost/store-authority::field request) (quote :max-total-bytes))))
+          (if (selfhost/store-verify::vec? observations)
+            (if ((core/int::eq? (core/vec::len observations)) (core/vec::len hashes))
+              ((((((((selfhost/store-verify::check-observations-loop request) hashes)
+                                observations) single) max-bytes) max-total) 0) 0)
+              ((selfhost/store-verify::reject request)
+                "verify observation count mismatch"))
+            ((selfhost/store-verify::reject request)
+              "verify observations must be a vector")))))))
+
+(def selfhost/store-verify::derive-hashes
+  (fn (request)
+    (fn (payload)
+      (fn (status)
+        (let ((hash ((selfhost/store-authority::field payload) (quote :hash))))
+          (if (selfhost/store-authority::nil? hash)
+            (let
+              ((selection
+                  ((selfhost/store-verify::select-hashes
+                      ((selfhost/store-authority::field request) (quote :entries)))
+                    ((selfhost/store-authority::field request) (quote :max-entries)))))
+              (if ((core/map::get selection) (quote :ok))
+                ((core/map::get selection) (quote :hashes))
+                nil))
+            (if (selfhost/store-authority::hash? hash)
+              (selfhost/store-verify::single hash)
+              nil)))))))
+
+(def selfhost/store-verify::decide
+  (fn (request)
+    (let
+      ((payload ((selfhost/store-authority::field request) (quote :payload)))
+        (status ((selfhost/store-authority::field request) (quote :status)))
+        (max-entries ((selfhost/store-authority::field request) (quote :max-entries)))
+        (max-bytes ((selfhost/store-authority::field request) (quote :max-bytes)))
+        (max-total ((selfhost/store-authority::field request) (quote :max-total-bytes))))
+      (if ((selfhost/store-authority::exact-map? payload) [:hash])
+        (if (selfhost/store-authority::nonnegative-int? max-entries)
+          (if (selfhost/store-authority::nonnegative-int? max-bytes)
+            (if (selfhost/store-authority::nonnegative-int? max-total)
+              (let ((hash ((selfhost/store-authority::field payload) (quote :hash))))
+                (if ((core/sym::eq? status) (quote :plan))
+                    (if (selfhost/store-authority::nil? hash)
+                      (selfhost/store-verify::observe-inventory request)
+                      (if (selfhost/store-authority::hash? hash)
+                      ((selfhost/store-verify::observe-hashes request)
+                        (selfhost/store-verify::single hash))
+                      (((((selfhost/store-verify::error request) "core/store/bad-hash")
+                              "verify hash must be lowercase hex64") nil) 0)))
+                  (if ((core/sym::eq? status) (quote :inventory))
+                    (if (selfhost/store-authority::nil? hash)
+                      (let ((hashes (((selfhost/store-verify::derive-hashes request) payload) status)))
+                        (if (selfhost/store-authority::nil? hashes)
+                          ((selfhost/store-verify::reject request)
+                            "inventory must be bounded, well-formed, and strictly sorted")
+                          ((selfhost/store-verify::observe-hashes request) hashes)))
+                      ((selfhost/store-verify::reject request)
+                        "specific verify must not request inventory"))
+                    (if ((core/sym::eq? status) (quote :observed))
+                      (let
+                        ((derived (((selfhost/store-verify::derive-hashes request) payload) status))
+                          (hashes
+                            ((selfhost/store-authority::field request) (quote :hashes))))
+                        (if (selfhost/store-verify::vec? derived)
+                          (if ((selfhost/store-verify::hash-vectors-equal? derived) hashes)
+                            (((selfhost/store-verify::check-observations request) hashes)
+                              (if (selfhost/store-authority::nil? hash) false true))
+                            ((selfhost/store-verify::reject request)
+                              "verify selected hash inventory mismatch"))
+                          ((selfhost/store-verify::reject request)
+                            "verify inventory cannot be derived")))
+                      (if ((core/sym::eq? status) (quote :inventory-resource-limit))
+                        (((((selfhost/store-verify::error request) "core/caps/resource-limit")
+                                "artifact store inventory exceeds bounded limits") nil) 0)
+                        (if ((core/sym::eq? status) (quote :inventory-error))
+                        (((((selfhost/store-verify::error request) "core/store/io-error")
+                                "artifact store inventory failed") nil) 0)
+                        ((selfhost/store-verify::reject request)
+                          "unsupported verify request status")))))))
+              ((selfhost/store-verify::reject request) "max-total-bytes must be nonnegative"))
+            ((selfhost/store-verify::reject request) "max-bytes must be nonnegative"))
+          ((selfhost/store-verify::reject request) "max-entries must be nonnegative"))
+        (((((selfhost/store-verify::error request) "core/store/bad-payload")
+                "store verify payload must contain exactly :hash") nil) 0)))))
+
+(def core/store::verify-authority
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [:entries :hashes :kind :max-bytes :max-entries :max-total-bytes :observations :payload
+          :phase :status :v])
+      (if
+        ((core/eq? ((selfhost/store-authority::field request) (quote :kind)))
+          "genesis/store-verify-authority-request-v0.1")
+        (if ((core/int::eq? ((selfhost/store-authority::field request) (quote :v))) 1)
+          (if
+            ((core/sym::eq? ((selfhost/store-authority::field request) (quote :phase)))
+              (quote :verify))
+            (selfhost/store-verify::decide request)
+            ((selfhost/store-verify::reject request) "verify phase mismatch"))
+          ((selfhost/store-verify::reject request) "verify request version mismatch"))
+        ((selfhost/store-verify::reject request) "verify request kind mismatch"))
+      ((selfhost/store-verify::reject request) "verify request fields mismatch"))))

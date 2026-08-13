@@ -412,7 +412,13 @@ pub(super) fn call_capability_with_runtime(
             timeout_ms,
             error_tok,
         ),
-        "core/store::verify" => cap_store_verify(op, payload, store, error_tok),
+        "core/store::verify" => runner_cap_store_verify::cap_store_verify(
+            op,
+            payload,
+            store,
+            store_authority,
+            error_tok,
+        ),
         s if s.starts_with("core/vcs-low::") => capability_vcs_low(
             s, payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
         ),

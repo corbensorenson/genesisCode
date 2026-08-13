@@ -11,8 +11,12 @@ use crate::policy::SelfhostAuthorityConfig;
 #[path = "store_authority_read.rs"]
 mod read;
 pub(crate) use read::{StoreGetDecision, StoreHasDecision};
+#[path = "store_authority_verify.rs"]
+mod verify;
+pub(crate) use verify::StoreVerifyDecision;
 
 const BINDING: &str = "core/store::authority";
+const VERIFY_BINDING: &str = "core/store::verify-authority";
 const REQUEST_KIND: &str = "genesis/store-authority-request-v0.1";
 const RESULT_KIND: &str = "genesis/store-authority-result-v0.1";
 const STEP_LIMIT: u64 = 20_000_000;
@@ -34,6 +38,7 @@ pub(crate) enum StorePutDecision {
 pub(crate) struct StoreAuthority {
     context: EvalCtx,
     authority: Value,
+    verify_authority: Value,
 }
 
 impl StoreAuthority {
@@ -59,9 +64,16 @@ impl StoreAuthority {
         let authority = environment
             .get(BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
+        let verify_authority = environment
+            .get(VERIFY_BINDING)
+            .ok_or_else(|| authority_error(format!("missing binding {VERIFY_BINDING}")))?;
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
-        Ok(Self { context, authority })
+        Ok(Self {
+            context,
+            authority,
+            verify_authority,
+        })
     }
 
     pub(crate) fn put(
@@ -90,12 +102,22 @@ impl StoreAuthority {
     }
 
     fn evaluate(&mut self, request: Term) -> Result<(Term, [u8; 32]), EffectsError> {
+        self.evaluate_with(self.authority.clone(), request)
+    }
+
+    fn evaluate_verify(&mut self, request: Term) -> Result<(Term, [u8; 32]), EffectsError> {
+        self.evaluate_with(self.verify_authority.clone(), request)
+    }
+
+    fn evaluate_with(
+        &mut self,
+        authority: Value,
+        request: Term,
+    ) -> Result<(Term, [u8; 32]), EffectsError> {
         let request_hash = hash_term(&request);
         self.context.reset_counters();
         self.context.step_limit = Some(STEP_LIMIT);
-        let value = self
-            .authority
-            .clone()
+        let value = authority
             .apply(&mut self.context, Value::data(request))
             .map_err(|error| authority_error(format!("apply failed: {error}")))?;
         let term = plain_result(value, &self.context)?;

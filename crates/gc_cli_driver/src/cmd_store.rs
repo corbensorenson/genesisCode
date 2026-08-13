@@ -238,6 +238,7 @@ fn finish_store_command(
                         | "core/store/not-found"
                         | "core/store/bad-hash"
                         | "core/store/io-error"
+                        | "core/caps/resource-limit"
                 )
             {
                 exit_code = EX_VERIFY;
@@ -346,6 +347,7 @@ fn store_error_json_code(code: &str) -> &'static str {
         "core/store/hash-mismatch" => "core/store/hash-mismatch",
         "core/store/bad-artifact" => "core/store/bad-artifact",
         "core/caps/policy-error" => "core/caps/policy-error",
+        "core/caps/resource-limit" => "core/caps/resource-limit",
         _ => "store/error",
     }
 }

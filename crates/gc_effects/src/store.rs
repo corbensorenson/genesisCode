@@ -21,10 +21,30 @@ pub struct ArtifactStore {
     integrity_cache: Option<Arc<Mutex<IntegrityCache>>>,
 }
 
+#[derive(Debug)]
 pub(crate) enum ArtifactObservation {
     Missing,
     TooLarge { observed: usize },
     Bytes(Vec<u8>),
+}
+
+#[derive(Debug)]
+pub(crate) struct StoreInventoryEntry {
+    pub(crate) kind: &'static str,
+    pub(crate) name: Vec<u8>,
+}
+
+#[derive(Debug)]
+pub(crate) enum StoreInventoryObservation {
+    Entries(Vec<StoreInventoryEntry>),
+    ResourceLimit,
+}
+
+#[derive(Debug)]
+pub(crate) enum ArtifactHashObservation {
+    Missing,
+    TooLarge,
+    Hash { bytes: usize, hash: String },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -322,11 +342,103 @@ impl ArtifactStore {
             "artifact store read instability".to_string(),
         ))
     }
+
+    pub(crate) fn observe_inventory(
+        &self,
+        max_entries: usize,
+        max_name_bytes: usize,
+    ) -> Result<StoreInventoryObservation, EffectsError> {
+        let mut entries = Vec::new();
+        let mut name_bytes = 0_usize;
+        for entry in std::fs::read_dir(&self.root)? {
+            let entry = entry?;
+            if entries.len() >= max_entries {
+                return Ok(StoreInventoryObservation::ResourceLimit);
+            }
+            let name = store_entry_name_bytes(&entry.file_name())?;
+            name_bytes = name_bytes.saturating_add(name.len());
+            if name_bytes > max_name_bytes {
+                return Ok(StoreInventoryObservation::ResourceLimit);
+            }
+            let file_type = entry.file_type()?;
+            let kind = if file_type.is_file() {
+                ":file"
+            } else if file_type.is_dir() {
+                ":directory"
+            } else if file_type.is_symlink() {
+                ":symlink"
+            } else {
+                ":other"
+            };
+            entries.push(StoreInventoryEntry { kind, name });
+        }
+        entries.sort_by(|left, right| left.name.cmp(&right.name));
+        Ok(StoreInventoryObservation::Entries(entries))
+    }
+
+    pub(crate) fn observe_hash_limited(
+        &self,
+        hex: &str,
+        max_bytes: usize,
+    ) -> Result<ArtifactHashObservation, EffectsError> {
+        const STABLE_READ_RETRIES: usize = 3;
+        let path = self.path_for(hex);
+        for _ in 0..STABLE_READ_RETRIES {
+            let mut file = match std::fs::File::open(&path) {
+                Ok(file) => file,
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    return Ok(ArtifactHashObservation::Missing);
+                }
+                Err(error) => return Err(error.into()),
+            };
+            let before = Self::file_sig(&file.metadata()?);
+            if before.len > max_bytes as u64 {
+                return Ok(ArtifactHashObservation::TooLarge);
+            }
+            let mut observed = 0_usize;
+            let mut hasher = Hasher::new();
+            let mut chunk = [0_u8; 8 * 1024];
+            loop {
+                let count = file.read(&mut chunk)?;
+                if count == 0 {
+                    break;
+                }
+                observed = observed.saturating_add(count);
+                if observed > max_bytes {
+                    return Ok(ArtifactHashObservation::TooLarge);
+                }
+                hasher.update(&chunk[..count]);
+            }
+            let after = Self::file_sig(&file.metadata()?);
+            if before == after {
+                return Ok(ArtifactHashObservation::Hash {
+                    bytes: observed,
+                    hash: hasher.finalize().to_hex().to_string(),
+                });
+            }
+        }
+        Err(EffectsError::Log(
+            "artifact store read instability".to_string(),
+        ))
+    }
+}
+
+#[cfg(unix)]
+fn store_entry_name_bytes(name: &std::ffi::OsStr) -> Result<Vec<u8>, EffectsError> {
+    use std::os::unix::ffi::OsStrExt;
+    Ok(name.as_bytes().to_vec())
+}
+
+#[cfg(not(unix))]
+fn store_entry_name_bytes(name: &std::ffi::OsStr) -> Result<Vec<u8>, EffectsError> {
+    name.to_str()
+        .map(|value| value.as_bytes().to_vec())
+        .ok_or_else(|| EffectsError::Log("artifact store entry name is not Unicode".to_string()))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::ArtifactStore;
+    use super::{ArtifactHashObservation, ArtifactStore, StoreInventoryObservation};
 
     #[test]
     fn integrity_cache_mode_detects_replaced_blob_corruption() {
@@ -365,5 +477,60 @@ mod tests {
             format!("{err}").contains("artifact store corruption"),
             "unexpected error: {err}"
         );
+    }
+
+    #[test]
+    fn verify_observations_are_sorted_classified_and_bounded() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let store = ArtifactStore::open(td.path()).expect("open");
+        std::fs::write(td.path().join("z-file"), b"z").expect("write file");
+        std::fs::create_dir(td.path().join("a-dir")).expect("create directory");
+
+        let StoreInventoryObservation::Entries(entries) =
+            store.observe_inventory(2, 32).expect("observe inventory")
+        else {
+            panic!("expected bounded inventory");
+        };
+        assert_eq!(entries[0].name, b"a-dir");
+        assert_eq!(entries[0].kind, ":directory");
+        assert_eq!(entries[1].name, b"z-file");
+        assert_eq!(entries[1].kind, ":file");
+        assert!(matches!(
+            store.observe_inventory(1, 32).expect("entry bound"),
+            StoreInventoryObservation::ResourceLimit
+        ));
+        assert!(matches!(
+            store.observe_inventory(2, 4).expect("name-byte bound"),
+            StoreInventoryObservation::ResourceLimit
+        ));
+    }
+
+    #[test]
+    fn verify_hash_observation_streams_identity_under_limit() {
+        let td = tempfile::tempdir().expect("tempdir");
+        let store = ArtifactStore::open(td.path()).expect("open");
+        let bytes = b"streamed artifact";
+        let hash = blake3::hash(bytes).to_hex().to_string();
+        std::fs::write(td.path().join(&hash), bytes).expect("write artifact");
+
+        assert!(matches!(
+            store
+                .observe_hash_limited(&hash, bytes.len() - 1)
+                .expect("bounded hash"),
+            ArtifactHashObservation::TooLarge
+        ));
+        match store
+            .observe_hash_limited(&hash, bytes.len())
+            .expect("hash observation")
+        {
+            ArtifactHashObservation::Hash {
+                bytes: observed,
+                hash: observed_hash,
+            } => {
+                assert_eq!(observed, bytes.len());
+                assert_eq!(observed_hash, hash);
+            }
+            other => panic!("unexpected observation: {other:?}"),
+        }
     }
 }

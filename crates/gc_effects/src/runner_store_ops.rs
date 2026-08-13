@@ -1,4 +1,6 @@
-use gc_coreform::{Term, TermOrdKey};
+use gc_coreform::Term;
+#[cfg(any(test, feature = "parity-oracle"))]
+use gc_coreform::TermOrdKey;
 
 use crate::EffectsError;
 use crate::store::ArtifactStore;
@@ -18,6 +20,7 @@ pub(crate) fn payload_store_hash(payload: &Term) -> Result<String, EffectsError>
     Ok(h.clone())
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn payload_store_optional_hash(payload: &Term) -> Result<Option<String>, EffectsError> {
     let Term::Map(m) = payload else {
         return Err(EffectsError::Log(
@@ -55,10 +58,12 @@ pub(crate) fn store_get_term(store: &ArtifactStore, hex: &str) -> Result<Term, E
     gc_coreform::parse_term(&s).map_err(|e| EffectsError::Log(format!("bad artifact term: {e}")))
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn is_hex64(s: &str) -> bool {
     s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit())
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn store_scan_hashes(store: &ArtifactStore) -> Result<Vec<String>, EffectsError> {
     let mut out = Vec::new();
     for ent in std::fs::read_dir(store.root_dir())? {

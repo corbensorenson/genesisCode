@@ -7,9 +7,13 @@ use gc_prelude::build_prelude;
 use replay_support::replay;
 
 fn load_policy(path: &std::path::Path) -> CapsPolicy {
-    let artifact = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .join("selfhost/toolchain.gc");
+    let artifact = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join("selfhost/toolchain.gc")
+        });
     CapsPolicy::load_with_selfhost_authority(
         path,
         gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
@@ -56,6 +60,22 @@ fn sealed_error_message(v: &Value) -> Option<String> {
     };
     match m.get(&TermOrdKey(Term::symbol(":error/message"))) {
         Some(Term::Str(s)) => Some(s.clone()),
+        _ => None,
+    }
+}
+
+fn sealed_error_context_str(v: &Value, field: &str) -> Option<String> {
+    let Value::Sealed { payload, .. } = v else {
+        return None;
+    };
+    let Some(Term::Map(error)) = payload.as_ref().as_data() else {
+        return None;
+    };
+    let Some(Term::Map(context)) = error.get(&TermOrdKey(Term::symbol(":error/context"))) else {
+        return None;
+    };
+    match context.get(&TermOrdKey(Term::symbol(field))) {
+        Some(Term::Str(value)) => Some(value.clone()),
         _ => None,
     }
 }
@@ -188,6 +208,207 @@ dir = "./.genesis/store"
         error
             .to_string()
             .contains("requires the artifact-loaded GenesisCode store authority")
+    );
+}
+
+#[test]
+fn store_verify_without_artifact_authority_fails_closed() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::verify"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = CapsPolicy::load(&caps_path).unwrap();
+    let forms = parse_module(
+        r#"
+        (def prog
+          (core/effect::perform
+            'core/store::verify
+            {:hash nil}
+            (fn (r) (core/effect::pure r))))
+        prog
+        "#,
+    )
+    .unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let error = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .err()
+    .expect("store verify without selfhost authority must fail");
+    assert!(
+        error
+            .to_string()
+            .contains("requires the artifact-loaded GenesisCode store authority")
+    );
+}
+
+#[test]
+fn store_verify_hash_admission_precedes_inventory_observation() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::verify"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    std::fs::create_dir_all(td.path().join(".genesis/store")).unwrap();
+    let uppercase = "A".repeat(64);
+    let candidate = td.path().join(".genesis/store").join(&uppercase);
+    std::fs::create_dir(&candidate).unwrap();
+    let source = format!(
+        "(def prog (core/effect::perform 'core/store::verify {{:hash \"{uppercase}\"}} (fn (r) (core/effect::pure r)))) prog"
+    );
+    let forms = parse_module(&source).unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let result = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert_eq!(
+        sealed_error_code(&result.value).as_deref(),
+        Some("core/store/bad-hash")
+    );
+    assert!(
+        candidate.is_dir(),
+        "rejected hash path must not be accessed"
+    );
+}
+
+#[test]
+fn store_verify_filters_inventory_and_reports_first_corruption() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::verify"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    let store = td.path().join(".genesis/store");
+    std::fs::create_dir_all(&store).unwrap();
+
+    let mut artifacts = [b"alpha".as_slice(), b"bravo".as_slice()]
+        .into_iter()
+        .map(|bytes| (blake3::hash(bytes).to_hex().to_string(), bytes))
+        .collect::<Vec<_>>();
+    artifacts.sort_by(|left, right| left.0.cmp(&right.0));
+    for (hash, bytes) in &artifacts {
+        std::fs::write(store.join(hash), bytes).unwrap();
+    }
+    std::fs::write(store.join(".tmp-uncommitted"), b"ignored").unwrap();
+    std::fs::write(store.join("A".repeat(64)), b"ignored").unwrap();
+    std::fs::create_dir(store.join("f".repeat(64))).unwrap();
+
+    let forms = parse_module(
+        "(def prog (core/effect::perform 'core/store::verify {:hash nil} (fn (r) (core/effect::pure r)))) prog",
+    )
+    .unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let result = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    let Some(Term::Map(fields)) = result.value.as_data() else {
+        panic!("expected verify result map");
+    };
+    assert_eq!(
+        fields.get(&TermOrdKey(Term::symbol(":checked"))),
+        Some(&Term::Int(2.into()))
+    );
+
+    std::fs::write(store.join(&artifacts[0].0), b"corrupted").unwrap();
+    let (mut context, program) = eval_prog(&forms);
+    let result = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert_eq!(
+        sealed_error_code(&result.value).as_deref(),
+        Some("core/store/corruption")
+    );
+    assert_eq!(
+        sealed_error_context_str(&result.value, ":hash").as_deref(),
+        Some(artifacts[0].0.as_str()),
+        "scan must report the first raw-byte-ordered canonical hash"
+    );
+}
+
+#[test]
+fn store_verify_io_errors_are_stable_and_nondisclosing() {
+    let td = tempfile::tempdir().unwrap();
+    let caps_path = td.path().join("caps.toml");
+    std::fs::write(
+        &caps_path,
+        r#"
+allow = ["core/store::verify"]
+
+[store]
+dir = "./.genesis/store"
+"#,
+    )
+    .unwrap();
+    let policy = load_policy(&caps_path);
+    let hash = "0".repeat(64);
+    std::fs::create_dir_all(td.path().join(".genesis/store").join(&hash)).unwrap();
+    let source = format!(
+        "(def prog (core/effect::perform 'core/store::verify {{:hash \"{hash}\"}} (fn (r) (core/effect::pure r)))) prog"
+    );
+    let forms = parse_module(&source).unwrap();
+    let module_hash = hash_module(&forms);
+    let (mut context, program) = eval_prog(&forms);
+    let result = run(
+        &mut context,
+        &policy,
+        program,
+        module_hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert_eq!(
+        sealed_error_code(&result.value).as_deref(),
+        Some("core/store/io-error")
+    );
+    assert_eq!(
+        sealed_error_message(&result.value).as_deref(),
+        Some("artifact store verification read failed")
     );
 }
 

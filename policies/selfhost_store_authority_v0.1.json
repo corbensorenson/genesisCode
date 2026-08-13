@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-13",
   "binding": "core/store::authority",
-  "contentIdentitySha256": "74914872ff002bd3026f788c9660b1dc4eaa56da78877ccd5eb19c342a17a745",
+  "contentIdentitySha256": "d53e09a6c225c9283e205f2d71f5eed81440c25c517658b2e18ffd3729d70e54",
   "decisionInventory": [
     "put-payload-admission",
     "put-canonical-bytes",
@@ -16,7 +16,12 @@
     "get-source-selection",
     "get-byte-limit-and-integrity",
     "get-selfhost-coreform-parse",
-    "get-cache-budget-admission"
+    "get-cache-budget-admission",
+    "verify-payload-and-hash-admission",
+    "verify-inventory-selection-and-order",
+    "verify-observation-binding",
+    "verify-artifact-and-cumulative-limits",
+    "verify-integrity-and-first-failure"
   ],
   "hostMechanisms": [
     "artifact-only-authority-bootstrap-and-bounded-evaluation",
@@ -24,7 +29,9 @@
     "blake3-and-byte-count-contradiction-checking",
     "atomic-write-once-filesystem-storage-and-durability",
     "bounded-stable-local-byte-observation",
-    "policy-authorized-remote-presence-byte-and-transport-integrity-observation"
+    "policy-authorized-remote-presence-byte-and-transport-integrity-observation",
+    "bounded-raw-inventory-enumeration-and-file-type-observation",
+    "bounded-streamed-artifact-hash-observation"
   ],
   "hostOracle": {
     "parityOnly": true,
@@ -37,7 +44,7 @@
   "kind": "genesis/selfhost-store-authority-v0.1",
   "nonclaims": [
     "bootstrap-fixpoint",
-    "verify-authority",
+    "internal-direct-store-consumer-authority",
     "h2-sd-store",
     "package-registry-vcs-authority",
     "r4-2-e-closure",
@@ -63,5 +70,10 @@
   "sourceModule": "selfhost/store_authority_v1.gc",
   "sourceSha256": "497d004ab31ac287d99c9d76bde68605afa1e28427dcfe6e36158b957e1ce244",
   "spec": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md",
+  "verifyBinding": "core/store::verify-authority",
+  "verifyRequestKind": "genesis/store-verify-authority-request-v0.1",
+  "verifyResultKind": "genesis/store-verify-authority-result-v0.1",
+  "verifySourceModule": "selfhost/store_verify_authority_v1.gc",
+  "verifySourceSha256": "3d9a0bcd10d92a6838792ccce338a948ef578c9d209ad3364401d0ebf9ae48e2",
   "version": "0.1.0"
 }

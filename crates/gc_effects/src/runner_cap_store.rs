@@ -311,7 +311,8 @@ pub(super) fn cap_store_get_parity(
     Ok(Value::data(Term::Map(m)))
 }
 
-pub(super) fn cap_store_verify(
+#[cfg(any(test, feature = "parity-oracle"))]
+pub(super) fn cap_store_verify_parity(
     op: &str,
     payload: &Term,
     store: Option<&ArtifactStore>,

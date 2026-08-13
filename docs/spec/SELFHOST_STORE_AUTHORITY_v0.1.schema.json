@@ -26,6 +26,11 @@
     "sourceModule",
     "sourceSha256",
     "spec",
+    "verifyBinding",
+    "verifyRequestKind",
+    "verifyResultKind",
+    "verifySourceModule",
+    "verifySourceSha256",
     "version"
   ],
   "properties": {
@@ -47,7 +52,12 @@
         "get-source-selection",
         "get-byte-limit-and-integrity",
         "get-selfhost-coreform-parse",
-        "get-cache-budget-admission"
+        "get-cache-budget-admission",
+        "verify-payload-and-hash-admission",
+        "verify-inventory-selection-and-order",
+        "verify-observation-binding",
+        "verify-artifact-and-cumulative-limits",
+        "verify-integrity-and-first-failure"
       ]
     },
     "hostMechanisms": {
@@ -57,7 +67,9 @@
         "blake3-and-byte-count-contradiction-checking",
         "atomic-write-once-filesystem-storage-and-durability",
         "bounded-stable-local-byte-observation",
-        "policy-authorized-remote-presence-byte-and-transport-integrity-observation"
+        "policy-authorized-remote-presence-byte-and-transport-integrity-observation",
+        "bounded-raw-inventory-enumeration-and-file-type-observation",
+        "bounded-streamed-artifact-hash-observation"
       ]
     },
     "hostOracle": {
@@ -96,6 +108,11 @@
     "sourceModule": {"const": "selfhost/store_authority_v1.gc"},
     "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md"},
+    "verifyBinding": {"const": "core/store::verify-authority"},
+    "verifyRequestKind": {"const": "genesis/store-verify-authority-request-v0.1"},
+    "verifyResultKind": {"const": "genesis/store-verify-authority-result-v0.1"},
+    "verifySourceModule": {"const": "selfhost/store_verify_authority_v1.gc"},
+    "verifySourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "version": {"const": "0.1.0"}
   }
 }
