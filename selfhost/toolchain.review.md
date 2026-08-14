@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `f32fbe1e043def36d4e5f7524b2485c7e7ced849cb5c701cf5c23ee8186e9383`
-- Freshness artifact hash: `f32fbe1e043def36d4e5f7524b2485c7e7ced849cb5c701cf5c23ee8186e9383`
-- Freshness source hash: `f610f219a3f92910590a47eb3f26e238f10d9a41abde6930d4c7e627b80ff261`
-- Source aggregate hash (module path + module sha256): `da63a0e515c6b1e757cd54ea84d6c42de6adcb436fdcf482399881acbd5ba1c8`
+- Artifact sha256: `2ff7d81c1939b4818712723380a1f97c40abf114daa11baca7f8994c3c4bc46f`
+- Freshness artifact hash: `2ff7d81c1939b4818712723380a1f97c40abf114daa11baca7f8994c3c4bc46f`
+- Freshness source hash: `f509d51c54592b22520f38d08936a896db2f84d7d4bd210751e210c7f048d9e4`
+- Source aggregate hash (module path + module sha256): `11577d14ae080040a0f7a54acd416e42b70ed2b4d9a29889b1d522b83a7959b8`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `107`
+- Module count: `111`
 
 ## Module Summary
 
@@ -104,6 +104,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_publish_authority_qualification_v1.gc` | 154 | 6427 | 8 | `4ce5d89616ebe489` |
 | `selfhost/pkg_publish_authority_crypto_v1.gc` | 120 | 5853 | 8 | `e426d1d2bf0c0220` |
 | `selfhost/pkg_publish_authority_prepare_v1.gc` | 210 | 10711 | 10 | `764ba38e122c523b` |
+| `selfhost/pkg_publish_authority_finalize_crypto_v1.gc` | 81 | 4044 | 5 | `4bbdc02f44f9c4a2` |
+| `selfhost/pkg_publish_authority_finalize_policy_v1.gc` | 126 | 5525 | 7 | `0850bc2781395ebb` |
+| `selfhost/pkg_publish_authority_finalize_v1.gc` | 206 | 9685 | 12 | `97f8ff8acd9ca587` |
+| `selfhost/pkg_publish_authority_v1.gc` | 14 | 859 | 1 | `b382e64aa90883b9` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -214,6 +218,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_publish_authority_qualification_v1.gc`: `selfhost/pkg-publish-authority::qualification-requirements-valid?`, `selfhost/pkg-publish-authority::qualification-tools-loop?`, `selfhost/pkg-publish-authority::qualification-tools-valid?`, `selfhost/pkg-publish-authority::qualification-test-valid?`, `selfhost/pkg-publish-authority::qualification-tests-loop?`, `selfhost/pkg-publish-authority::qualification-tests-valid?`, `selfhost/pkg-publish-authority::tool-qualification-valid?`, `selfhost/pkg-publish-authority::tool-qualifications-loop?`
 - `selfhost/pkg_publish_authority_crypto_v1.gc`: `selfhost/pkg-publish-authority::bytes-length?`, `selfhost/pkg-publish-authority::optional-role-valid?`, `selfhost/pkg-publish-authority::commit-signing-hash`, `selfhost/pkg-publish-authority::commit-sign-message`, `selfhost/pkg-publish-authority::attestation-valid?`, `selfhost/pkg-publish-authority::crypto-request`, `selfhost/pkg-publish-authority::crypto-requests-loop`, `selfhost/pkg-publish-authority::crypto-requests`
 - `selfhost/pkg_publish_authority_prepare_v1.gc`: `selfhost/pkg-publish-authority::prepare-request-shape?`, `selfhost/pkg-publish-authority::prepare-mechanism-valid?`, `selfhost/pkg-publish-authority::prepare-value`, `selfhost/pkg-publish-authority::reject-internal`, `selfhost/pkg-publish-authority::prepare-crypto`, `selfhost/pkg-publish-authority::prepare-assurance`, `selfhost/pkg-publish-authority::prepare-evidence`, `selfhost/pkg-publish-authority::prepare-objects`
+- `selfhost/pkg_publish_authority_finalize_crypto_v1.gc`: `selfhost/pkg-publish-authority::crypto-fact-valid?`, `selfhost/pkg-publish-authority::attestation-role`, `selfhost/pkg-publish-authority::role-signers-add`, `selfhost/pkg-publish-authority::crypto-tally-loop`, `selfhost/pkg-publish-authority::crypto-tally`
+- `selfhost/pkg_publish_authority_finalize_policy_v1.gc`: `selfhost/pkg-publish-authority::role-signer-count`, `selfhost/pkg-publish-authority::required-role-code-loop`, `selfhost/pkg-publish-authority::role-minimum-code-loop`, `selfhost/pkg-publish-authority::set-overlap-loop?`, `selfhost/pkg-publish-authority::sets-overlap?`, `selfhost/pkg-publish-authority::independence-code-loop`, `selfhost/pkg-publish-authority::signature-policy-code`
+- `selfhost/pkg_publish_authority_finalize_v1.gc`: `selfhost/pkg-publish-authority::finalize-request-shape?`, `selfhost/pkg-publish-authority::finalize-mechanism-valid?`, `selfhost/pkg-publish-authority::finalize-prepare-mechanism`, `selfhost/pkg-publish-authority::finalize-prepare-request`, `selfhost/pkg-publish-authority::rebind-rejection`, `selfhost/pkg-publish-authority::publication-provenance`, `selfhost/pkg-publish-authority::publication-set-ref`, `selfhost/pkg-publish-authority::publication-sync`
+- `selfhost/pkg_publish_authority_v1.gc`: `core/pkg::publish-authority`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

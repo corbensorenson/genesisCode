@@ -1,0 +1,206 @@
+(def selfhost/pkg-publish-authority::finalize-request-shape?
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [
+          :facts
+          :kind
+          :mechanism
+          :phase
+          :v])
+      (if
+        ((core/eq? ((selfhost/pkg-publish-authority::field request) (quote :kind)))
+          "genesis/pkg-publish-authority-request-v0.1")
+        (if
+          (if
+            (selfhost/pkg-publish-authority::int?
+              ((selfhost/pkg-publish-authority::field request) (quote :v)))
+            ((core/int::eq? ((selfhost/pkg-publish-authority::field request) (quote :v))) 1)
+            false)
+          (if
+            (selfhost/pkg-publish-authority::sym?
+              ((selfhost/pkg-publish-authority::field request) (quote :phase)))
+            ((core/sym::eq? ((selfhost/pkg-publish-authority::field request) (quote :phase)))
+              (quote :finalize))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::finalize-mechanism-valid?
+  (fn (mechanism)
+    (if
+      ((selfhost/store-authority::exact-map? mechanism)
+        [
+          :attestations
+          :crypto-facts
+          :evidence
+          :inspect-h
+          :prepare-h])
+      (if
+        (selfhost/pkg-publish-authority::vec?
+          ((selfhost/pkg-publish-authority::field mechanism) (quote :attestations)))
+        (if
+          (selfhost/pkg-publish-authority::vec?
+            ((selfhost/pkg-publish-authority::field mechanism) (quote :crypto-facts)))
+          (if
+            (selfhost/pkg-publish-authority::vec?
+              ((selfhost/pkg-publish-authority::field mechanism) (quote :evidence)))
+            (if
+              (selfhost/store-authority::hash?
+                ((selfhost/pkg-publish-authority::field mechanism) (quote :inspect-h)))
+              (selfhost/store-authority::hash?
+                ((selfhost/pkg-publish-authority::field mechanism) (quote :prepare-h)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::finalize-prepare-mechanism
+  (fn (mechanism)
+    {
+      :attestations ((selfhost/pkg-publish-authority::field mechanism) (quote :attestations))
+      :evidence ((selfhost/pkg-publish-authority::field mechanism) (quote :evidence))
+      :inspect-h ((selfhost/pkg-publish-authority::field mechanism) (quote :inspect-h))}))
+
+(def selfhost/pkg-publish-authority::finalize-prepare-request
+  (fn (request)
+    (fn (mechanism)
+      (let ((prepared (((core/map::put request) (quote :phase)) (quote :prepare))))
+        (((core/map::put prepared) (quote :mechanism))
+          (selfhost/pkg-publish-authority::finalize-prepare-mechanism mechanism))))))
+
+(def selfhost/pkg-publish-authority::rebind-rejection
+  (fn (request)
+    (fn (result)
+      (
+        ((selfhost/pkg-publish-authority::reject request)
+          ((selfhost/pkg-publish-authority::field result) (quote :code)))
+        ((selfhost/pkg-publish-authority::field result) (quote :message))))))
+
+(def selfhost/pkg-publish-authority::publication-provenance
+  (fn (commit)
+    {
+      :attestations ((selfhost/pkg-publish-authority::field commit) (quote :attestations))
+      :base ((selfhost/pkg-publish-authority::field commit) (quote :base))
+      :evidence ((selfhost/pkg-publish-authority::field commit) (quote :evidence))
+      :obligations ((selfhost/pkg-publish-authority::field commit) (quote :obligations))
+      :parents ((selfhost/pkg-publish-authority::field commit) (quote :parents))
+      :patch ((selfhost/pkg-publish-authority::field commit) (quote :patch))
+      :result ((selfhost/pkg-publish-authority::field commit) (quote :result))}))
+
+(def selfhost/pkg-publish-authority::publication-set-ref
+  (fn (facts)
+    (let
+      (
+        (base
+          {
+            :hash ((selfhost/pkg-publish-authority::field facts) (quote :commit-h))
+            :name ((selfhost/pkg-publish-authority::field facts) (quote :ref))
+            :policy ((selfhost/pkg-publish-authority::field facts) (quote :policy-h))}))
+      (let ((expected-old ((selfhost/pkg-publish-authority::field facts) (quote :expected-old))))
+        (if (selfhost/pkg-publish-authority::nil? expected-old)
+          base
+          (((core/map::put base) (quote :expected-old)) expected-old))))))
+
+(def selfhost/pkg-publish-authority::publication-sync
+  (fn (facts)
+    (let
+      (
+        (roots
+          (
+            (core/vec::push
+              ((core/vec::push []) ((selfhost/pkg-publish-authority::field facts) (quote :commit-h))))
+            ((selfhost/pkg-publish-authority::field facts) (quote :policy-h))))
+        (set-refs ((core/vec::push []) (selfhost/pkg-publish-authority::publication-set-ref facts))))
+      (let
+        (
+          (base
+            {
+              :remote ((selfhost/pkg-publish-authority::field facts) (quote :remote))
+              :roots roots
+              :set-refs set-refs}))
+        (let ((depth ((selfhost/pkg-publish-authority::field facts) (quote :depth))))
+          (if ((core/int::lt? 0) depth) (((core/map::put base) (quote :depth)) depth) base))))))
+
+(def selfhost/pkg-publish-authority::finalize-value
+  (fn (facts)
+    (let ((commit ((selfhost/pkg-publish-authority::field facts) (quote :commit))))
+      {
+        :commit ((selfhost/pkg-publish-authority::field facts) (quote :commit-h))
+        :provenance (selfhost/pkg-publish-authority::publication-provenance commit)
+        :ref ((selfhost/pkg-publish-authority::field facts) (quote :ref))
+        :sync (selfhost/pkg-publish-authority::publication-sync facts)})))
+
+(def selfhost/pkg-publish-authority::finalize-tally
+  (fn (request)
+    (fn (facts)
+      (fn (mechanism)
+        (fn (class)
+          (fn (prepare-value)
+            (let
+              ((requests ((selfhost/pkg-publish-authority::field prepare-value) (quote :crypto-requests)))
+                (crypto-facts
+                  ((selfhost/pkg-publish-authority::field mechanism) (quote :crypto-facts)))
+                (attestations
+                  ((selfhost/pkg-publish-authority::field mechanism) (quote :attestations))))
+              (let
+                ((tally (((selfhost/pkg-publish-authority::crypto-tally requests) crypto-facts) attestations)))
+                (if (selfhost/pkg-publish-authority::internal-ok? tally)
+                  (let
+                    (
+                      (code
+                        ((selfhost/pkg-publish-authority::signature-policy-code class)
+                          (selfhost/pkg-publish-authority::internal-value tally))))
+                    (if (selfhost/pkg-publish-authority::nil? code)
+                      ((selfhost/pkg-publish-authority::accept request)
+                        (selfhost/pkg-publish-authority::finalize-value facts))
+                      (((selfhost/pkg-publish-authority::reject request) code)
+                        "publication signature role policy is not satisfied")))
+                  (((selfhost/pkg-publish-authority::reject-internal request) tally)
+                    "publication cryptographic facts are malformed or unbound"))))))))))
+
+(def selfhost/pkg-publish-authority::finalize-prepared
+  (fn (request)
+    (fn (facts)
+      (fn (mechanism)
+        (fn (prepared)
+          (let ((prepare-value ((selfhost/pkg-publish-authority::field prepared) (quote :value))))
+            (if
+              ((core/eq? ((selfhost/pkg-publish-authority::field mechanism) (quote :prepare-h)))
+                ((selfhost/pkg-publish-authority::field prepare-value) (quote :prepare-h)))
+              (let
+                (
+                  (selection
+                    (
+                      (selfhost/pkg-publish-policy::select
+                        ((selfhost/pkg-publish-authority::field facts) (quote :policy)))
+                      ((selfhost/pkg-publish-authority::field facts) (quote :ref)))))
+                (if ((selfhost/pkg-publish-authority::field selection) (quote :ok))
+                  (
+                    ((((selfhost/pkg-publish-authority::finalize-tally request) facts) mechanism)
+                      ((selfhost/pkg-publish-authority::field selection) (quote :value)))
+                    prepare-value)
+                  ((selfhost/pkg-publish-authority::reject-policy-result request) selection)))
+              (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+                "finalize prepare identity mismatch"))))))))
+
+(def selfhost/pkg-publish-authority::finalize
+  (fn (request)
+    (if (selfhost/pkg-publish-authority::finalize-request-shape? request)
+      (let
+        ((facts ((selfhost/pkg-publish-authority::field request) (quote :facts)))
+          (mechanism ((selfhost/pkg-publish-authority::field request) (quote :mechanism))))
+        (if (selfhost/pkg-publish-authority::finalize-mechanism-valid? mechanism)
+          (let
+            ((prepare-request ((selfhost/pkg-publish-authority::finalize-prepare-request request) mechanism)))
+            (let ((prepared (selfhost/pkg-publish-authority::prepare prepare-request)))
+              (if ((selfhost/pkg-publish-authority::field prepared) (quote :ok))
+                ((((selfhost/pkg-publish-authority::finalize-prepared request) facts) mechanism)
+                  prepared)
+                ((selfhost/pkg-publish-authority::rebind-rejection request) prepared))))
+          (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+            "finalize mechanism is malformed")))
+      (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+        "finalize request envelope is invalid"))))

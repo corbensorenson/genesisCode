@@ -1,0 +1,81 @@
+(def selfhost/pkg-publish-authority::crypto-fact-valid?
+  (fn (fact)
+    (fn (request)
+      (if ((selfhost/store-authority::exact-map? fact) [:request-h :signature-valid])
+        (let
+          ((request-h ((selfhost/pkg-publish-authority::field fact) (quote :request-h)))
+            (signature-valid ((selfhost/pkg-publish-authority::field fact) (quote :signature-valid))))
+          (if (selfhost/store-authority::hash? request-h)
+            (if
+              ((core/eq? request-h)
+                ((selfhost/pkg-publish-authority::field request) (quote :request-h)))
+              (selfhost/pkg-publish-authority::bool? signature-valid)
+              false)
+            false))
+        false))))
+
+(def selfhost/pkg-publish-authority::attestation-role
+  (fn (object)
+    (let ((term ((selfhost/pkg-publish-authority::field object) (quote :term))))
+      (if ((selfhost/pkg-publish-authority::has-key? term) (quote :role))
+        (let ((role ((selfhost/pkg-publish-authority::field term) (quote :role))))
+          (if (selfhost/pkg-publish-authority::nil? role)
+            nil
+            (selfhost/pkg-publish-authority::normalize-symbol-like role)))
+        nil))))
+
+(def selfhost/pkg-publish-authority::role-signers-add
+  (fn (role-signers)
+    (fn (role)
+      (fn (pk)
+        (if (selfhost/pkg-publish-authority::nil? role)
+          role-signers
+          (if ((core/eq? role) ":")
+            role-signers
+            (let ((existing ((selfhost/pkg-publish-authority::field role-signers) role)))
+              (let ((signers (if (selfhost/pkg-publish-authority::map? existing) existing {})))
+                (((core/map::put role-signers) role) (((core/map::put signers) pk) true))))))))))
+
+(def selfhost/pkg-publish-authority::crypto-tally-loop
+  (fn (requests)
+    (fn (facts)
+      (fn (attestations)
+        (fn (index)
+          (fn (signers)
+            (fn (role-signers)
+              (if ((core/int::eq? index) (core/vec::len requests))
+                (selfhost/pkg-publish-authority::internal-ok
+                  {:role-signers role-signers :signers signers})
+                (let
+                  ((request ((core/vec::get requests) index)) (fact ((core/vec::get facts) index)))
+                  (if ((selfhost/pkg-publish-authority::crypto-fact-valid? fact) request)
+                    (if ((selfhost/pkg-publish-authority::field fact) (quote :signature-valid))
+                      (let
+                        ((pk ((selfhost/pkg-publish-authority::field request) (quote :pk)))
+                          (role
+                            (selfhost/pkg-publish-authority::attestation-role
+                              ((core/vec::get attestations) index))))
+                        (
+                          (
+                            ((((selfhost/pkg-publish-authority::crypto-tally-loop requests) facts) attestations)
+                              ((core/int::add index) 1))
+                            (((core/map::put signers) pk) true))
+                          (((selfhost/pkg-publish-authority::role-signers-add role-signers) role) pk)))
+                      (
+                        (
+                          ((((selfhost/pkg-publish-authority::crypto-tally-loop requests) facts) attestations)
+                            ((core/int::add index) 1))
+                          signers)
+                        role-signers))
+                    (selfhost/pkg-publish-authority::internal-bad "core/pkg/bad-authority-request")))))))))))
+
+(def selfhost/pkg-publish-authority::crypto-tally
+  (fn (requests)
+    (fn (facts)
+      (fn (attestations)
+        (if (selfhost/pkg-publish-authority::vec? facts)
+          (if ((core/int::eq? (core/vec::len facts)) (core/vec::len requests))
+            ((((((selfhost/pkg-publish-authority::crypto-tally-loop requests) facts) attestations) 0) {})
+              {})
+            (selfhost/pkg-publish-authority::internal-bad "core/pkg/bad-authority-request"))
+          (selfhost/pkg-publish-authority::internal-bad "core/pkg/bad-authority-request"))))))

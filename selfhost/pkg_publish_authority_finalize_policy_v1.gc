@@ -1,0 +1,126 @@
+(def selfhost/pkg-publish-authority::role-signer-count
+  (fn (role-signers)
+    (fn (role)
+      (let ((signers ((selfhost/pkg-publish-authority::field role-signers) role)))
+        (if (selfhost/pkg-publish-authority::map? signers) (core/map::len signers) 0)))))
+
+(def selfhost/pkg-publish-authority::required-role-code-loop
+  (fn (roles)
+    (fn (role-signers)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len roles))
+          nil
+          (if
+            ((core/int::lt? 0)
+              ((selfhost/pkg-publish-authority::role-signer-count role-signers)
+                ((core/vec::get roles) index)))
+            (((selfhost/pkg-publish-authority::required-role-code-loop roles) role-signers)
+              ((core/int::add index) 1))
+            "core/pkg/missing-attestation-role"))))))
+
+(def selfhost/pkg-publish-authority::role-minimum-code-loop
+  (fn (entries)
+    (fn (role-signers)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          nil
+          (let ((entry ((core/vec::get entries) index)))
+            (let ((role ((core/vec::get entry) 0)) (minimum ((core/vec::get entry) 1)))
+              (if
+                ((core/int::lt? ((selfhost/pkg-publish-authority::role-signer-count role-signers) role))
+                  minimum)
+                "core/pkg/missing-attestation-role-signatures"
+                (((selfhost/pkg-publish-authority::role-minimum-code-loop entries) role-signers)
+                  ((core/int::add index) 1))))))))))
+
+(def selfhost/pkg-publish-authority::set-overlap-loop?
+  (fn (entries)
+    (fn (right)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          false
+          (let ((pk ((core/vec::get ((core/vec::get entries) index)) 0)))
+            (if ((selfhost/pkg-publish-authority::has-key? right) pk)
+              true
+              (((selfhost/pkg-publish-authority::set-overlap-loop? entries) right)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/pkg-publish-authority::sets-overlap?
+  (fn (left)
+    (fn (right)
+      (if (selfhost/pkg-publish-authority::map? left)
+        (if (selfhost/pkg-publish-authority::map? right)
+          (((selfhost/pkg-publish-authority::set-overlap-loop? (core/map::entries left)) right) 0)
+          false)
+        false))))
+
+(def selfhost/pkg-publish-authority::independence-code-loop
+  (fn (pairs)
+    (fn (role-signers)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len pairs))
+          nil
+          (let ((pair ((core/vec::get pairs) index)))
+            (let
+              ((left-role ((selfhost/pkg-publish-authority::field pair) (quote :left)))
+                (right-role ((selfhost/pkg-publish-authority::field pair) (quote :right))))
+              (let
+                ((left ((selfhost/pkg-publish-authority::field role-signers) left-role))
+                  (right ((selfhost/pkg-publish-authority::field role-signers) right-role)))
+                (if
+                  (if (selfhost/pkg-publish-authority::map? left)
+                    ((core/int::lt? 0) (core/map::len left))
+                    false)
+                  (if
+                    (if (selfhost/pkg-publish-authority::map? right)
+                      ((core/int::lt? 0) (core/map::len right))
+                      false)
+                    (if ((selfhost/pkg-publish-authority::sets-overlap? left) right)
+                      "core/pkg/role-independence-violation"
+                      (((selfhost/pkg-publish-authority::independence-code-loop pairs) role-signers)
+                        ((core/int::add index) 1)))
+                    "core/pkg/missing-attestation-role")
+                  "core/pkg/missing-attestation-role")))))))))
+
+(def selfhost/pkg-publish-authority::signature-policy-code
+  (fn (class)
+    (fn (tally)
+      (let
+        ((signers ((selfhost/pkg-publish-authority::field tally) (quote :signers)))
+          (role-signers ((selfhost/pkg-publish-authority::field tally) (quote :role-signers))))
+        (if
+          ((core/int::lt? (core/map::len signers))
+            ((selfhost/pkg-publish-authority::field class) (quote :min-signatures)))
+          "core/pkg/missing-signatures"
+          (let
+            (
+              (required-code
+                (
+                  (
+                    (selfhost/pkg-publish-authority::required-role-code-loop
+                      ((selfhost/pkg-publish-authority::field class)
+                        (quote :required-attestation-roles)))
+                    role-signers)
+                  0)))
+            (if (selfhost/pkg-publish-authority::nil? required-code)
+              (let
+                (
+                  (minimum-code
+                    (
+                      (
+                        (selfhost/pkg-publish-authority::role-minimum-code-loop
+                          (core/map::entries
+                            ((selfhost/pkg-publish-authority::field class)
+                              (quote :role-min-signatures))))
+                        role-signers)
+                      0)))
+                (if (selfhost/pkg-publish-authority::nil? minimum-code)
+                  (
+                    (
+                      (selfhost/pkg-publish-authority::independence-code-loop
+                        ((selfhost/pkg-publish-authority::field class)
+                          (quote :independent-role-pairs)))
+                      role-signers)
+                    0)
+                  minimum-code))
+              required-code)))))))
