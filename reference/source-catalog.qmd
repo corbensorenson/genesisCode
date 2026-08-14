@@ -7,7 +7,7 @@ toc-depth: 2
 
 # Documentation and authority inventory
 
-**362 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
+**366 tracked sources**. SHA-256 prefixes identify the exact content used to generate this catalog.
 
 ## Repository roots
 
@@ -16,7 +16,7 @@ toc-depth: 2
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `833e7da1c6c8` |
 | [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `202454538ec3` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0dd915fba729` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `db75c0b627b1` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `e58e5004b690` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-08-11) | md | `bd0e7b8580e7` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `ebf50143ae88` |
@@ -29,7 +29,7 @@ toc-depth: 2
 | [`docs/DEPRECATION_MAP_v0.1.md`](../docs/DEPRECATION_MAP_v0.1.md) | Documentation Deprecation Map v0.1 | md | `961d8acb5a56` |
 | [`docs/FOUNDATION_STDLIB_v0.2.md`](../docs/FOUNDATION_STDLIB_v0.2.md) | Foundation Standard Library (Level 1) v0.2 | md | `6f89ada78518` |
 | [`docs/GETTING_STARTED.md`](../docs/GETTING_STARTED.md) | Getting Started (GenesisCode v0.2) | md | `a603057137bd` |
-| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `8d75f07ae781` |
+| [`docs/INDEX.md`](../docs/INDEX.md) | GenesisCode Docs Index | md | `818428133ed7` |
 | [`docs/PAPER_v0.2.md`](../docs/PAPER_v0.2.md) | **GenesisCode v0.2** | md | `a580551652c7` |
 | [`docs/POLICY_DEFAULTS_v0.1.md`](../docs/POLICY_DEFAULTS_v0.1.md) | Policy Defaults v0.1 | md | `3cd6800f37c2` |
 | [`docs/STACKS_v0.2.md`](../docs/STACKS_v0.2.md) | GenesisCode Stacks (Levels 0–2) v0.2 | md | `8c0df911adeb` |
@@ -309,8 +309,8 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json`](../docs/spec/SELFHOST_CLOSURE_LEVELS_v0.1.schema.json) | GenesisCode Self-Host Closure Levels v0.1 | schema | `60dc6a4d860d` |
 | [`docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.md) | Self-hosted Commit Authority v0.1 | md | `18b9487ea5a3` |
 | [`docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json) | SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json | schema | `fcfbc8a2ecdc` |
-| [`docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md`](../docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md) | Self-host Effect Policy Composition v0.1 | md | `720f23720fc2` |
-| [`docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json`](../docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json) | GenesisCode H2 self-host effect policy composition profile v0.1 | schema | `30bebfba8990` |
+| [`docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md`](../docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md) | Self-host Effect Policy Composition v0.1 | md | `296229109b27` |
+| [`docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json`](../docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.schema.json) | GenesisCode H2 self-host effect policy composition profile v0.1 | schema | `75e20caa0a27` |
 | [`docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md) | Self-hosted Evidence Verification Authority v0.1 | md | `5b9422365fa8` |
 | [`docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json) | SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json | schema | `a5025fdd9d34` |
 | [`docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md) | Self-host Frontend Authority Profile v0.1 | md | `cbe8d5ac951d` |
@@ -321,6 +321,8 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PATCH_AUTHORITY_v0.1.schema.json) | GenesisCode self-host patch authority profile v0.1 | schema | `3e5c5268aea0` |
 | [`docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.md) | Self-hosted package bridge authority v0.1 | md | `cf46ff27d899` |
 | [`docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json | schema | `2c1ce5d35890` |
+| [`docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.md) | Self-hosted package install authority v0.1 | md | `cea0d72113af` |
+| [`docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json | schema | `3ab77e264360` |
 | [`docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.md) | Self-hosted package lock model authority v0.1 | md | `ec30994516d2` |
 | [`docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json | schema | `0b2158e8207c` |
 | [`docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_LOCK_OPS_AUTHORITY_v0.1.md) | Self-hosted package lock operations authority v0.1 | md | `edac7021a8b7` |
@@ -331,10 +333,12 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json | schema | `42d0799f125c` |
 | [`docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md) | Self-hosted package publish authority v0.1 | md | `a9e03ef91c24` |
 | [`docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.schema.json | schema | `1597dfd756fd` |
-| [`docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md) | Self-hosted package resolution identity authority v0.1 | md | `c8fcb1f10d09` |
+| [`docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md) | Self-hosted package resolution identity authority v0.1 | md | `3444b263b0bb` |
 | [`docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.schema.json | schema | `ad2ee26a57eb` |
-| [`docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md) | Self-hosted package resolution plan authority v0.1 | md | `d3fa0cdf833f` |
+| [`docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md) | Self-hosted package resolution plan authority v0.1 | md | `6d5ae4f24755` |
 | [`docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json | schema | `b5af737856f4` |
+| [`docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.md) | Self-hosted package resolution workflow authority v0.1 | md | `cd7442b0c8d4` |
+| [`docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.schema.json | schema | `16c60cf9fa3b` |
 | [`docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md) | Self-hosted package semver selection authority v0.1 | md | `b83ffc54a55a` |
 | [`docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.schema.json) | SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.schema.json | schema | `95db53ce2467` |
 | [`docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.md`](../docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.md) | Self-hosted package snapshot authority v0.1 | md | `f6c8faafd0ec` |
@@ -356,7 +360,7 @@ toc-depth: 2
 | [`docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json`](../docs/spec/SELFHOST_TYPECHECK_AUTHORITY_v0.1.schema.json) | GenesisCode self-host typecheck authority profile v0.1 | schema | `94236af9fe71` |
 | [`docs/spec/SELF_HOST_BOOTSTRAP_API.md`](../docs/spec/SELF_HOST_BOOTSTRAP_API.md) | Self-Host Bootstrap API (CoreForm) v0.2 | md | `166103b6bfba` |
 | [`docs/spec/SELF_HOST_BOUNDARY.md`](../docs/spec/SELF_HOST_BOUNDARY.md) | Self-Host Boundary (WASM-First) v0.2 | md | `1fb939a04377` |
-| [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json) | genesis/semantic-ownership-ledger-v0.1 | json | `0cb65f3b060b` |
+| [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json) | genesis/semantic-ownership-ledger-v0.1 | json | `a4e9921d864f` |
 | [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md) | Semantic Ownership Ledger v0.1 | md | `b9a7a8e55acb` |
 | [`docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json`](../docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.schema.json) | GenesisCode Semantic Ownership Ledger v0.1 | schema | `c3bc52735a9d` |
 | [`docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md`](../docs/spec/SEMANTIC_PATCH_APPLY_REPORT_v0.1.md) | Semantic Patch Apply Report v0.1 | md | `fafb159d4bc3` |

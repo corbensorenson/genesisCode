@@ -426,8 +426,9 @@ pub(crate) fn validate_locked_entries_strict(
     Ok(())
 }
 
-// Install remains a separate R4.2.e residual. Lock/update provenance is produced
-// exclusively by the workflow authority and does not call this compatibility path.
+// The production lock/update and install authorities construct provenance. This
+// compatibility path exists only for differential tests and the parity oracle.
+#[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn locked_dependency_provenance(
     store: &ArtifactStore,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,

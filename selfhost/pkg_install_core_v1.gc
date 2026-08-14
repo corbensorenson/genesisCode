@@ -1,0 +1,98 @@
+; Closed helpers for package installation workflow authority.
+
+(def selfhost/pkg-install::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind "genesis/pkg-install-result-v0.1"
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-install::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-install::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-install::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-install::result request-h) false)
+          "core/pkg/bad-authority-request") message) nil))))
+
+(def selfhost/pkg-install::hash?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::str? value)
+      (selfhost/pkg-resolution-plan::hash64? value)
+      false)))
+
+(def selfhost/pkg-install::optional-hash?
+  (fn (value)
+    (if (core/list::is-nil? value) true (selfhost/pkg-install::hash? value))))
+
+(def selfhost/pkg-install::optional-bool?
+  (fn (value)
+    (if (core/list::is-nil? value)
+      true
+      (selfhost/pkg-resolution-workflow::bool? value))))
+
+(def selfhost/pkg-install::nonnegative-int?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::int? value)
+      (if ((core/int::lt? value) 0) false true)
+      false)))
+
+(def selfhost/pkg-install::resolution-status?
+  (fn (value)
+    (if (selfhost/pkg-resolution-workflow::symbol? value)
+      (if ((core/sym::eq? value) (quote :not-needed))
+        true
+        (if ((core/sym::eq? value) (quote :resolved))
+          true
+          (if ((core/sym::eq? value) (quote :not-found))
+            true
+            ((core/sym::eq? value) (quote :unavailable)))))
+      false)))
+
+(def selfhost/pkg-install::workspace-root
+  (fn (model)
+    (let ((artifacts ((core/map::get model) (quote :artifacts))))
+      (let ((root ((core/map::get artifacts) "root_workspace_snapshot")))
+        (if (core/list::is-nil? root) nil root)))))
+
+(def selfhost/pkg-install::registry
+  (fn (locked)
+    (fn (requirement)
+      (let ((locked-registry ((core/map::get locked) (quote :registry))))
+        (if (core/list::is-nil? locked-registry)
+          (if (core/list::is-nil? requirement)
+            nil
+            ((core/map::get requirement) (quote :registry)))
+          locked-registry)))))
+
+(def selfhost/pkg-install::missing-locks-loop
+  (fn (requirements)
+    (fn (locked)
+      (fn (index)
+        (fn (out)
+          (let ((entries (core/map::entries requirements)))
+            (if ((core/int::eq? index) (core/vec::len entries))
+              out
+              (let ((name ((core/vec::get ((core/vec::get entries) index)) 0)))
+                ((((selfhost/pkg-install::missing-locks-loop requirements) locked)
+                    ((core/int::add index) 1))
+                  (if (core/list::is-nil? ((core/map::get locked) name))
+                    ((core/vec::push out) name)
+                    out))))))))))
+
+(def selfhost/pkg-install::missing-locks
+  (fn (model)
+    ((((selfhost/pkg-install::missing-locks-loop
+          ((core/map::get model) (quote :requirements)))
+        ((core/map::get model) (quote :locked))) 0) [])))

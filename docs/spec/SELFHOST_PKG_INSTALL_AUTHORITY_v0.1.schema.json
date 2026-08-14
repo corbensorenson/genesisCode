@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact": { "const": "selfhost/toolchain.gc" },
+    "auditDate": { "format": "date", "type": "string" },
+    "binding": { "const": "core/pkg::install-authority" },
+    "contentIdentitySha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+    "decisionInventory": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "hostMechanisms": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "hostOracle": {
+      "additionalProperties": false,
+      "properties": {
+        "parityOnly": { "const": true },
+        "productionRequired": { "const": false },
+        "removalTask": { "const": "R4.2.e" }
+      },
+      "required": ["parityOnly", "productionRequired", "removalTask"],
+      "type": "object"
+    },
+    "independentVerifier": { "const": "scripts/lib/selfhost_pkg_install_authority.py" },
+    "kind": { "const": "genesis/selfhost-pkg-install-authority-v0.1" },
+    "nonclaims": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "productionEntrypoints": { "items": { "enum": ["genesis", "genesis_wasi"] }, "minItems": 2, "type": "array", "uniqueItems": true },
+    "requestKind": { "const": "genesis/pkg-install-request-v0.1" },
+    "resultKind": { "const": "genesis/pkg-install-result-v0.1" },
+    "schema": { "const": "docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json" },
+    "sourceModules": { "items": { "type": "string" }, "minItems": 4, "type": "array", "uniqueItems": true },
+    "sourceSha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+    "spec": { "const": "docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.md" },
+    "version": { "const": "0.1.0" }
+  },
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionEntrypoints", "requestKind", "resultKind", "schema", "sourceModules",
+    "sourceSha256", "spec", "version"
+  ],
+  "type": "object"
+}

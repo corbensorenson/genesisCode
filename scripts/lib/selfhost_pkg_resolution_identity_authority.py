@@ -196,8 +196,13 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             or workflow.count("resolve_requirement(") != 2
             or workflow.count("validate_locked_entries_strict(") != 1):
         fail("workflow identity and validation forwarding inventory drift")
-    if (install.count("identity_authority.as_deref_mut()") != 2
-            or "resolve_requirement(" not in install):
+    install_plan = install.find("plan_requirement(Some(authority)")
+    install_resolve = install.find("resolve_requirement(")
+    if (install.count("identity_authority.as_deref_mut()") != 1
+            or install.count("plan_requirement(Some(authority)") != 1
+            or install.count("Some(authority),") < 2
+            or min(install_plan, install_resolve) < 0
+            or not install_plan < install_resolve):
         fail("install hydration does not forward identity authority")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
@@ -260,7 +265,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs", ".fingerprint(req, snapshot, commit)", ".legacy_fingerprint(req)", "production route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "identity_authority.as_deref_mut()", "None", "resolution forwarding")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs", "plan_requirement(", "legacy_requirement_plan(", "workflow forwarding")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "identity_authority.as_deref_mut()", "None", "install forwarding")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "plan_requirement(Some(authority)", "plan_requirement(None", "install forwarding")
     source_mutation("crates/gc_effects/src/runner.rs", ".map(PkgResolutionIdentityAuthority::load)", ".map(PkgLockReadAuthority::load)", "runner load")
 
     controls = 0

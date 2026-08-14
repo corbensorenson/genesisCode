@@ -283,7 +283,7 @@ pub(super) fn finalize_workflow(
     Ok(finalized)
 }
 
-fn commit_observations(
+pub(super) fn commit_observations(
     store: &ArtifactStore,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
 ) -> Vec<Term> {

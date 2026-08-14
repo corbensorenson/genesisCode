@@ -250,6 +250,8 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `scripts/lib/selfhost_pkg_resolution_plan_authority.py` - independent plan source/artifact/route/no-fallback/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.md` - normative partial R4.2.e causal lock/update workflow, rationale, workspace snapshot, and provenance authority boundary.
 - `docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package resolution workflow profile.
+- `docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.md` - normative partial R4.2.e install admission, causal dependency plan, observation binding, verdict, and provenance authority boundary.
+- `docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package install profile.
 - `policies/selfhost_pkg_resolution_workflow_authority_v0.1.json` - content-addressed workflow decision inventory, residual host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_resolution_workflow_authority.py` - independent workflow source/artifact/route/oracle/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md` - normative partial R4.2.e semver policy-extremum, lexical tie-break, and empty-candidate authority boundary.

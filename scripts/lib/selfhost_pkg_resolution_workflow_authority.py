@@ -243,8 +243,13 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"retired lock/update Rust semantic producer remains: {forbidden}")
     if "workspace_snapshot_term_from_lock" in validation:
         fail("retired Rust workspace snapshot producer remains")
-    if "Install remains a separate R4.2.e residual" not in validation:
-        fail("install-only provenance residual is not explicit")
+    for marker in (
+        "#[cfg(any(test, feature = \"parity-oracle\"))]",
+        "pub(crate) fn locked_dependency_provenance(",
+        "compatibility path exists only for differential tests and the parity oracle",
+    ):
+        if marker not in validation:
+            fail(f"shared provenance parity custody missing marker: {marker}")
     for marker in (
         "pkg_lock_value_matches_between_frontends", "pkg_update_value_matches_between_frontends",
         "fs::read(&rust_lock)", "fs::read(&self_lock)",

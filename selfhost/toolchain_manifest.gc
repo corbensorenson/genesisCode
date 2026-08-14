@@ -81,6 +81,10 @@
     "selfhost/pkg_resolution_workflow_plan_v1.gc"
     "selfhost/pkg_resolution_workflow_finalize_v1.gc"
     "selfhost/pkg_resolution_workflow_authority_v1.gc"
+    "selfhost/pkg_install_core_v1.gc"
+    "selfhost/pkg_install_plan_v1.gc"
+    "selfhost/pkg_install_finalize_v1.gc"
+    "selfhost/pkg_install_authority_v1.gc"
     "selfhost/pkg_semver_select_authority_v1.gc"
     "selfhost/pkg_bridge_authority_v1.gc"
     "selfhost/pkg_snapshot_authority_v1.gc"
@@ -163,6 +167,7 @@
     core/pkg::resolution-identity-authority
     core/pkg::resolution-plan-authority
     core/pkg::resolution-workflow-authority
+    core/pkg::install-authority
     core/pkg::semver-select-authority
     core/cli::stage1-transform-module
     core/cli::store-get-program

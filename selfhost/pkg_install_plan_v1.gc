@@ -1,0 +1,58 @@
+; Authoritative ordered installation plan and registry precedence.
+
+(def selfhost/pkg-install::steps-loop
+  (fn (locked-entries)
+    (fn (requirements)
+      (fn (refs-available)
+        (fn (index)
+          (fn (out)
+            (if ((core/int::eq? index) (core/vec::len locked-entries))
+              out
+              (let
+                ((entry ((core/vec::get locked-entries) index))
+                  (name ((core/vec::get ((core/vec::get locked-entries) index)) 0))
+                  (locked ((core/vec::get ((core/vec::get locked-entries) index)) 1))
+                  (requirement
+                    ((core/map::get requirements)
+                      ((core/vec::get ((core/vec::get locked-entries) index)) 0))))
+                (((((selfhost/pkg-install::steps-loop locked-entries) requirements)
+                      refs-available) ((core/int::add index) 1))
+                  ((core/vec::push out)
+                    {
+                      :commit ((core/map::get locked) (quote :commit))
+                      :name name
+                      :registry ((selfhost/pkg-install::registry locked) requirement)
+                      :resolve-if-missing
+                        (if refs-available
+                          (if (core/list::is-nil? requirement) false true)
+                          false)
+                      :snapshot ((core/map::get locked) (quote :snapshot))}))))))))))
+
+(def selfhost/pkg-install::build-plan
+  (fn (model)
+    (fn (frozen)
+      (fn (strict)
+        (fn (refs-available)
+          {
+            :dependencies
+              (((((selfhost/pkg-install::steps-loop
+                        (core/map::entries ((core/map::get model) (quote :locked))))
+                    ((core/map::get model) (quote :requirements))) refs-available) 0) [])
+            :frozen frozen
+            :refs-available refs-available
+            :strict strict
+            :workspace-root (selfhost/pkg-install::workspace-root model)})))))
+
+(def selfhost/pkg-install::plan-value
+  (fn (model)
+    (fn (frozen)
+      (fn (strict)
+        (fn (refs-available)
+          (let ((missing (selfhost/pkg-install::missing-locks model)))
+            (let
+              ((plan ((((selfhost/pkg-install::build-plan model) frozen) strict) refs-available)))
+              {
+                :admit (if frozen ((core/int::eq? (core/vec::len missing)) 0) true)
+                :missing-locks missing
+                :plan plan
+                :plan-h (selfhost/hash::hash-term plan)})))))))

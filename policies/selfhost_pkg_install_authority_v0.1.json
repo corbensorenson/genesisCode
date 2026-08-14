@@ -1,0 +1,62 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::install-authority",
+  "contentIdentitySha256": "b0037f30a25b2649b862fc26f706b261dcf91d19b11e0b2c4d7ca5538c6d45b7",
+  "decisionInventory": [
+    "frozen-missing-lock-admission-and-ordered-diagnostic-set",
+    "ordered-dependency-install-plan",
+    "locked-over-requirement-registry-precedence",
+    "resolve-if-missing-eligibility",
+    "strict-and-workspace-root-projection",
+    "complete-observation-coverage-and-plan-binding",
+    "checked-missing-and-success-verdict",
+    "install-dependency-provenance-projection",
+    "request-bound-final-report"
+  ],
+  "hostMechanisms": [
+    "artifact-only-shared-context-bootstrap-and-bounded-evaluation",
+    "typed-lock-model-request-observation-and-result-transport",
+    "bounded-ref-registry-resolver-and-artifact-hydration",
+    "snapshot-and-commit-schema-parsing",
+    "non-publish-strict-commit-closure-validation",
+    "sealed-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_install_authority.py",
+  "kind": "genesis/selfhost-pkg-install-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "complete-graph-solving",
+    "generic-lock-or-toml-syntax-authority",
+    "h2-package-resolution",
+    "non-publish-artifact-validation-authority",
+    "r4-2-e-closure",
+    "ref-or-registry-transport-authority",
+    "release-qualification",
+    "semver-grammar-range-rank-authority",
+    "sh-c-closure",
+    "verify-workflow-authority",
+    "workspace-scaffolding-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/pkg-install-request-v0.1",
+  "resultKind": "genesis/pkg-install-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_install_core_v1.gc",
+    "selfhost/pkg_install_plan_v1.gc",
+    "selfhost/pkg_install_finalize_v1.gc",
+    "selfhost/pkg_install_authority_v1.gc"
+  ],
+  "sourceSha256": "53c54bc7943ecef3f73a536afda10822fa8602182571dec8d86876f53f3bec8e",
+  "spec": "docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

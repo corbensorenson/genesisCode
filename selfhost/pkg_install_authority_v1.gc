@@ -1,0 +1,99 @@
+; Closed plan/finalize authority for core/pkg-low::install.
+
+(def selfhost/pkg-install::plan-request?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [:frozen :kind :model :op :refs-available :strict :v])
+      (if (selfhost/pkg-resolution-workflow::model? ((core/map::get request) (quote :model)))
+        (if
+          (selfhost/pkg-resolution-workflow::requirements?
+            ((core/map::get ((core/map::get request) (quote :model))) (quote :requirements)))
+          (if
+            (selfhost/pkg-resolution-workflow::locked?
+              ((core/map::get ((core/map::get request) (quote :model))) (quote :locked)))
+            (if (selfhost/pkg-resolution-workflow::bool? ((core/map::get request) (quote :frozen)))
+              (if (selfhost/pkg-resolution-workflow::bool? ((core/map::get request) (quote :strict)))
+                (selfhost/pkg-resolution-workflow::bool?
+                  ((core/map::get request) (quote :refs-available)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-install::finalize-request?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [:commit-observations :frozen :kind :model :observations :op :plan :plan-h
+         :refs-available :strict :v])
+      (if (selfhost/pkg-install::plan-request?
+            {
+              :frozen ((core/map::get request) (quote :frozen))
+              :kind ((core/map::get request) (quote :kind))
+              :model ((core/map::get request) (quote :model))
+              :op (quote :plan)
+              :refs-available ((core/map::get request) (quote :refs-available))
+              :strict ((core/map::get request) (quote :strict))
+              :v ((core/map::get request) (quote :v))})
+        (if (selfhost/pkg-lock-read::vec? ((core/map::get request) (quote :observations)))
+          (selfhost/pkg-lock-read::vec?
+            ((core/map::get request) (quote :commit-observations)))
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-install::finalize
+  (fn (request-h)
+    (fn (request)
+      (let
+        ((model ((core/map::get request) (quote :model)))
+          (frozen ((core/map::get request) (quote :frozen)))
+          (strict ((core/map::get request) (quote :strict)))
+          (refs-available ((core/map::get request) (quote :refs-available)))
+          (declared-plan ((core/map::get request) (quote :plan)))
+          (declared-h ((core/map::get request) (quote :plan-h))))
+        (let ((expected ((((selfhost/pkg-install::build-plan model) frozen) strict) refs-available)))
+          (if ((core/eq? (selfhost/hash::hash-term expected)) declared-h)
+            (if ((core/eq? (selfhost/hash::hash-term declared-plan)) declared-h)
+              (let
+                ((value
+                  (((((selfhost/pkg-install::final-value model) expected)
+                        ((core/map::get request) (quote :observations)))
+                      ((core/map::get request) (quote :commit-observations))))))
+                (if (core/list::is-nil? ((core/map::get value) (quote :message)))
+                  ((selfhost/pkg-install::accept request-h) value)
+                  ((selfhost/pkg-install::reject request-h)
+                    ((core/map::get value) (quote :message)))))
+              ((selfhost/pkg-install::reject request-h) "declared install plan identity mismatch"))
+            ((selfhost/pkg-install::reject request-h)
+              "install plan identity does not match authoritative recomputation")))))))
+
+(def core/pkg::install-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if ((core/eq? ((core/map::get request) (quote :kind)))
+              "genesis/pkg-install-request-v0.1")
+          (if ((core/eq? ((core/map::get request) (quote :v))) 1)
+            (let ((op ((core/map::get request) (quote :op))))
+              (if ((core/sym::eq? op) (quote :plan))
+                (if (selfhost/pkg-install::plan-request? request)
+                  ((selfhost/pkg-install::accept request-h)
+                    (((((selfhost/pkg-install::plan-value
+                              ((core/map::get request) (quote :model)))
+                          ((core/map::get request) (quote :frozen)))
+                        ((core/map::get request) (quote :strict)))
+                      ((core/map::get request) (quote :refs-available)))))
+                  ((selfhost/pkg-install::reject request-h) "install plan request is malformed"))
+                (if ((core/sym::eq? op) (quote :finalize))
+                  (if (selfhost/pkg-install::finalize-request? request)
+                    ((selfhost/pkg-install::finalize request-h) request)
+                    ((selfhost/pkg-install::reject request-h)
+                      "install finalize request is malformed"))
+                  ((selfhost/pkg-install::reject request-h) "request :op is unsupported"))))
+            ((selfhost/pkg-install::reject request-h) "request :v must be 1"))
+          ((selfhost/pkg-install::reject request-h) "request :kind mismatch"))
+        ((selfhost/pkg-install::reject request-h) "request must be map")))))

@@ -1,0 +1,188 @@
+; Request-bound installation report and provenance projection.
+
+(def selfhost/pkg-install::hash-observation?
+  (fn (value)
+    (if ((selfhost/pkg-lock-read::exact-map? value) [:h :present])
+      (if (selfhost/pkg-install::hash? ((core/map::get value) (quote :h)))
+        (selfhost/pkg-resolution-workflow::bool?
+          ((core/map::get value) (quote :present)))
+        false)
+      false)))
+
+(def selfhost/pkg-install::hash-observations-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/pkg-install::hash-observation? ((core/vec::get values) index))
+          ((selfhost/pkg-install::hash-observations-loop? values)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-install::hash-observations?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::vec? value)
+      ((selfhost/pkg-install::hash-observations-loop? value) 0)
+      false)))
+
+(def selfhost/pkg-install::observation?
+  (fn (value)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? value)
+        [:closure-checked :commit-present :hashes :initially-present :name :resolution])
+      (if
+        (selfhost/pkg-install::nonnegative-int?
+          ((core/map::get value) (quote :closure-checked)))
+        (if
+          (selfhost/pkg-install::optional-bool?
+            ((core/map::get value) (quote :commit-present)))
+          (if (selfhost/pkg-install::hash-observations? ((core/map::get value) (quote :hashes)))
+            (if
+              (selfhost/pkg-resolution-workflow::bool?
+                ((core/map::get value) (quote :initially-present)))
+              (if (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :name)))
+                (selfhost/pkg-install::resolution-status?
+                  ((core/map::get value) (quote :resolution)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-install::resolution-coherent?
+  (fn (step)
+    (fn (observation)
+      (let
+        ((initial ((core/map::get observation) (quote :initially-present)))
+          (resolution ((core/map::get observation) (quote :resolution)))
+          (can-resolve ((core/map::get step) (quote :resolve-if-missing))))
+        (if initial
+          ((core/sym::eq? resolution) (quote :not-needed))
+          (if can-resolve
+            (if ((core/sym::eq? resolution) (quote :resolved))
+              true
+              ((core/sym::eq? resolution) (quote :not-found)))
+            ((core/sym::eq? resolution) (quote :unavailable))))))))
+
+(def selfhost/pkg-install::hashes-fold
+  (fn (hashes)
+    (fn (index)
+      (fn (state)
+        (if ((core/int::eq? index) (core/vec::len hashes))
+          state
+          (let ((observation ((core/vec::get hashes) index)))
+            (let
+              ((present ((core/map::get observation) (quote :present)))
+                (hash ((core/map::get observation) (quote :h))))
+              (((selfhost/pkg-install::hashes-fold hashes)
+                  ((core/int::add index) 1))
+                {
+                  :checked
+                    (if present
+                      ((core/int::add ((core/map::get state) (quote :checked))) 1)
+                      ((core/map::get state) (quote :checked)))
+                  :missing
+                    (if present
+                      ((core/map::get state) (quote :missing))
+                      ((core/vec::push ((core/map::get state) (quote :missing))) hash))
+                  :ok (if present ((core/map::get state) (quote :ok)) false)}))))))))
+
+(def selfhost/pkg-install::step-fold
+  (fn (state)
+    (fn (step)
+      (fn (observation)
+        (if ((core/eq? ((core/map::get step) (quote :name)))
+              ((core/map::get observation) (quote :name)))
+          (if ((selfhost/pkg-install::resolution-coherent? step) observation)
+            (let ((hashes ((core/map::get observation) (quote :hashes))))
+              (if ((core/int::lt? 0) (core/vec::len hashes))
+                (if
+                  ((core/eq? ((core/map::get ((core/vec::get hashes) 0)) (quote :h)))
+                    ((core/map::get step) (quote :snapshot)))
+                  (let
+                    ((folded (((selfhost/pkg-install::hashes-fold hashes) 0) state))
+                      (commit-present
+                        ((core/map::get observation) (quote :commit-present)))
+                      (commit ((core/map::get step) (quote :commit)))
+                      (closure ((core/map::get observation) (quote :closure-checked))))
+                    (if (core/list::is-nil? commit)
+                      (if (core/list::is-nil? commit-present)
+                        {
+                          :checked ((core/int::add ((core/map::get folded) (quote :checked))) closure)
+                          :missing ((core/map::get folded) (quote :missing))
+                          :ok ((core/map::get folded) (quote :ok))}
+                        {:message "commit presence supplied for dependency without commit" :valid false})
+                      (if (core/list::is-nil? commit-present)
+                        (if ((core/map::get ((core/vec::get hashes) 0)) (quote :present))
+                          {:message "available snapshot requires commit presence observation" :valid false}
+                          {
+                            :checked ((core/map::get folded) (quote :checked))
+                            :missing ((core/map::get folded) (quote :missing))
+                            :ok ((core/map::get folded) (quote :ok))})
+                        {
+                          :checked
+                            ((core/int::add
+                                ((core/int::add ((core/map::get folded) (quote :checked)))
+                                  (if commit-present 1 0))) closure)
+                          :missing
+                            (if commit-present
+                              ((core/map::get folded) (quote :missing))
+                              ((core/vec::push ((core/map::get folded) (quote :missing))) commit))
+                          :ok (if commit-present ((core/map::get folded) (quote :ok)) false)})))
+                  {:message "first hydration hash does not match planned snapshot" :valid false})
+                {:message "hydration observation must include planned snapshot" :valid false}))
+            {:message "resolution observation contradicts authority plan" :valid false})
+          {:message "install observation name mismatch" :valid false})))))
+
+(def selfhost/pkg-install::observations-loop
+  (fn (steps)
+    (fn (observations)
+      (fn (index)
+        (fn (state)
+          (if ((core/int::eq? index) (core/vec::len steps))
+            state
+            (let ((observation ((core/vec::get observations) index)))
+              (if (selfhost/pkg-install::observation? observation)
+                (let
+                  ((next
+                    (((selfhost/pkg-install::step-fold state)
+                        ((core/vec::get steps) index)) observation)))
+                  (if (core/list::is-nil? ((core/map::get next) (quote :valid)))
+                    ((((selfhost/pkg-install::observations-loop steps) observations)
+                        ((core/int::add index) 1)) next)
+                    next))
+                {:message "install observation is malformed" :valid false}))))))))
+
+(def selfhost/pkg-install::final-value
+  (fn (model)
+    (fn (plan)
+      (fn (observations)
+        (fn (commit-observations)
+          (let ((steps ((core/map::get plan) (quote :dependencies))))
+            (if ((core/int::eq? (core/vec::len steps)) (core/vec::len observations))
+              (let
+                ((state
+                  ((((selfhost/pkg-install::observations-loop steps) observations) 0)
+                    {:checked 0 :missing [] :ok true})))
+                (if (core/list::is-nil? ((core/map::get state) (quote :valid)))
+                  (let
+                    ((provenance
+                      (((((selfhost/pkg-resolution-workflow::provenance-loop
+                                (core/map::entries ((core/map::get model) (quote :locked))))
+                            commit-observations)
+                          ((core/map::get plan) (quote :strict))) 0) [])))
+                    (if ((core/map::get provenance) (quote :ok))
+                      {
+                        :checked ((core/map::get state) (quote :checked))
+                        :lock ((core/map::get model) (quote :lock))
+                        :missing ((core/map::get state) (quote :missing))
+                        :ok ((core/map::get state) (quote :ok))
+                        :provenance
+                          {
+                            :deps ((core/map::get provenance) (quote :value))
+                            :workspace-root ((core/map::get plan) (quote :workspace-root))}
+                        :workspace-root ((core/map::get plan) (quote :workspace-root))}
+                      provenance))
+                  state))
+              {:message "install observation count mismatch" :valid false})))))))

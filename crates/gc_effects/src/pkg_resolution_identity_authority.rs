@@ -15,8 +15,13 @@ pub(crate) use plan::{
 #[path = "pkg_semver_select_authority.rs"]
 mod semver_select;
 pub(crate) use semver_select::PkgSemverCandidate;
+#[path = "pkg_install_authority.rs"]
+mod install;
 #[path = "pkg_resolution_workflow_authority.rs"]
 mod workflow;
+pub(crate) use install::{
+    PkgInstallHashObservation, PkgInstallObservation, PkgInstallPlanDecision, PkgInstallResolution,
+};
 #[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) use workflow::PkgWorkflowObject;
 pub(crate) use workflow::{
@@ -30,6 +35,7 @@ const IDENTITY_RESULT_KIND: &str = "genesis/pkg-resolution-identity-result-v0.1"
 const PLAN_BINDING: &str = "core/pkg::resolution-plan-authority";
 const SEMVER_SELECT_BINDING: &str = "core/pkg::semver-select-authority";
 const WORKFLOW_BINDING: &str = "core/pkg::resolution-workflow-authority";
+const INSTALL_BINDING: &str = "core/pkg::install-authority";
 const STEP_LIMIT: u64 = 20_000_000;
 const ALLOC_LIMIT: u64 = 40_000_000;
 
@@ -39,6 +45,7 @@ pub(crate) struct PkgResolutionIdentityAuthority {
     plan_authority: Value,
     semver_select_authority: Value,
     workflow_authority: Value,
+    install_authority: Value,
 }
 
 impl PkgResolutionIdentityAuthority {
@@ -73,6 +80,9 @@ impl PkgResolutionIdentityAuthority {
         let workflow_authority = environment
             .get(WORKFLOW_BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {WORKFLOW_BINDING}")))?;
+        let install_authority = environment
+            .get(INSTALL_BINDING)
+            .ok_or_else(|| authority_error(format!("missing binding {INSTALL_BINDING}")))?;
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
@@ -81,6 +91,7 @@ impl PkgResolutionIdentityAuthority {
             plan_authority,
             semver_select_authority,
             workflow_authority,
+            install_authority,
         })
     }
 

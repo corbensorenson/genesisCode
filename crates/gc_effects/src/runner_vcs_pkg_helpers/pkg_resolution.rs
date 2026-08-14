@@ -5,9 +5,11 @@ use semver::{Version, VersionReq};
 #[path = "pkg_resolution/lock_validation.rs"]
 mod lock_validation;
 
+#[cfg(any(test, feature = "parity-oracle"))]
+pub(crate) use lock_validation::locked_dependency_provenance;
 pub(crate) use lock_validation::{
-    compute_requirement_fingerprint, locked_dependency_provenance,
-    validate_commit_artifact_closure, validate_locked_entries_strict,
+    compute_requirement_fingerprint, validate_commit_artifact_closure,
+    validate_locked_entries_strict,
 };
 
 #[cfg(any(test, feature = "parity-oracle"))]
