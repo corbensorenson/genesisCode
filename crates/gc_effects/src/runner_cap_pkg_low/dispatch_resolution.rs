@@ -1,5 +1,6 @@
 use super::*;
 use crate::pkg_lock_read_authority::PkgLockModelDecision;
+use crate::pkg_lock_write_authority::{PkgLockWriteAuthority, PkgLockWriteDecision};
 
 #[path = "dispatch_resolution/install_verify.rs"]
 mod install_verify;
@@ -23,6 +24,7 @@ pub(super) fn dispatch_resolution(
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     mut lock_authority: Option<&mut PkgLockReadAuthority>,
+    mut lock_write_authority: Option<&mut PkgLockWriteAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
@@ -247,8 +249,16 @@ pub(super) fn dispatch_resolution(
                     Err(v) => return Ok(v),
                 };
 
-            let bytes = l.to_toml_canonical();
-            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            let (bytes, lock_h) = match render_resolved_lock(
+                lock_write_authority.as_deref_mut(),
+                &lock_s,
+                &l,
+                error_tok,
+                op,
+            ) {
+                Ok(result) => result,
+                Err(error) => return Ok(error),
+            };
             let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
@@ -260,7 +270,7 @@ pub(super) fn dispatch_resolution(
                     ));
                 }
             };
-            if let Err(e) = atomic_write_text(&lock_write_path, bytes.as_bytes()) {
+            if let Err(e) = atomic_write_text(&lock_write_path, &bytes) {
                 return Ok(mk_error(
                     error_tok,
                     "core/pkg/io-error",
@@ -500,8 +510,16 @@ pub(super) fn dispatch_resolution(
                     Err(v) => return Ok(v),
                 };
 
-            let bytes = l.to_toml_canonical();
-            let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
+            let (bytes, lock_h) = match render_resolved_lock(
+                lock_write_authority.as_deref_mut(),
+                &lock_s,
+                &l,
+                error_tok,
+                op,
+            ) {
+                Ok(result) => result,
+                Err(error) => return Ok(error),
+            };
             let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
@@ -513,7 +531,7 @@ pub(super) fn dispatch_resolution(
                     ));
                 }
             };
-            if let Err(e) = atomic_write_text(&lock_write_path, bytes.as_bytes()) {
+            if let Err(e) = atomic_write_text(&lock_write_path, &bytes) {
                 return Ok(mk_error(
                     error_tok,
                     "core/pkg/io-error",
@@ -611,6 +629,44 @@ pub(super) fn dispatch_resolution(
             Some(op),
         )),
     }
+}
+
+fn render_resolved_lock(
+    authority: Option<&mut PkgLockWriteAuthority>,
+    lock_path: &str,
+    lock: &gc_pkg::GenesisLock,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(Vec<u8>, String), Value> {
+    if let Some(authority) = authority {
+        return match authority.write_model(lock_path, lock) {
+            Ok(PkgLockWriteDecision::Write { bytes, lock_hash }) => Ok((bytes, lock_hash)),
+            Ok(PkgLockWriteDecision::Error { code, message }) => {
+                Err(mk_error(error_tok, &code, message, Some(op)))
+            }
+            Err(error) => Err(mk_error(
+                error_tok,
+                "core/pkg/authority-error",
+                error.to_string(),
+                Some(op),
+            )),
+        };
+    }
+
+    #[cfg(any(test, feature = "parity-oracle"))]
+    {
+        let bytes = lock.to_toml_canonical().into_bytes();
+        let lock_hash = blake3::hash(&bytes).to_hex().to_string();
+        return Ok((bytes, lock_hash));
+    }
+
+    #[cfg(not(any(test, feature = "parity-oracle")))]
+    Err(mk_error(
+        error_tok,
+        "core/pkg/authority-error",
+        "lock and update require the artifact-loaded GenesisCode lock write authority".to_string(),
+        Some(op),
+    ))
 }
 
 fn load_lock_model(
@@ -739,6 +795,7 @@ mod tests {
             &Term::Nil,
             None,
             &CapsPolicy::empty(),
+            None,
             None,
             None,
             None,

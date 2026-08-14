@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "fbb242f6c171b94500b1294e1675327ff3f367688f7a25a1d4b2697362383fcb",
+  "contentIdentitySha256": "67ae48bee7eb933353ff485463af4625aa87fa5255ad5c32760aa20b55d13573",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2000,7 +2000,7 @@
       "id": "SD-PACKAGE-RESOLUTION",
       "internalOnly": false,
       "limitations": [
-        "Artifact-loaded GenesisCode exclusively normalizes and serializes core/pkg-low::save-lock payloads and decides their canonical BLAKE3 lock identity under genesis/selfhost-pkg-lock-write-authority-v0.1",
+        "Artifact-loaded GenesisCode exclusively normalizes and serializes core/pkg-low::save-lock payloads and the final typed lock/update models, and decides their canonical BLAKE3 lock identity under genesis/selfhost-pkg-lock-write-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the typed public core/pkg-low::load-lock result under genesis/selfhost-pkg-lock-read-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the complete internal typed lock model consumed by core/pkg-low::{info,lock,update,install,verify} under genesis/selfhost-pkg-lock-model-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively initializes direct locks with workspace, policy, and default-registry normalization, mutates and canonically serializes core/pkg-low::add requirements, owns conditional core/pkg-low::bridge lock mutation and dependency artifact-key identity after a bounded pure CoreForm runtime-map freeze, and constructs the closed core/pkg-low::list projection under genesis/selfhost-pkg-lock-ops-authority-v0.1",
@@ -2010,7 +2010,7 @@
         "Artifact-loaded GenesisCode exclusively normalizes and classifies effect-route selectors, checks declared strategy and tag-policy coherence, normalizes semver selection policy, and decides existing-lock update admission under genesis/selfhost-pkg-resolution-plan-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively chooses highest or lowest semver candidate ranks, applies deterministic lexical ref tie-breaking, and decides empty candidate sets under genesis/selfhost-pkg-semver-select-authority-v0.1; Rust retains semver grammar, range matching, precedence ranking, and ref observation only as bounded mechanisms",
         "Artifact-loaded GenesisCode exclusively owns core/pkg-low::publish policy and class selection, commit, evidence, and assurance admission, ordered object and cryptographic requests, signer threshold, role, and independence decisions, publication provenance, and the exact core/sync::push plan under genesis/selfhost-pkg-publish-authority-v0.1",
-        "The generic Rust TOML syntax decoder, package manifest and source frontend transport, bridge payload transport, exact-byte storage, Ed25519 signing and supplied-key verification mechanisms, semver grammar/range matching/precedence ranking, ref observation, package graph resolution beyond semver candidate selection, registry behavior and transport, non-publish artifact and commit validation, workspace scaffolding, non-publish policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
+        "The generic Rust TOML syntax decoder, package manifest and source frontend transport, bridge payload transport, exact-byte storage and atomic persistence, Ed25519 signing and supplied-key verification mechanisms, semver grammar/range matching/precedence ranking, ref observation, package graph planning and resolution beyond semver candidate selection, registry behavior and transport, resolution rationale, non-publish artifact and commit validation, workspace snapshot and provenance construction, workspace scaffolding, non-publish policy admission, sandboxing, and bounded file transport remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"

@@ -52,6 +52,7 @@ CONSTANTS = {
         "lock-payload-normalization", "requirement-policy-and-strategy-normalization",
         "resolution-strategy-inference", "legacy-lock-version-upgrade",
         "canonical-lock-toml-serialization", "canonical-lock-content-identity",
+        "lock-and-update-final-serialization",
         "request-bound-result-verdict",
     ],
     "hostMechanisms": [
@@ -131,6 +132,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     artifact = text(root, profile["artifact"], overrides)
     adapter = text(root, "crates/gc_effects/src/pkg_lock_write_authority.rs", overrides)
     save_lock = text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs", overrides)
+    resolution = text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", overrides)
+    pkg_dispatch = text(root, "crates/gc_effects/src/runner_cap_pkg_low.rs", overrides)
     runner = text(root, "crates/gc_effects/src/runner.rs", overrides)
     dispatch = text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs", overrides)
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
@@ -169,10 +172,41 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("test-only parity oracle declaration missing")
     if ".map(PkgLockWriteAuthority::load)" not in runner or "pkg_lock_write_authority.as_mut()" not in runner:
         fail("runner does not lazily load and forward package lock authority")
-    if 'req.op == "core/pkg-low::save-lock"' not in runner:
-        fail("package lock authority is not restricted to the exact production operation")
+    if "if pkg_lock_write_authority.is_none()" not in runner or "if pkg_lock_read_authority.is_none()" not in runner:
+        fail("runner lock authority lazy-load boundaries are missing")
+    lock_writer_load = runner.split("if pkg_lock_write_authority.is_none()", 1)[1].split(
+        "if pkg_lock_read_authority.is_none()", 1
+    )[0]
+    for operation in ("core/pkg-low::save-lock", "core/pkg-low::lock", "core/pkg-low::update"):
+        if f'"{operation}"' not in lock_writer_load:
+            fail(f"package lock authority is not loaded for {operation}")
     if "pkg_lock_write_authority" not in dispatch or "dispatch_save_lock(" not in dispatch:
         fail("lock dispatch does not forward package lock authority")
+    if resolution.count("render_resolved_lock(") < 3:
+        fail("lock and update do not both route final models through one writer boundary")
+    finalizer = resolution.split("fn render_resolved_lock(", 1)[1]
+    resolution_parity = '\n    #[cfg(any(test, feature = "parity-oracle"))]\n'
+    if resolution_parity not in finalizer:
+        fail("lock/update native writer parity boundary missing")
+    production_finalizer = finalizer.split(resolution_parity, 1)[0]
+    for marker in (
+        "authority.write_model(lock_path, lock)",
+        "lock and update require the artifact-loaded GenesisCode lock write authority",
+    ):
+        if marker not in finalizer:
+            fail(f"lock/update finalizer missing marker: {marker}")
+    for forbidden in ("to_toml_canonical", "blake3::hash"):
+        if forbidden in production_finalizer:
+            fail(f"production lock/update finalizer retains native writer: {forbidden}")
+    if resolution.count("atomic_write_text(&lock_write_path, &bytes)") < 2:
+        fail("lock and update do not persist the exact authority bytes")
+    if "dispatch_resolution::dispatch_resolution(" not in pkg_dispatch:
+        fail("package dispatch does not forward lock-write authority to resolution operations")
+    resolution_dispatch = pkg_dispatch.split("dispatch_resolution::dispatch_resolution(", 1)[1].split(
+        ");", 1
+    )[0]
+    if "pkg_lock_write_authority" not in resolution_dispatch:
+        fail("resolution dispatch call omits lock-write authority")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
                 if item.get("id") == "SD-PACKAGE-RESOLUTION"), None)
@@ -201,6 +235,8 @@ def self_test(root: Path, profile, schema) -> int:
         profile["sourceModule"], "selfhost/toolchain_manifest.gc", profile["artifact"],
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low.rs",
         "crates/gc_effects/src/runner.rs",
     ]
     sources = {path: text(root, path, {}) for path in paths}
@@ -236,6 +272,15 @@ def self_test(root: Path, profile, schema) -> int:
                 "authority.write(payload)?", "legacy_writer(payload)?", 1)}, "production route"),
         (profile, {"crates/gc_effects/src/runner.rs": sources["crates/gc_effects/src/runner.rs"].replace(
             ".map(PkgLockWriteAuthority::load)", ".map(StoreAuthority::load)", 1)}, "runner load"),
+        (profile, {"crates/gc_effects/src/runner.rs": sources["crates/gc_effects/src/runner.rs"].replace(
+            '| "core/pkg-low::lock"', '| "core/pkg-low::legacy-lock"', 1)}, "lock route load"),
+        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs": sources[
+            "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs"].replace(
+                "authority.write_model(lock_path, lock)", "legacy_writer(lock)", 1)}, "resolution writer route"),
+        (profile, {"crates/gc_effects/src/runner_cap_pkg_low.rs": sources[
+            "crates/gc_effects/src/runner_cap_pkg_low.rs"].replace(
+                "            pkg_lock_write_authority,\n            pkg_resolution_identity_authority,",
+                "            None,\n            pkg_resolution_identity_authority,", 1)}, "resolution authority forwarding"),
     ])
     controls = 0
     for candidate, overrides, label in mutations:
@@ -245,7 +290,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"mutation survived: {label}")
-    if controls != 13:
+    if controls != 16:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

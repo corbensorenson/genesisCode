@@ -69,6 +69,122 @@ impl PkgLockWriteAuthority {
             .map_err(|error| authority_error(format!("apply failed: {error}")))?;
         decode_result(plain_result(value, &self.context)?, request_hash)
     }
+
+    pub(crate) fn write_model(
+        &mut self,
+        lock_path: &str,
+        model: &gc_pkg::GenesisLock,
+    ) -> Result<PkgLockWriteDecision, EffectsError> {
+        self.write(&lock_model_payload(lock_path, model)?)
+    }
+}
+
+fn lock_model_payload(lock_path: &str, model: &gc_pkg::GenesisLock) -> Result<Term, EffectsError> {
+    let version = i64::try_from(model.version)
+        .map_err(|_| authority_error("lock model version exceeds protocol integer range"))?;
+    let registries = model
+        .registries
+        .iter()
+        .map(|(name, remote)| {
+            (
+                TermOrdKey(Term::Str(name.clone())),
+                Term::Str(remote.clone()),
+            )
+        })
+        .collect();
+    let requirements = model
+        .requirements
+        .iter()
+        .map(|(name, requirement)| {
+            let update_policy = match requirement.update_policy {
+                gc_pkg::UpdatePolicy::Manual => ":manual",
+                gc_pkg::UpdatePolicy::Auto => ":auto",
+            };
+            let value = map([
+                (
+                    ":registry",
+                    requirement
+                        .registry
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
+                ),
+                (":selector", Term::Str(requirement.selector.clone())),
+                (
+                    ":strategy",
+                    Term::symbol(format!(":{}", requirement.strategy.as_str())),
+                ),
+                (
+                    ":tag-policy",
+                    requirement
+                        .tag_policy
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
+                ),
+                (":update-policy", Term::symbol(update_policy)),
+            ]);
+            (TermOrdKey(Term::Str(name.clone())), value)
+        })
+        .collect();
+    let locked = model
+        .locked
+        .iter()
+        .map(|(name, entry)| {
+            let value = map([
+                (
+                    ":commit",
+                    entry.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
+                ),
+                (
+                    ":environment-fingerprint",
+                    entry
+                        .environment_fingerprint
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    ":exports_hash",
+                    entry
+                        .exports_hash
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
+                ),
+                (
+                    ":registry",
+                    entry.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+                ),
+                (
+                    ":resolved-ref",
+                    entry
+                        .resolved_ref
+                        .clone()
+                        .map(Term::Str)
+                        .unwrap_or(Term::Nil),
+                ),
+                (":snapshot", Term::Str(entry.snapshot.clone())),
+                (":source_selector", Term::Str(entry.source_selector.clone())),
+            ]);
+            (TermOrdKey(Term::Str(name.clone())), value)
+        })
+        .collect();
+    let artifacts = model
+        .artifacts
+        .iter()
+        .map(|(name, hash)| (TermOrdKey(Term::Str(name.clone())), Term::Str(hash.clone())))
+        .collect();
+    Ok(map([
+        (":artifacts", Term::Map(artifacts)),
+        (":lock", Term::Str(lock_path.to_string())),
+        (":locked", Term::Map(locked)),
+        (":policy", Term::Str(model.policy.clone())),
+        (":registries", Term::Map(registries)),
+        (":requirements", Term::Map(requirements)),
+        (":version", Term::Int(version.into())),
+        (":workspace", Term::Str(model.workspace.clone())),
+    ]))
 }
 
 fn decode_result(term: Term, request_hash: [u8; 32]) -> Result<PkgLockWriteDecision, EffectsError> {
@@ -468,6 +584,24 @@ mod tests {
             lock_hash,
             blake3::hash(&expected_bytes).to_hex().to_string()
         );
+    }
+
+    #[test]
+    fn artifact_authority_serializes_typed_resolution_model() {
+        let mut authority = PkgLockWriteAuthority::load(&artifact_config()).expect("authority");
+        let mut model = gc_pkg::GenesisLock::empty("typed-workspace");
+        model
+            .artifacts
+            .insert("resolution".to_string(), "e".repeat(64));
+        let decision = authority
+            .write_model("genesis.lock", &model)
+            .expect("decision");
+        let PkgLockWriteDecision::Write { bytes, lock_hash } = decision else {
+            panic!("typed model must authorize a write: {decision:?}");
+        };
+        let expected = model.to_toml_canonical().into_bytes();
+        assert_eq!(bytes, expected);
+        assert_eq!(lock_hash, blake3::hash(&bytes).to_hex().to_string());
     }
 
     #[test]

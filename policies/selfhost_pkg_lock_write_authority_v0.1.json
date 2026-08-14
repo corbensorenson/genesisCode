@@ -1,8 +1,8 @@
 {
   "artifact": "selfhost/toolchain.gc",
-  "auditDate": "2026-08-13",
+  "auditDate": "2026-08-14",
   "binding": "core/pkg::lock-write-authority",
-  "contentIdentitySha256": "dd406395cb370464a917cd3e564dcdd65e7b549df22f0733c3124f1887069e77",
+  "contentIdentitySha256": "92e031ff0860f44b7ddbf4be2d80ff031ecce1d049a62f9c01fcd1ffeb7299ae",
   "decisionInventory": [
     "lock-payload-normalization",
     "requirement-policy-and-strategy-normalization",
@@ -10,6 +10,7 @@
     "legacy-lock-version-upgrade",
     "canonical-lock-toml-serialization",
     "canonical-lock-content-identity",
+    "lock-and-update-final-serialization",
     "request-bound-result-verdict"
   ],
   "hostMechanisms": [

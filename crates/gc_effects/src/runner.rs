@@ -325,7 +325,14 @@ pub fn run(
                                 .transpose()
                         );
                     }
-                    if pkg_lock_write_authority.is_none() && req.op == "core/pkg-low::save-lock" {
+                    if pkg_lock_write_authority.is_none()
+                        && matches!(
+                            req.op.as_str(),
+                            "core/pkg-low::save-lock"
+                                | "core/pkg-low::lock"
+                                | "core/pkg-low::update"
+                        )
+                    {
                         pkg_lock_write_authority = run_try!(
                             policy
                                 .selfhost_authority_config()

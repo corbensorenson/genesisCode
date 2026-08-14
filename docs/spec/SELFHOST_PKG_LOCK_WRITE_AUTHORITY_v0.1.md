@@ -5,15 +5,16 @@ Status: normative partial authority contract for `R4.2.e`.
 ## Scope
 
 The artifact-loaded `core/pkg::lock-write-authority` binding is the production semantic authority
-for `core/pkg-low::save-lock`. It owns payload normalization, update-policy and resolution-strategy
-normalization or inference, legacy-version upgrade, canonical lock TOML bytes, and the BLAKE3
-`lock-h` of those exact bytes.
+for `core/pkg-low::save-lock` and the final lock serialization performed by
+`core/pkg-low::{lock,update}`. It owns payload normalization, update-policy and
+resolution-strategy normalization or inference, legacy-version upgrade, canonical lock TOML bytes,
+and the BLAKE3 `lock-h` of those exact bytes.
 
 Rust remains the bounded mechanism for capability-policy admission, artifact bootstrap, strict result
 decoding, sandboxed path resolution, directory policy, and atomic persistence. Lock parsing, package
-graph resolution, registry behavior, workspace scaffolding, and all package operations other than the
-`save-lock` serialization decision remain outside this authority. These residuals keep
-`SD-PACKAGE-RESOLUTION` at H0.
+graph planning and resolution, registry behavior, resolution rationale, workspace snapshots,
+provenance construction, and package operations other than final lock serialization remain outside
+this authority. These residuals keep `SD-PACKAGE-RESOLUTION` at H0.
 
 ## Bootstrap and limits
 
@@ -35,7 +36,7 @@ Every request is the exact map:
 {
   :kind "genesis/pkg-lock-write-authority-request-v0.1"
   :op :write
-  :payload <core/pkg-low::save-lock payload>
+  :payload <save-lock payload or exact typed lock/update model transport>
   :v 1
 }
 ```
@@ -44,6 +45,11 @@ The payload accepts the lock fields `:version`, `:workspace`, `:policy`, `:regis
 `:requirements`, `:locked`, and `:artifacts`; the host-only `:lock` path is ignored by semantic
 serialization. Maps use canonical term order. Requirement and locked package names are quoted TOML
 keys. Registry and artifact keys preserve the v0.2 writer's bare-key compatibility behavior.
+
+For `lock` and `update`, Rust transports the exact typed model already admitted by the self-hosted
+lock reader plus the resolved entries and artifacts produced by the current operation. The transport
+uses the same closed payload vocabulary as `save-lock`; Rust does not serialize, hash, normalize, or
+modify the resulting lock bytes.
 
 Symbol strategies accept `:pinned`, `:track-ref`, and `:tag-policy`; string strategies accept only
 their unprefixed forms. Missing strategies are inferred from the selector. Missing update policy is
@@ -71,7 +77,8 @@ authority result; they do not select serialization semantics.
 ## Persistence protocol
 
 After authority success, Rust resolves the payload's `:lock` against the effective policy base,
-rejects path escape, applies `create_dirs`, and atomically writes the exact authorized bytes. The
+rejects path escape, and atomically writes the exact authorized bytes. `save-lock` applies its
+declared `create_dirs` policy; `lock` and `update` preserve their existing-file requirement. The
 effect response returns the authorized `lock-h`; Rust does not reserialize or modify the bytes.
 
 ## Nonclaims

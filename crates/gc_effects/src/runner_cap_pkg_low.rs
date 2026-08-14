@@ -70,6 +70,7 @@ pub(super) fn capability_pkg_low(
             store,
             refs,
             pkg_lock_read_authority,
+            pkg_lock_write_authority,
             pkg_resolution_identity_authority,
             budget,
             error_tok,

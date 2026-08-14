@@ -569,6 +569,10 @@ fn pkg_lock_value_matches_between_frontends() {
         normalize_pkg_value(&json_value(&rust_lock_out)),
         normalize_pkg_value(&json_value(&self_lock_out))
     );
+    assert_eq!(
+        fs::read(&rust_lock).expect("read Rust-frontend lock"),
+        fs::read(&self_lock).expect("read selfhost-frontend lock")
+    );
 }
 
 #[cfg(feature = "parity-harness")]
@@ -651,6 +655,10 @@ fn pkg_update_value_matches_between_frontends() {
     assert_eq!(
         normalize_pkg_value(&json_value(&rust_update)),
         normalize_pkg_value(&json_value(&self_update))
+    );
+    assert_eq!(
+        fs::read(&rust_lock).expect("read Rust-frontend updated lock"),
+        fs::read(&self_lock).expect("read selfhost-frontend updated lock")
     );
 }
 
