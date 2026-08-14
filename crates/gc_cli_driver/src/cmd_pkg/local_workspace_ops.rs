@@ -264,7 +264,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             })?,
         ),
         PkgCmd::Remove { name, lock } => Some(
-            pkg_workspace_ops::handle_remove(name, lock)
+            pkg_workspace_ops::handle_remove(cli, name, lock)
                 .map_err(|e| cli_err(EX_PARSE, "pkg/remove", e))?,
         ),
         PkgCmd::Migrate {

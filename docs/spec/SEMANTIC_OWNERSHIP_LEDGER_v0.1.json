@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "fd4f4e59d530e18b35477008dbd79a24722b19bbbb2525611d956b03f4adb4cb",
+  "contentIdentitySha256": "fe5c93efbe24c56edc8481f3accc880e1345fcd97ee32115e656d77cae667da2",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1965,7 +1965,8 @@
       "limitations": [
         "Artifact-loaded GenesisCode exclusively owns gcpm scaffold identifier normalization, closed archetype admission, backend and target selection, six dynamic document bodies, identity-pinned static-template admission, fixed file order, body and aggregate identities, and the exact report under genesis/selfhost-pkg-scaffold-authority-v0.1; Rust retains bounded static capability-template observations, strict result and cross-document decoding, whole-plan path and conflict preflight, and exact-byte persistence mechanisms",
         "Artifact-loaded GenesisCode exclusively owns gcpm new member parsing, default-root construction, legacy-exact TOML escaping, workspace/default/profile and empty-lock rendering, fixed file order, body identities, and exact report under genesis/selfhost-pkg-workspace-new-authority-v0.1; Rust retains the active-backend observation, strict result and cross-document decoding, two-destination path preflight, and exact-byte persistence mechanisms",
-        "Workspace remove, migration, environment, task, and manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, crash-atomic multi-file commit, and WASI workspace support remain unproven, so SD-PACKAGE-WORKSPACE remains H0"
+        "Artifact-loaded GenesisCode exclusively owns gcpm remove exact requirement/locked key deletion, non-target lock-model preservation, absent-name disposition, and the exact updated model under genesis/selfhost-pkg-workspace-remove-authority-v0.1; the independently governed GenesisCode lock writer owns canonical bytes and lock identity, while Rust retains bounded lock read/model transport, strict request-bound decoding and cross-document validation, stable report projection from accepted authority facts, destination preflight, and exact-byte persistence mechanisms",
+        "Workspace migration, environment, task, and manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, crash-atomic multi-file commit, and WASI workspace support remain unproven, so SD-PACKAGE-WORKSPACE remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -1976,9 +1977,11 @@
         "selfhost/pkg_scaffold_render_v1.gc",
         "selfhost/pkg_scaffold_authority_v1.gc",
         "selfhost/pkg_workspace_new_authority_v1.gc",
+        "selfhost/pkg_workspace_remove_authority_v1.gc",
         "crates/gc_cli_driver/src/pkg_scaffold.rs",
         "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
         "crates/gc_cli_driver/src/pkg_workspace_new.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
       ],
       "productionAuthorityPaths": [
@@ -1986,8 +1989,10 @@
         "selfhost/pkg_scaffold_render_v1.gc",
         "selfhost/pkg_scaffold_authority_v1.gc",
         "selfhost/pkg_workspace_new_authority_v1.gc",
+        "selfhost/pkg_workspace_remove_authority_v1.gc",
         "crates/gc_cli_driver/src/pkg_scaffold.rs",
         "crates/gc_cli_driver/src/pkg_workspace_new.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
@@ -2007,7 +2012,8 @@
       "verifierPaths": [
         "scripts/check_gcpm_operation_contract_pack.sh",
         "scripts/lib/selfhost_pkg_scaffold_authority.py",
-        "scripts/lib/selfhost_pkg_workspace_new_authority.py"
+        "scripts/lib/selfhost_pkg_workspace_new_authority.py",
+        "scripts/lib/selfhost_pkg_workspace_remove_authority.py"
       ]
     },
     {

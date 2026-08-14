@@ -18,6 +18,8 @@ mod pkg_workspace_ops_build;
 mod pkg_workspace_ops_env;
 #[path = "pkg_workspace_ops_manifest_helpers.rs"]
 mod pkg_workspace_ops_manifest_helpers;
+#[path = "pkg_workspace_remove.rs"]
+mod pkg_workspace_remove;
 
 use pkg_workspace_ops_manifest_helpers::{build_env_deps_term, build_env_members_term};
 
@@ -150,7 +152,17 @@ fn handle_new_parity(
     })
 }
 
-pub(crate) fn handle_remove(name: &str, lock: &Path) -> Result<LocalPkgResult, String> {
+pub(crate) fn handle_remove(
+    cli: &crate::Cli,
+    name: &str,
+    lock: &Path,
+) -> Result<LocalPkgResult, String> {
+    pkg_workspace_remove::handle_remove(cli, name, lock)
+}
+
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Retained only as an explicit compatibility oracle.
+fn handle_remove_parity(name: &str, lock: &Path) -> Result<LocalPkgResult, String> {
     let mut l = gc_pkg::GenesisLock::load(lock).map_err(|e| e.to_string())?;
     let removed_req = l.requirements.remove(name).is_some();
     let removed_locked = l.locked.remove(name).is_some();

@@ -256,9 +256,14 @@ policy = "policy:default-v0.1"
 
 [requirements]
 "dep" = { selector = "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", update_policy = "manual", registry = "default" }
+"keep" = { selector = "snapshot:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", update_policy = "auto", registry = "mirror", strategy = "pinned" }
 
 [locked]
 "dep" = { snapshot = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source_selector = "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
+"keep" = { snapshot = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source_selector = "snapshot:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", registry = "mirror", environment_fingerprint = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" }
+
+[artifacts]
+receipt = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
 "#,
     )
     .unwrap();
@@ -287,6 +292,85 @@ policy = "policy:default-v0.1"
     );
     let lock_src = fs::read_to_string(dir.join("genesis.lock")).unwrap();
     assert!(!lock_src.contains("\"dep\" ="));
+    assert!(lock_src.contains("\"keep\" ="));
+    assert!(lock_src.contains("environment_fingerprint = \"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\""));
+    assert!(lock_src.contains(
+        "receipt = \"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\""
+    ));
+}
+
+#[test]
+fn gcpm_remove_absent_name_is_canonical_noop() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.lock"),
+        "version = 2\nworkspace = \"ws\"\npolicy = \"policy:default-v0.1\"\n\n[requirements]\n\n[locked]\n\n",
+    )
+    .unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["remove", "absent", "--lock", "genesis.lock"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let value: serde_json::Value = serde_json::from_slice(&out).unwrap();
+    assert_eq!(
+        value
+            .pointer("/data/value")
+            .and_then(|item| item.as_str())
+            .map(|item| item.contains(":removed false")),
+        Some(true)
+    );
+}
+
+#[test]
+fn gcpm_remove_rejects_empty_name_without_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let body = "version = 2\nworkspace = \"ws\"\npolicy = \"policy:default-v0.1\"\n\n[requirements]\n\n[locked]\n\n";
+    fs::write(dir.join("genesis.lock"), body).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["remove", "", "--lock", "genesis.lock"])
+        .assert()
+        .failure();
+
+    assert_eq!(fs::read_to_string(dir.join("genesis.lock")).unwrap(), body);
+}
+
+#[cfg(unix)]
+#[test]
+fn gcpm_remove_rejects_lock_symlink_without_write() {
+    use std::os::unix::fs::symlink;
+
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let body = "version = 2\nworkspace = \"ws\"\npolicy = \"policy:default-v0.1\"\n\n[requirements]\n\n[locked]\n\n";
+    fs::write(dir.join("target.lock"), body).unwrap();
+    symlink("target.lock", dir.join("genesis.lock")).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["remove", "absent", "--lock", "genesis.lock"])
+        .assert()
+        .failure();
+
+    assert_eq!(fs::read_to_string(dir.join("target.lock")).unwrap(), body);
 }
 
 #[test]

@@ -1,8 +1,9 @@
-# Self-hosted package workspace-new authority v0.1
+# Self-hosted package workspace authorities v0.1
 
-Status: normative partial authority contract for `R4.2.e`.
+Status: normative partial authority contract for `R4.2.e`. The filename is retained for stable
+references; this document governs both workspace-new and workspace-remove authority profiles.
 
-## Scope
+## Workspace-new scope
 
 The artifact-loaded `core/pkg::workspace-new-authority` binding is the exclusive production
 semantic authority for `gcpm new`. It owns bounded member-spec parsing, default-root-member
@@ -17,7 +18,7 @@ authorized bytes. Rust MUST NOT parse a member spec, choose a default member, re
 document, substitute a backend, reconstruct a report, silently use the retained native oracle, or
 write the lock before the complete authority result and both destinations pass validation.
 
-## Closed Protocol
+## Workspace-new closed protocol
 
 The request kind is `genesis/pkg-workspace-new-authority-request-v0.1`, version 1, and contains
 exactly `[:active-backend :kind :lock :members :policy :registry-default :v :workspace
@@ -45,7 +46,7 @@ DEL, and C1 control uses uppercase `\\uXXXX`; all other valid UTF-8 is unchanged
 are exactly `ci`, `dev`, and `release` in lexical order. The exact report binds workspace,
 destinations, both hashes, member count, and `:ok true`.
 
-## Host Admission And Writes
+## Workspace-new host admission and writes
 
 The adapter independently checks envelope and nested field closure, request identity, fixed file
 order, both body hashes, exact destination echoes, report coherence, lock version and emptiness,
@@ -60,16 +61,42 @@ non-file destination therefore produces zero workspace-new mutation. Accepted fi
 same-directory temporary files and atomic rename individually; temporary files are removed after
 write or rename failure.
 
-## Compatibility Oracle
+## Workspace-new compatibility oracle
 
 The former complete Rust `gcpm new` implementation and member parser compile only for tests or the
 explicit `parity-harness` feature. The retained oracle fixes representative document and report
 identities and cannot be called by the production adapter. It is compatibility evidence, not a
 fallback, verifier, or second authority.
 
+## Workspace-remove contract
+
+Production `gcpm remove` loads `core/pkg::workspace-remove-authority` from the exact self-host
+artifact. The request is the closed map `{:kind :lock :model :name :v}` where `:model` is the
+already-admitted typed lock model and `:name` is non-empty. The result is request-hash-bound and
+has the closed envelope `{:code :kind :message :ok :request-h :v :value}`. Success contains the
+exact updated lock model and removal disposition; rejection uses only
+`core/pkg/bad-workspace-remove`.
+
+GenesisCode exclusively owns deletion of the exact string key from both `:requirements` and
+`:locked`, preservation of every other normalized lock-model fact, absent-name no-op disposition,
+and issuance of the exact updated lock model for the independently governed canonical lock writer.
+
+Rust remains a bounded mechanism adapter only. It reads and normalizes the existing TOML lock,
+transports the closed model, evaluates both artifact bindings under existing limits, strictly
+decodes every field, transports the authority-issued updated model unchanged through
+`core/pkg::lock-write-authority`, reparses and cross-checks the proposed bytes, projects the
+accepted hash and authority disposition into the stable report shape, preflights the regular
+non-symlink destination, and atomically persists the exact accepted bytes. There is no production
+native semantic fallback.
+
+The boundary rejects open or same-cardinality-substituted requests/results, wrong request
+identities, empty names, non-map lock sections, writer rejection, malformed or hash-contradictory
+bytes, removal of the wrong key, mutation or loss of unrelated fields, false removal dispositions,
+and symlink destinations. The prior Rust producer is compiled only for tests or `parity-harness`.
+
 ## Nonclaims
 
-This contract does not claim generic TOML or path semantics; workspace remove, migrate,
-environment, task, manifest, or scaffold authority; filesystem policy; pairwise crash-atomic
-two-file commit; WASI support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint;
-or release qualification.
+These profiles do not claim generic TOML or path semantics; workspace migrate, environment, task,
+manifest, or scaffold authority; filesystem policy; pairwise crash-atomic two-file commit; WASI
+support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint; or release
+qualification.

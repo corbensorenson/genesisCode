@@ -1,0 +1,50 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::workspace-remove-authority",
+  "contentIdentitySha256": "b9c18baa7f4041311b045189d7b0dc8e099142610d892eb9ea48580fe2e19928",
+  "decisionInventory": [
+    "exact-requirement-and-locked-key-removal",
+    "non-target-lock-model-preservation",
+    "absent-name-noop-disposition",
+    "canonical-lock-writer-composition",
+    "request-bound-workspace-remove-disposition"
+  ],
+  "hostMechanisms": [
+    "bounded-lock-file-read-and-typed-model-transport",
+    "artifact-only-bounded-authority-evaluation",
+    "strict-request-bound-result-and-cross-document-decoding",
+    "regular-file-ancestor-and-symlink-preflight",
+    "exact-byte-temporary-file-persistence-and-atomic-rename"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
+  "kind": "genesis/selfhost-pkg-workspace-remove-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "filesystem-or-path-policy-authority",
+    "generic-toml-or-path-authority",
+    "h2-workspace-closure",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-workspace-remove-support",
+    "workspace-migrate-environment-task-or-manifest-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/pkg-workspace-remove-authority-request-v0.1",
+  "resultKind": "genesis/pkg-workspace-remove-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_workspace_remove_authority_v1.gc"
+  ],
+  "sourceSha256": "8979eda8f3a74f7e47d696b649c26897d91ef1b005047ab762bfb011bb2ce950",
+  "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

@@ -93,6 +93,7 @@
     "selfhost/pkg_scaffold_render_v1.gc"
     "selfhost/pkg_scaffold_authority_v1.gc"
     "selfhost/pkg_workspace_new_authority_v1.gc"
+    "selfhost/pkg_workspace_remove_authority_v1.gc"
     "selfhost/pkg_semver_select_authority_v1.gc"
     "selfhost/pkg_bridge_authority_v1.gc"
     "selfhost/pkg_snapshot_authority_v1.gc"
@@ -179,6 +180,7 @@
     core/pkg::verify-authority
     core/pkg::scaffold-authority
     core/pkg::workspace-new-authority
+    core/pkg::workspace-remove-authority
     core/pkg::semver-select-authority
     core/cli::stage1-transform-module
     core/cli::store-get-program
