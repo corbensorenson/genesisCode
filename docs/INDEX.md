@@ -230,7 +230,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package-bridge authority profile.
 - `policies/selfhost_pkg_bridge_authority_v0.1.json` - content-addressed bridge decision inventory, retained host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_bridge_authority.py` - independent bridge source/artifact/route/order/ledger custody and mutation verifier.
-- `docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md` - normative R4.2.e implementation contract for the closed inspect/prepare/finalize package-publish authority and retained host mechanisms; production switch pending.
+- `docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md` - normative partial R4.2.e artifact-only inspect/prepare/finalize package-publish semantic authority and retained host mechanisms.
+- `docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package-publish authority profile.
+- `policies/selfhost_pkg_publish_authority_v0.1.json` - content-addressed publish decision inventory, bounded host mechanisms, and explicit nonclaims.
+- `scripts/lib/selfhost_pkg_publish_authority.py` - independent publish source/artifact/adapter/route/order/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.md` - normative partial R4.2.e direct package-snapshot object, byte, identity, and ordered-storage-plan authority.
 - `docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package-snapshot authority profile.
 - `policies/selfhost_pkg_snapshot_authority_v0.1.json` - content-addressed package-snapshot decision inventory, retained frontend mechanisms, and explicit nonclaims.

@@ -660,7 +660,27 @@ fn mk_caps_for_pkg_publish(
     refs_path: &std::path::Path,
     remote_allow: &str,
 ) -> CapsPolicy {
-    let s = format!(
+    let artifact = std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/toolchain.gc")
+        })
+        .canonicalize()
+        .expect("canonical selfhost artifact path");
+    CapsPolicy::from_toml_str_with_selfhost_authority(
+        &pkg_publish_caps_source(store_dir, refs_path, remote_allow),
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .expect("selfhost-authorized publish caps")
+}
+
+fn pkg_publish_caps_source(
+    store_dir: &std::path::Path,
+    refs_path: &std::path::Path,
+    remote_allow: &str,
+) -> String {
+    format!(
         r#"
 allow = ["core/pkg-low::publish"]
 
@@ -676,8 +696,7 @@ remote_allow = ["{remote_allow}"]
         store_dir = store_dir.display(),
         refs_path = refs_path.display(),
         remote_allow = remote_allow
-    );
-    CapsPolicy::from_toml_str(&s).expect("caps")
+    )
 }
 
 fn pkg_snapshot_caps_source(

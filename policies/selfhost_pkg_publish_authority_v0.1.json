@@ -1,0 +1,63 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::publish-authority",
+  "contentIdentitySha256": "610133d24c4442e1bab1aaac16109cf14360e4c831a4d7b0030fa5409c919211",
+  "decisionInventory": [
+    "policy-commit-evidence-and-assurance-admission",
+    "ordered-object-and-cryptographic-request-construction",
+    "signer-threshold-role-and-independence-decision",
+    "exact-publication-provenance-and-sync-plan"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "bounded-ref-and-content-addressed-artifact-transport",
+    "canonical-term-byte-and-hash-contradiction-checking",
+    "strict-ed25519-mechanism-verification",
+    "capability-timeout-and-byte-budget-enforcement",
+    "exact-authority-returned-sync-plan-execution"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_publish_authority.py",
+  "kind": "genesis/selfhost-pkg-publish-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "h2-package-resolution",
+    "package-manifest-and-source-frontend-authority",
+    "r4-2-e-closure",
+    "registry-transport-authority",
+    "release-qualification",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionOperations": [
+    "core/pkg-low::publish"
+  ],
+  "requestKind": "genesis/pkg-publish-authority-request-v0.1",
+  "resultKind": "genesis/pkg-publish-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_publish_glob_v1.gc",
+    "selfhost/pkg_publish_policy_core_v1.gc",
+    "selfhost/pkg_publish_policy_v1.gc",
+    "selfhost/pkg_publish_authority_core_v1.gc",
+    "selfhost/pkg_publish_authority_inspect_v1.gc",
+    "selfhost/pkg_publish_authority_objects_v1.gc",
+    "selfhost/pkg_publish_authority_assurance_core_v1.gc",
+    "selfhost/pkg_publish_authority_requirements_v1.gc",
+    "selfhost/pkg_publish_authority_qualification_v1.gc",
+    "selfhost/pkg_publish_authority_crypto_v1.gc",
+    "selfhost/pkg_publish_authority_prepare_v1.gc",
+    "selfhost/pkg_publish_authority_finalize_crypto_v1.gc",
+    "selfhost/pkg_publish_authority_finalize_policy_v1.gc",
+    "selfhost/pkg_publish_authority_finalize_v1.gc",
+    "selfhost/pkg_publish_authority_v1.gc"
+  ],
+  "sourceSha256": "4a08907b982d370df4aab7b367e4b57e939f9fd6c5ee248e79392d490e7f225e",
+  "spec": "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

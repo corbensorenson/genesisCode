@@ -6,9 +6,8 @@ use semver::{Version, VersionReq};
 mod lock_validation;
 
 pub(crate) use lock_validation::{
-    commit_provenance_term, compute_requirement_fingerprint, locked_dependency_provenance,
-    persist_workspace_root_snapshot, validate_commit_artifact_closure,
-    validate_locked_entries_strict,
+    compute_requirement_fingerprint, locked_dependency_provenance, persist_workspace_root_snapshot,
+    validate_commit_artifact_closure, validate_locked_entries_strict,
 };
 
 #[cfg(any(test, feature = "parity-oracle"))]

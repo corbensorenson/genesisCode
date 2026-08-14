@@ -1,7 +1,7 @@
 # Self-hosted package publish authority v0.1
 
-Status: normative implementation contract for `R4.2.e`; the production authority switch and
-independent evidence are pending.
+Status: normative production contract for the artifact-only `core/pkg-low::publish` semantic
+authority; aggregate `R4.2.e` closure and independent release qualification remain pending.
 
 ## Purpose and authority
 
@@ -18,10 +18,10 @@ sync plan. Rust MUST NOT parse a policy into a decision structure, select a poli
 commit/evidence semantics, count accepted signers or roles, construct provenance, or retain a
 production semantic fallback.
 
-This contract does not switch production authority by itself. Until the source module, strict
-adapter, authentic route, profile, independent verifier, and published toolchain artifact pass
-their required controls, the current Rust route remains truthfully host-authoritative and
-`SD-PACKAGE-RESOLUTION` remains H0.
+The source closure, strict adapter, authentic route, profile, independent verifier, and published
+toolchain artifact switch this exact publication decision domain to GenesisCode. The broader
+`SD-PACKAGE-RESOLUTION` row remains H0 because package frontend, graph resolution, registry
+transport, workspace behavior, and other declared host-authoritative domains remain unfinished.
 
 ## Closed three-phase protocol
 

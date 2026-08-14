@@ -189,7 +189,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     require_markers(reader, (
         '#[path = "pkg_bridge_authority.rs"]', "bridge_authority: Option<Value>",
         "let bridge_authority = environment.get(bridge::BRIDGE_BINDING);",
-        'matches!(op, "core/pkg-low::bridge" | "core/pkg-low::snapshot")',
+        '"core/pkg-low::bridge" | "core/pkg-low::snapshot" | "core/pkg-low::publish"',
     ), "lazy bridge authority loader")
     require_markers(publish, (
         '#[path = "dispatch_publish/bridge_objects.rs"]',
@@ -299,7 +299,12 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_bridge_authority.rs", "fn decode_bridge_envelope", "fn decode_legacy_envelope", "result-decoder")
     source_mutation("crates/gc_effects/src/pkg_bridge_authority.rs", "bridge plan :sign-message contradicts the VCS attestation domain", "sign message accepted", "sign-contradiction")
     source_mutation("crates/gc_effects/src/pkg_bridge_authority.rs", "bridge object :term, :bytes, and :h are malformed or contradictory", "object accepted", "object-contradiction")
-    source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", 'matches!(op, "core/pkg-low::bridge" | "core/pkg-low::snapshot")', 'matches!(op, "core/pkg-low::snapshot")', "lazy-route")
+    source_mutation(
+        "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        '"core/pkg-low::bridge" | "core/pkg-low::snapshot" | "core/pkg-low::publish"',
+        '"core/pkg-low::snapshot" | "core/pkg-low::publish"',
+        "lazy-route",
+    )
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", '"core/pkg-low::bridge" => bridge_objects::dispatch_bridge(', '"core/pkg-low::bridge" => legacy_bridge(', "dispatch")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs", "Term::Bytes(plan.sign_message.clone().into())", "Term::Bytes(plan.signing_hash.to_vec().into())", "sign-message-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs", "key.verify_strict(", "key.verify_legacy(", "crypto-check")

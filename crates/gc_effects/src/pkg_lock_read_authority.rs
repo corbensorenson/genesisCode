@@ -19,6 +19,11 @@ pub(crate) use bridge::{PkgBridgeDecision, PkgBridgeFacts, PkgBridgeObject};
 #[path = "pkg_snapshot_authority.rs"]
 mod snapshot;
 pub(crate) use snapshot::PkgSnapshotDecision;
+#[path = "pkg_publish_authority.rs"]
+mod publish;
+pub(crate) use publish::{
+    PkgPublishDecision, PkgPublishInspection, PkgPublishObject, PkgPublishPreparation,
+};
 #[cfg(test)]
 #[path = "pkg_publish_authority_finalize_tests.rs"]
 mod publish_authority_finalize_tests;
@@ -48,6 +53,7 @@ pub(crate) struct PkgLockReadAuthority {
     ops_authority: Option<Value>,
     bridge_authority: Option<Value>,
     snapshot_authority: Option<Value>,
+    publish_authority: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -69,7 +75,10 @@ impl PkgLockReadAuthority {
                 | "core/pkg-low::update"
                 | "core/pkg-low::install"
                 | "core/pkg-low::verify"
-        ) || matches!(op, "core/pkg-low::bridge" | "core/pkg-low::snapshot")
+        ) || matches!(
+            op,
+            "core/pkg-low::bridge" | "core/pkg-low::snapshot" | "core/pkg-low::publish"
+        )
     }
 
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
@@ -98,6 +107,7 @@ impl PkgLockReadAuthority {
         let ops_authority = environment.get(ops::OPS_BINDING);
         let bridge_authority = environment.get(bridge::BRIDGE_BINDING);
         let snapshot_authority = environment.get(snapshot::SNAPSHOT_BINDING);
+        let publish_authority = environment.get(publish::PUBLISH_BINDING);
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
@@ -107,6 +117,7 @@ impl PkgLockReadAuthority {
             ops_authority,
             bridge_authority,
             snapshot_authority,
+            publish_authority,
         })
     }
 

@@ -441,6 +441,67 @@ fn sync_push_set_refs_preflight_fails_before_upload() {
 }
 
 #[test]
+fn pkg_publish_requires_selfhost_authority_before_local_or_remote_io() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_pkg_publish_no_authority", reg.clone())
+        .expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_pkg_publish_no_authority");
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = CapsPolicy::from_toml_str(&pkg_publish_caps_source(
+        &store_dir,
+        &refs_path,
+        &remote_allow,
+    ))
+    .expect("caps without selfhost authority");
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :ref "refs/heads/main"
+          :policy "{}"
+          :commit "{}"
+        }}"#,
+        "11".repeat(32),
+        "22".repeat(32),
+    ))
+    .unwrap();
+    let (forms, hash) = mk_prog("core/pkg-low::publish", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+
+    let error = match run(
+        &mut context,
+        &caps,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    ) {
+        Ok(_) => panic!("publish must fail closed without selfhost authority"),
+        Err(error) => error,
+    };
+    assert!(
+        error
+            .to_string()
+            .contains("requires the artifact-loaded GenesisCode publish authority"),
+        "unexpected missing-authority error: {error}"
+    );
+    assert_eq!(
+        std::fs::read_dir(&store_dir).unwrap().count(),
+        0,
+        "authority failure must precede artifact access"
+    );
+    assert!(
+        !refs_path.exists(),
+        "authority failure must precede ref database access"
+    );
+    assert_eq!(reg.ref_get("refs/heads/main"), None);
+    assert_eq!(reg.upload_counts(), (0, 0, 0));
+}
+
+#[test]
 fn pkg_publish_validates_policy_and_pushes_commit_closure() {
     let reg = Arc::new(MemRegistry::new());
     gc_registry::register_inproc("t_pkg_publish", reg.clone()).expect("register inproc");

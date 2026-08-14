@@ -214,11 +214,19 @@ pub(crate) fn payload_pkg_publish_expected_old(payload: &Term) -> Result<Option<
     }
 }
 
-pub(crate) fn payload_pkg_publish_depth(payload: &Term) -> Option<u64> {
-    let Term::Map(m) = payload else { return None };
+pub(crate) fn payload_pkg_publish_depth(payload: &Term) -> Result<u64, String> {
+    let Term::Map(m) = payload else {
+        return Err("payload must be a map".to_string());
+    };
     match m.get(&TermOrdKey(Term::symbol(":depth"))) {
-        Some(Term::Int(i)) => i.to_u64(),
-        _ => None,
+        None | Some(Term::Nil) => Ok(0),
+        Some(Term::Int(i)) => i
+            .to_u64()
+            .ok_or_else(|| ":depth must be a nonnegative u64".to_string()),
+        Some(other) => Err(format!(
+            ":depth must be a nonnegative integer or nil, got {}",
+            print_term(other)
+        )),
     }
 }
 

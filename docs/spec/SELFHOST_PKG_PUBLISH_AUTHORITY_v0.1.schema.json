@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-pkg-publish-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionOperations", "requestKind", "resultKind", "schema", "sourceModules",
+    "sourceSha256", "spec", "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/pkg::publish-authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {"const": [
+      "policy-commit-evidence-and-assurance-admission",
+      "ordered-object-and-cryptographic-request-construction",
+      "signer-threshold-role-and-independence-decision",
+      "exact-publication-provenance-and-sync-plan"
+    ]},
+    "hostMechanisms": {"const": [
+      "artifact-only-authority-bootstrap-and-bounded-evaluation",
+      "bounded-ref-and-content-addressed-artifact-transport",
+      "canonical-term-byte-and-hash-contradiction-checking",
+      "strict-ed25519-mechanism-verification",
+      "capability-timeout-and-byte-budget-enforcement",
+      "exact-authority-returned-sync-plan-execution"
+    ]},
+    "hostOracle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parityOnly", "productionRequired", "removalTask"],
+      "properties": {
+        "parityOnly": {"const": true},
+        "productionRequired": {"const": false},
+        "removalTask": {"const": "R4.2.e"}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_pkg_publish_authority.py"},
+    "kind": {"const": "genesis/selfhost-pkg-publish-authority-v0.1"},
+    "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "productionOperations": {"const": ["core/pkg-low::publish"]},
+    "requestKind": {"const": "genesis/pkg-publish-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/pkg-publish-authority-result-v0.1"},
+    "schema": {"const": "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.schema.json"},
+    "sourceModules": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}
