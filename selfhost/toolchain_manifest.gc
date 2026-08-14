@@ -77,6 +77,10 @@
     "selfhost/pkg_lock_write_authority_v1.gc"
     "selfhost/pkg_lock_ops_authority_v1.gc"
     "selfhost/pkg_resolution_identity_authority_v1.gc"
+    "selfhost/pkg_resolution_workflow_core_v1.gc"
+    "selfhost/pkg_resolution_workflow_plan_v1.gc"
+    "selfhost/pkg_resolution_workflow_finalize_v1.gc"
+    "selfhost/pkg_resolution_workflow_authority_v1.gc"
     "selfhost/pkg_semver_select_authority_v1.gc"
     "selfhost/pkg_bridge_authority_v1.gc"
     "selfhost/pkg_snapshot_authority_v1.gc"
@@ -158,6 +162,7 @@
     core/pkg::lock-write-authority
     core/pkg::resolution-identity-authority
     core/pkg::resolution-plan-authority
+    core/pkg::resolution-workflow-authority
     core/pkg::semver-select-authority
     core/cli::stage1-transform-module
     core/cli::store-get-program

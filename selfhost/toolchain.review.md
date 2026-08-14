@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `2bd0d1e2986488fcd11c6a8ad0351181dc6cc8e33b02fa915631ffbd40b8b503`
-- Freshness artifact hash: `2bd0d1e2986488fcd11c6a8ad0351181dc6cc8e33b02fa915631ffbd40b8b503`
-- Freshness source hash: `35c99fdcee70648b3577401e00626dbc0411f1bbcb9d382cbce8af8a1d878caa`
-- Source aggregate hash (module path + module sha256): `53db0ead6d57f9875c78b5dd804cc537bc33c1b0535389a670f0577914e3be31`
+- Artifact sha256: `7924ad215774038d398b11470f1fdb07f4490cc9d87f0820947da432ca408e27`
+- Freshness artifact hash: `7924ad215774038d398b11470f1fdb07f4490cc9d87f0820947da432ca408e27`
+- Freshness source hash: `f24b2b83b726aca052196291c243a188af8d8cec422c0b83b0aaf5b2c1094763`
+- Source aggregate hash (module path + module sha256): `7787ab571f92c9c8c8de8310cfbd2ec532532c81bfbb4961b8699cd2df3e33b2`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `112`
+- Module count: `116`
 
 ## Module Summary
 
@@ -91,6 +91,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
 | `selfhost/pkg_lock_ops_authority_v1.gc` | 476 | 21921 | 29 | `e377f0f028d2d6fb` |
 | `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
+| `selfhost/pkg_resolution_workflow_core_v1.gc` | 191 | 7541 | 18 | `da57fe759d8d1fd7` |
+| `selfhost/pkg_resolution_workflow_plan_v1.gc` | 72 | 3081 | 5 | `1b2469a4549129c3` |
+| `selfhost/pkg_resolution_workflow_finalize_v1.gc` | 380 | 18851 | 11 | `908c1f3a05fba0cb` |
+| `selfhost/pkg_resolution_workflow_authority_v1.gc` | 133 | 6945 | 4 | `9ec8f141e5c9d929` |
 | `selfhost/pkg_semver_select_authority_v1.gc` | 176 | 7400 | 11 | `9b3fc573e02fb224` |
 | `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
 | `selfhost/pkg_snapshot_authority_v1.gc` | 174 | 6623 | 12 | `db2d90994b97fdd7` |
@@ -206,6 +210,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`
 - `selfhost/pkg_lock_ops_authority_v1.gc`: `selfhost/pkg-lock-ops::result`, `selfhost/pkg-lock-ops::reject`, `selfhost/pkg-lock-ops::accept-write`, `selfhost/pkg-lock-ops::accept-value`, `selfhost/pkg-lock-ops::writer-locked-entry`, `selfhost/pkg-lock-ops::writer-locked-loop`, `selfhost/pkg-lock-ops::writer-locked`, `selfhost/pkg-lock-ops::writer-payload`
 - `selfhost/pkg_resolution_identity_authority_v1.gc`: `selfhost/pkg-resolution-id::tag`, `selfhost/pkg-resolution-id::map?`, `selfhost/pkg-resolution-id::str?`, `selfhost/pkg-resolution-id::sym?`, `selfhost/pkg-resolution-id::int?`, `selfhost/pkg-resolution-id::nil?`, `selfhost/pkg-resolution-id::map-has-key-loop?`, `selfhost/pkg-resolution-id::map-has-keys-loop?`
+- `selfhost/pkg_resolution_workflow_core_v1.gc`: `selfhost/pkg-resolution-workflow::bool?`, `selfhost/pkg-resolution-workflow::symbol?`, `selfhost/pkg-resolution-workflow::workflow?`, `selfhost/pkg-resolution-workflow::string-vector-loop?`, `selfhost/pkg-resolution-workflow::string-vector?`, `selfhost/pkg-resolution-workflow::string-set-loop`, `selfhost/pkg-resolution-workflow::string-set`, `selfhost/pkg-resolution-workflow::model?`
+- `selfhost/pkg_resolution_workflow_plan_v1.gc`: `selfhost/pkg-resolution-workflow::plan-action`, `selfhost/pkg-resolution-workflow::requirement-steps-loop`, `selfhost/pkg-resolution-workflow::missing-steps-loop`, `selfhost/pkg-resolution-workflow::build-plan`, `selfhost/pkg-resolution-workflow::plan-value`
+- `selfhost/pkg_resolution_workflow_finalize_v1.gc`: `selfhost/pkg-resolution-workflow::rationale`, `selfhost/pkg-resolution-workflow::resolved-reason`, `selfhost/pkg-resolution-workflow::observation?`, `selfhost/pkg-resolution-workflow::step-result`, `selfhost/pkg-resolution-workflow::finalize-steps-loop`, `selfhost/pkg-resolution-workflow::finalize-steps`, `selfhost/pkg-resolution-workflow::commit-observation?`, `selfhost/pkg-resolution-workflow::provenance-loop`
+- `selfhost/pkg_resolution_workflow_authority_v1.gc`: `selfhost/pkg-resolution-workflow::plan-request?`, `selfhost/pkg-resolution-workflow::finalize-request?`, `selfhost/pkg-resolution-workflow::finalize`, `core/pkg::resolution-workflow-authority`
 - `selfhost/pkg_semver_select_authority_v1.gc`: `selfhost/pkg-semver-select::vec?`, `selfhost/pkg-semver-select::int?`, `selfhost/pkg-semver-select::candidate?`, `selfhost/pkg-semver-select::candidates-valid?`, `selfhost/pkg-semver-select::bytes-lex-lt?`, `selfhost/pkg-semver-select::str-lex-lt?`, `selfhost/pkg-semver-select::better?`, `selfhost/pkg-semver-select::select-loop`
 - `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
 - `selfhost/pkg_snapshot_authority_v1.gc`: `selfhost/pkg-snapshot::bytes?`, `selfhost/pkg-snapshot::module-valid?`, `selfhost/pkg-snapshot::modules-valid-loop?`, `selfhost/pkg-snapshot::modules-valid?`, `selfhost/pkg-snapshot::facts-valid?`, `selfhost/pkg-snapshot::object`, `selfhost/pkg-snapshot::build-modules-loop`, `selfhost/pkg-snapshot::build`

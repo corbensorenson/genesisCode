@@ -6,7 +6,7 @@ use semver::{Version, VersionReq};
 mod lock_validation;
 
 pub(crate) use lock_validation::{
-    compute_requirement_fingerprint, locked_dependency_provenance, persist_workspace_root_snapshot,
+    compute_requirement_fingerprint, locked_dependency_provenance,
     validate_commit_artifact_closure, validate_locked_entries_strict,
 };
 

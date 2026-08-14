@@ -21,8 +21,10 @@ production.
 The plan and fingerprint bindings share one artifact-loaded `EvalCtx`; adding planning therefore
 does not add a second toolchain bootstrap. Production uses `SelfhostBootstrapMode::ArtifactOnly`
 and fails closed with a sealed `core/pkg/authority-error` if the artifact, binding, evaluation, or
-result contract is unavailable. Each call is bounded to 2,000,000 steps, 4,000,000 allocation
-units, 64 KiB bytes, 16 KiB strings, and 64 map or vector entries.
+result contract is unavailable. The shared package-resolution authority context is bounded to
+20,000,000 steps, 40,000,000 allocation units, 4 MiB bytes and strings, and 65,536 map or vector
+entries. These finite limits accommodate a complete admitted lock model and workflow while still
+failing closed before unbounded host work.
 
 ## Request
 

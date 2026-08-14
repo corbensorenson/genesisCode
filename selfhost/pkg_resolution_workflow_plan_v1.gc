@@ -1,0 +1,72 @@
+; Causal package workflow planner. The host may execute only returned steps.
+
+(def selfhost/pkg-resolution-workflow::plan-action
+  (fn (workflow)
+    (fn (only-set)
+      (fn (name)
+        (if ((core/sym::eq? workflow) (quote :lock))
+          (quote :resolve)
+          (if ((core/int::eq? (core/map::len only-set)) 0)
+            (quote :consider)
+            (if ((core/map::get only-set) name)
+              (quote :consider)
+              (quote :skip-unselected))))))))
+
+(def selfhost/pkg-resolution-workflow::requirement-steps-loop
+  (fn (entries)
+    (fn (workflow)
+      (fn (only-set)
+        (fn (index)
+          (fn (out)
+            (if ((core/int::eq? index) (core/vec::len entries))
+              out
+              (let ((entry ((core/vec::get entries) index)))
+                (let ((name ((core/vec::get entry) 0)))
+                  (((((selfhost/pkg-resolution-workflow::requirement-steps-loop entries)
+                        workflow) only-set) ((core/int::add index) 1))
+                    ((core/vec::push out)
+                      {
+                        :action
+                          (((selfhost/pkg-resolution-workflow::plan-action workflow) only-set) name)
+                        :name name
+                        :requirement ((core/vec::get entry) 1)})))))))))))
+
+(def selfhost/pkg-resolution-workflow::missing-steps-loop
+  (fn (only-entries)
+    (fn (requirements)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len only-entries))
+            out
+            (let ((name ((core/vec::get ((core/vec::get only-entries) index)) 0)))
+              ((((selfhost/pkg-resolution-workflow::missing-steps-loop only-entries)
+                    requirements) ((core/int::add index) 1))
+                (if ((core/map::get requirements) name)
+                  out
+                  ((core/vec::push out)
+                    {:action (quote :missing-requirement) :name name :requirement nil}))))))))))
+
+(def selfhost/pkg-resolution-workflow::build-plan
+  (fn (model)
+    (fn (workflow)
+      (fn (only)
+        (let ((requirements ((core/map::get model) (quote :requirements))))
+          (let ((only-set (selfhost/pkg-resolution-workflow::string-set only)))
+            (let
+              ((requirement-steps
+                (((((selfhost/pkg-resolution-workflow::requirement-steps-loop
+                        (core/map::entries requirements)) workflow) only-set) 0) [])))
+              (let
+                ((steps
+                  (if ((core/sym::eq? workflow) (quote :update))
+                    ((((selfhost/pkg-resolution-workflow::missing-steps-loop
+                          (core/map::entries only-set)) requirements) 0) requirement-steps)
+                    requirement-steps)))
+                {:steps steps :workflow workflow}))))))))
+
+(def selfhost/pkg-resolution-workflow::plan-value
+  (fn (model)
+    (fn (workflow)
+      (fn (only)
+        (let ((plan (((selfhost/pkg-resolution-workflow::build-plan model) workflow) only)))
+          {:plan plan :plan-h (selfhost/hash::hash-term plan)})))))

@@ -6,11 +6,11 @@ use crate::pkg_lock_write_authority::{PkgLockWriteAuthority, PkgLockWriteDecisio
 mod install_verify;
 #[path = "dispatch_resolution/rationale_diagnostics.rs"]
 mod rationale_diagnostics;
+#[path = "dispatch_resolution/workflow.rs"]
+mod workflow;
 
-use rationale_diagnostics::{
-    annotate_requirement_resolution_error, build_lock_resolution_rationale,
-    persist_resolution_rationale_artifact, update_rationale_term,
-};
+use rationale_diagnostics::annotate_requirement_resolution_error;
+use workflow::{execute_workflow, finalize_workflow};
 
 #[expect(
     clippy::too_many_arguments,
@@ -165,89 +165,49 @@ pub(super) fn dispatch_resolution(
                     Err(error) => return Ok(error),
                 };
 
-            let mut out_locked: BTreeMap<String, gc_pkg::LockedEntry> = BTreeMap::new();
-            for (name, req) in &l.requirements {
-                if let Err(v) = validate_requirement_registry_alias(&l, name, req, error_tok, op) {
-                    return Ok(v);
-                }
-                let plan = match plan_requirement(
-                    identity_authority.as_deref_mut(),
-                    req,
-                    false,
-                    error_tok,
-                    op,
-                ) {
-                    Ok(plan) => plan,
-                    Err(err_val) => {
-                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
-                    }
-                };
-                match resolve_requirement(
-                    store,
-                    refs,
-                    &l.registries,
-                    policy,
-                    pol,
-                    budget,
-                    timeout_ms,
-                    name,
-                    req,
-                    plan,
-                    identity_authority.as_deref_mut(),
-                    error_tok,
-                    op,
-                ) {
-                    Ok(le) => {
-                        out_locked.insert(name.clone(), le);
-                    }
-                    Err(err_val) => {
-                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
-                    }
-                }
-            }
-
-            if strict
-                && let Err(v) = validate_locked_entries_strict(
-                    identity_authority.as_deref_mut(),
-                    store,
-                    &l.requirements,
-                    &out_locked,
-                    true,
-                    error_tok,
-                    op,
-                )
-            {
-                return Ok(v);
-            }
-            l.locked = out_locked;
-            let lock_rationale = build_lock_resolution_rationale(&l.requirements, &l.locked);
-            let lock_rationale_artifact = match persist_resolution_rationale_artifact(
+            let executed = match execute_workflow(
+                identity_authority.as_deref_mut(),
+                PkgResolutionWorkflow::Lock,
+                &[],
+                &lock_s,
+                &l,
                 store,
-                "lock",
-                &lock_rationale,
+                refs,
+                policy,
+                pol,
+                budget,
+                timeout_ms,
                 error_tok,
                 op,
             ) {
-                Ok(h) => h,
-                Err(v) => return Ok(v),
+                Ok(value) => value,
+                Err(value) => return Ok(value),
             };
-            l.artifacts.insert(
-                "lock_resolution_rationale".to_string(),
-                lock_rationale_artifact.clone(),
-            );
-            let workspace_root = match persist_workspace_root_snapshot(store, &l, error_tok, op) {
-                Ok(h) => h,
-                Err(v) => return Ok(v),
+            let finalized = match finalize_workflow(
+                identity_authority.as_deref_mut(),
+                PkgResolutionWorkflow::Lock,
+                &[],
+                &lock_s,
+                &mut l,
+                executed,
+                store,
+                strict,
+                error_tok,
+                op,
+            ) {
+                Ok(value) => value,
+                Err(value) => return Ok(value),
             };
-            l.artifacts.insert(
-                "root_workspace_snapshot".to_string(),
-                workspace_root.clone(),
-            );
-            let deps_provenance =
-                match locked_dependency_provenance(store, &l.locked, strict, error_tok, op) {
-                    Ok(v) => v,
-                    Err(v) => return Ok(v),
-                };
+            let lock_rationale_artifact = l
+                .artifacts
+                .get("lock_resolution_rationale")
+                .cloned()
+                .unwrap_or_default();
+            let workspace_root = l
+                .artifacts
+                .get("root_workspace_snapshot")
+                .cloned()
+                .unwrap_or_default();
 
             let (bytes, lock_h) = match render_resolved_lock(
                 lock_write_authority.as_deref_mut(),
@@ -288,15 +248,15 @@ pub(super) fn dispatch_resolution(
             );
             m.insert(
                 TermOrdKey(Term::symbol(":locked-count")),
-                Term::Int((l.locked.len() as i64).into()),
+                Term::Int(finalized.locked_count.into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":rationale-count")),
-                Term::Int((lock_rationale.len() as i64).into()),
+                Term::Int((finalized.rationale.len() as i64).into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":rationale")),
-                Term::Vector(lock_rationale),
+                Term::Vector(finalized.rationale),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":rationale-artifact")),
@@ -325,7 +285,7 @@ pub(super) fn dispatch_resolution(
                         ),
                         (
                             TermOrdKey(Term::symbol(":deps")),
-                            Term::Vector(deps_provenance),
+                            Term::Vector(finalized.provenance),
                         ),
                     ]
                     .into_iter()
@@ -348,7 +308,7 @@ pub(super) fn dispatch_resolution(
             };
             let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
             let only_filter = match payload_pkg_only(payload) {
-                Ok(xs) => normalize_only_filter(xs),
+                Ok(xs) => xs.unwrap_or_default(),
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
@@ -369,146 +329,49 @@ pub(super) fn dispatch_resolution(
                     Err(error) => return Ok(error),
                 };
 
-            let mut updated: u64 = 0;
-            let mut rationale: Vec<Term> = Vec::new();
-            let mut selected_count: u64 = 0;
-            for (name, req) in &l.requirements {
-                if let Err(v) = validate_requirement_registry_alias(&l, name, req, error_tok, op) {
-                    return Ok(v);
-                }
-                if !only_filter.is_empty() && !only_filter.contains(name) {
-                    rationale.push(update_rationale_term(
-                        name,
-                        Some(req),
-                        ":skipped-unselected",
-                        "not selected by --only filter",
-                        l.locked.get(name),
-                    ));
-                    continue;
-                }
-                selected_count = selected_count.saturating_add(1);
-                let has_existing = l.locked.contains_key(name);
-                let plan = match plan_requirement(
-                    identity_authority.as_deref_mut(),
-                    req,
-                    has_existing,
-                    error_tok,
-                    op,
-                ) {
-                    Ok(plan) => plan,
-                    Err(err_val) => {
-                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
-                    }
-                };
-                if !plan.should_resolve {
-                    rationale.push(update_rationale_term(
-                        name,
-                        Some(req),
-                        ":kept-existing",
-                        "GenesisCode resolution plan retained the existing locked entry",
-                        l.locked.get(name),
-                    ));
-                    continue;
-                }
-                let previous = l.locked.get(name).cloned();
-                match resolve_requirement(
-                    store,
-                    refs,
-                    &l.registries,
-                    policy,
-                    pol,
-                    budget,
-                    timeout_ms,
-                    name,
-                    req,
-                    plan,
-                    identity_authority.as_deref_mut(),
-                    error_tok,
-                    op,
-                ) {
-                    Ok(le) => {
-                        let changed = previous
-                            .as_ref()
-                            .map(|old| !locked_entry_eq(old, &le))
-                            .unwrap_or(true);
-                        l.locked.insert(name.clone(), le);
-                        if changed {
-                            updated = updated.saturating_add(1);
-                            rationale.push(update_rationale_term(
-                                name,
-                                Some(req),
-                                ":updated",
-                                if has_existing {
-                                    "resolved new lock entry for selected dependency"
-                                } else {
-                                    "resolved missing locked entry"
-                                },
-                                l.locked.get(name),
-                            ));
-                        } else {
-                            rationale.push(update_rationale_term(
-                                name,
-                                Some(req),
-                                ":no-change",
-                                "resolved dependency equals existing lock entry",
-                                l.locked.get(name),
-                            ));
-                        }
-                    }
-                    Err(err_val) => {
-                        return Ok(annotate_requirement_resolution_error(err_val, name, req));
-                    }
-                }
-            }
-            if !only_filter.is_empty() {
-                for selected in &only_filter {
-                    if !l.requirements.contains_key(selected) {
-                        rationale.push(update_rationale_term(
-                            selected,
-                            None,
-                            ":missing-requirement",
-                            "selected dependency is not present in lock requirements",
-                            None,
-                        ));
-                    }
-                }
-            }
-            if strict
-                && let Err(v) = validate_locked_entries_strict(
-                    identity_authority.as_deref_mut(),
-                    store,
-                    &l.requirements,
-                    &l.locked,
-                    true,
-                    error_tok,
-                    op,
-                )
-            {
-                return Ok(v);
-            }
-            let update_rationale_artifact = match persist_resolution_rationale_artifact(
-                store, "update", &rationale, error_tok, op,
+            let executed = match execute_workflow(
+                identity_authority.as_deref_mut(),
+                PkgResolutionWorkflow::Update,
+                &only_filter,
+                &lock_s,
+                &l,
+                store,
+                refs,
+                policy,
+                pol,
+                budget,
+                timeout_ms,
+                error_tok,
+                op,
             ) {
-                Ok(h) => h,
-                Err(v) => return Ok(v),
+                Ok(value) => value,
+                Err(value) => return Ok(value),
             };
-            l.artifacts.insert(
-                "update_resolution_rationale".to_string(),
-                update_rationale_artifact.clone(),
-            );
-            let workspace_root = match persist_workspace_root_snapshot(store, &l, error_tok, op) {
-                Ok(h) => h,
-                Err(v) => return Ok(v),
+            let finalized = match finalize_workflow(
+                identity_authority.as_deref_mut(),
+                PkgResolutionWorkflow::Update,
+                &only_filter,
+                &lock_s,
+                &mut l,
+                executed,
+                store,
+                strict,
+                error_tok,
+                op,
+            ) {
+                Ok(value) => value,
+                Err(value) => return Ok(value),
             };
-            l.artifacts.insert(
-                "root_workspace_snapshot".to_string(),
-                workspace_root.clone(),
-            );
-            let deps_provenance =
-                match locked_dependency_provenance(store, &l.locked, strict, error_tok, op) {
-                    Ok(v) => v,
-                    Err(v) => return Ok(v),
-                };
+            let update_rationale_artifact = l
+                .artifacts
+                .get("update_resolution_rationale")
+                .cloned()
+                .unwrap_or_default();
+            let workspace_root = l
+                .artifacts
+                .get("root_workspace_snapshot")
+                .cloned()
+                .unwrap_or_default();
 
             let (bytes, lock_h) = match render_resolved_lock(
                 lock_write_authority.as_deref_mut(),
@@ -548,19 +411,19 @@ pub(super) fn dispatch_resolution(
             );
             m.insert(
                 TermOrdKey(Term::symbol(":updated")),
-                Term::Int((updated as i64).into()),
+                Term::Int(finalized.updated_count.into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":selected-count")),
-                Term::Int((selected_count as i64).into()),
+                Term::Int(finalized.selected_count.into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":rationale-count")),
-                Term::Int((rationale.len() as i64).into()),
+                Term::Int((finalized.rationale.len() as i64).into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":rationale")),
-                Term::Vector(rationale),
+                Term::Vector(finalized.rationale),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":rationale-artifact")),
@@ -589,7 +452,7 @@ pub(super) fn dispatch_resolution(
                         ),
                         (
                             TermOrdKey(Term::symbol(":deps")),
-                            Term::Vector(deps_provenance),
+                            Term::Vector(finalized.provenance),
                         ),
                     ]
                     .into_iter()
@@ -706,29 +569,6 @@ fn load_lock_model(
         "selfhost package lock model authority is unavailable".to_string(),
         Some(op),
     ))
-}
-
-fn normalize_only_filter(raw: Option<Vec<String>>) -> std::collections::BTreeSet<String> {
-    let mut out = std::collections::BTreeSet::new();
-    if let Some(xs) = raw {
-        for x in xs {
-            let trimmed = x.trim();
-            if !trimmed.is_empty() {
-                out.insert(trimmed.to_string());
-            }
-        }
-    }
-    out
-}
-
-fn locked_entry_eq(a: &gc_pkg::LockedEntry, b: &gc_pkg::LockedEntry) -> bool {
-    a.commit == b.commit
-        && a.snapshot == b.snapshot
-        && a.registry == b.registry
-        && a.source_selector == b.source_selector
-        && a.resolved_ref == b.resolved_ref
-        && a.exports_hash == b.exports_hash
-        && a.environment_fingerprint == b.environment_fingerprint
 }
 
 fn validate_requirement_registry_alias(

@@ -135,6 +135,11 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     resolution = source_text(
         root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", overrides
     )
+    workflow = source_text(
+        root,
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
+        overrides,
+    )
     install = source_text(
         root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", overrides
     )
@@ -156,7 +161,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("published artifact does not contain identity authority module and binding")
     for marker in (
         "pub(crate) struct PkgResolutionIdentityAuthority", "SelfhostBootstrapMode::ArtifactOnly",
-        "const STEP_LIMIT: u64 = 2_000_000", "const ALLOC_LIMIT: u64 = 4_000_000",
+        "const STEP_LIMIT: u64 = 20_000_000", "const ALLOC_LIMIT: u64 = 40_000_000",
+        "max_bytes_len: Some(4 * 1024 * 1024)", "max_vec_len: Some(65_536)",
         "decode_identity_result", "result field set mismatch", "request-h",
         "result :fingerprint must be lowercase BLAKE3 hex64",
     ):
@@ -182,8 +188,14 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ):
         if marker not in runner:
             fail(f"runner identity authority wiring missing marker: {marker}")
-    if resolution.count("identity_authority.as_deref_mut()") != 6:
-        fail("lock/update resolution authority forwarding inventory drift")
+    if (resolution.count("identity_authority.as_deref_mut()") != 4
+            or resolution.count("execute_workflow(") != 2
+            or resolution.count("finalize_workflow(") != 2):
+        fail("lock/update workflow authority forwarding inventory drift")
+    if (workflow.count("plan_requirement(") != 2
+            or workflow.count("resolve_requirement(") != 2
+            or workflow.count("validate_locked_entries_strict(") != 1):
+        fail("workflow identity and validation forwarding inventory drift")
     if (install.count("identity_authority.as_deref_mut()") != 2
             or "resolve_requirement(" not in install):
         fail("install hydration does not forward identity authority")
@@ -215,6 +227,7 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
         "crates/gc_effects/src/runner.rs",
     ]
@@ -246,6 +259,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_resolution_identity_authority.rs", "result field set mismatch", "result accepted", "decoder")
     source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs", ".fingerprint(req, snapshot, commit)", ".legacy_fingerprint(req)", "production route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "identity_authority.as_deref_mut()", "None", "resolution forwarding")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs", "plan_requirement(", "legacy_requirement_plan(", "workflow forwarding")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "identity_authority.as_deref_mut()", "None", "install forwarding")
     source_mutation("crates/gc_effects/src/runner.rs", ".map(PkgResolutionIdentityAuthority::load)", ".map(PkgLockReadAuthority::load)", "runner load")
 
@@ -257,7 +271,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 15:
+    if controls != 16:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

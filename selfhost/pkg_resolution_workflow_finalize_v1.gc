@@ -1,0 +1,380 @@
+; Final lock/update decision, rationale, workspace identity, and provenance.
+
+(def selfhost/pkg-resolution-workflow::rationale
+  (fn (name)
+    (fn (requirement)
+      (fn (action)
+        (fn (reason)
+          (fn (resolved)
+            {
+              :action action
+              :commit
+                (if (core/list::is-nil? resolved)
+                  nil
+                  ((core/map::get resolved) (quote :commit)))
+              :name name
+              :reason reason
+              :registry
+                (if (core/list::is-nil? requirement)
+                  (if (core/list::is-nil? resolved)
+                    nil
+                    ((core/map::get resolved) (quote :registry)))
+                  (let ((registry ((core/map::get requirement) (quote :registry))))
+                    (if (core/list::is-nil? registry)
+                      (if (core/list::is-nil? resolved)
+                        nil
+                        ((core/map::get resolved) (quote :registry)))
+                      registry)))
+              :resolved-ref
+                (if (core/list::is-nil? resolved)
+                  nil
+                  ((core/map::get resolved) (quote :resolved-ref)))
+              :selector
+                (if (core/list::is-nil? requirement)
+                  nil
+                  ((core/map::get requirement) (quote :selector)))
+              :snapshot
+                (if (core/list::is-nil? resolved)
+                  nil
+                  ((core/map::get resolved) (quote :snapshot)))
+              :strategy
+                (if (core/list::is-nil? requirement)
+                  nil
+                  ((core/map::get requirement) (quote :strategy)))
+              :tag-policy
+                (if (core/list::is-nil? requirement)
+                  nil
+                  ((core/map::get requirement) (quote :tag-policy)))
+              :update-policy
+                (if (core/list::is-nil? requirement)
+                  nil
+                  ((core/map::get requirement) (quote :update-policy)))}))))))
+
+(def selfhost/pkg-resolution-workflow::resolved-reason
+  (fn (resolved)
+    (let
+      ((commit ((core/map::get resolved) (quote :commit)))
+        (resolved-ref ((core/map::get resolved) (quote :resolved-ref))))
+      (if (core/list::is-nil? commit)
+        "resolved selector directly to snapshot artifact"
+        (if (core/list::is-nil? resolved-ref)
+          "resolved selector to pinned commit+snapshot"
+          "resolved selector to commit via tracked ref/tag")))))
+
+(def selfhost/pkg-resolution-workflow::observation?
+  (fn (value)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? value) [:name :resolved :should-resolve])
+      (if (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :name)))
+        (let
+          ((resolved ((core/map::get value) (quote :resolved)))
+            (should-resolve ((core/map::get value) (quote :should-resolve))))
+          (if
+            (if (core/list::is-nil? resolved)
+              true
+              (selfhost/pkg-resolution-workflow::locked-entry? resolved))
+            (if (core/list::is-nil? should-resolve)
+              true
+              (selfhost/pkg-resolution-workflow::bool? should-resolve))
+            false))
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::step-result
+  (fn (state)
+    (fn (step)
+      (fn (observation)
+        (let
+          ((action ((core/map::get step) (quote :action)))
+            (name ((core/map::get step) (quote :name)))
+            (requirement ((core/map::get step) (quote :requirement)))
+            (observed-name ((core/map::get observation) (quote :name)))
+            (resolved ((core/map::get observation) (quote :resolved)))
+            (should-resolve ((core/map::get observation) (quote :should-resolve))))
+          (if ((core/eq? name) observed-name)
+            (if ((core/sym::eq? action) (quote :resolve))
+              (if (selfhost/pkg-resolution-workflow::locked-entry? resolved)
+                {
+                  :locked (((core/map::put ((core/map::get state) (quote :locked))) name) resolved)
+                  :ok true
+                  :rationale
+                    ((core/vec::push ((core/map::get state) (quote :rationale)))
+                      (((((selfhost/pkg-resolution-workflow::rationale name) requirement)
+                            (quote :resolved))
+                          (selfhost/pkg-resolution-workflow::resolved-reason resolved)) resolved))
+                  :selected ((core/map::get state) (quote :selected))
+                  :updated ((core/map::get state) (quote :updated))}
+                {:message "resolve step requires a locked result" :ok false})
+              (if ((core/sym::eq? action) (quote :consider))
+                (if (selfhost/pkg-resolution-workflow::bool? should-resolve)
+                  (let
+                    ((selected
+                      ((core/int::add ((core/map::get state) (quote :selected))) 1))
+                      (previous
+                        ((core/map::get ((core/map::get state) (quote :locked))) name)))
+                    (if should-resolve
+                      (if (selfhost/pkg-resolution-workflow::locked-entry? resolved)
+                        (let
+                          ((changed
+                            (if (core/list::is-nil? previous)
+                              true
+                              (if ((core/eq? previous) resolved) false true))))
+                          {
+                            :locked
+                              (((core/map::put ((core/map::get state) (quote :locked))) name) resolved)
+                            :ok true
+                            :rationale
+                              ((core/vec::push ((core/map::get state) (quote :rationale)))
+                                (((((selfhost/pkg-resolution-workflow::rationale name) requirement)
+                                      (if changed (quote :updated) (quote :no-change)))
+                                    (if changed
+                                      (if (core/list::is-nil? previous)
+                                        "resolved missing locked entry"
+                                        "resolved new lock entry for selected dependency")
+                                      "resolved dependency equals existing lock entry")) resolved))
+                            :selected selected
+                            :updated
+                              (if changed
+                                ((core/int::add ((core/map::get state) (quote :updated))) 1)
+                                ((core/map::get state) (quote :updated)))} )
+                        {:message "selected resolution requires a locked result" :ok false})
+                      (if (core/list::is-nil? resolved)
+                        {
+                          :locked ((core/map::get state) (quote :locked))
+                          :ok true
+                          :rationale
+                            ((core/vec::push ((core/map::get state) (quote :rationale)))
+                              (((((selfhost/pkg-resolution-workflow::rationale name) requirement)
+                                    (quote :kept-existing))
+                                  "GenesisCode resolution plan retained the existing locked entry")
+                                previous))
+                          :selected selected
+                          :updated ((core/map::get state) (quote :updated))}
+                        {:message "retained resolution must not supply a locked result" :ok false})))
+                  {:message "consider step requires a boolean plan observation" :ok false})
+                (if ((core/sym::eq? action) (quote :skip-unselected))
+                  (if
+                    (if (core/list::is-nil? should-resolve)
+                      (core/list::is-nil? resolved)
+                      false)
+                    {
+                      :locked ((core/map::get state) (quote :locked))
+                      :ok true
+                      :rationale
+                        ((core/vec::push ((core/map::get state) (quote :rationale)))
+                          (((((selfhost/pkg-resolution-workflow::rationale name) requirement)
+                                (quote :skipped-unselected))
+                              "not selected by --only filter") previous))
+                      :selected ((core/map::get state) (quote :selected))
+                      :updated ((core/map::get state) (quote :updated))}
+                    {:message "skipped step must have empty observations" :ok false})
+                  (if ((core/sym::eq? action) (quote :missing-requirement))
+                    (if
+                      (if (core/list::is-nil? should-resolve)
+                        (core/list::is-nil? resolved)
+                        false)
+                      {
+                        :locked ((core/map::get state) (quote :locked))
+                        :ok true
+                        :rationale
+                          ((core/vec::push ((core/map::get state) (quote :rationale)))
+                            (((((selfhost/pkg-resolution-workflow::rationale name) nil)
+                                  (quote :missing-requirement))
+                                "selected dependency is not present in lock requirements") nil))
+                        :selected ((core/map::get state) (quote :selected))
+                        :updated ((core/map::get state) (quote :updated))}
+                      {:message "missing step must have empty observations" :ok false})
+                    {:message "unknown workflow step action" :ok false}))))
+            {:message "workflow observation name mismatch" :ok false}))))))
+
+(def selfhost/pkg-resolution-workflow::finalize-steps-loop
+  (fn (steps)
+    (fn (observations)
+      (fn (index)
+        (fn (state)
+          (if ((core/int::eq? index) (core/vec::len steps))
+            state
+            (if ((core/int::lt? index) (core/vec::len observations))
+              (let
+                ((observation ((core/vec::get observations) index))
+                  (step ((core/vec::get steps) index)))
+                (if (selfhost/pkg-resolution-workflow::observation? observation)
+                  (let
+                    ((next
+                      (((selfhost/pkg-resolution-workflow::step-result state) step) observation)))
+                    (if ((core/map::get next) (quote :ok))
+                      ((((selfhost/pkg-resolution-workflow::finalize-steps-loop steps) observations)
+                          ((core/int::add index) 1)) next)
+                      next))
+                  {:message "workflow observation is malformed" :ok false}))
+              {:message "workflow observation vector is incomplete" :ok false})))))))
+
+(def selfhost/pkg-resolution-workflow::finalize-steps
+  (fn (model)
+    (fn (workflow)
+      (fn (plan)
+        (fn (observations)
+          (let
+            ((initial
+              {
+                :locked
+                  (if ((core/sym::eq? workflow) (quote :lock))
+                    {}
+                    ((core/map::get model) (quote :locked)))
+                :ok true
+                :rationale []
+                :selected 0
+                :updated 0})
+              (steps ((core/map::get plan) (quote :steps))))
+            (if ((core/int::eq? (core/vec::len steps)) (core/vec::len observations))
+              ((((selfhost/pkg-resolution-workflow::finalize-steps-loop steps) observations) 0)
+                initial)
+              {:message "workflow observation count mismatch" :ok false})))))))
+
+(def selfhost/pkg-resolution-workflow::commit-observation?
+  (fn (value)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? value)
+        [:commit :evidence :name :obligations :status])
+      (if (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :name)))
+        (if
+          (selfhost/pkg-resolution-id::optional-string? ((core/map::get value) (quote :commit)))
+          (if
+            (selfhost/pkg-resolution-workflow::string-vector?
+              ((core/map::get value) (quote :evidence)))
+            (if
+              (selfhost/pkg-resolution-workflow::string-vector?
+                ((core/map::get value) (quote :obligations)))
+              (let ((status ((core/map::get value) (quote :status))))
+                (if (selfhost/pkg-resolution-workflow::symbol? status)
+                  (if ((core/sym::eq? status) (quote :absent))
+                    true
+                    (if ((core/sym::eq? status) (quote :valid))
+                      true
+                      ((core/sym::eq? status) (quote :invalid))))
+                  false))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::provenance-loop
+  (fn (locked-entries)
+    (fn (commit-observations)
+      (fn (strict)
+        (fn (index)
+          (fn (out)
+            (if ((core/int::eq? index) (core/vec::len locked-entries))
+              (if ((core/int::eq? index) (core/vec::len commit-observations))
+                {:ok true :value out}
+                {:message "commit observation count mismatch" :ok false})
+              (if ((core/int::lt? index) (core/vec::len commit-observations))
+                (let
+                  ((entry ((core/vec::get locked-entries) index))
+                    (observation ((core/vec::get commit-observations) index)))
+                  (if (selfhost/pkg-resolution-workflow::commit-observation? observation)
+                    (let
+                      ((name ((core/vec::get entry) 0))
+                        (locked ((core/vec::get entry) 1))
+                        (observed-name ((core/map::get observation) (quote :name)))
+                        (observed-commit ((core/map::get observation) (quote :commit)))
+                        (status ((core/map::get observation) (quote :status)))
+                        (commit ((core/map::get ((core/vec::get entry) 1)) (quote :commit))))
+                      (if ((core/eq? name) observed-name)
+                        (if ((core/eq? commit) observed-commit)
+                          (if
+                            (if (core/list::is-nil? commit)
+                              ((core/sym::eq? status) (quote :absent))
+                              (if ((core/sym::eq? status) (quote :valid))
+                                true
+                                (if strict false ((core/sym::eq? status) (quote :invalid)))))
+                            (((((selfhost/pkg-resolution-workflow::provenance-loop locked-entries)
+                                  commit-observations) strict) ((core/int::add index) 1))
+                              ((core/vec::push out)
+                                {
+                                  :commit commit
+                                  :evidence
+                                    (if ((core/sym::eq? status) (quote :valid))
+                                      ((core/map::get observation) (quote :evidence))
+                                      [])
+                                  :name name
+                                  :obligations
+                                    (if ((core/sym::eq? status) (quote :valid))
+                                      ((core/map::get observation) (quote :obligations))
+                                      [])
+                                  :snapshot ((core/map::get locked) (quote :snapshot))}))
+                            {:message "commit observation status contradicts locked entry" :ok false})
+                          {:message "commit observation hash mismatch" :ok false})
+                        {:message "commit observation name mismatch" :ok false}))
+                    {:message "commit observation is malformed" :ok false}))
+                {:message "commit observation vector is incomplete" :ok false}))))))))
+
+(def selfhost/pkg-resolution-workflow::rationale-term
+  (fn (workflow)
+    (fn (rationale)
+      {
+        :data
+          {
+            :entries rationale
+            :entry-count (core/vec::len rationale)
+            :workflow workflow}
+        :inputs []
+        :kind (quote :pkg-resolution-rationale)
+        :outputs []
+        :produced-by {:tool "genesis" :tool-version "v0.2"}
+        :type (quote :vcs/evidence)
+        :v 1})))
+
+(def selfhost/pkg-resolution-workflow::workspace-term
+  (fn (workspace)
+    (fn (locked)
+      (fn (entries)
+        (fn (index)
+          (fn (modules)
+            (if ((core/int::eq? index) (core/vec::len entries))
+              {
+                :kind (quote :workspace)
+                :lock nil
+                :modules modules
+                :type (quote :vcs/snapshot)
+                :v 1
+                :workspace workspace}
+              (let ((entry ((core/vec::get entries) index)))
+                (((((selfhost/pkg-resolution-workflow::workspace-term workspace) locked)
+                      entries) ((core/int::add index) 1))
+                  (((core/map::put modules) ((core/vec::get entry) 0))
+                    ((core/map::get ((core/vec::get entry) 1)) (quote :snapshot))))))))))))
+
+(def selfhost/pkg-resolution-workflow::final-value
+  (fn (model)
+    (fn (workflow)
+      (fn (step-state)
+        (fn (commit-observations)
+          (fn (strict)
+            (let ((locked ((core/map::get step-state) (quote :locked))))
+              (let
+                ((provenance
+                  (((((selfhost/pkg-resolution-workflow::provenance-loop
+                            (core/map::entries locked)) commit-observations) strict) 0) [])))
+                (if ((core/map::get provenance) (quote :ok))
+                  (let
+                    ((rationale ((core/map::get step-state) (quote :rationale)))
+                      (workspace
+                        (((((selfhost/pkg-resolution-workflow::workspace-term
+                                  ((core/map::get model) (quote :workspace))) locked)
+                              (core/map::entries locked)) 0) {})))
+                    {
+                      :locked locked
+                      :locked-count (core/map::len locked)
+                      :provenance ((core/map::get provenance) (quote :value))
+                      :rationale rationale
+                      :rationale-object
+                        ((selfhost/pkg-resolution-workflow::object
+                            ((selfhost/pkg-resolution-workflow::rationale-term workflow) rationale))
+                          true)
+                      :selected-count ((core/map::get step-state) (quote :selected))
+                      :updated-count ((core/map::get step-state) (quote :updated))
+                      :workspace-object
+                        ((selfhost/pkg-resolution-workflow::object workspace) false)})
+                  provenance)))))))))

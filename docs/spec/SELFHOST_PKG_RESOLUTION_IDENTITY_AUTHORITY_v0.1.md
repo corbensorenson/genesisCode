@@ -18,10 +18,11 @@ remain outside this partial authority.
 ## Limits and bootstrap
 
 Production evaluation MUST use `SelfhostBootstrapMode::ArtifactOnly` and fail closed if the artifact
-or binding is absent. Each evaluation is bounded to 2,000,000 steps, 4,000,000 logical allocation
-units, 64 KiB bytes, 16 KiB strings, and 64 map or vector entries. Rust may construct the typed
-request, load the artifact, enforce those limits, decode the closed result, and seal a stable
-`core/pkg/authority-error`; it must not recompute or substitute a production fingerprint.
+or binding is absent. The shared package-resolution authority context is bounded to 20,000,000
+steps, 40,000,000 logical allocation units, 4 MiB bytes and strings, and 65,536 map or vector
+entries. Rust may construct the typed request, load the artifact, enforce those finite limits,
+decode the closed result, and seal a stable `core/pkg/authority-error`; it must not recompute or
+substitute a production fingerprint.
 
 ## Request
 

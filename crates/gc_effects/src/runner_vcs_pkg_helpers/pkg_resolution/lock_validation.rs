@@ -426,71 +426,8 @@ pub(crate) fn validate_locked_entries_strict(
     Ok(())
 }
 
-pub(crate) fn workspace_snapshot_term_from_lock(lock: &gc_pkg::GenesisLock) -> Term {
-    let modules = lock
-        .locked
-        .iter()
-        .map(|(name, le)| {
-            (
-                TermOrdKey(Term::Str(name.clone())),
-                Term::Str(le.snapshot.clone()),
-            )
-        })
-        .collect::<BTreeMap<_, _>>();
-    Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":type")),
-                Term::symbol(":vcs/snapshot"),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            (
-                TermOrdKey(Term::symbol(":kind")),
-                Term::symbol(":workspace"),
-            ),
-            (
-                TermOrdKey(Term::symbol(":workspace")),
-                Term::Str(lock.workspace.clone()),
-            ),
-            (TermOrdKey(Term::symbol(":lock")), Term::Nil),
-            (TermOrdKey(Term::symbol(":modules")), Term::Map(modules)),
-        ]
-        .into_iter()
-        .collect(),
-    )
-}
-
-pub(crate) fn persist_workspace_root_snapshot(
-    store: &ArtifactStore,
-    lock: &gc_pkg::GenesisLock,
-    error_tok: SealId,
-    op: &str,
-) -> Result<String, Value> {
-    let snapshot_term = workspace_snapshot_term_from_lock(lock);
-    let snapshot = gc_vcs::Snapshot::from_term(&snapshot_term).map_err(|e| {
-        mk_error(
-            error_tok,
-            "core/pkg/bad-snapshot",
-            format!("workspace snapshot schema error: {e}"),
-            Some(op),
-        )
-    })?;
-    match snapshot.kind {
-        gc_vcs::SnapshotKind::Workspace(_) => {}
-        _ => {
-            return Err(mk_error(
-                error_tok,
-                "core/pkg/bad-snapshot",
-                "workspace root snapshot must have kind :workspace".to_string(),
-                Some(op),
-            ));
-        }
-    }
-    store
-        .put_bytes(print_term(&snapshot_term).as_bytes())
-        .map_err(|e| mk_error(error_tok, "core/store/io-error", e.to_string(), Some(op)))
-}
-
+// Install remains a separate R4.2.e residual. Lock/update provenance is produced
+// exclusively by the workflow authority and does not call this compatibility path.
 pub(crate) fn locked_dependency_provenance(
     store: &ArtifactStore,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
@@ -503,19 +440,19 @@ pub(crate) fn locked_dependency_provenance(
         let mut evidence: Vec<Term> = Vec::new();
         let mut obligations: Vec<Term> = Vec::new();
         if let Some(commit_hex) = &le.commit {
-            match store_get_term(store, commit_hex).and_then(|t| {
-                gc_vcs::Commit::from_term(&t)
-                    .map_err(|e| EffectsError::Log(format!("bad commit: {e}")))
+            match store_get_term(store, commit_hex).and_then(|term| {
+                gc_vcs::Commit::from_term(&term)
+                    .map_err(|error| EffectsError::Log(format!("bad commit: {error}")))
             }) {
-                Ok(c) => {
-                    evidence.extend(c.evidence.into_iter().map(Term::Str));
-                    obligations.extend(c.obligations.into_iter().map(Term::Str));
+                Ok(commit) => {
+                    evidence.extend(commit.evidence.into_iter().map(Term::Str));
+                    obligations.extend(commit.obligations.into_iter().map(Term::Str));
                 }
-                Err(e) if strict => {
+                Err(error) if strict => {
                     return Err(mk_error(
                         error_tok,
                         "core/pkg/bad-commit",
-                        format!("{name}: {e}"),
+                        format!("{name}: {error}"),
                         Some(op),
                     ));
                 }

@@ -15,20 +15,30 @@ pub(crate) use plan::{
 #[path = "pkg_semver_select_authority.rs"]
 mod semver_select;
 pub(crate) use semver_select::PkgSemverCandidate;
+#[path = "pkg_resolution_workflow_authority.rs"]
+mod workflow;
+#[cfg(any(test, feature = "parity-oracle"))]
+pub(crate) use workflow::PkgWorkflowObject;
+pub(crate) use workflow::{
+    PkgResolutionWorkflow, PkgWorkflowAction, PkgWorkflowDecision, PkgWorkflowFinalized,
+    PkgWorkflowObservation, PkgWorkflowPlan, PkgWorkflowStep,
+};
 
 const IDENTITY_BINDING: &str = "core/pkg::resolution-identity-authority";
 const IDENTITY_REQUEST_KIND: &str = "genesis/pkg-resolution-identity-request-v0.1";
 const IDENTITY_RESULT_KIND: &str = "genesis/pkg-resolution-identity-result-v0.1";
 const PLAN_BINDING: &str = "core/pkg::resolution-plan-authority";
 const SEMVER_SELECT_BINDING: &str = "core/pkg::semver-select-authority";
-const STEP_LIMIT: u64 = 2_000_000;
-const ALLOC_LIMIT: u64 = 4_000_000;
+const WORKFLOW_BINDING: &str = "core/pkg::resolution-workflow-authority";
+const STEP_LIMIT: u64 = 20_000_000;
+const ALLOC_LIMIT: u64 = 40_000_000;
 
 pub(crate) struct PkgResolutionIdentityAuthority {
     context: EvalCtx,
     identity_authority: Value,
     plan_authority: Value,
     semver_select_authority: Value,
+    workflow_authority: Value,
 }
 
 impl PkgResolutionIdentityAuthority {
@@ -36,10 +46,10 @@ impl PkgResolutionIdentityAuthority {
         let mut context = EvalCtx::with_step_limit(None);
         context.set_mem_limits(MemLimits {
             max_alloc_units: Some(ALLOC_LIMIT),
-            max_bytes_len: Some(64 * 1024),
-            max_map_len: Some(64),
-            max_string_len: Some(16 * 1024),
-            max_vec_len: Some(64),
+            max_bytes_len: Some(4 * 1024 * 1024),
+            max_map_len: Some(65_536),
+            max_string_len: Some(4 * 1024 * 1024),
+            max_vec_len: Some(65_536),
             ..MemLimits::default()
         });
         let prelude = build_prelude(&mut context);
@@ -60,6 +70,9 @@ impl PkgResolutionIdentityAuthority {
         let semver_select_authority = environment
             .get(SEMVER_SELECT_BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {SEMVER_SELECT_BINDING}")))?;
+        let workflow_authority = environment
+            .get(WORKFLOW_BINDING)
+            .ok_or_else(|| authority_error(format!("missing binding {WORKFLOW_BINDING}")))?;
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
@@ -67,6 +80,7 @@ impl PkgResolutionIdentityAuthority {
             identity_authority,
             plan_authority,
             semver_select_authority,
+            workflow_authority,
         })
     }
 

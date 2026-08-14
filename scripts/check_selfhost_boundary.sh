@@ -251,6 +251,14 @@ python3 scripts/lib/selfhost_pkg_resolution_plan_authority.py \
   --schema docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e resolution workflow authority is partial: GenesisCode owns lock/update
+# causal decisions and exact evidence objects; host resolver mechanisms remain H0.
+python3 scripts/lib/selfhost_pkg_resolution_workflow_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_resolution_workflow_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.e semver selection is partial: GenesisCode owns policy extrema and
 # lexical tie-breaking; semver parsing, ranking, refs, and transport remain H0.
 python3 scripts/lib/selfhost_pkg_semver_select_authority.py \

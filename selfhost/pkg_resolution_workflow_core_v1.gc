@@ -1,0 +1,191 @@
+; Shared closed-schema helpers for package lock/update workflow authority.
+
+(def selfhost/pkg-resolution-workflow::bool?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :bool))))
+
+(def selfhost/pkg-resolution-workflow::symbol?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :sym))))
+
+(def selfhost/pkg-resolution-workflow::workflow?
+  (fn (value)
+    (if (selfhost/pkg-resolution-workflow::symbol? value)
+      (if ((core/sym::eq? value) (quote :lock))
+        true
+        ((core/sym::eq? value) (quote :update)))
+      false)))
+
+(def selfhost/pkg-resolution-workflow::string-vector-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if
+          (selfhost/pkg-lock-read::str? ((core/vec::get values) index))
+          ((selfhost/pkg-resolution-workflow::string-vector-loop? values)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-resolution-workflow::string-vector?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::vec? value)
+      ((selfhost/pkg-resolution-workflow::string-vector-loop? value) 0)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::string-set-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (let
+            ((value
+              (selfhost/pkg-resolution-plan::trim ((core/vec::get values) index))))
+            (((selfhost/pkg-resolution-workflow::string-set-loop values)
+                ((core/int::add index) 1))
+              (if ((core/int::eq? (core/str::len value)) 0)
+                out
+                (((core/map::put out) value) true)))))))))
+
+(def selfhost/pkg-resolution-workflow::string-set
+  (fn (values)
+    (((selfhost/pkg-resolution-workflow::string-set-loop values) 0) {})))
+
+(def selfhost/pkg-resolution-workflow::model?
+  (fn (model)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? model)
+        [:artifacts :lock :locked :policy :registries :requirements :version :workspace])
+      (if (selfhost/pkg-lock-read::map? ((core/map::get model) (quote :artifacts)))
+        (if (selfhost/pkg-lock-read::str? ((core/map::get model) (quote :lock)))
+          (if (selfhost/pkg-lock-read::map? ((core/map::get model) (quote :locked)))
+            (if (selfhost/pkg-lock-read::str? ((core/map::get model) (quote :policy)))
+              (if (selfhost/pkg-lock-read::map? ((core/map::get model) (quote :registries)))
+                (if (selfhost/pkg-lock-read::map? ((core/map::get model) (quote :requirements)))
+                  (if (selfhost/pkg-lock-read::int? ((core/map::get model) (quote :version)))
+                    (selfhost/pkg-lock-read::str? ((core/map::get model) (quote :workspace)))
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::requirement?
+  (fn (value)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? value)
+        [:registry :selector :strategy :tag-policy :update-policy])
+      (if (selfhost/pkg-resolution-id::optional-string? ((core/map::get value) (quote :registry)))
+        (if (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :selector)))
+          (if (selfhost/pkg-resolution-id::strategy? ((core/map::get value) (quote :strategy)))
+            (if (selfhost/pkg-resolution-id::optional-string? ((core/map::get value) (quote :tag-policy)))
+              (selfhost/pkg-resolution-id::update-policy?
+                ((core/map::get value) (quote :update-policy)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::requirements-loop?
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        true
+        (let ((entry ((core/vec::get entries) index)))
+          (if (selfhost/pkg-lock-read::str? ((core/vec::get entry) 0))
+            (if
+              (selfhost/pkg-resolution-workflow::requirement? ((core/vec::get entry) 1))
+              ((selfhost/pkg-resolution-workflow::requirements-loop? entries)
+                ((core/int::add index) 1))
+              false)
+            false))))))
+
+(def selfhost/pkg-resolution-workflow::requirements?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      ((selfhost/pkg-resolution-workflow::requirements-loop? (core/map::entries value)) 0)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::locked-entry?
+  (fn (value)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? value)
+        [:commit :environment-fingerprint :exports_hash :registry :resolved-ref :snapshot :source_selector])
+      (if (selfhost/pkg-resolution-id::optional-string? ((core/map::get value) (quote :commit)))
+        (if
+          (selfhost/pkg-resolution-id::optional-string?
+            ((core/map::get value) (quote :environment-fingerprint)))
+          (if (selfhost/pkg-resolution-id::optional-string? ((core/map::get value) (quote :exports_hash)))
+            (if (selfhost/pkg-resolution-id::optional-string? ((core/map::get value) (quote :registry)))
+              (if
+                (selfhost/pkg-resolution-id::optional-string?
+                  ((core/map::get value) (quote :resolved-ref)))
+                (if (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :snapshot)))
+                  (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :source_selector)))
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::locked-loop?
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        true
+        (let ((entry ((core/vec::get entries) index)))
+          (if (selfhost/pkg-lock-read::str? ((core/vec::get entry) 0))
+            (if
+              (selfhost/pkg-resolution-workflow::locked-entry? ((core/vec::get entry) 1))
+              ((selfhost/pkg-resolution-workflow::locked-loop? entries)
+                ((core/int::add index) 1))
+              false)
+            false))))))
+
+(def selfhost/pkg-resolution-workflow::locked?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      ((selfhost/pkg-resolution-workflow::locked-loop? (core/map::entries value)) 0)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::object
+  (fn (term)
+    (fn (newline)
+      (let ((printed (selfhost/printer::print-term term)))
+        (let ((text (if newline ((core/str::concat printed) "\n") printed)))
+          (let ((bytes (core/str::to-utf8 text)))
+            {
+              :bytes bytes
+              :h (core/bytes::to-hex (core/crypto::blake3 bytes))
+              :term term}))))))
+
+(def selfhost/pkg-resolution-workflow::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind "genesis/pkg-resolution-workflow-result-v0.1"
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-resolution-workflow::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-resolution-workflow::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-resolution-workflow::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((selfhost/pkg-resolution-workflow::result request-h) false) code) message) nil)))))

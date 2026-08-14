@@ -1,0 +1,133 @@
+; Closed two-phase package lock/update workflow authority.
+
+(def selfhost/pkg-resolution-workflow::plan-request?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [:kind :model :only :op :v :workflow])
+      (if (selfhost/pkg-resolution-workflow::model? ((core/map::get request) (quote :model)))
+        (if
+          (selfhost/pkg-resolution-workflow::requirements?
+            ((core/map::get ((core/map::get request) (quote :model))) (quote :requirements)))
+          (if
+            (selfhost/pkg-resolution-workflow::locked?
+              ((core/map::get ((core/map::get request) (quote :model))) (quote :locked)))
+            (if
+              (selfhost/pkg-resolution-workflow::string-vector?
+                ((core/map::get request) (quote :only)))
+              (selfhost/pkg-resolution-workflow::workflow?
+                ((core/map::get request) (quote :workflow)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::finalize-request?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [:commit-observations :kind :model :observations :only :op :plan :plan-h :strict :v :workflow])
+      (if (selfhost/pkg-resolution-workflow::model? ((core/map::get request) (quote :model)))
+        (if
+          (selfhost/pkg-resolution-workflow::string-vector?
+            ((core/map::get request) (quote :only)))
+          (if (selfhost/pkg-lock-read::vec? ((core/map::get request) (quote :observations)))
+            (if
+              (selfhost/pkg-lock-read::vec?
+                ((core/map::get request) (quote :commit-observations)))
+              (if (selfhost/pkg-resolution-workflow::bool? ((core/map::get request) (quote :strict)))
+                (selfhost/pkg-resolution-workflow::workflow?
+                  ((core/map::get request) (quote :workflow)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-resolution-workflow::finalize
+  (fn (request-h)
+    (fn (request)
+      (let
+        ((model ((core/map::get request) (quote :model)))
+          (workflow ((core/map::get request) (quote :workflow)))
+          (only ((core/map::get request) (quote :only)))
+          (declared-plan ((core/map::get request) (quote :plan)))
+          (declared-plan-h ((core/map::get request) (quote :plan-h))))
+        (let ((expected (((selfhost/pkg-resolution-workflow::build-plan model) workflow) only)))
+          (if ((core/eq? (selfhost/hash::hash-term expected)) declared-plan-h)
+            (if ((core/eq? (selfhost/hash::hash-term declared-plan)) declared-plan-h)
+              (let
+                ((steps
+                  ((((selfhost/pkg-resolution-workflow::finalize-steps model) workflow) expected)
+                    ((core/map::get request) (quote :observations)))))
+                (if ((core/map::get steps) (quote :ok))
+                  (let
+                    ((value
+                      (((((selfhost/pkg-resolution-workflow::final-value model) workflow) steps)
+                            ((core/map::get request) (quote :commit-observations)))
+                        ((core/map::get request) (quote :strict)))))
+                    (if ((core/map::get value) (quote :ok))
+                      (((selfhost/pkg-resolution-workflow::reject request-h)
+                          "core/pkg/bad-authority-request")
+                        ((core/map::get value) (quote :message)))
+                      ((selfhost/pkg-resolution-workflow::accept request-h) value)))
+                  (((selfhost/pkg-resolution-workflow::reject request-h)
+                      "core/pkg/bad-authority-request")
+                    ((core/map::get steps) (quote :message)))))
+              (((selfhost/pkg-resolution-workflow::reject request-h)
+                  "core/pkg/bad-authority-request")
+                "declared workflow plan identity mismatch"))
+            (((selfhost/pkg-resolution-workflow::reject request-h)
+                "core/pkg/bad-authority-request")
+              "workflow plan identity does not match authoritative recomputation")))))))
+
+(def core/pkg::resolution-workflow-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (let ((kind ((core/map::get request) (quote :kind))))
+          (if
+            (if (selfhost/pkg-lock-read::str? kind)
+              ((core/eq? kind) "genesis/pkg-resolution-workflow-request-v0.1")
+              false)
+            (let
+              ((version ((core/map::get request) (quote :v)))
+                (op ((core/map::get request) (quote :op))))
+              (if
+                (if (selfhost/pkg-lock-read::int? version)
+                  ((core/int::eq? version) 1)
+                  false)
+                (if (selfhost/pkg-resolution-workflow::symbol? op)
+                  (if ((core/sym::eq? op) (quote :plan))
+                    (if (selfhost/pkg-resolution-workflow::plan-request? request)
+                      ((selfhost/pkg-resolution-workflow::accept request-h)
+                        (((selfhost/pkg-resolution-workflow::plan-value
+                              ((core/map::get request) (quote :model)))
+                            ((core/map::get request) (quote :workflow)))
+                          ((core/map::get request) (quote :only))))
+                      (((selfhost/pkg-resolution-workflow::reject request-h)
+                          "core/pkg/bad-authority-request")
+                        "workflow planning request is malformed"))
+                    (if ((core/sym::eq? op) (quote :finalize))
+                      (if (selfhost/pkg-resolution-workflow::finalize-request? request)
+                        ((selfhost/pkg-resolution-workflow::finalize request-h) request)
+                        (((selfhost/pkg-resolution-workflow::reject request-h)
+                            "core/pkg/bad-authority-request")
+                          "workflow finalization request is malformed"))
+                      (((selfhost/pkg-resolution-workflow::reject request-h)
+                          "core/pkg/bad-authority-request")
+                        "request :op is unsupported")))
+                  (((selfhost/pkg-resolution-workflow::reject request-h)
+                      "core/pkg/bad-authority-request")
+                    "request :op must be symbol"))
+                (((selfhost/pkg-resolution-workflow::reject request-h)
+                    "core/pkg/bad-authority-request")
+                  "request :v must be 1")))
+            (((selfhost/pkg-resolution-workflow::reject request-h)
+                "core/pkg/bad-authority-request")
+              "request :kind mismatch")))
+        (((selfhost/pkg-resolution-workflow::reject request-h)
+            "core/pkg/bad-authority-request")
+          "request must be map")))))

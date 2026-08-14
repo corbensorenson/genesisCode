@@ -1,0 +1,62 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::resolution-workflow-authority",
+  "contentIdentitySha256": "e1980fbfe97c0162ffbb6679bf8359fa29e7ce2342e9e110ed2ba2be1b886971",
+  "decisionInventory": [
+    "normalized-only-selection-set",
+    "causal-ordered-resolver-step-plan",
+    "complete-observation-coverage-and-plan-binding",
+    "final-lock-update-classification-and-counts",
+    "resolution-rationale-construction-and-identity",
+    "workspace-snapshot-construction-and-identity",
+    "lock-update-dependency-provenance-projection",
+    "strict-malformed-commit-disposition",
+    "request-bound-final-verdict"
+  ],
+  "hostMechanisms": [
+    "artifact-only-shared-context-bootstrap-and-bounded-evaluation",
+    "typed-request-observation-and-strict-result-transport",
+    "selector-plan-semver-ref-registry-and-resolver-mechanisms",
+    "non-publish-artifact-and-commit-closure-validation",
+    "exact-authorized-byte-storage-and-atomic-lock-persistence",
+    "sealed-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_resolution_workflow_authority.py",
+  "kind": "genesis/selfhost-pkg-resolution-workflow-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "complete-graph-solving",
+    "generic-lock-syntax-authority",
+    "h2-package-resolution",
+    "install-workflow-authority",
+    "non-publish-artifact-validation-authority",
+    "r4-2-e-closure",
+    "ref-or-registry-transport-authority",
+    "release-qualification",
+    "semver-grammar-range-rank-authority",
+    "sh-c-closure",
+    "workspace-scaffolding-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/pkg-resolution-workflow-request-v0.1",
+  "resultKind": "genesis/pkg-resolution-workflow-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_resolution_workflow_core_v1.gc",
+    "selfhost/pkg_resolution_workflow_plan_v1.gc",
+    "selfhost/pkg_resolution_workflow_finalize_v1.gc",
+    "selfhost/pkg_resolution_workflow_authority_v1.gc"
+  ],
+  "sourceSha256": "f44baccc08ab2665f8584495fc58243b71dba07551b932e280b35d7107ea5d03",
+  "spec": "docs/spec/SELFHOST_PKG_RESOLUTION_WORKFLOW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

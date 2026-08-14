@@ -79,7 +79,10 @@ impl PkgLockWriteAuthority {
     }
 }
 
-fn lock_model_payload(lock_path: &str, model: &gc_pkg::GenesisLock) -> Result<Term, EffectsError> {
+pub(crate) fn lock_model_payload(
+    lock_path: &str,
+    model: &gc_pkg::GenesisLock,
+) -> Result<Term, EffectsError> {
     let version = i64::try_from(model.version)
         .map_err(|_| authority_error("lock model version exceeds protocol integer range"))?;
     let registries = model
@@ -131,42 +134,7 @@ fn lock_model_payload(lock_path: &str, model: &gc_pkg::GenesisLock) -> Result<Te
         .locked
         .iter()
         .map(|(name, entry)| {
-            let value = map([
-                (
-                    ":commit",
-                    entry.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
-                ),
-                (
-                    ":environment-fingerprint",
-                    entry
-                        .environment_fingerprint
-                        .clone()
-                        .map(Term::Str)
-                        .unwrap_or(Term::Nil),
-                ),
-                (
-                    ":exports_hash",
-                    entry
-                        .exports_hash
-                        .clone()
-                        .map(Term::Str)
-                        .unwrap_or(Term::Nil),
-                ),
-                (
-                    ":registry",
-                    entry.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-                ),
-                (
-                    ":resolved-ref",
-                    entry
-                        .resolved_ref
-                        .clone()
-                        .map(Term::Str)
-                        .unwrap_or(Term::Nil),
-                ),
-                (":snapshot", Term::Str(entry.snapshot.clone())),
-                (":source_selector", Term::Str(entry.source_selector.clone())),
-            ]);
+            let value = locked_entry_payload(entry);
             (TermOrdKey(Term::Str(name.clone())), value)
         })
         .collect();
@@ -185,6 +153,45 @@ fn lock_model_payload(lock_path: &str, model: &gc_pkg::GenesisLock) -> Result<Te
         (":version", Term::Int(version.into())),
         (":workspace", Term::Str(model.workspace.clone())),
     ]))
+}
+
+pub(crate) fn locked_entry_payload(entry: &gc_pkg::LockedEntry) -> Term {
+    map([
+        (
+            ":commit",
+            entry.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
+        ),
+        (
+            ":environment-fingerprint",
+            entry
+                .environment_fingerprint
+                .clone()
+                .map(Term::Str)
+                .unwrap_or(Term::Nil),
+        ),
+        (
+            ":exports_hash",
+            entry
+                .exports_hash
+                .clone()
+                .map(Term::Str)
+                .unwrap_or(Term::Nil),
+        ),
+        (
+            ":registry",
+            entry.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
+        ),
+        (
+            ":resolved-ref",
+            entry
+                .resolved_ref
+                .clone()
+                .map(Term::Str)
+                .unwrap_or(Term::Nil),
+        ),
+        (":snapshot", Term::Str(entry.snapshot.clone())),
+        (":source_selector", Term::Str(entry.source_selector.clone())),
+    ])
 }
 
 fn decode_result(term: Term, request_hash: [u8; 32]) -> Result<PkgLockWriteDecision, EffectsError> {

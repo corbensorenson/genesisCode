@@ -143,6 +143,11 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     dispatch = source_text(
         root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", overrides
     )
+    workflow = source_text(
+        root,
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
+        overrides,
+    )
     install = source_text(
         root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", overrides
     )
@@ -197,14 +202,14 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"production route retains Rust planning oracle: {forbidden}")
 
     for text, markers, label in (
-        (dispatch, ("plan_requirement(", "if !plan.should_resolve", "resolve_requirement("), "lock/update"),
+        (workflow, ("plan_requirement(", "if resolution_plan.should_resolve", "resolve_requirement("), "lock/update"),
         (validation, ("plan_requirement_for_strict_validation(", "match plan.selector"), "strict validation"),
         (install, ("plan_requirement(", "resolve_requirement("), "install hydration"),
     ):
         for marker in markers:
             if marker not in text:
                 fail(f"{label} plan wiring missing marker: {marker}")
-    if "let should_update = req.update_policy" in dispatch:
+    if "let should_update = req.update_policy" in dispatch or "let should_update = req.update_policy" in workflow:
         fail("update dispatcher retains duplicated Rust update admission")
     for marker in (
         ".map(PkgResolutionIdentityAuthority::load)", '"core/pkg-low::lock"',
@@ -247,6 +252,7 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
         "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
         "crates/gc_effects/src/runner.rs",
     ]
@@ -286,7 +292,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_resolution_plan_authority.rs", "semver selector and :semver-policy disagree", "semver accepted", "decoder")
     source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs", ".plan(req, has_existing)", ".legacy_plan(req)", "production plan")
     source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs", "match plan.selector", "match parse_selector_parity(&req.selector).unwrap()", "selector execution")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "if !plan.should_resolve", "if false", "update decision")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs", "if resolution_plan.should_resolve", "if false", "update decision")
     source_mutation("crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs", "match plan.selector", "match parse_selector_parity(&req.selector).unwrap()", "strict validation")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "plan_requirement(", "legacy_plan(", "install")
     source_mutation("crates/gc_effects/src/runner.rs", ".map(PkgResolutionIdentityAuthority::load)", ".map(PkgLockReadAuthority::load)", "runner load")
