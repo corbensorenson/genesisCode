@@ -197,8 +197,10 @@ optional `:refs {:frozen-prefixes [string ...]}`, and required `:classes` map. O
 roles, same-role independence pairs, role constraints without signature enforcement, and positive
 signature minima without allowed keys fail closed.
 
-Evidence kinds and roles are ASCII-trimmed and receive one leading `:` when absent. Deduplicated
-semantic sets use canonical term order; commit vectors and object requests preserve source order.
+Evidence kinds and roles are trimmed over the Unicode White_Space set (`U+0009..U+000D`,
+`U+0020`, `U+0085`, `U+00A0`, `U+1680`, `U+2000..U+200A`, `U+2028`, `U+2029`, `U+202F`,
+`U+205F`, and `U+3000`) and receive one leading `:` when absent. Deduplicated semantic sets use
+canonical term order; commit vectors and object requests preserve source order.
 Obligation-specific evidence requirements apply only when the exact obligation is on the commit.
 
 Policy patterns use the v1 portable-ref glob grammar over UTF-8 bytes: UTF-8 literal byte

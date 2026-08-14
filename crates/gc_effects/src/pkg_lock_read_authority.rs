@@ -22,6 +22,9 @@ pub(crate) use snapshot::PkgSnapshotDecision;
 #[cfg(test)]
 #[path = "pkg_publish_glob_tests.rs"]
 mod publish_glob_tests;
+#[cfg(test)]
+#[path = "pkg_publish_policy_tests.rs"]
+mod publish_policy_tests;
 
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";

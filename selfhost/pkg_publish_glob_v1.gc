@@ -364,6 +364,65 @@
                           text-index)
                         false))))))))))
 
+(def selfhost/pkg-publish-glob::valid-loop
+  (fn (pattern)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len pattern))
+        true
+        (let ((byte ((core/bytes::get pattern) index)))
+          (if ((core/int::eq? byte) 92)
+            (if
+              ((core/int::eq? ((core/int::add index) 1)) (core/bytes::len pattern))
+              false
+              ((selfhost/pkg-publish-glob::valid-loop pattern)
+                ((core/int::add index) 2)))
+            (if ((core/int::eq? byte) 91)
+              (let
+                ((end
+                    ((selfhost/pkg-publish-glob::find-class-end pattern)
+                      ((core/int::add index) 1))))
+                (if ((core/int::lt? end) 0)
+                  false
+                  (if ((core/int::eq? ((core/int::add index) 1)) end)
+                    false
+                    (let
+                      ((checked
+                          (((((selfhost/pkg-publish-glob::class-items pattern)
+                                  ((core/int::add index) 1))
+                                end)
+                              0)
+                            false)))
+                      (if ((core/map::get checked) (quote :ok))
+                        ((selfhost/pkg-publish-glob::valid-loop pattern)
+                          ((core/int::add end) 1))
+                        false)))))
+              (if ((core/int::eq? byte) 123)
+                (let
+                  ((end
+                      (((selfhost/pkg-publish-glob::find-brace-end pattern)
+                          ((core/int::add index) 1))
+                        0)))
+                  (if ((core/int::lt? end) 0)
+                    false
+                    (let
+                      ((inner
+                          (((core/bytes::slice pattern) ((core/int::add index) 1))
+                            ((core/int::sub end) ((core/int::add index) 1)))))
+                      (if ((selfhost/pkg-publish-glob::valid-loop inner) 0)
+                        ((selfhost/pkg-publish-glob::valid-loop pattern)
+                          ((core/int::add end) 1))
+                        false))))
+                (if ((core/int::eq? byte) 125)
+                  false
+                  ((selfhost/pkg-publish-glob::valid-loop pattern)
+                    ((core/int::add index) 1)))))))))))
+
+(def selfhost/pkg-publish-glob::valid?
+  (fn (pattern)
+    (if (selfhost/pkg-lock-read::str? pattern)
+      ((selfhost/pkg-publish-glob::valid-loop (core/str::to-utf8 pattern)) 0)
+      false)))
+
 (def selfhost/pkg-publish-glob::literal
   (fn (pattern)
     (fn (pattern-index)

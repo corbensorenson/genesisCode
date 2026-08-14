@@ -5,10 +5,12 @@ use gc_prelude::{
 };
 
 const BINDING: &str = "selfhost/pkg-publish-glob::match";
+const VALID_BINDING: &str = "selfhost/pkg-publish-glob::valid?";
 
 struct Harness {
     context: EvalCtx,
     matcher: Value,
+    validator: Value,
 }
 
 fn artifact_path() -> std::path::PathBuf {
@@ -47,8 +49,15 @@ impl Harness {
         )
         .expect("artifact-only toolchain bootstrap");
         let matcher = environment.get(BINDING).expect("publish glob binding");
+        let validator = environment
+            .get(VALID_BINDING)
+            .expect("publish glob validator binding");
         context.reset_counters();
-        Self { context, matcher }
+        Self {
+            context,
+            matcher,
+            validator,
+        }
     }
 
     fn evaluate(&mut self, pattern: &str, value: &str) -> Term {
@@ -66,6 +75,20 @@ impl Harness {
             .expect("apply publish glob value")
             .to_plain_term()
             .expect("plain publish glob result")
+    }
+
+    fn valid(&mut self, pattern: &str) -> bool {
+        self.context.reset_counters();
+        self.validator
+            .clone()
+            .apply(
+                &mut self.context,
+                Value::data(Term::Str(pattern.to_string())),
+            )
+            .expect("apply publish glob validator")
+            .to_plain_term()
+            .expect("plain publish glob validity")
+            == Term::Bool(true)
     }
 }
 
@@ -134,9 +157,18 @@ fn publish_glob_matches_portable_ref_grammar() {
 fn publish_glob_rejects_malformed_patterns() {
     let mut harness = Harness::new();
     for pattern in ["refs/[bad", "refs/[z-a]", "refs/{heads", r"refs/heads/\"] {
+        assert!(!harness.valid(pattern), "{pattern:?}");
         assert_eq!(
             harness.evaluate(pattern, "refs/heads/main"),
             result(false, false)
+        );
+    }
+    for pattern in ["unrelated[", "unrelated{bad", "unrelated[z-a]"] {
+        assert!(!harness.valid(pattern), "{pattern:?}");
+        assert_eq!(
+            harness.evaluate(pattern, "refs/heads/main"),
+            result(true, false),
+            "ordinary matching must not substitute for structural validation"
         );
     }
 }
@@ -199,6 +231,7 @@ fn publish_glob_matches_native_globset_edge_corpus() {
     ] {
         let expected = native_match(pattern, value);
         let actual = harness.evaluate(pattern, value);
+        assert_eq!(harness.valid(pattern), expected.is_ok(), "{pattern:?}");
         let expected = match expected {
             Ok(expected) => result(true, expected),
             Err(_) => result(false, false),

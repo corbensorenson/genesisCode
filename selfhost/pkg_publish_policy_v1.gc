@@ -1,0 +1,601 @@
+(def selfhost/pkg-publish-policy::optional-strings
+  (fn (map)
+    (fn (key)
+      (if ((selfhost/pkg-publish-policy::has-key? map) key)
+        (selfhost/pkg-publish-policy::strings
+          ((selfhost/pkg-publish-policy::field map) key))
+        (selfhost/pkg-publish-policy::ok [])))))
+
+(def selfhost/pkg-publish-policy::optional-texts
+  (fn (map)
+    (fn (key)
+      (if ((selfhost/pkg-publish-policy::has-key? map) key)
+        (selfhost/pkg-publish-policy::texts
+          ((selfhost/pkg-publish-policy::field map) key))
+        (selfhost/pkg-publish-policy::ok [])))))
+
+(def selfhost/pkg-publish-policy::optional-kinds
+  (fn (map)
+    (fn (key)
+      (if ((selfhost/pkg-publish-policy::has-key? map) key)
+        (selfhost/pkg-publish-policy::kinds
+          ((selfhost/pkg-publish-policy::field map) key))
+        (selfhost/pkg-publish-policy::ok [])))))
+
+(def selfhost/pkg-publish-policy::patterns-valid-loop?
+  (fn (patterns)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len patterns))
+        true
+        (if
+          (selfhost/pkg-publish-glob::valid? ((core/vec::get patterns) index))
+          ((selfhost/pkg-publish-policy::patterns-valid-loop? patterns)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-publish-policy::validated-patterns
+  (fn (result)
+    (fn (require-nonempty)
+      (if (selfhost/pkg-publish-policy::result-ok? result)
+        (let ((patterns (selfhost/pkg-publish-policy::result-value result)))
+          (if
+            (if require-nonempty ((core/int::eq? (core/vec::len patterns)) 0) false)
+            (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+            (if ((selfhost/pkg-publish-policy::patterns-valid-loop? patterns) 0)
+              result
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+        result))))
+
+(def selfhost/pkg-publish-policy::obligation-kind-map-loop
+  (fn (entries)
+    (fn (index)
+      (fn (output)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-publish-policy::ok output)
+          (let
+            ((entry ((core/vec::get entries) index)))
+            (let
+              ((obligation
+                  (selfhost/pkg-publish-policy::text ((core/vec::get entry) 0)))
+                (kinds
+                  (selfhost/pkg-publish-policy::kinds ((core/vec::get entry) 1))))
+              (if (selfhost/pkg-publish-policy::nil? obligation)
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+                (if (selfhost/pkg-publish-policy::result-ok? kinds)
+                  (((selfhost/pkg-publish-policy::obligation-kind-map-loop entries)
+                      ((core/int::add index) 1))
+                    (((core/map::put output) obligation)
+                      (selfhost/pkg-publish-policy::result-value kinds)))
+                  kinds)))))))))
+
+(def selfhost/pkg-publish-policy::obligation-kind-map
+  (fn (map)
+    (if
+      ((selfhost/pkg-publish-policy::has-key? map)
+        (quote :obligation-evidence-kinds))
+      (let
+        ((value
+            ((selfhost/pkg-publish-policy::field map)
+              (quote :obligation-evidence-kinds))))
+        (if (selfhost/pkg-publish-policy::map? value)
+          (((selfhost/pkg-publish-policy::obligation-kind-map-loop
+                (core/map::entries value))
+              0)
+            {})
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy))))
+      (selfhost/pkg-publish-policy::ok {}))))
+
+(def selfhost/pkg-publish-policy::signature-flag
+  (fn (map)
+    (let
+      ((value
+          ((selfhost/pkg-publish-policy::field map) (quote :require-signatures))))
+      (if
+        (if
+          ((selfhost/pkg-publish-policy::has-key? map) (quote :require-signatures))
+          (if (selfhost/pkg-publish-policy::nil? value)
+            true
+            (selfhost/pkg-publish-policy::bool? value))
+          true)
+        (selfhost/pkg-publish-policy::ok
+          (if (selfhost/pkg-publish-policy::nil? value) false value))
+        (selfhost/pkg-publish-policy::bad (quote :bad-policy))))))
+
+(def selfhost/pkg-publish-policy::signature-minimum
+  (fn (map)
+    (fn (require-signatures)
+      (let
+        ((value
+            ((selfhost/pkg-publish-policy::field map) (quote :min-signatures))))
+        (if
+          (if ((selfhost/pkg-publish-policy::has-key? map) (quote :min-signatures))
+            (if (selfhost/pkg-publish-policy::nil? value)
+              true
+              (selfhost/pkg-publish-policy::nonnegative-u64? value))
+            true)
+          (selfhost/pkg-publish-policy::ok
+            (if (selfhost/pkg-publish-policy::nil? value)
+              (if require-signatures 1 0)
+              value))
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))))
+
+(def selfhost/pkg-publish-policy::allowed-keys
+  (fn (map)
+    (let
+      ((value
+          ((selfhost/pkg-publish-policy::field map) (quote :allowed-public-keys))))
+      (if
+        (if
+          ((selfhost/pkg-publish-policy::has-key? map) (quote :allowed-public-keys))
+          (if (selfhost/pkg-publish-policy::nil? value)
+            true
+            (selfhost/pkg-publish-policy::base64-keys? value))
+          true)
+        (selfhost/pkg-publish-policy::ok
+          (if (selfhost/pkg-publish-policy::nil? value) [] value))
+        (selfhost/pkg-publish-policy::bad (quote :bad-policy))))))
+
+(def selfhost/pkg-publish-policy::required-roles
+  (fn (map)
+    (if
+      ((selfhost/pkg-publish-policy::has-key? map)
+        (quote :required-attestation-roles))
+      ((selfhost/pkg-publish-policy::labels
+          ((selfhost/pkg-publish-policy::field map)
+            (quote :required-attestation-roles)))
+        true)
+      (selfhost/pkg-publish-policy::ok []))))
+
+(def selfhost/pkg-publish-policy::role-minimum-map-loop
+  (fn (entries)
+    (fn (index)
+      (fn (output)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-publish-policy::ok output)
+          (let ((entry ((core/vec::get entries) index)))
+            (let
+              ((role
+                  (selfhost/pkg-publish-policy::normalize-label
+                    ((core/vec::get entry) 0)))
+                (minimum ((core/vec::get entry) 1)))
+              (if (selfhost/pkg-publish-policy::nil? role)
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+                (if (selfhost/pkg-publish-policy::nonnegative-u64? minimum)
+                  (((selfhost/pkg-publish-policy::role-minimum-map-loop entries)
+                      ((core/int::add index) 1))
+                    (((core/map::put output) role) minimum))
+                  (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))))))))
+
+(def selfhost/pkg-publish-policy::role-minimum-map
+  (fn (map)
+    (if
+      ((selfhost/pkg-publish-policy::has-key? map) (quote :role-min-signatures))
+      (let
+        ((value
+            ((selfhost/pkg-publish-policy::field map) (quote :role-min-signatures))))
+        (if (selfhost/pkg-publish-policy::map? value)
+          (((selfhost/pkg-publish-policy::role-minimum-map-loop
+                (core/map::entries value))
+              0)
+            {})
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy))))
+      (selfhost/pkg-publish-policy::ok {}))))
+
+(def selfhost/pkg-publish-policy::parse-role-pair
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::map? value)
+      (if ((selfhost/pkg-publish-policy::has-key? value) (quote :left))
+        (if ((selfhost/pkg-publish-policy::has-key? value) (quote :right))
+          (let
+            ((left
+                (selfhost/pkg-publish-policy::normalize-label
+                  ((selfhost/pkg-publish-policy::field value) (quote :left))))
+              (right
+                (selfhost/pkg-publish-policy::normalize-label
+                  ((selfhost/pkg-publish-policy::field value) (quote :right)))))
+            (if (selfhost/pkg-publish-policy::nil? left)
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+              (if (selfhost/pkg-publish-policy::nil? right)
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+                (let
+                  ((pair
+                      ((selfhost/pkg-publish-policy::canonical-pair left) right)))
+                  (if (selfhost/pkg-publish-policy::nil? pair)
+                    (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+                    (selfhost/pkg-publish-policy::ok pair))))))
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy)))
+        (selfhost/pkg-publish-policy::bad (quote :bad-policy)))
+      (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+
+(def selfhost/pkg-publish-policy::role-pair-seen?
+  (fn (seen)
+    (fn (pair)
+      (let
+        ((left ((selfhost/pkg-publish-policy::field pair) (quote :left)))
+          (right ((selfhost/pkg-publish-policy::field pair) (quote :right))))
+        (let ((rights ((selfhost/pkg-publish-policy::field seen) left)))
+          (if (selfhost/pkg-publish-policy::map? rights)
+            ((selfhost/pkg-publish-policy::has-key? rights) right)
+            false))))))
+
+(def selfhost/pkg-publish-policy::remember-role-pair
+  (fn (seen)
+    (fn (pair)
+      (let
+        ((left ((selfhost/pkg-publish-policy::field pair) (quote :left)))
+          (right ((selfhost/pkg-publish-policy::field pair) (quote :right))))
+        (let ((current ((selfhost/pkg-publish-policy::field seen) left)))
+          (let ((rights (if (selfhost/pkg-publish-policy::map? current) current {})))
+            (((core/map::put seen) left) (((core/map::put rights) right) true))))))))
+
+(def selfhost/pkg-publish-policy::role-pairs-loop
+  (fn (values)
+    (fn (index)
+      (fn (seen)
+        (fn (output)
+          (if ((core/int::eq? index) (core/vec::len values))
+            (selfhost/pkg-publish-policy::ok output)
+            (let
+              ((parsed
+                  (selfhost/pkg-publish-policy::parse-role-pair
+                    ((core/vec::get values) index))))
+              (if (selfhost/pkg-publish-policy::result-ok? parsed)
+                (let
+                  ((pair (selfhost/pkg-publish-policy::result-value parsed))
+                    (next
+                      ((selfhost/pkg-publish-policy::role-pairs-loop values)
+                        ((core/int::add index) 1))))
+                  (if ((selfhost/pkg-publish-policy::role-pair-seen? seen) pair)
+                    ((next seen) output)
+                    ((next ((selfhost/pkg-publish-policy::remember-role-pair seen) pair))
+                      ((core/vec::push output) pair))))
+                parsed))))))))
+
+(def selfhost/pkg-publish-policy::role-pairs
+  (fn (map)
+    (if
+      ((selfhost/pkg-publish-policy::has-key? map) (quote :independent-role-pairs))
+      (let
+        ((value
+            ((selfhost/pkg-publish-policy::field map)
+              (quote :independent-role-pairs))))
+        (if (selfhost/pkg-publish-policy::vec? value)
+          ((((selfhost/pkg-publish-policy::role-pairs-loop value) 0) {}) [])
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy))))
+      (selfhost/pkg-publish-policy::ok []))))
+
+(def selfhost/pkg-publish-policy::first-failure-loop
+  (fn (entries)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len entries))
+        nil
+        (let
+          ((result
+              ((core/vec::get ((core/vec::get entries) index)) 1)))
+          (if (selfhost/pkg-publish-policy::result-ok? result)
+            ((selfhost/pkg-publish-policy::first-failure-loop entries)
+              ((core/int::add index) 1))
+            result))))))
+
+(def selfhost/pkg-publish-policy::assemble-class
+  (fn (name)
+    (fn (values)
+      (let
+        ((keys
+            ((selfhost/pkg-publish-policy::field values)
+              (quote :allowed-public-keys)))
+          (minimum
+            ((selfhost/pkg-publish-policy::field values) (quote :min-signatures)))
+          (pairs
+            ((selfhost/pkg-publish-policy::field values)
+              (quote :independent-role-pairs)))
+          (require-signatures
+            ((selfhost/pkg-publish-policy::field values)
+              (quote :require-signatures)))
+          (required-roles
+            ((selfhost/pkg-publish-policy::field values)
+              (quote :required-attestation-roles)))
+          (role-minima
+            ((selfhost/pkg-publish-policy::field values)
+              (quote :role-min-signatures))))
+        (let
+          ((has-role-constraints
+              (if ((core/int::lt? 0) (core/vec::len required-roles))
+                true
+                (if ((core/int::lt? 0) (core/map::len role-minima))
+                  true
+                  ((core/int::lt? 0) (core/vec::len pairs))))))
+          (if
+            (if ((core/int::lt? 0) minimum)
+              ((core/int::eq? (core/vec::len keys)) 0)
+              false)
+            (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+            (if
+              (if has-role-constraints (if require-signatures false true) false)
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+              (if
+                (if has-role-constraints
+                  ((core/int::eq? (core/vec::len keys)) 0)
+                  false)
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+                (selfhost/pkg-publish-policy::ok
+                  (((core/map::put values) (quote :name)) name))))))))))
+
+(def selfhost/pkg-publish-policy::parse-class-fields
+  (fn (name)
+    (fn (map)
+      (let
+        ((patterns
+            ((selfhost/pkg-publish-policy::validated-patterns
+                (if
+                  ((selfhost/pkg-publish-policy::has-key? map) (quote :patterns))
+                  (selfhost/pkg-publish-policy::strings
+                    ((selfhost/pkg-publish-policy::field map) (quote :patterns)))
+                  (selfhost/pkg-publish-policy::bad (quote :bad-policy))))
+              true))
+          (excludes
+            ((selfhost/pkg-publish-policy::validated-patterns
+                ((selfhost/pkg-publish-policy::optional-strings map) (quote :exclude)))
+              false))
+          (obligations
+            ((selfhost/pkg-publish-policy::optional-texts map)
+              (quote :required-obligations)))
+          (evidence-kinds
+            ((selfhost/pkg-publish-policy::optional-kinds map)
+              (quote :required-evidence-kinds)))
+          (obligation-kinds
+            (selfhost/pkg-publish-policy::obligation-kind-map map))
+          (signature-flag
+            (selfhost/pkg-publish-policy::signature-flag map))
+          (allowed-keys
+            (selfhost/pkg-publish-policy::allowed-keys map))
+          (roles
+            (selfhost/pkg-publish-policy::required-roles map))
+          (role-minima
+            (selfhost/pkg-publish-policy::role-minimum-map map))
+          (role-pairs
+            (selfhost/pkg-publish-policy::role-pairs map)))
+        (let
+          ((failure
+              ((selfhost/pkg-publish-policy::first-failure-loop
+                  (core/map::entries
+                    {
+                      :allowed-keys allowed-keys
+                      :evidence-kinds evidence-kinds
+                      :excludes excludes
+                      :obligation-kinds obligation-kinds
+                      :obligations obligations
+                      :patterns patterns
+                      :role-minima role-minima
+                      :role-pairs role-pairs
+                      :roles roles
+                      :signature-flag signature-flag}))
+                0)))
+          (if (selfhost/pkg-publish-policy::nil? failure)
+            (let
+              ((require-signatures
+                  (selfhost/pkg-publish-policy::result-value signature-flag)))
+              (let
+                ((minimum
+                    ((selfhost/pkg-publish-policy::signature-minimum map)
+                      require-signatures)))
+                (if (selfhost/pkg-publish-policy::result-ok? minimum)
+                  ((selfhost/pkg-publish-policy::assemble-class name)
+                    {
+                      :allowed-public-keys
+                        (selfhost/pkg-publish-policy::result-value allowed-keys)
+                      :exclude (selfhost/pkg-publish-policy::result-value excludes)
+                      :independent-role-pairs
+                        (selfhost/pkg-publish-policy::result-value role-pairs)
+                      :min-signatures
+                        (selfhost/pkg-publish-policy::result-value minimum)
+                      :obligation-evidence-kinds
+                        (selfhost/pkg-publish-policy::result-value obligation-kinds)
+                      :patterns (selfhost/pkg-publish-policy::result-value patterns)
+                      :require-signatures require-signatures
+                      :required-attestation-roles
+                        (selfhost/pkg-publish-policy::result-value roles)
+                      :required-evidence-kinds
+                        (selfhost/pkg-publish-policy::result-value evidence-kinds)
+                      :required-obligations
+                        (selfhost/pkg-publish-policy::result-value obligations)
+                      :role-min-signatures
+                        (selfhost/pkg-publish-policy::result-value role-minima)})
+                  minimum)))
+            failure))))))
+
+(def selfhost/pkg-publish-policy::parse-class
+  (fn (classes)
+    (fn (key)
+      (fn (name)
+        (if ((selfhost/pkg-publish-policy::has-key? classes) key)
+          (let ((value ((selfhost/pkg-publish-policy::field classes) key)))
+            (if (selfhost/pkg-publish-policy::nil? value)
+              (selfhost/pkg-publish-policy::ok nil)
+              (if (selfhost/pkg-publish-policy::map? value)
+                ((selfhost/pkg-publish-policy::parse-class-fields name) value)
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+          (selfhost/pkg-publish-policy::ok nil))))))
+
+(def selfhost/pkg-publish-policy::frozen-prefixes
+  (fn (policy)
+    (let ((refs ((selfhost/pkg-publish-policy::field policy) (quote :refs))))
+      (if (selfhost/pkg-publish-policy::map? refs)
+        (let
+          ((prefixes
+              ((selfhost/pkg-publish-policy::field refs) (quote :frozen-prefixes))))
+          (if (selfhost/pkg-publish-policy::vec? prefixes)
+            (selfhost/pkg-publish-policy::strings prefixes)
+            (selfhost/pkg-publish-policy::ok [])))
+        (selfhost/pkg-publish-policy::ok [])))))
+
+(def selfhost/pkg-publish-policy::parse
+  (fn (policy)
+    (if (selfhost/pkg-publish-policy::map? policy)
+      (let
+        ((type ((selfhost/pkg-publish-policy::field policy) (quote :type)))
+          (version ((selfhost/pkg-publish-policy::field policy) (quote :v)))
+          (name ((selfhost/pkg-publish-policy::field policy) (quote :name)))
+          (classes ((selfhost/pkg-publish-policy::field policy) (quote :classes))))
+        (if
+          (if (selfhost/pkg-publish-policy::sym? type)
+            ((core/sym::eq? type) (quote :vcs/policy))
+            false)
+          (if
+            (if (selfhost/pkg-publish-policy::int? version)
+              ((core/int::eq? version) 1)
+              false)
+            (if
+              (if (selfhost/pkg-publish-policy::nil? name)
+                true
+                (selfhost/pkg-publish-policy::str? name))
+              (if (selfhost/pkg-publish-policy::map? classes)
+                (let
+                  ((prefixes (selfhost/pkg-publish-policy::frozen-prefixes policy))
+                    (tags
+                      (((selfhost/pkg-publish-policy::parse-class classes) (quote :tags))
+                        (quote :tags)))
+                    (main
+                      (((selfhost/pkg-publish-policy::parse-class classes) (quote :main))
+                        (quote :main)))
+                    (dev
+                      (((selfhost/pkg-publish-policy::parse-class classes) (quote :dev))
+                        (quote :dev))))
+                  (if (selfhost/pkg-publish-policy::result-ok? prefixes)
+                    (if (selfhost/pkg-publish-policy::result-ok? tags)
+                      (if (selfhost/pkg-publish-policy::result-ok? main)
+                        (if (selfhost/pkg-publish-policy::result-ok? dev)
+                          (selfhost/pkg-publish-policy::ok
+                            {
+                              :dev (selfhost/pkg-publish-policy::result-value dev)
+                              :frozen-prefixes
+                                (selfhost/pkg-publish-policy::result-value prefixes)
+                              :main (selfhost/pkg-publish-policy::result-value main)
+                              :name name
+                              :tags (selfhost/pkg-publish-policy::result-value tags)})
+                          dev)
+                        main)
+                      tags)
+                    prefixes))
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy)))
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy)))
+            (selfhost/pkg-publish-policy::bad (quote :bad-policy)))
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy))))
+      (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+
+(def selfhost/pkg-publish-policy::prefix-member-loop?
+  (fn (prefixes)
+    (fn (refname)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len prefixes))
+          false
+          (if
+            ((selfhost/pkg-lock-read::starts-with? refname)
+              ((core/vec::get prefixes) index))
+            true
+            (((selfhost/pkg-publish-policy::prefix-member-loop? prefixes) refname)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/pkg-publish-policy::patterns-match-loop
+  (fn (patterns)
+    (fn (refname)
+      (fn (index)
+        (fn (matched)
+          (if ((core/int::eq? index) (core/vec::len patterns))
+            (selfhost/pkg-publish-policy::ok matched)
+            (let
+              ((result
+                  ((selfhost/pkg-publish-glob::match ((core/vec::get patterns) index))
+                    refname)))
+              (if ((selfhost/pkg-publish-policy::field result) (quote :ok))
+                (let
+                  ((next
+                      (((selfhost/pkg-publish-policy::patterns-match-loop patterns)
+                          refname)
+                        ((core/int::add index) 1)))
+                    (next-matched
+                      (if matched
+                        true
+                        ((selfhost/pkg-publish-policy::field result) (quote :value)))))
+                  (next next-matched))
+                (selfhost/pkg-publish-policy::bad (quote :bad-policy))))))))))
+
+(def selfhost/pkg-publish-policy::class-matches
+  (fn (class)
+    (fn (refname)
+      (if (selfhost/pkg-publish-policy::nil? class)
+        (selfhost/pkg-publish-policy::ok false)
+        (let
+          ((included
+              ((((selfhost/pkg-publish-policy::patterns-match-loop
+                      ((selfhost/pkg-publish-policy::field class) (quote :patterns)))
+                    refname)
+                  0)
+                false))
+            (excluded
+              ((((selfhost/pkg-publish-policy::patterns-match-loop
+                      ((selfhost/pkg-publish-policy::field class) (quote :exclude)))
+                    refname)
+                  0)
+                false)))
+          (if (selfhost/pkg-publish-policy::result-ok? included)
+            (if (selfhost/pkg-publish-policy::result-ok? excluded)
+              (selfhost/pkg-publish-policy::ok
+                (if (selfhost/pkg-publish-policy::result-value included)
+                  (if (selfhost/pkg-publish-policy::result-value excluded) false true)
+                  false))
+              excluded)
+            included))))))
+
+(def selfhost/pkg-publish-policy::select-parsed
+  (fn (parsed)
+    (fn (refname)
+      (let
+        ((tags
+            ((selfhost/pkg-publish-policy::class-matches
+                ((selfhost/pkg-publish-policy::field parsed) (quote :tags)))
+              refname))
+          (main
+            ((selfhost/pkg-publish-policy::class-matches
+                ((selfhost/pkg-publish-policy::field parsed) (quote :main)))
+              refname))
+          (dev
+            ((selfhost/pkg-publish-policy::class-matches
+                ((selfhost/pkg-publish-policy::field parsed) (quote :dev)))
+              refname)))
+        (if (selfhost/pkg-publish-policy::result-ok? tags)
+          (if (selfhost/pkg-publish-policy::result-ok? main)
+            (if (selfhost/pkg-publish-policy::result-ok? dev)
+              (if (selfhost/pkg-publish-policy::result-value tags)
+                (selfhost/pkg-publish-policy::ok
+                  ((selfhost/pkg-publish-policy::field parsed) (quote :tags)))
+                (if (selfhost/pkg-publish-policy::result-value main)
+                  (selfhost/pkg-publish-policy::ok
+                    ((selfhost/pkg-publish-policy::field parsed) (quote :main)))
+                  (if (selfhost/pkg-publish-policy::result-value dev)
+                    (selfhost/pkg-publish-policy::ok
+                      ((selfhost/pkg-publish-policy::field parsed) (quote :dev)))
+                    (selfhost/pkg-publish-policy::bad (quote :no-policy-class)))))
+              dev)
+            main)
+          tags)))))
+
+(def selfhost/pkg-publish-policy::select
+  (fn (policy)
+    (fn (refname)
+      (if (selfhost/pkg-publish-policy::str? refname)
+        (if ((core/int::lt? 0) (core/str::len refname))
+          (let ((parsed (selfhost/pkg-publish-policy::parse policy)))
+            (if (selfhost/pkg-publish-policy::result-ok? parsed)
+              (let ((value (selfhost/pkg-publish-policy::result-value parsed)))
+                (if
+                  (((selfhost/pkg-publish-policy::prefix-member-loop?
+                        ((selfhost/pkg-publish-policy::field value)
+                          (quote :frozen-prefixes)))
+                      refname)
+                    0)
+                  (selfhost/pkg-publish-policy::bad (quote :ref-frozen))
+                  ((selfhost/pkg-publish-policy::select-parsed value) refname)))
+              parsed))
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy)))
+        (selfhost/pkg-publish-policy::bad (quote :bad-policy))))))

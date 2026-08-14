@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `32c7942cb29da85b6eabd12c68d237e403fb9bf7061aa27aab26cdb240af98dc`
-- Freshness artifact hash: `32c7942cb29da85b6eabd12c68d237e403fb9bf7061aa27aab26cdb240af98dc`
-- Freshness source hash: `6d27522286022297c138e89e444c14d1a5456a6516cd670629073f659785f78a`
-- Source aggregate hash (module path + module sha256): `5ac889e9a2eda1e8310dc146cb9c74ee09bddc8414c2e266660304fe2d61e980`
+- Artifact sha256: `c8b6b58be8cc042c8e983e4f889bd95d6c0619e295d41b4466f85f174708052e`
+- Freshness artifact hash: `c8b6b58be8cc042c8e983e4f889bd95d6c0619e295d41b4466f85f174708052e`
+- Freshness source hash: `b62cd83f4ed59097ed25282c3246799056c73f56c730600d34c3d819329f694d`
+- Source aggregate hash (module path + module sha256): `7c5fea4b43177e71be5ccf1a9bd5bfdc19cb113fda58d17617eb0879aa953f10`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `97`
+- Module count: `99`
 
 ## Module Summary
 
@@ -93,7 +93,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
 | `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
 | `selfhost/pkg_snapshot_authority_v1.gc` | 174 | 6623 | 12 | `db2d90994b97fdd7` |
-| `selfhost/pkg_publish_glob_v1.gc` | 463 | 22414 | 19 | `e96d460969141303` |
+| `selfhost/pkg_publish_glob_v1.gc` | 522 | 24945 | 21 | `889e56fe7854ce24` |
+| `selfhost/pkg_publish_policy_core_v1.gc` | 252 | 9604 | 34 | `d21993c138dda0a2` |
+| `selfhost/pkg_publish_policy_v1.gc` | 601 | 26342 | 29 | `fa6b3136e6333a4d` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -194,6 +196,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
 - `selfhost/pkg_snapshot_authority_v1.gc`: `selfhost/pkg-snapshot::bytes?`, `selfhost/pkg-snapshot::module-valid?`, `selfhost/pkg-snapshot::modules-valid-loop?`, `selfhost/pkg-snapshot::modules-valid?`, `selfhost/pkg-snapshot::facts-valid?`, `selfhost/pkg-snapshot::object`, `selfhost/pkg-snapshot::build-modules-loop`, `selfhost/pkg-snapshot::build`
 - `selfhost/pkg_publish_glob_v1.gc`: `selfhost/pkg-publish-glob::good`, `selfhost/pkg-publish-glob::bad`, `selfhost/pkg-publish-glob::byte-at`, `selfhost/pkg-publish-glob::byte-equal`, `selfhost/pkg-publish-glob::skip-stars`, `selfhost/pkg-publish-glob::recursive-component?`, `selfhost/pkg-publish-glob::star`, `selfhost/pkg-publish-glob::star-loop`
+- `selfhost/pkg_publish_policy_core_v1.gc`: `selfhost/pkg-publish-policy::tag`, `selfhost/pkg-publish-policy::map?`, `selfhost/pkg-publish-policy::vec?`, `selfhost/pkg-publish-policy::str?`, `selfhost/pkg-publish-policy::sym?`, `selfhost/pkg-publish-policy::int?`, `selfhost/pkg-publish-policy::bool?`, `selfhost/pkg-publish-policy::nil?`
+- `selfhost/pkg_publish_policy_v1.gc`: `selfhost/pkg-publish-policy::optional-strings`, `selfhost/pkg-publish-policy::optional-texts`, `selfhost/pkg-publish-policy::optional-kinds`, `selfhost/pkg-publish-policy::patterns-valid-loop?`, `selfhost/pkg-publish-policy::validated-patterns`, `selfhost/pkg-publish-policy::obligation-kind-map-loop`, `selfhost/pkg-publish-policy::obligation-kind-map`, `selfhost/pkg-publish-policy::signature-flag`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

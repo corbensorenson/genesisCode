@@ -1,0 +1,252 @@
+(def selfhost/pkg-publish-policy::tag core/data::tag)
+
+(def selfhost/pkg-publish-policy::map?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-policy::tag value)) (quote :map))))
+
+(def selfhost/pkg-publish-policy::vec?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-policy::tag value)) (quote :vec))))
+
+(def selfhost/pkg-publish-policy::str?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-policy::tag value)) (quote :str))))
+
+(def selfhost/pkg-publish-policy::sym?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-policy::tag value)) (quote :sym))))
+
+(def selfhost/pkg-publish-policy::int?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-policy::tag value)) (quote :int))))
+
+(def selfhost/pkg-publish-policy::bool?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-policy::tag value)) (quote :bool))))
+
+(def selfhost/pkg-publish-policy::nil? core/list::is-nil?)
+
+(def selfhost/pkg-publish-policy::field
+  (fn (map)
+    (fn (key)
+      (if (selfhost/pkg-publish-policy::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/pkg-publish-policy::has-key?
+  (fn (map)
+    (fn (key)
+      (((selfhost/store-authority::map-has-key-loop? (core/map::entries map)) key) 0))))
+
+(def selfhost/pkg-publish-policy::ok
+  (fn (value) {:code nil :ok true :value value}))
+
+(def selfhost/pkg-publish-policy::bad
+  (fn (code) {:code code :ok false :value nil}))
+
+(def selfhost/pkg-publish-policy::result-ok?
+  (fn (result) ((selfhost/pkg-publish-policy::field result) (quote :ok))))
+
+(def selfhost/pkg-publish-policy::result-value
+  (fn (result) ((selfhost/pkg-publish-policy::field result) (quote :value))))
+
+(def selfhost/pkg-publish-policy::nonnegative-u64?
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::int? value)
+      (if ((core/int::lt? value) 0)
+        false
+        ((core/int::lt? value) 18446744073709551616))
+      false)))
+
+(def selfhost/pkg-publish-policy::text
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::str? value)
+      value
+      (if (selfhost/pkg-publish-policy::sym? value) (core/sym::to-str value) nil))))
+
+(def selfhost/pkg-publish-policy::normalize-label
+  (fn (value)
+    (let ((text (selfhost/pkg-publish-policy::text value)))
+      (if (selfhost/pkg-publish-policy::nil? text)
+        nil
+        (let ((trimmed (selfhost/policy::trim text)))
+          (if ((core/int::eq? (core/str::len trimmed)) 0)
+            nil
+            (if ((selfhost/pkg-lock-read::starts-with? trimmed) ":")
+              trimmed
+              ((core/str::concat ":") trimmed))))))))
+
+(def selfhost/pkg-publish-policy::normalize-kind
+  (fn (value)
+    (let ((text (selfhost/pkg-publish-policy::text value)))
+      (if (selfhost/pkg-publish-policy::nil? text)
+        nil
+        (let ((trimmed (selfhost/policy::trim text)))
+          (if ((selfhost/pkg-lock-read::starts-with? trimmed) ":")
+            trimmed
+            ((core/str::concat ":") trimmed)))))))
+
+(def selfhost/pkg-publish-policy::strings-loop
+  (fn (values)
+    (fn (index)
+      (fn (output)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (selfhost/pkg-publish-policy::ok output)
+          (let ((value ((core/vec::get values) index)))
+            (if (selfhost/pkg-publish-policy::str? value)
+              (((selfhost/pkg-publish-policy::strings-loop values)
+                  ((core/int::add index) 1))
+                ((core/vec::push output) value))
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))))))
+
+(def selfhost/pkg-publish-policy::strings
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::vec? value)
+      (((selfhost/pkg-publish-policy::strings-loop value) 0) [])
+      (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+
+(def selfhost/pkg-publish-policy::texts-loop
+  (fn (values)
+    (fn (index)
+      (fn (output)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (selfhost/pkg-publish-policy::ok output)
+          (let ((text (selfhost/pkg-publish-policy::text ((core/vec::get values) index))))
+            (if (selfhost/pkg-publish-policy::nil? text)
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+              (((selfhost/pkg-publish-policy::texts-loop values)
+                  ((core/int::add index) 1))
+                ((core/vec::push output) text)))))))))
+
+(def selfhost/pkg-publish-policy::texts
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::vec? value)
+      (((selfhost/pkg-publish-policy::texts-loop value) 0) [])
+      (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+
+(def selfhost/pkg-publish-policy::entry-keys-loop
+  (fn (entries)
+    (fn (index)
+      (fn (output)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          output
+          (((selfhost/pkg-publish-policy::entry-keys-loop entries)
+              ((core/int::add index) 1))
+            ((core/vec::push output)
+              ((core/vec::get ((core/vec::get entries) index)) 0))))))))
+
+(def selfhost/pkg-publish-policy::set-keys
+  (fn (set)
+    (((selfhost/pkg-publish-policy::entry-keys-loop (core/map::entries set)) 0) [])))
+
+(def selfhost/pkg-publish-policy::labels-loop
+  (fn (values)
+    (fn (index)
+      (fn (set)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (selfhost/pkg-publish-policy::ok
+            (selfhost/pkg-publish-policy::set-keys set))
+          (let ((label (selfhost/pkg-publish-policy::normalize-label
+                         ((core/vec::get values) index))))
+            (if (selfhost/pkg-publish-policy::nil? label)
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+              (((selfhost/pkg-publish-policy::labels-loop values)
+                  ((core/int::add index) 1))
+                (((core/map::put set) label) true)))))))))
+
+(def selfhost/pkg-publish-policy::labels
+  (fn (value)
+    (fn (require-nonempty)
+      (if (selfhost/pkg-publish-policy::vec? value)
+        (if
+          (if require-nonempty ((core/int::eq? (core/vec::len value)) 0) false)
+          (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+          (((selfhost/pkg-publish-policy::labels-loop value) 0) {}))
+        (selfhost/pkg-publish-policy::bad (quote :bad-policy))))))
+
+(def selfhost/pkg-publish-policy::kinds-loop
+  (fn (values)
+    (fn (index)
+      (fn (set)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (selfhost/pkg-publish-policy::ok
+            (selfhost/pkg-publish-policy::set-keys set))
+          (let ((kind (selfhost/pkg-publish-policy::normalize-kind
+                        ((core/vec::get values) index))))
+            (if (selfhost/pkg-publish-policy::nil? kind)
+              (selfhost/pkg-publish-policy::bad (quote :bad-policy))
+              (((selfhost/pkg-publish-policy::kinds-loop values)
+                  ((core/int::add index) 1))
+                (((core/map::put set) kind) true)))))))))
+
+(def selfhost/pkg-publish-policy::kinds
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::vec? value)
+      (((selfhost/pkg-publish-policy::kinds-loop value) 0) {})
+      (selfhost/pkg-publish-policy::bad (quote :bad-policy)))))
+
+(def selfhost/pkg-publish-policy::base64-value
+  (fn (byte)
+    (if (if ((core/int::lt? 64) byte) ((core/int::lt? byte) 91) false)
+      ((core/int::sub byte) 65)
+      (if (if ((core/int::lt? 96) byte) ((core/int::lt? byte) 123) false)
+        ((core/int::add ((core/int::sub byte) 97)) 26)
+        (if (if ((core/int::lt? 47) byte) ((core/int::lt? byte) 58) false)
+          ((core/int::add ((core/int::sub byte) 48)) 52)
+          (if ((core/int::eq? byte) 43)
+            62
+            (if ((core/int::eq? byte) 47) 63 -1)))))))
+
+(def selfhost/pkg-publish-policy::base64-body-valid?
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? index) 43)
+        true
+        (if ((core/int::lt?
+                (selfhost/pkg-publish-policy::base64-value
+                  ((core/bytes::get bytes) index)))
+              0)
+          false
+          ((selfhost/pkg-publish-policy::base64-body-valid? bytes)
+            ((core/int::add index) 1)))))))
+
+(def selfhost/pkg-publish-policy::base64-key?
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::str? value)
+      (let ((bytes (core/str::to-utf8 value)))
+        (if ((core/int::eq? (core/bytes::len bytes)) 44)
+          (if ((core/int::eq? ((core/bytes::get bytes) 43)) 61)
+            (if ((selfhost/pkg-publish-policy::base64-body-valid? bytes) 0)
+              ((core/int::eq?
+                  ((core/int::mod
+                      (selfhost/pkg-publish-policy::base64-value
+                        ((core/bytes::get bytes) 42)))
+                    4))
+                0)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-publish-policy::base64-keys-loop
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/pkg-publish-policy::base64-key? ((core/vec::get values) index))
+          ((selfhost/pkg-publish-policy::base64-keys-loop values)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-publish-policy::base64-keys?
+  (fn (value)
+    (if (selfhost/pkg-publish-policy::vec? value)
+      ((selfhost/pkg-publish-policy::base64-keys-loop value) 0)
+      false)))
+
+(def selfhost/pkg-publish-policy::canonical-pair
+  (fn (left)
+    (fn (right)
+      (if ((core/eq? left) right)
+        nil
+        (let ((set (((core/map::put (((core/map::put {}) left) true)) right) true)))
+          (let ((keys (selfhost/pkg-publish-policy::set-keys set)))
+            {:left ((core/vec::get keys) 0) :right ((core/vec::get keys) 1)}))))))
