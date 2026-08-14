@@ -30,7 +30,16 @@ pub(super) fn dispatch_publish(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/pkg-low::snapshot".to_string())
             })?;
-            handle_snapshot(payload, pol, policy, store, budget, error_tok, op)
+            handle_snapshot(
+                payload,
+                pol,
+                policy,
+                store,
+                pkg_lock_read_authority,
+                budget,
+                error_tok,
+                op,
+            )
         }
 
         "core/pkg-low::publish" => {

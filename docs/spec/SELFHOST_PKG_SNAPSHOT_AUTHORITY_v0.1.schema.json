@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-pkg-snapshot-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionOperations", "requestKind", "resultKind", "schema", "sourceModule",
+    "sourceSha256", "spec", "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/pkg::snapshot-authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {"const": [
+      "canonical-module-object-bytes-and-content-identities",
+      "module-identity-recomputation-and-substitution-rejection",
+      "canonical-package-snapshot-object-and-content-identity",
+      "request-bound-ordered-artifact-plan"
+    ]},
+    "hostMechanisms": {"const": [
+      "artifact-only-authority-bootstrap-and-bounded-evaluation",
+      "sandboxed-manifest-and-module-byte-transport",
+      "frontend-parse-and-canonical-form-transport",
+      "capability-and-cumulative-store-budget-enforcement",
+      "exact-authorized-byte-content-addressed-storage",
+      "strict-result-and-store-identity-contradiction-checking"
+    ]},
+    "hostOracle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parityOnly", "productionRequired", "removalTask"],
+      "properties": {
+        "parityOnly": {"const": true}, "productionRequired": {"const": false},
+        "removalTask": {"const": "R4.2.e"}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_pkg_snapshot_authority.py"},
+    "kind": {"const": "genesis/selfhost-pkg-snapshot-authority-v0.1"},
+    "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "productionOperations": {"const": ["core/pkg-low::snapshot"]},
+    "requestKind": {"const": "genesis/pkg-snapshot-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/pkg-snapshot-authority-result-v0.1"},
+    "schema": {"const": "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/pkg_snapshot_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

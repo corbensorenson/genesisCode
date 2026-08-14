@@ -227,6 +227,14 @@ python3 scripts/lib/selfhost_pkg_bridge_authority.py \
   --schema docs/spec/SELFHOST_PKG_BRIDGE_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e direct package snapshot authority is partial: GenesisCode owns exact
+# module/snapshot objects and identities; package frontend transport remains H0.
+python3 scripts/lib/selfhost_pkg_snapshot_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_snapshot_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.e package identity is partial: GenesisCode owns canonical requirement
 # fingerprints; selector parsing, graph solving, and registry mechanisms remain H0.
 python3 scripts/lib/selfhost_pkg_resolution_identity_authority.py \

@@ -16,6 +16,9 @@ pub(crate) use ops::{PkgBridgeLockFacts, PkgLockOpsDecision};
 #[path = "pkg_bridge_authority.rs"]
 mod bridge;
 pub(crate) use bridge::{PkgBridgeDecision, PkgBridgeFacts, PkgBridgeObject};
+#[path = "pkg_snapshot_authority.rs"]
+mod snapshot;
+pub(crate) use snapshot::PkgSnapshotDecision;
 
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";
@@ -29,6 +32,7 @@ pub(crate) struct PkgLockReadAuthority {
     model_authority: Option<Value>,
     ops_authority: Option<Value>,
     bridge_authority: Option<Value>,
+    snapshot_authority: Option<Value>,
 }
 
 #[derive(Debug)]
@@ -50,7 +54,7 @@ impl PkgLockReadAuthority {
                 | "core/pkg-low::update"
                 | "core/pkg-low::install"
                 | "core/pkg-low::verify"
-        ) || op == "core/pkg-low::bridge"
+        ) || matches!(op, "core/pkg-low::bridge" | "core/pkg-low::snapshot")
     }
 
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
@@ -78,6 +82,7 @@ impl PkgLockReadAuthority {
         let model_authority = environment.get(model::MODEL_BINDING);
         let ops_authority = environment.get(ops::OPS_BINDING);
         let bridge_authority = environment.get(bridge::BRIDGE_BINDING);
+        let snapshot_authority = environment.get(snapshot::SNAPSHOT_BINDING);
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
@@ -86,6 +91,7 @@ impl PkgLockReadAuthority {
             model_authority,
             ops_authority,
             bridge_authority,
+            snapshot_authority,
         })
     }
 

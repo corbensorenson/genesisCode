@@ -1,0 +1,47 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-13",
+  "binding": "core/pkg::snapshot-authority",
+  "contentIdentitySha256": "983da2cc2bfe398ab0c603dada4da46defc9f1d793a0707a8dbf0b6bc64dce67",
+  "decisionInventory": [
+    "canonical-module-object-bytes-and-content-identities",
+    "module-identity-recomputation-and-substitution-rejection",
+    "canonical-package-snapshot-object-and-content-identity",
+    "request-bound-ordered-artifact-plan"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "sandboxed-manifest-and-module-byte-transport",
+    "frontend-parse-and-canonical-form-transport",
+    "capability-and-cumulative-store-budget-enforcement",
+    "exact-authorized-byte-content-addressed-storage",
+    "strict-result-and-store-identity-contradiction-checking"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_snapshot_authority.py",
+  "kind": "genesis/selfhost-pkg-snapshot-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "h2-package-resolution",
+    "package-manifest-and-source-frontend-authority",
+    "publish-and-registry-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionOperations": [
+    "core/pkg-low::snapshot"
+  ],
+  "requestKind": "genesis/pkg-snapshot-authority-request-v0.1",
+  "resultKind": "genesis/pkg-snapshot-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_snapshot_authority_v1.gc",
+  "sourceSha256": "b5b2aea889ff57484e3a83516feaae178e08ae38b59eafc43a38fc3b4b0ef16f",
+  "spec": "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

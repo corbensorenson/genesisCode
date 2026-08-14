@@ -1,6 +1,106 @@
 use super::*;
 
 #[test]
+fn pkg_snapshot_authority_constructs_exact_objects_and_is_required_before_storage() {
+    let td = tempfile::tempdir().unwrap();
+    let workspace_dir = td.path().join("workspace");
+    let store_dir = td.path().join("store");
+    std::fs::create_dir_all(&workspace_dir).unwrap();
+    std::fs::write(
+        workspace_dir.join("package.toml"),
+        r#"
+name = "demo"
+version = "0.1.0"
+dependencies = []
+obligations = ["core/obligation::unit-tests"]
+
+[[modules]]
+path = "demo.gc"
+"#,
+    )
+    .unwrap();
+    let source = "(def demo::x 1)\n";
+    std::fs::write(workspace_dir.join("demo.gc"), source).unwrap();
+
+    let payload = parse_term(r#"{:pkg "package.toml"}"#).unwrap();
+    let (forms, hash) = mk_prog("core/pkg-low::snapshot", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let caps = mk_caps_for_pkg_snapshot(&workspace_dir, &store_dir);
+    let result = run(
+        &mut context,
+        &caps,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    let Term::Map(output) = result.value.to_term_for_log(None) else {
+        panic!("snapshot result must be a map");
+    };
+    let Some(Term::Str(snapshot_hash)) = output.get(&TermOrdKey(Term::symbol(":snapshot"))) else {
+        panic!("snapshot result must contain a string :snapshot");
+    };
+    let store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let snapshot =
+        parse_term(std::str::from_utf8(&store.get_bytes(snapshot_hash).unwrap()).unwrap()).unwrap();
+    let Term::Map(snapshot) = snapshot else {
+        panic!("stored snapshot must be a map");
+    };
+    assert_eq!(
+        snapshot.get(&TermOrdKey(Term::symbol(":pkg/name"))),
+        Some(&Term::Str("demo".to_string()))
+    );
+    let Some(Term::Vector(modules)) = snapshot.get(&TermOrdKey(Term::symbol(":modules"))) else {
+        panic!("stored snapshot must contain a module vector");
+    };
+    let canonical =
+        gc_coreform::canonicalize_module(gc_coreform::parse_module(source).unwrap()).unwrap();
+    let Term::Map(module) = &modules[0] else {
+        panic!("stored snapshot module must be a map");
+    };
+    assert_eq!(
+        module.get(&TermOrdKey(Term::symbol(":module-h"))),
+        Some(&Term::Bytes(
+            gc_coreform::hash_module(&canonical).to_vec().into()
+        ))
+    );
+
+    let missing_store = td.path().join("missing-store");
+    let missing_caps =
+        CapsPolicy::from_toml_str(&pkg_snapshot_caps_source(&workspace_dir, &missing_store))
+            .unwrap();
+    let (missing_forms, missing_hash) = mk_prog("core/pkg-low::snapshot", &payload);
+    let mut missing_context = EvalCtx::new();
+    let missing_prelude = build_prelude(&mut missing_context);
+    let mut missing_environment = missing_prelude.env;
+    let missing_program = eval_module(
+        &mut missing_context,
+        &mut missing_environment,
+        &missing_forms,
+    )
+    .unwrap();
+    let error = match run(
+        &mut missing_context,
+        &missing_caps,
+        missing_program,
+        missing_hash,
+        "gc_effects-test".to_string(),
+    ) {
+        Ok(_) => panic!("snapshot must fail closed without selfhost authority"),
+        Err(error) => error,
+    };
+    let message = error.to_string();
+    assert!(
+        message.contains("missing selfhost package snapshot authority"),
+        "unexpected missing-authority error: {message}"
+    );
+    assert_eq!(std::fs::read_dir(&missing_store).unwrap().count(), 0);
+}
+
+#[test]
 fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
     let reg = Arc::new(MemRegistry::new());
     gc_registry::register_inproc("t1", reg.clone()).expect("register inproc");

@@ -680,6 +680,44 @@ remote_allow = ["{remote_allow}"]
     CapsPolicy::from_toml_str(&s).expect("caps")
 }
 
+fn pkg_snapshot_caps_source(
+    workspace_dir: &std::path::Path,
+    store_dir: &std::path::Path,
+) -> String {
+    format!(
+        r#"
+allow = ["core/pkg-low::snapshot"]
+
+[store]
+dir = "{store_dir}"
+
+[op."core/pkg-low::snapshot"]
+base_dir = "{workspace_dir}"
+"#,
+        workspace_dir = workspace_dir.display(),
+        store_dir = store_dir.display(),
+    )
+}
+
+fn mk_caps_for_pkg_snapshot(
+    workspace_dir: &std::path::Path,
+    store_dir: &std::path::Path,
+) -> CapsPolicy {
+    let artifact = std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/toolchain.gc")
+        })
+        .canonicalize()
+        .expect("canonical selfhost artifact path");
+    CapsPolicy::from_toml_str_with_selfhost_authority(
+        &pkg_snapshot_caps_source(workspace_dir, store_dir),
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .expect("selfhost-authorized snapshot caps")
+}
+
 fn mk_caps_for_pkg_bridge(
     base_dir: &std::path::Path,
     store_dir: &std::path::Path,

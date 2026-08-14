@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `75736cd6d052c865fc93ab21e94fb7f7b34c23a7a005acc9bedf8c1ee19650ba`
-- Freshness artifact hash: `75736cd6d052c865fc93ab21e94fb7f7b34c23a7a005acc9bedf8c1ee19650ba`
-- Freshness source hash: `1a9bf43648d834a0807f9eae4daad0b589162c6ebd9f2c3d5a1ff21f271575c5`
-- Source aggregate hash (module path + module sha256): `f875445b280c0054ad9befddf86cae87ba4fc4f12c3fb4716f692cec24c5ba83`
+- Artifact sha256: `dd07a9679abe367bbfcb7f1209eddb04c4df30d3511a12f4f3530ba63c0f7538`
+- Freshness artifact hash: `dd07a9679abe367bbfcb7f1209eddb04c4df30d3511a12f4f3530ba63c0f7538`
+- Freshness source hash: `60746688a72811fa1fcefefbc0ce969aa9af0d125191bc40e2994fcdf1202248`
+- Source aggregate hash (module path + module sha256): `70ad4bf80cf64aa53417976d8fb5deaa8f184f90a6cc03e18190186ac1f62f18`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `95`
+- Module count: `96`
 
 ## Module Summary
 
@@ -92,6 +92,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_lock_ops_authority_v1.gc` | 476 | 21921 | 29 | `e377f0f028d2d6fb` |
 | `selfhost/pkg_resolution_identity_authority_v1.gc` | 491 | 21558 | 35 | `33fdf119d03db49f` |
 | `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
+| `selfhost/pkg_snapshot_authority_v1.gc` | 174 | 6623 | 12 | `db2d90994b97fdd7` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -190,6 +191,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_lock_ops_authority_v1.gc`: `selfhost/pkg-lock-ops::result`, `selfhost/pkg-lock-ops::reject`, `selfhost/pkg-lock-ops::accept-write`, `selfhost/pkg-lock-ops::accept-value`, `selfhost/pkg-lock-ops::writer-locked-entry`, `selfhost/pkg-lock-ops::writer-locked-loop`, `selfhost/pkg-lock-ops::writer-locked`, `selfhost/pkg-lock-ops::writer-payload`
 - `selfhost/pkg_resolution_identity_authority_v1.gc`: `selfhost/pkg-resolution-id::tag`, `selfhost/pkg-resolution-id::map?`, `selfhost/pkg-resolution-id::str?`, `selfhost/pkg-resolution-id::sym?`, `selfhost/pkg-resolution-id::int?`, `selfhost/pkg-resolution-id::nil?`, `selfhost/pkg-resolution-id::map-has-key-loop?`, `selfhost/pkg-resolution-id::map-has-keys-loop?`
 - `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
+- `selfhost/pkg_snapshot_authority_v1.gc`: `selfhost/pkg-snapshot::bytes?`, `selfhost/pkg-snapshot::module-valid?`, `selfhost/pkg-snapshot::modules-valid-loop?`, `selfhost/pkg-snapshot::modules-valid?`, `selfhost/pkg-snapshot::facts-valid?`, `selfhost/pkg-snapshot::object`, `selfhost/pkg-snapshot::build-modules-loop`, `selfhost/pkg-snapshot::build`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

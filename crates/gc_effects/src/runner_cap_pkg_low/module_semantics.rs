@@ -1,4 +1,5 @@
 use super::*;
+use crate::pkg_lock_read_authority::{PkgLockReadAuthority, PkgSnapshotDecision};
 use crate::runner_io_ops::payload_pkg_path;
 
 #[derive(Debug, Clone)]
@@ -213,10 +214,14 @@ pub(super) fn handle_snapshot(
     pol: Option<&OpPolicy>,
     policy: &CapsPolicy,
     store: &ArtifactStore,
+    snapshot_authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
+    let snapshot_authority = snapshot_authority.ok_or_else(|| {
+        EffectsError::Log("missing selfhost package snapshot authority".to_string())
+    })?;
     let pkg_path_s = match payload_pkg_path(payload) {
         Ok(s) => s,
         Err(e) => {
@@ -254,7 +259,7 @@ pub(super) fn handle_snapshot(
         ));
     }
 
-    let mut modules_out: Vec<Term> = Vec::new();
+    let mut module_facts: Vec<Term> = Vec::new();
     for me in &manifest.modules {
         let module_fs_path = pkg_dir.join(&me.path);
         let resolved = match std::fs::canonicalize(&module_fs_path) {
@@ -310,60 +315,31 @@ pub(super) fn handle_snapshot(
         let forms = parsed.forms;
         let module_h = parsed.module_hash;
 
-        let module_art = Term::Vector(forms);
-        let module_bytes = print_term(&module_art);
-        let store_hex = match store_put_with_budget(
-            store,
-            module_bytes.as_bytes(),
-            policy,
-            budget,
-            error_tok,
-            op,
-        ) {
-            Ok(h) => h,
-            Err(v) => return Ok(v),
-        };
         let mut mm = BTreeMap::new();
         mm.insert(
             TermOrdKey(Term::Symbol(":path".to_string())),
             Term::Str(me.path.clone()),
         );
         mm.insert(
-            TermOrdKey(Term::Symbol(":hash".to_string())),
-            Term::Str(store_hex),
+            TermOrdKey(Term::Symbol(":module".to_string())),
+            Term::Vector(forms),
         );
         mm.insert(
             TermOrdKey(Term::Symbol(":module-h".to_string())),
             Term::Bytes(module_h.to_vec().into()),
         );
-        modules_out.push(Term::Map(mm));
+        module_facts.push(Term::Map(mm));
     }
 
-    let snapshot = Term::Map(
+    let facts = Term::Map(
         [
             (
-                TermOrdKey(Term::Symbol(":type".to_string())),
-                Term::Symbol(":vcs/snapshot".to_string()),
-            ),
-            (
-                TermOrdKey(Term::Symbol(":v".to_string())),
-                Term::Int(1.into()),
-            ),
-            (
-                TermOrdKey(Term::Symbol(":kind".to_string())),
-                Term::Symbol(":package".to_string()),
-            ),
-            (
-                TermOrdKey(Term::Symbol(":pkg/name".to_string())),
-                Term::Str(manifest.name.clone()),
-            ),
-            (
-                TermOrdKey(Term::Symbol(":pkg/version".to_string())),
-                Term::Str(manifest.version.clone()),
-            ),
-            (
                 TermOrdKey(Term::Symbol(":modules".to_string())),
-                Term::Vector(modules_out.clone()),
+                Term::Vector(module_facts),
+            ),
+            (
+                TermOrdKey(Term::Symbol(":name".to_string())),
+                Term::Str(manifest.name.clone()),
             ),
             (
                 TermOrdKey(Term::Symbol(":obligations".to_string())),
@@ -376,31 +352,45 @@ pub(super) fn handle_snapshot(
                         .collect(),
                 ),
             ),
+            (
+                TermOrdKey(Term::Symbol(":pkg".to_string())),
+                Term::Str(pkg_path_s),
+            ),
+            (
+                TermOrdKey(Term::Symbol(":version".to_string())),
+                Term::Str(manifest.version.clone()),
+            ),
         ]
         .into_iter()
         .collect(),
     );
-    let snapshot_bytes = print_term(&snapshot);
-    let snap_hex = match store_put_with_budget(
-        store,
-        snapshot_bytes.as_bytes(),
-        policy,
-        budget,
-        error_tok,
-        op,
-    ) {
-        Ok(h) => h,
-        Err(v) => return Ok(v),
+    let plan = match snapshot_authority.construct_snapshot(facts)? {
+        PkgSnapshotDecision::Accept(plan) => plan,
+        PkgSnapshotDecision::Error { code, message } => {
+            return Ok(mk_error(error_tok, &code, message, Some(op)));
+        }
     };
+    for artifact in &plan.artifacts {
+        let stored =
+            match store_put_with_budget(store, &artifact.bytes, policy, budget, error_tok, op) {
+                Ok(hash) => hash,
+                Err(value) => return Ok(value),
+            };
+        if stored != artifact.hash {
+            return Err(EffectsError::Log(
+                "selfhost package snapshot authority/store identity contradiction".to_string(),
+            ));
+        }
+    }
 
     let mut out = BTreeMap::new();
     out.insert(
         TermOrdKey(Term::Symbol(":snapshot".to_string())),
-        Term::Str(snap_hex),
+        Term::Str(plan.snapshot),
     );
     out.insert(
         TermOrdKey(Term::Symbol(":modules".to_string())),
-        Term::Vector(modules_out),
+        Term::Vector(plan.modules),
     );
     Ok(Value::data(Term::Map(out)))
 }

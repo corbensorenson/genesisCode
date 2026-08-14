@@ -1,0 +1,174 @@
+(def selfhost/pkg-snapshot::bytes?
+  (fn (value)
+    ((core/sym::eq? (core/data::tag value)) (quote :bytes))))
+
+(def selfhost/pkg-snapshot::module-valid?
+  (fn (module)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? module) [:module :module-h :path])
+      (let
+        ((forms ((core/map::get module) (quote :module)))
+          (module-h ((core/map::get module) (quote :module-h)))
+          (path ((core/map::get module) (quote :path))))
+        (if (selfhost/commit::nonempty-str? path)
+          (if (selfhost/commit::vec? forms)
+            (if (selfhost/pkg-snapshot::bytes? module-h)
+              (if ((core/int::eq? (core/bytes::len module-h)) 32)
+                (let ((computed (selfhost/hash::hash-module forms)))
+                  (if (selfhost/pkg-lock-read::str? computed)
+                    ((core/eq? (core/bytes::from-hex computed)) module-h)
+                    false))
+                false)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-snapshot::modules-valid-loop?
+  (fn (modules)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len modules))
+        true
+        (if (selfhost/pkg-snapshot::module-valid? ((core/vec::get modules) index))
+          ((selfhost/pkg-snapshot::modules-valid-loop? modules) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-snapshot::modules-valid?
+  (fn (modules)
+    (if (selfhost/commit::vec? modules)
+      ((selfhost/pkg-snapshot::modules-valid-loop? modules) 0)
+      false)))
+
+(def selfhost/pkg-snapshot::facts-valid?
+  (fn (facts)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? facts)
+        [:modules :name :obligations :pkg :version])
+      (if
+        (selfhost/commit::nonempty-str?
+          ((core/map::get facts) (quote :pkg)))
+        (if
+          (selfhost/commit::nonempty-str?
+            ((core/map::get facts) (quote :name)))
+          (if
+            (selfhost/commit::nonempty-str?
+              ((core/map::get facts) (quote :version)))
+            (if
+              (selfhost/commit::obligation-vector?
+                ((core/map::get facts) (quote :obligations)))
+              (selfhost/pkg-snapshot::modules-valid?
+                ((core/map::get facts) (quote :modules)))
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-snapshot::object
+  (fn (term)
+    (let ((printed (selfhost/printer::print-term term)))
+      (let ((bytes (core/str::to-utf8 printed)))
+        {
+          :bytes bytes
+          :h (core/bytes::to-hex (core/crypto::blake3 bytes))
+          :term term}))))
+
+(def selfhost/pkg-snapshot::build-modules-loop
+  (fn (modules)
+    (fn (index)
+      (fn (artifacts)
+        (fn (snapshot-modules)
+          (if ((core/int::eq? index) (core/vec::len modules))
+            {:artifacts artifacts :modules snapshot-modules}
+            (let ((module ((core/vec::get modules) index)))
+              (let
+                ((object
+                    (selfhost/pkg-snapshot::object
+                      ((core/map::get module) (quote :module)))))
+                (((((selfhost/pkg-snapshot::build-modules-loop modules)
+                      ((core/int::add index) 1))
+                    ((core/vec::push artifacts) object))
+                  ((core/vec::push snapshot-modules)
+                    {
+                      :hash ((core/map::get object) (quote :h))
+                      :module-h ((core/map::get module) (quote :module-h))
+                      :path ((core/map::get module) (quote :path))})))))))))))
+
+(def selfhost/pkg-snapshot::build
+  (fn (facts)
+    (let
+      ((built
+          ((((selfhost/pkg-snapshot::build-modules-loop
+                  ((core/map::get facts) (quote :modules))) 0) []) [])))
+      (let
+        ((snapshot-term
+            {
+              :kind (quote :package)
+              :modules ((core/map::get built) (quote :modules))
+              :obligations ((core/map::get facts) (quote :obligations))
+              :pkg/name ((core/map::get facts) (quote :name))
+              :pkg/version ((core/map::get facts) (quote :version))
+              :type (quote :vcs/snapshot)
+              :v 1}))
+        (let ((snapshot (selfhost/pkg-snapshot::object snapshot-term)))
+          {
+            :artifacts
+              ((core/vec::push
+                  ((core/map::get built) (quote :artifacts))) snapshot)
+            :modules ((core/map::get built) (quote :modules))
+            :snapshot ((core/map::get snapshot) (quote :h))})))))
+
+(def selfhost/pkg-snapshot::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (value)
+        (fn (code)
+          (fn (message)
+            {
+              :code code
+              :kind "genesis/pkg-snapshot-authority-result-v0.1"
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-snapshot::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-snapshot::result request-h) true) value) nil) nil))))
+
+(def selfhost/pkg-snapshot::reject
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((selfhost/pkg-snapshot::result request-h) false) nil) code) message)))))
+
+(def core/pkg::snapshot-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if
+        ((selfhost/pkg-lock-read::exact-map? request) [:facts :kind :v])
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (version ((core/map::get request) (quote :v)))
+            (facts ((core/map::get request) (quote :facts))))
+          (if
+            (if (selfhost/pkg-lock-read::str? kind)
+              ((core/eq? kind) "genesis/pkg-snapshot-authority-request-v0.1")
+              false)
+            (if
+              (if (selfhost/pkg-lock-read::int? version)
+                ((core/int::eq? version) 1)
+                false)
+              (if (selfhost/pkg-snapshot::facts-valid? facts)
+                ((selfhost/pkg-snapshot::accept request-h)
+                  (selfhost/pkg-snapshot::build facts))
+                (((selfhost/pkg-snapshot::reject request-h) "core/pkg/bad-package")
+                  "snapshot facts are malformed or module identity mismatched"))
+              (((selfhost/pkg-snapshot::reject request-h) "core/pkg/bad-authority-request")
+                "request :v must be 1"))
+            (((selfhost/pkg-snapshot::reject request-h) "core/pkg/bad-authority-request")
+              "request :kind mismatch")))
+        (((selfhost/pkg-snapshot::reject request-h) "core/pkg/bad-authority-request")
+          "request fields mismatch")))))
