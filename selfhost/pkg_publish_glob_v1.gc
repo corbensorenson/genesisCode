@@ -1,0 +1,463 @@
+(def selfhost/pkg-publish-glob::good
+  (fn (value) {:ok true :value value}))
+
+(def selfhost/pkg-publish-glob::bad {:ok false :value false})
+
+(def selfhost/pkg-publish-glob::byte-at
+  (fn (bytes)
+    (fn (index)
+      (let ((length (core/bytes::len bytes)))
+        (if ((core/int::eq? index) length)
+          selfhost/pkg-publish-glob::bad
+          (selfhost/pkg-publish-glob::good
+            {:byte ((core/bytes::get bytes) index) :next ((core/int::add index) 1)}))))))
+
+(def selfhost/pkg-publish-glob::byte-equal
+  (fn (pattern-byte)
+    (fn (text-byte)
+      ((core/int::eq?
+          ((core/map::get pattern-byte) (quote :byte)))
+        ((core/map::get text-byte) (quote :byte))))))
+
+(def selfhost/pkg-publish-glob::skip-stars
+  (fn (pattern)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len pattern))
+        index
+        (if ((core/int::eq? ((core/bytes::get pattern) index)) 42)
+          ((selfhost/pkg-publish-glob::skip-stars pattern) ((core/int::add index) 1))
+          index)))))
+
+(def selfhost/pkg-publish-glob::recursive-component?
+  (fn (pattern)
+    (fn (index)
+      (let ((length (core/bytes::len pattern)))
+        (if ((core/int::lt? ((core/int::add index) 2)) length)
+          (if
+            ((core/int::eq? ((core/bytes::get pattern) ((core/int::add index) 1))) 42)
+            (if
+              ((core/int::eq? ((core/bytes::get pattern) ((core/int::add index) 2))) 47)
+              (if ((core/int::eq? index) 0)
+                true
+                ((core/int::eq?
+                    ((core/bytes::get pattern) ((core/int::sub index) 1)))
+                  47))
+              false)
+            false)
+          false)))))
+
+(def selfhost/pkg-publish-glob::star
+  (fn (pattern)
+    (fn (pattern-index)
+      (fn (text)
+        (fn (text-index)
+          (let ((next-pattern ((selfhost/pkg-publish-glob::skip-stars pattern) pattern-index)))
+            (if ((core/int::eq? next-pattern) (core/bytes::len pattern))
+              (selfhost/pkg-publish-glob::good true)
+              (((((selfhost/pkg-publish-glob::star-loop pattern) next-pattern) text)
+                  text-index)
+                (core/bytes::len text)))))))))
+
+(def selfhost/pkg-publish-glob::star-loop
+  (fn (pattern)
+    (fn (pattern-index)
+      (fn (text)
+        (fn (text-index)
+          (fn (text-length)
+            (let
+              ((matched
+                  ((((selfhost/pkg-publish-glob::match-loop pattern) pattern-index) text)
+                    text-index)))
+              (if ((core/map::get matched) (quote :ok))
+                (if ((core/map::get matched) (quote :value))
+                  matched
+                  (if ((core/int::eq? text-index) text-length)
+                    matched
+                    (let ((next ((selfhost/pkg-publish-glob::byte-at text) text-index)))
+                      (if ((core/map::get next) (quote :ok))
+                        (((((selfhost/pkg-publish-glob::star-loop pattern) pattern-index) text)
+                            ((core/map::get
+                                ((core/map::get next) (quote :value)))
+                              (quote :next)))
+                          text-length)
+                        selfhost/pkg-publish-glob::bad))))
+                matched))))))))
+
+(def selfhost/pkg-publish-glob::find-class-end
+  (fn (pattern)
+    (fn (index)
+      (if ((core/int::eq? index) (core/bytes::len pattern))
+        -1
+        (let ((byte ((core/bytes::get pattern) index)))
+          (if ((core/int::eq? byte) 92)
+            (if ((core/int::eq? ((core/int::add index) 1)) (core/bytes::len pattern))
+              -1
+              ((selfhost/pkg-publish-glob::find-class-end pattern)
+                ((core/int::add index) 2)))
+            (if ((core/int::eq? byte) 93)
+              index
+              ((selfhost/pkg-publish-glob::find-class-end pattern)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/pkg-publish-glob::class-scalar
+  (fn (pattern)
+    (fn (index)
+      (if ((core/int::eq? ((core/bytes::get pattern) index)) 92)
+        ((selfhost/pkg-publish-glob::byte-at pattern) ((core/int::add index) 1))
+        ((selfhost/pkg-publish-glob::byte-at pattern) index)))))
+
+(def selfhost/pkg-publish-glob::in-range?
+  (fn (value)
+    (fn (low)
+      (fn (high)
+        (if ((core/int::lt? value) low)
+          false
+          (if ((core/int::lt? high) value) false true))))))
+
+(def selfhost/pkg-publish-glob::class-items
+  (fn (pattern)
+    (fn (index)
+      (fn (end)
+        (fn (text-cp)
+          (fn (matched)
+            (if ((core/int::eq? index) end)
+              (selfhost/pkg-publish-glob::good matched)
+              (let ((first ((selfhost/pkg-publish-glob::class-scalar pattern) index)))
+                (if ((core/map::get first) (quote :ok))
+                  (let ((first-value ((core/map::get first) (quote :value))))
+                    (let ((next ((core/map::get first-value) (quote :next))))
+                      (let
+                        ((range?
+                            (if ((core/int::lt? next) end)
+                              ((core/int::eq? ((core/bytes::get pattern) next)) 45)
+                              false)))
+                        (if range?
+                          (let ((range-start ((core/int::add next) 1)))
+                            (if ((core/int::eq? range-start) end)
+                              selfhost/pkg-publish-glob::bad
+                              (let
+                                ((last
+                                    ((selfhost/pkg-publish-glob::class-scalar pattern)
+                                      range-start)))
+                                (if ((core/map::get last) (quote :ok))
+                                  (let
+                                    ((last-value ((core/map::get last) (quote :value))))
+                                    (if
+                                      ((core/int::lt?
+                                          ((core/map::get last-value) (quote :byte)))
+                                        ((core/map::get first-value) (quote :byte)))
+                                      selfhost/pkg-publish-glob::bad
+                                      (((((selfhost/pkg-publish-glob::class-items pattern)
+                                                ((core/map::get last-value) (quote :next)))
+                                            end)
+                                          text-cp)
+                                        (if matched
+                                          true
+                                          (((selfhost/pkg-publish-glob::in-range? text-cp)
+                                              ((core/map::get first-value) (quote :byte)))
+                                            ((core/map::get last-value) (quote :byte)))))))
+                                  selfhost/pkg-publish-glob::bad))))
+                          (((((selfhost/pkg-publish-glob::class-items pattern) next) end)
+                              text-cp)
+                            (if matched
+                              true
+                              ((core/int::eq?
+                                  ((core/map::get first-value) (quote :byte)))
+                                text-cp)))))))
+                  selfhost/pkg-publish-glob::bad)))))))))
+
+(def selfhost/pkg-publish-glob::class
+  (fn (pattern)
+    (fn (index)
+      (fn (text)
+        (fn (text-index)
+          (let ((end ((selfhost/pkg-publish-glob::find-class-end pattern) index)))
+            (if ((core/int::lt? end) 0)
+              selfhost/pkg-publish-glob::bad
+              (if ((core/int::eq? index) end)
+                selfhost/pkg-publish-glob::bad
+                (let ((text-scalar ((selfhost/pkg-publish-glob::byte-at text) text-index)))
+                  (if ((core/map::get text-scalar) (quote :ok))
+                    (let
+                      ((negated
+                          (if ((core/int::eq? ((core/bytes::get pattern) index)) 33)
+                            true
+                            false)))
+                      (let ((items-start (if negated ((core/int::add index) 1) index)))
+                        (if ((core/int::eq? items-start) end)
+                          selfhost/pkg-publish-glob::bad
+                          (let
+                            ((class-result
+                                (((((selfhost/pkg-publish-glob::class-items pattern) items-start)
+                                      end)
+                                    ((core/map::get
+                                        ((core/map::get text-scalar) (quote :value)))
+                                      (quote :byte)))
+                                  false)))
+                            (if ((core/map::get class-result) (quote :ok))
+                              (let
+                                ((contained
+                                    ((core/map::get class-result) (quote :value))))
+                                (if (if negated (if contained false true) contained)
+                                  ((((selfhost/pkg-publish-glob::match-loop pattern)
+                                        ((core/int::add end) 1))
+                                      text)
+                                    ((core/map::get
+                                        ((core/map::get text-scalar) (quote :value)))
+                                      (quote :next)))
+                                  (selfhost/pkg-publish-glob::good false)))
+                              class-result)))))
+                    (selfhost/pkg-publish-glob::good false)))))))))))
+
+(def selfhost/pkg-publish-glob::find-brace-end
+  (fn (pattern)
+    (fn (index)
+      (fn (depth)
+        (if ((core/int::eq? index) (core/bytes::len pattern))
+          -1
+          (let ((byte ((core/bytes::get pattern) index)))
+            (if ((core/int::eq? byte) 92)
+              (if ((core/int::eq? ((core/int::add index) 1)) (core/bytes::len pattern))
+                -1
+                (((selfhost/pkg-publish-glob::find-brace-end pattern)
+                    ((core/int::add index) 2))
+                  depth))
+              (if ((core/int::eq? byte) 123)
+                (((selfhost/pkg-publish-glob::find-brace-end pattern)
+                    ((core/int::add index) 1))
+                  ((core/int::add depth) 1))
+                (if ((core/int::eq? byte) 125)
+                  (if ((core/int::eq? depth) 0)
+                    index
+                    (((selfhost/pkg-publish-glob::find-brace-end pattern)
+                        ((core/int::add index) 1))
+                      ((core/int::sub depth) 1)))
+                  (((selfhost/pkg-publish-glob::find-brace-end pattern)
+                      ((core/int::add index) 1))
+                    depth))))))))))
+
+(def selfhost/pkg-publish-glob::brace-alternatives
+  (fn (pattern)
+    (fn (start)
+      (fn (index)
+        (fn (end)
+          (fn (depth)
+            (fn (suffix)
+              (fn (text)
+                (fn (text-index)
+                  (fn (saw-nonempty)
+                    (if ((core/int::eq? index) end)
+                      (if ((core/int::eq? start) end)
+                        (if saw-nonempty
+                          (selfhost/pkg-publish-glob::good false)
+                          ((((selfhost/pkg-publish-glob::match-loop suffix) 0) text)
+                            text-index))
+                        (let
+                          ((alternative
+                              (((core/bytes::slice pattern) start)
+                                ((core/int::sub end) start))))
+                          ((((selfhost/pkg-publish-glob::match-loop
+                                  ((core/bytes::concat alternative) suffix)) 0)
+                              text)
+                            text-index)))
+                      (let ((byte ((core/bytes::get pattern) index)))
+                        (if ((core/int::eq? byte) 92)
+                          (if ((core/int::eq? ((core/int::add index) 1)) end)
+                            selfhost/pkg-publish-glob::bad
+                            (((((((((selfhost/pkg-publish-glob::brace-alternatives pattern) start)
+                                              ((core/int::add index) 2))
+                                          end)
+                                        depth)
+                                      suffix)
+                                    text)
+                                  text-index)
+                                saw-nonempty))
+                          (if ((core/int::eq? byte) 123)
+                            (((((((((selfhost/pkg-publish-glob::brace-alternatives pattern) start)
+                                              ((core/int::add index) 1))
+                                          end)
+                                        ((core/int::add depth) 1))
+                                      suffix)
+                                    text)
+                                  text-index)
+                                saw-nonempty)
+                            (if ((core/int::eq? byte) 125)
+                              (if ((core/int::eq? depth) 0)
+                                selfhost/pkg-publish-glob::bad
+                                (((((((((selfhost/pkg-publish-glob::brace-alternatives pattern) start)
+                                                  ((core/int::add index) 1))
+                                              end)
+                                            ((core/int::sub depth) 1))
+                                          suffix)
+                                        text)
+                                      text-index)
+                                    saw-nonempty))
+                              (if
+                                (if ((core/int::eq? byte) 44)
+                                  ((core/int::eq? depth) 0)
+                                  false)
+                                (if ((core/int::eq? start) index)
+                                  (((((((((selfhost/pkg-publish-glob::brace-alternatives pattern)
+                                                    ((core/int::add index) 1))
+                                                  ((core/int::add index) 1))
+                                                end)
+                                              depth)
+                                            suffix)
+                                          text)
+                                        text-index)
+                                      saw-nonempty)
+                                  (let
+                                    ((alternative
+                                        (((core/bytes::slice pattern) start)
+                                          ((core/int::sub index) start))))
+                                    (let
+                                      ((attempt
+                                          ((((selfhost/pkg-publish-glob::match-loop
+                                                  ((core/bytes::concat alternative) suffix)) 0)
+                                              text)
+                                            text-index)))
+                                      (if ((core/map::get attempt) (quote :ok))
+                                        (if ((core/map::get attempt) (quote :value))
+                                          attempt
+                                          (((((((((selfhost/pkg-publish-glob::brace-alternatives
+                                                              pattern)
+                                                            ((core/int::add index) 1))
+                                                          ((core/int::add index) 1))
+                                                        end)
+                                                      depth)
+                                                    suffix)
+                                                  text)
+                                                text-index)
+                                              true))
+                                        attempt))))
+                                (((((((((selfhost/pkg-publish-glob::brace-alternatives pattern)
+                                                  start)
+                                                ((core/int::add index) 1))
+                                              end)
+                                            depth)
+                                          suffix)
+                                        text)
+                                      text-index)
+                                    saw-nonempty)))))))))))))))))
+
+(def selfhost/pkg-publish-glob::brace
+  (fn (pattern)
+    (fn (index)
+      (fn (text)
+        (fn (text-index)
+          (let ((end (((selfhost/pkg-publish-glob::find-brace-end pattern) index) 0)))
+            (if ((core/int::lt? end) 0)
+              selfhost/pkg-publish-glob::bad
+              (let
+                ((suffix-start ((core/int::add end) 1))
+                  (length (core/bytes::len pattern)))
+                (let
+                  ((suffix
+                      (((core/bytes::slice pattern) suffix-start)
+                        ((core/int::sub length) suffix-start))))
+                  (((((((((selfhost/pkg-publish-glob::brace-alternatives pattern) index)
+                                    index)
+                                  end)
+                                0)
+                              suffix)
+                            text)
+                          text-index)
+                        false))))))))))
+
+(def selfhost/pkg-publish-glob::literal
+  (fn (pattern)
+    (fn (pattern-index)
+      (fn (text)
+        (fn (text-index)
+          (let
+            ((pattern-scalar
+                ((selfhost/pkg-publish-glob::byte-at pattern) pattern-index))
+              (text-scalar ((selfhost/pkg-publish-glob::byte-at text) text-index)))
+            (if ((core/map::get pattern-scalar) (quote :ok))
+              (if ((core/map::get text-scalar) (quote :ok))
+                (let
+                  ((pattern-value ((core/map::get pattern-scalar) (quote :value)))
+                    (text-value ((core/map::get text-scalar) (quote :value))))
+                  (if ((selfhost/pkg-publish-glob::byte-equal pattern-value) text-value)
+                    ((((selfhost/pkg-publish-glob::match-loop pattern)
+                        ((core/map::get pattern-value) (quote :next)))
+                      text)
+                    ((core/map::get text-value) (quote :next)))
+                    (selfhost/pkg-publish-glob::good false)))
+                (selfhost/pkg-publish-glob::good false))
+              selfhost/pkg-publish-glob::bad)))))))
+
+(def selfhost/pkg-publish-glob::match-loop
+  (fn (pattern)
+    (fn (pattern-index)
+      (fn (text)
+        (fn (text-index)
+          (if ((core/int::eq? pattern-index) (core/bytes::len pattern))
+            (selfhost/pkg-publish-glob::good
+              ((core/int::eq? text-index) (core/bytes::len text)))
+            (let ((byte ((core/bytes::get pattern) pattern-index)))
+              (if ((core/int::eq? byte) 42)
+                (if ((selfhost/pkg-publish-glob::recursive-component? pattern) pattern-index)
+                  (let
+                    ((without-component
+                        ((((selfhost/pkg-publish-glob::match-loop pattern)
+                              ((core/int::add pattern-index) 3))
+                            text)
+                          text-index)))
+                    (if ((core/map::get without-component) (quote :ok))
+                      (if ((core/map::get without-component) (quote :value))
+                        without-component
+                        ((((selfhost/pkg-publish-glob::star pattern)
+                            ((core/int::add pattern-index) 1))
+                          text)
+                        text-index))
+                      without-component))
+                  ((((selfhost/pkg-publish-glob::star pattern)
+                      ((core/int::add pattern-index) 1))
+                    text)
+                  text-index))
+                (if ((core/int::eq? byte) 63)
+                  (let ((text-scalar ((selfhost/pkg-publish-glob::byte-at text) text-index)))
+                    (if ((core/map::get text-scalar) (quote :ok))
+                      ((((selfhost/pkg-publish-glob::match-loop pattern)
+                          ((core/int::add pattern-index) 1))
+                        text)
+                      ((core/map::get
+                          ((core/map::get text-scalar) (quote :value)))
+                        (quote :next)))
+                      (selfhost/pkg-publish-glob::good false)))
+                  (if ((core/int::eq? byte) 91)
+                    ((((selfhost/pkg-publish-glob::class pattern)
+                        ((core/int::add pattern-index) 1))
+                      text)
+                    text-index)
+                    (if ((core/int::eq? byte) 123)
+                      ((((selfhost/pkg-publish-glob::brace pattern)
+                          ((core/int::add pattern-index) 1))
+                        text)
+                      text-index)
+                      (if ((core/int::eq? byte) 92)
+                        (if
+                          ((core/int::eq?
+                              ((core/int::add pattern-index) 1))
+                            (core/bytes::len pattern))
+                          selfhost/pkg-publish-glob::bad
+                          ((((selfhost/pkg-publish-glob::literal pattern)
+                              ((core/int::add pattern-index) 1))
+                            text)
+                          text-index))
+                        (if ((core/int::eq? byte) 125)
+                          selfhost/pkg-publish-glob::bad
+                          ((((selfhost/pkg-publish-glob::literal pattern) pattern-index)
+                              text)
+                            text-index))))))))))))))
+
+(def selfhost/pkg-publish-glob::match
+  (fn (pattern)
+    (fn (value)
+      (if (selfhost/pkg-lock-read::str? pattern)
+        (if (selfhost/pkg-lock-read::str? value)
+          ((((selfhost/pkg-publish-glob::match-loop (core/str::to-utf8 pattern)) 0)
+              (core/str::to-utf8 value)) 0)
+          selfhost/pkg-publish-glob::bad)
+        selfhost/pkg-publish-glob::bad))))

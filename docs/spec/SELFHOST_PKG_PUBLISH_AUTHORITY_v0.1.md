@@ -201,13 +201,17 @@ Evidence kinds and roles are ASCII-trimmed and receive one leading `:` when abse
 semantic sets use canonical term order; commit vectors and object requests preserve source order.
 Obligation-specific evidence requirements apply only when the exact obligation is on the commit.
 
-Policy patterns use the v1 portable-ref glob grammar: UTF-8 literals, backslash escaping, `?` for
-one Unicode scalar, `*` or `**` for zero or more Unicode scalars including `/`, bracket classes and
-ranges with leading `!` negation, and comma-separated brace alternatives. Matching is
-case-sensitive and anchored to the complete ref. Invalid escapes, classes, ranges, or alternatives
-make the policy invalid. This freezes the existing default `globset` behavior as a language-level
-contract; production GenesisCode MUST parse and match it directly. A Rust glob result is not an
-admissible mechanism fact.
+Policy patterns use the v1 portable-ref glob grammar over UTF-8 bytes: UTF-8 literal byte
+sequences, backslash escaping, `?` for exactly one byte, `*` or `**` for zero or more bytes
+including `/`, bracket byte classes and ranges with leading `!` negation, and brace expansion.
+A component-boundary `**/` additionally matches zero complete path components, so
+`refs/**/main` matches `refs/main`. Brace groups may contain nested or singleton alternatives;
+empty alternatives are ignored when any nonempty alternative exists, while an all-empty group
+matches the empty byte sequence. Matching is case-sensitive and anchored to the complete ref.
+Invalid escapes, unclosed classes or braces, and descending byte ranges make the policy invalid.
+This freezes the existing default `globset` behavior as a language-level contract; production
+GenesisCode MUST parse and match it directly. A Rust glob result is not an admissible mechanism
+fact.
 
 Frozen prefixes use exact Unicode scalar prefix comparison. Excludes override patterns within a
 class. Class precedence is always tags, main, dev and is not map iteration order.

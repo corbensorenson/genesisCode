@@ -19,6 +19,9 @@ pub(crate) use bridge::{PkgBridgeDecision, PkgBridgeFacts, PkgBridgeObject};
 #[path = "pkg_snapshot_authority.rs"]
 mod snapshot;
 pub(crate) use snapshot::PkgSnapshotDecision;
+#[cfg(test)]
+#[path = "pkg_publish_glob_tests.rs"]
+mod publish_glob_tests;
 
 const BINDING: &str = "core/pkg::lock-read-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-read-authority-request-v0.1";
