@@ -20,6 +20,9 @@ pub(crate) use bridge::{PkgBridgeDecision, PkgBridgeFacts, PkgBridgeObject};
 mod snapshot;
 pub(crate) use snapshot::PkgSnapshotDecision;
 #[cfg(test)]
+#[path = "pkg_publish_authority_inspect_tests.rs"]
+mod publish_authority_inspect_tests;
+#[cfg(test)]
 #[path = "pkg_publish_glob_tests.rs"]
 mod publish_glob_tests;
 #[cfg(test)]

@@ -1,0 +1,91 @@
+(def selfhost/pkg-publish-authority::obligation-text
+  (fn (value)
+    (if (selfhost/pkg-publish-authority::str? value)
+      value
+      (if (selfhost/pkg-publish-authority::sym? value) (core/sym::to-str value) nil))))
+
+(def selfhost/pkg-publish-authority::obligation-member-loop?
+  (fn (obligations required index)
+    (if ((core/int::eq? index) (core/vec::len obligations))
+      false
+      (if
+        ((core/eq?
+            (selfhost/pkg-publish-authority::obligation-text
+              ((core/vec::get obligations) index))) required)
+        true
+        (selfhost/pkg-publish-authority::obligation-member-loop? obligations required
+          ((core/int::add index) 1))))))
+
+(def selfhost/pkg-publish-authority::required-obligations-loop?
+  (fn (required obligations index)
+    (if ((core/int::eq? index) (core/vec::len required))
+      true
+      (if
+        (selfhost/pkg-publish-authority::obligation-member-loop? obligations
+          ((core/vec::get required) index) 0)
+        (selfhost/pkg-publish-authority::required-obligations-loop? required obligations
+          ((core/int::add index) 1))
+        false))))
+
+(def selfhost/pkg-publish-authority::required-obligations-present?
+  (fn (class commit)
+    (selfhost/pkg-publish-authority::required-obligations-loop?
+      ((selfhost/pkg-publish-authority::field class) (quote :required-obligations))
+      ((selfhost/pkg-publish-authority::field commit) (quote :obligations)) 0)))
+
+(def selfhost/pkg-publish-authority::inspect-value
+  (fn (commit)
+    (let
+      ((base
+          {
+            :attestation-hashes
+              ((selfhost/pkg-publish-authority::field commit) (quote :attestations))
+            :evidence-hashes
+              ((selfhost/pkg-publish-authority::field commit) (quote :evidence))}))
+      (((core/map::put base) (quote :inspect-h)) (selfhost/hash::hash-term base)))))
+
+(def selfhost/pkg-publish-authority::reject-policy-result
+  (fn (request selection)
+    (let ((code ((selfhost/pkg-publish-authority::field selection) (quote :code))))
+      (if ((core/sym::eq? code) (quote :ref-frozen))
+        (selfhost/pkg-publish-authority::reject request "core/pkg/ref-frozen"
+          "publication ref is frozen by policy")
+        (if ((core/sym::eq? code) (quote :no-policy-class))
+          (selfhost/pkg-publish-authority::reject request "core/pkg/no-policy-class"
+            "publication ref has no matching policy class")
+          (selfhost/pkg-publish-authority::reject request "core/pkg/bad-policy"
+            "publication policy is invalid"))))))
+
+(def selfhost/pkg-publish-authority::inspect-facts
+  (fn (request facts)
+    (let
+      ((commit ((selfhost/pkg-publish-authority::field facts) (quote :commit)))
+        (policy ((selfhost/pkg-publish-authority::field facts) (quote :policy)))
+        (refname ((selfhost/pkg-publish-authority::field facts) (quote :ref))))
+      (let ((selection ((selfhost/pkg-publish-policy::select policy) refname)))
+        (if ((selfhost/pkg-publish-authority::field selection) (quote :ok))
+          (if (selfhost/commit::commit? commit)
+            (let ((class ((selfhost/pkg-publish-authority::field selection) (quote :value))))
+              (if (selfhost/pkg-publish-authority::required-obligations-present? class commit)
+                (selfhost/pkg-publish-authority::accept request
+                  (selfhost/pkg-publish-authority::inspect-value commit))
+                (selfhost/pkg-publish-authority::reject request
+                  "core/pkg/missing-obligation"
+                  "commit does not satisfy the selected class obligations")))
+            (selfhost/pkg-publish-authority::reject request "core/pkg/bad-commit"
+              "publication commit is invalid"))
+          (selfhost/pkg-publish-authority::reject-policy-result request selection))))))
+
+(def selfhost/pkg-publish-authority::inspect
+  (fn (request)
+    (if (selfhost/pkg-publish-authority::request-shape? request)
+      (let ((facts ((selfhost/pkg-publish-authority::field request) (quote :facts))))
+        (if (selfhost/pkg-publish-authority::facts-shape? facts)
+          (if (selfhost/pkg-publish-authority::facts-identities-match? facts)
+            (selfhost/pkg-publish-authority::inspect-facts request facts)
+            (selfhost/pkg-publish-authority::reject request "core/pkg/bad-payload"
+              "policy or commit identity contradicts its raw term"))
+          (selfhost/pkg-publish-authority::reject request "core/pkg/bad-payload"
+            "publish facts fields or values are invalid")))
+      (selfhost/pkg-publish-authority::reject request "core/pkg/bad-authority-request"
+        "inspect request envelope is invalid"))))

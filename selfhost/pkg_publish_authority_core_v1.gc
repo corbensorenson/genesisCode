@@ -1,0 +1,138 @@
+(def selfhost/pkg-publish-authority::tag core/data::tag)
+
+(def selfhost/pkg-publish-authority::nil? core/list::is-nil?)
+
+(def selfhost/pkg-publish-authority::map?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-authority::tag value)) (quote :map))))
+
+(def selfhost/pkg-publish-authority::str?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-authority::tag value)) (quote :str))))
+
+(def selfhost/pkg-publish-authority::sym?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-authority::tag value)) (quote :sym))))
+
+(def selfhost/pkg-publish-authority::int?
+  (fn (value)
+    ((core/sym::eq? (selfhost/pkg-publish-authority::tag value)) (quote :int))))
+
+(def selfhost/pkg-publish-authority::field
+  (fn (map)
+    (fn (key)
+      (if (selfhost/pkg-publish-authority::map? map) ((core/map::get map) key) nil))))
+
+(def selfhost/pkg-publish-authority::nonempty-str?
+  (fn (value)
+    (if (selfhost/pkg-publish-authority::str? value)
+      ((core/int::lt? 0) (core/str::len value))
+      false)))
+
+(def selfhost/pkg-publish-authority::nonnegative-u64?
+  (fn (value)
+    (if (selfhost/pkg-publish-authority::int? value)
+      (if ((core/int::lt? value) 0)
+        false
+        ((core/int::lt? value) 18446744073709551616))
+      false)))
+
+(def selfhost/pkg-publish-authority::artifact-hash
+  (fn (term)
+    (let ((printed (selfhost/printer::print-term term)))
+      (if (core/error::is? printed)
+        nil
+        (let ((bytes (core/str::to-utf8 printed)))
+          (if (core/error::is? bytes)
+            nil
+            (let ((digest (core/crypto::blake3 bytes)))
+              (if (core/error::is? digest) nil (core/bytes::to-hex digest)))))))))
+
+(def selfhost/pkg-publish-authority::result
+  (fn (request ok code message value)
+    {
+      :code code
+      :kind "genesis/pkg-publish-authority-result-v0.1"
+      :message message
+      :ok ok
+      :request-h (selfhost/hash::hash-term request)
+      :v 1
+      :value value}))
+
+(def selfhost/pkg-publish-authority::accept
+  (fn (request value)
+    (selfhost/pkg-publish-authority::result request true nil nil value)))
+
+(def selfhost/pkg-publish-authority::reject
+  (fn (request code message)
+    (selfhost/pkg-publish-authority::result request false code message nil)))
+
+(def selfhost/pkg-publish-authority::request-shape?
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request) [:facts :kind :mechanism :phase :v])
+      (if
+        ((core/eq? ((selfhost/pkg-publish-authority::field request) (quote :kind)))
+          "genesis/pkg-publish-authority-request-v0.1")
+        (if
+          (if
+            (selfhost/pkg-publish-authority::int?
+              ((selfhost/pkg-publish-authority::field request) (quote :v)))
+            ((core/int::eq?
+                ((selfhost/pkg-publish-authority::field request) (quote :v))) 1)
+            false)
+          (if
+            (if
+              (selfhost/pkg-publish-authority::sym?
+                ((selfhost/pkg-publish-authority::field request) (quote :phase)))
+              ((core/sym::eq?
+                  ((selfhost/pkg-publish-authority::field request) (quote :phase)))
+                (quote :inspect))
+              false)
+            (selfhost/pkg-publish-authority::nil?
+              ((selfhost/pkg-publish-authority::field request) (quote :mechanism)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::facts-shape?
+  (fn (facts)
+    (if
+      ((selfhost/store-authority::exact-map? facts)
+        [:commit :commit-h :depth :expected-old :policy :policy-h :ref :remote])
+      (let
+        ((commit-h ((selfhost/pkg-publish-authority::field facts) (quote :commit-h)))
+          (depth ((selfhost/pkg-publish-authority::field facts) (quote :depth)))
+          (expected-old
+            ((selfhost/pkg-publish-authority::field facts) (quote :expected-old)))
+          (policy-h ((selfhost/pkg-publish-authority::field facts) (quote :policy-h)))
+          (refname ((selfhost/pkg-publish-authority::field facts) (quote :ref)))
+          (remote ((selfhost/pkg-publish-authority::field facts) (quote :remote))))
+        (if (selfhost/store-authority::hash? commit-h)
+          (if (selfhost/pkg-publish-authority::nonnegative-u64? depth)
+            (if
+              (if (selfhost/pkg-publish-authority::nil? expected-old)
+                true
+                (selfhost/store-authority::hash? expected-old))
+              (if (selfhost/store-authority::hash? policy-h)
+                (if (selfhost/pkg-publish-authority::nonempty-str? refname)
+                  (selfhost/pkg-publish-authority::nonempty-str? remote)
+                  false)
+                false)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-publish-authority::facts-identities-match?
+  (fn (facts)
+    (let
+      ((commit ((selfhost/pkg-publish-authority::field facts) (quote :commit)))
+        (commit-h ((selfhost/pkg-publish-authority::field facts) (quote :commit-h)))
+        (policy ((selfhost/pkg-publish-authority::field facts) (quote :policy)))
+        (policy-h ((selfhost/pkg-publish-authority::field facts) (quote :policy-h))))
+      (if
+        ((core/eq? (selfhost/pkg-publish-authority::artifact-hash commit)) commit-h)
+        ((core/eq? (selfhost/pkg-publish-authority::artifact-hash policy)) policy-h)
+        false))))
