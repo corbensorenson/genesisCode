@@ -1,0 +1,47 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::semver-select-authority",
+  "contentIdentitySha256": "c38194dc913cc6ae3e2fc9748439e5c8177ea251798fe9e08390f0ee5d1ffea5",
+  "decisionInventory": [
+    "closed-candidate-admission",
+    "highest-and-lowest-policy-extremum-selection",
+    "equal-precedence-lexicographic-ref-tie-break",
+    "empty-candidate-no-match-decision",
+    "request-bound-exact-member-result"
+  ],
+  "hostMechanisms": [
+    "artifact-only-shared-context-bootstrap-and-bounded-evaluation",
+    "semver-syntax-range-matching-and-precedence-ranking",
+    "local-and-remote-ref-observation",
+    "registry-network-and-artifact-transport",
+    "strict-result-membership-and-contradiction-checking"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_semver_select_authority.py",
+  "kind": "genesis/selfhost-pkg-semver-select-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "complete-graph-solving",
+    "generic-lock-codec-authority",
+    "h2-package-resolution",
+    "r4-2-e-closure",
+    "ref-and-registry-transport-authority",
+    "release-qualification",
+    "semver-grammar-and-range-matching-authority",
+    "sh-c-closure",
+    "workspace-authority"
+  ],
+  "productionEntrypoints": ["genesis", "genesis_wasi"],
+  "requestKind": "genesis/pkg-semver-select-request-v0.1",
+  "resultKind": "genesis/pkg-semver-select-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/pkg_semver_select_authority_v1.gc",
+  "sourceSha256": "b305525c15d03ec97ccfd6eade5ccc5d11062ce41c03ad995769b2ccc0030354",
+  "spec": "docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

@@ -12,11 +12,15 @@ mod plan;
 pub(crate) use plan::{
     PkgResolutionPlan, PkgResolutionPlanError, PkgResolutionSelector, SemverSelectionPolicy,
 };
+#[path = "pkg_semver_select_authority.rs"]
+mod semver_select;
+pub(crate) use semver_select::PkgSemverCandidate;
 
 const IDENTITY_BINDING: &str = "core/pkg::resolution-identity-authority";
 const IDENTITY_REQUEST_KIND: &str = "genesis/pkg-resolution-identity-request-v0.1";
 const IDENTITY_RESULT_KIND: &str = "genesis/pkg-resolution-identity-result-v0.1";
 const PLAN_BINDING: &str = "core/pkg::resolution-plan-authority";
+const SEMVER_SELECT_BINDING: &str = "core/pkg::semver-select-authority";
 const STEP_LIMIT: u64 = 2_000_000;
 const ALLOC_LIMIT: u64 = 4_000_000;
 
@@ -24,6 +28,7 @@ pub(crate) struct PkgResolutionIdentityAuthority {
     context: EvalCtx,
     identity_authority: Value,
     plan_authority: Value,
+    semver_select_authority: Value,
 }
 
 impl PkgResolutionIdentityAuthority {
@@ -52,12 +57,16 @@ impl PkgResolutionIdentityAuthority {
         let plan_authority = environment
             .get(PLAN_BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {PLAN_BINDING}")))?;
+        let semver_select_authority = environment
+            .get(SEMVER_SELECT_BINDING)
+            .ok_or_else(|| authority_error(format!("missing binding {SEMVER_SELECT_BINDING}")))?;
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
         Ok(Self {
             context,
             identity_authority,
             plan_authority,
+            semver_select_authority,
         })
     }
 

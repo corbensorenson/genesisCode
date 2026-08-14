@@ -1,0 +1,176 @@
+; Package semver candidate selection authority. The host supplies semver-parser
+; mechanism facts as ranks; GenesisCode owns policy and deterministic tie-breaks.
+
+(def selfhost/pkg-semver-select::vec?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :vec))))
+
+(def selfhost/pkg-semver-select::int?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :int))))
+
+(def selfhost/pkg-semver-select::candidate?
+  (fn (candidate)
+    (if (selfhost/pkg-resolution-id::map? candidate)
+      (if
+        ((selfhost/pkg-resolution-id::exact-map? candidate) [:commit :rank :ref])
+        (let
+          ((commit ((core/map::get candidate) (quote :commit)))
+           (rank ((core/map::get candidate) (quote :rank)))
+           (ref ((core/map::get candidate) (quote :ref))))
+          (if (selfhost/pkg-resolution-id::str? commit)
+            (if (selfhost/pkg-resolution-plan::hash64? commit)
+              (if (selfhost/pkg-semver-select::int? rank)
+                (if ((core/int::lt? rank) 0)
+                  false
+                  (if (selfhost/pkg-resolution-id::str? ref)
+                    ((selfhost/pkg-resolution-plan::starts-with? ref) "refs/tags/")
+                    false))
+                false)
+              false)
+            false))
+        false)
+      false)))
+
+(def selfhost/pkg-semver-select::candidates-valid?
+  (fn (candidates)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len candidates))
+        true
+        (if (selfhost/pkg-semver-select::candidate? ((core/vec::get candidates) index))
+          ((selfhost/pkg-semver-select::candidates-valid? candidates) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-semver-select::bytes-lex-lt?
+  (fn (left)
+    (fn (right)
+      (fn (index)
+        (let ((left-len (core/bytes::len left)) (right-len (core/bytes::len right)))
+          (if ((core/int::eq? index) left-len)
+            ((core/int::lt? index) right-len)
+            (if ((core/int::eq? index) right-len)
+              false
+              (let
+                ((left-byte ((core/bytes::get left) index))
+                 (right-byte ((core/bytes::get right) index)))
+                (if ((core/int::lt? left-byte) right-byte)
+                  true
+                  (if ((core/int::eq? left-byte) right-byte)
+                    (((selfhost/pkg-semver-select::bytes-lex-lt? left) right)
+                      ((core/int::add index) 1))
+                    false))))))))))
+
+(def selfhost/pkg-semver-select::str-lex-lt?
+  (fn (left)
+    (fn (right)
+      (((selfhost/pkg-semver-select::bytes-lex-lt? (core/str::to-utf8 left))
+        (core/str::to-utf8 right)) 0))))
+
+(def selfhost/pkg-semver-select::better?
+  (fn (policy)
+    (fn (candidate)
+      (fn (best)
+        (let
+          ((candidate-rank ((core/map::get candidate) (quote :rank)))
+           (best-rank ((core/map::get best) (quote :rank))))
+          (if ((core/int::eq? candidate-rank) best-rank)
+            ((selfhost/pkg-semver-select::str-lex-lt?
+              ((core/map::get candidate) (quote :ref)))
+              ((core/map::get best) (quote :ref)))
+            (if ((core/sym::eq? policy) (quote :lowest))
+              ((core/int::lt? candidate-rank) best-rank)
+              ((core/int::lt? best-rank) candidate-rank))))))))
+
+(def selfhost/pkg-semver-select::select-loop
+  (fn (policy)
+    (fn (candidates)
+      (fn (index)
+        (fn (best)
+          (if ((core/int::eq? index) (core/vec::len candidates))
+            best
+            (let ((candidate ((core/vec::get candidates) index)))
+              ((((selfhost/pkg-semver-select::select-loop policy) candidates)
+                ((core/int::add index) 1))
+                (if (core/list::is-nil? best)
+                  candidate
+                  (if (((selfhost/pkg-semver-select::better? policy) candidate) best)
+                    candidate
+                    best))))))))))
+
+(def selfhost/pkg-semver-select::reject
+  (fn (request-h)
+    (fn (message)
+      {
+        :code "core/pkg/bad-authority-request"
+        :commit nil
+        :kind "genesis/pkg-semver-select-result-v0.1"
+        :message message
+        :ok false
+        :rank nil
+        :ref nil
+        :request-h request-h
+        :v 1})))
+
+(def selfhost/pkg-semver-select::accept
+  (fn (request-h)
+    (fn (selected)
+      {
+        :code nil
+        :commit (if (core/list::is-nil? selected)
+                  nil
+                  ((core/map::get selected) (quote :commit)))
+        :kind "genesis/pkg-semver-select-result-v0.1"
+        :message nil
+        :ok true
+        :rank (if (core/list::is-nil? selected)
+                nil
+                ((core/map::get selected) (quote :rank)))
+        :ref (if (core/list::is-nil? selected)
+               nil
+               ((core/map::get selected) (quote :ref)))
+        :request-h request-h
+        :v 1})))
+
+(def core/pkg::semver-select-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-resolution-id::map? request)
+        (if
+          ((selfhost/pkg-resolution-id::exact-map? request) [:candidates :kind :op :policy :v])
+          (let
+            ((candidates ((core/map::get request) (quote :candidates)))
+             (kind ((core/map::get request) (quote :kind)))
+             (op ((core/map::get request) (quote :op)))
+             (policy ((core/map::get request) (quote :policy)))
+             (version ((core/map::get request) (quote :v))))
+            (if
+              (if (selfhost/pkg-resolution-id::str? kind)
+                ((core/eq? kind) "genesis/pkg-semver-select-request-v0.1")
+                false)
+              (if
+                (if (selfhost/pkg-resolution-id::sym? op)
+                  ((core/sym::eq? op) (quote :select))
+                  false)
+                (if
+                  (if (selfhost/pkg-semver-select::int? version)
+                    ((core/int::eq? version) 1)
+                    false)
+                  (if
+                    (if (selfhost/pkg-resolution-id::sym? policy)
+                      (if ((core/sym::eq? policy) (quote :highest))
+                        true
+                        ((core/sym::eq? policy) (quote :lowest)))
+                      false)
+                    (if (selfhost/pkg-semver-select::vec? candidates)
+                      (if ((selfhost/pkg-semver-select::candidates-valid? candidates) 0)
+                        ((selfhost/pkg-semver-select::accept request-h)
+                          ((((selfhost/pkg-semver-select::select-loop policy) candidates) 0) nil))
+                        ((selfhost/pkg-semver-select::reject request-h)
+                          "candidate fields are invalid"))
+                      ((selfhost/pkg-semver-select::reject request-h)
+                        "request :candidates must be a vector"))
+                    ((selfhost/pkg-semver-select::reject request-h)
+                      "request :policy must be :highest or :lowest"))
+                  ((selfhost/pkg-semver-select::reject request-h) "request :v must be 1"))
+                ((selfhost/pkg-semver-select::reject request-h) "request :op must be :select"))
+              ((selfhost/pkg-semver-select::reject request-h) "request :kind mismatch")))
+          ((selfhost/pkg-semver-select::reject request-h) "request fields mismatch"))
+        ((selfhost/pkg-semver-select::reject request-h) "request must be map")))))

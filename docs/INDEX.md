@@ -1,6 +1,6 @@
 # GenesisCode Docs Index
 
-Last updated: 2026-08-12
+Last updated: 2026-08-14
 
 This is the canonical entrypoint for project documentation.
 
@@ -248,6 +248,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package resolution plan profile.
 - `policies/selfhost_pkg_resolution_plan_authority_v0.1.json` - content-addressed resolution-plan decision inventory, residual host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_resolution_plan_authority.py` - independent plan source/artifact/route/no-fallback/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md` - normative partial R4.2.e semver policy-extremum, lexical tie-break, and empty-candidate authority boundary.
+- `docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package semver-selection profile.
+- `policies/selfhost_pkg_semver_select_authority_v0.1.json` - content-addressed semver-selection decisions, bounded host mechanisms, and explicit nonclaims.
+- `scripts/lib/selfhost_pkg_semver_select_authority.py` - independent source/artifact/route/decoder/ledger custody and mutation verifier.
 - `policies/selfhost_evidence_verify_authority_v0.1.json` - content-addressed verification decisions, bounded host mechanisms, runtime limits, and nonclaims.
 - `scripts/lib/selfhost_evidence_verify_authority.py` - independent source/artifact custody, route-reachability, no-fallback, separation, ledger, and mutation verifier.
 - `policies/selfhost_effect_policy_composition_v0.1.json` - content-addressed 29-decision, five-residual, bounded-runtime, host-oracle, and nonclaim profile.

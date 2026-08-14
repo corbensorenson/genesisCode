@@ -14,7 +14,7 @@ use crate::pkg_lock_read_authority::PkgLockReadAuthority;
 use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
 use crate::pkg_resolution_identity_authority::{
     PkgResolutionIdentityAuthority, PkgResolutionPlan, PkgResolutionPlanError,
-    PkgResolutionSelector, SemverSelectionPolicy,
+    PkgResolutionSelector, PkgSemverCandidate, SemverSelectionPolicy,
 };
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};

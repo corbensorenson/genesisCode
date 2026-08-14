@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "57d7bdad6f2fa7322e332995bad0e1a7856735eecf90b764440fc6b89032a27f",
+  "contentIdentitySha256": "fbb242f6c171b94500b1294e1675327ff3f367688f7a25a1d4b2697362383fcb",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2008,8 +2008,9 @@
         "Artifact-loaded GenesisCode exclusively recomputes canonical module identities and constructs the exact module objects, package snapshot, canonical bytes, raw BLAKE3 identities, and ordered storage plan for direct core/pkg-low::snapshot under genesis/selfhost-pkg-snapshot-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively constructs canonical package requirement environment fingerprints for lock, update, and install hydration under genesis/selfhost-pkg-resolution-identity-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively normalizes and classifies effect-route selectors, checks declared strategy and tag-policy coherence, normalizes semver selection policy, and decides existing-lock update admission under genesis/selfhost-pkg-resolution-plan-authority-v0.1",
+        "Artifact-loaded GenesisCode exclusively chooses highest or lowest semver candidate ranks, applies deterministic lexical ref tie-breaking, and decides empty candidate sets under genesis/selfhost-pkg-semver-select-authority-v0.1; Rust retains semver grammar, range matching, precedence ranking, and ref observation only as bounded mechanisms",
         "Artifact-loaded GenesisCode exclusively owns core/pkg-low::publish policy and class selection, commit, evidence, and assurance admission, ordered object and cryptographic requests, signer threshold, role, and independence decisions, publication provenance, and the exact core/sync::push plan under genesis/selfhost-pkg-publish-authority-v0.1",
-        "The generic Rust TOML syntax decoder, package manifest and source frontend transport, bridge payload transport, exact-byte storage, Ed25519 signing and supplied-key verification mechanisms, semver grammar and comparison, ref observation, package graph resolution, registry behavior and transport, non-publish artifact and commit validation, workspace scaffolding, non-publish policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
+        "The generic Rust TOML syntax decoder, package manifest and source frontend transport, bridge payload transport, exact-byte storage, Ed25519 signing and supplied-key verification mechanisms, semver grammar/range matching/precedence ranking, ref observation, package graph resolution beyond semver candidate selection, registry behavior and transport, non-publish artifact and commit validation, workspace scaffolding, non-publish policy admission, sandboxing, bounded file transport, and atomic persistence remain production-required host mechanisms or host-authoritative, so SD-PACKAGE-RESOLUTION remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -2024,6 +2025,7 @@
         "selfhost/pkg_bridge_authority_v1.gc",
         "selfhost/pkg_snapshot_authority_v1.gc",
         "selfhost/pkg_resolution_identity_authority_v1.gc",
+        "selfhost/pkg_semver_select_authority_v1.gc",
         "selfhost/pkg_publish_glob_v1.gc",
         "selfhost/pkg_publish_policy_core_v1.gc",
         "selfhost/pkg_publish_policy_v1.gc",
@@ -2047,6 +2049,7 @@
         "crates/gc_effects/src/pkg_snapshot_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
+        "crates/gc_effects/src/pkg_semver_select_authority.rs",
         "crates/gc_effects/src/pkg_publish_authority.rs",
         "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs",
@@ -2061,6 +2064,7 @@
         "selfhost/pkg_bridge_authority_v1.gc",
         "selfhost/pkg_snapshot_authority_v1.gc",
         "selfhost/pkg_resolution_identity_authority_v1.gc",
+        "selfhost/pkg_semver_select_authority_v1.gc",
         "selfhost/pkg_publish_glob_v1.gc",
         "selfhost/pkg_publish_policy_core_v1.gc",
         "selfhost/pkg_publish_policy_v1.gc",
@@ -2084,6 +2088,7 @@
         "crates/gc_effects/src/pkg_snapshot_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
+        "crates/gc_effects/src/pkg_semver_select_authority.rs",
         "crates/gc_effects/src/pkg_publish_authority.rs",
         "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
@@ -2108,6 +2113,7 @@
         "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_RESOLUTION_PLAN_AUTHORITY_v0.1.md",
+        "docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md",
         "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
@@ -2124,6 +2130,7 @@
         "crates/gc_effects/src/pkg_snapshot_authority.rs",
         "crates/gc_effects/src/pkg_resolution_identity_authority.rs",
         "crates/gc_effects/src/pkg_resolution_plan_authority.rs",
+        "crates/gc_effects/src/pkg_semver_select_authority.rs",
         "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
         "crates/gc_effects/tests/sync_registry.rs"
       ],
@@ -2138,6 +2145,7 @@
         "scripts/lib/selfhost_pkg_snapshot_authority.py",
         "scripts/lib/selfhost_pkg_resolution_identity_authority.py",
         "scripts/lib/selfhost_pkg_resolution_plan_authority.py",
+        "scripts/lib/selfhost_pkg_semver_select_authority.py",
         "scripts/lib/selfhost_pkg_publish_authority.py"
       ]
     },

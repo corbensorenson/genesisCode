@@ -205,12 +205,8 @@ fn parse_tag_semver_version(ref_name: &str) -> Option<Version> {
     })
 }
 
-fn select_semver_tag_ref(
-    refs: &[RefEntry],
-    req: &VersionReq,
-    policy: SemverSelectionPolicy,
-) -> Option<(String, String)> {
-    let mut best: Option<(String, String, Version)> = None;
+fn collect_semver_candidates(refs: &[RefEntry], req: &VersionReq) -> Vec<PkgSemverCandidate> {
+    let mut parsed = Vec::new();
     for entry in refs {
         let Some(commit_hex) = entry.hash.as_ref() else {
             continue;
@@ -221,25 +217,79 @@ fn select_semver_tag_ref(
         if !req.matches(&version) {
             continue;
         }
-        let candidate = (entry.name.clone(), commit_hex.clone(), version);
-        let replace = match &best {
-            None => true,
-            Some((best_ref, _best_commit, best_version)) => match policy {
-                SemverSelectionPolicy::Highest => {
-                    candidate.2 > *best_version
-                        || (candidate.2 == *best_version && candidate.0 < *best_ref)
-                }
-                SemverSelectionPolicy::Lowest => {
-                    candidate.2 < *best_version
-                        || (candidate.2 == *best_version && candidate.0 < *best_ref)
-                }
-            },
-        };
-        if replace {
-            best = Some(candidate);
-        }
+        parsed.push((entry.name.clone(), commit_hex.clone(), version));
     }
-    best.map(|(ref_name, commit_hex, _)| (ref_name, commit_hex))
+    parsed.sort_by(|left, right| left.2.cmp_precedence(&right.2));
+    let mut previous: Option<Version> = None;
+    let mut rank = 0_u64;
+    parsed
+        .into_iter()
+        .map(|(ref_name, commit, version)| {
+            if previous
+                .as_ref()
+                .is_some_and(|prior| prior.cmp_precedence(&version) != std::cmp::Ordering::Equal)
+            {
+                // Candidate vectors are bounded to 64 entries by the authority profile.
+                rank = rank.saturating_add(1);
+            }
+            previous = Some(version);
+            PkgSemverCandidate {
+                ref_name,
+                commit,
+                rank,
+            }
+        })
+        .collect()
+}
+
+fn select_semver_tag_ref(
+    authority: Option<&mut PkgResolutionIdentityAuthority>,
+    candidates: &[PkgSemverCandidate],
+    policy: SemverSelectionPolicy,
+    error_tok: SealId,
+    op: &str,
+) -> Result<Option<(String, String)>, Value> {
+    if let Some(authority) = authority {
+        return authority
+            .select_semver(candidates, policy)
+            .map_err(|error| {
+                let message = match error {
+                    PkgResolutionPlanError::Rejected { code, message } => {
+                        format!("{code}: {message}")
+                    }
+                    PkgResolutionPlanError::Boundary(error) => error.to_string(),
+                };
+                mk_error(error_tok, "core/pkg/authority-error", message, Some(op))
+            });
+    }
+
+    #[cfg(any(test, feature = "parity-oracle"))]
+    return Ok(select_semver_tag_ref_parity(candidates, policy));
+
+    #[cfg(not(any(test, feature = "parity-oracle")))]
+    Err(mk_error(
+        error_tok,
+        "core/pkg/authority-error",
+        "semver selection requires the artifact-loaded GenesisCode authority".to_string(),
+        Some(op),
+    ))
+}
+
+#[cfg(any(test, feature = "parity-oracle"))]
+fn select_semver_tag_ref_parity(
+    candidates: &[PkgSemverCandidate],
+    policy: SemverSelectionPolicy,
+) -> Option<(String, String)> {
+    candidates
+        .iter()
+        .min_by(|left, right| {
+            let rank_order = match policy {
+                SemverSelectionPolicy::Highest => right.rank.cmp(&left.rank),
+                SemverSelectionPolicy::Lowest => left.rank.cmp(&right.rank),
+            };
+            rank_order.then_with(|| left.ref_name.cmp(&right.ref_name))
+        })
+        .map(|candidate| (candidate.ref_name.clone(), candidate.commit.clone()))
 }
 
 fn collect_available_semver_tags(refs: &[RefEntry]) -> Vec<Term> {
@@ -270,7 +320,7 @@ pub(crate) fn resolve_requirement(
     _name: &str,
     req: &gc_pkg::Requirement,
     plan: PkgResolutionPlan,
-    identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
+    mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<gc_pkg::LockedEntry, Value> {
@@ -467,8 +517,14 @@ pub(crate) fn resolve_requirement(
             let local_refs_list = refs
                 .list(Some("refs/tags/"))
                 .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
-            let mut resolved =
-                select_semver_tag_ref(&local_refs_list, &req_range, selection_policy);
+            let local_candidates = collect_semver_candidates(&local_refs_list, &req_range);
+            let mut resolved = select_semver_tag_ref(
+                identity_authority.as_deref_mut(),
+                &local_candidates,
+                selection_policy,
+                error_tok,
+                op,
+            )?;
             let mut available_tags = collect_available_semver_tags(&local_refs_list);
             if resolved.is_none()
                 && let Some(client) = registry_client_for_requirement(
@@ -492,8 +548,14 @@ pub(crate) fn resolve_requirement(
                             })
                             .collect();
                         available_tags = collect_available_semver_tags(&remote_refs);
-                        resolved =
-                            select_semver_tag_ref(&remote_refs, &req_range, selection_policy);
+                        let remote_candidates = collect_semver_candidates(&remote_refs, &req_range);
+                        resolved = select_semver_tag_ref(
+                            identity_authority.as_deref_mut(),
+                            &remote_candidates,
+                            selection_policy,
+                            error_tok,
+                            op,
+                        )?;
                     }
                     Err(e) => {
                         let code = registry_error_code(&e, "core/store/remote-auth");
@@ -742,10 +804,37 @@ mod tests {
             },
         ];
         let range = VersionReq::parse("^1.2.0").expect("valid range");
-        let high = select_semver_tag_ref(&refs, &range, SemverSelectionPolicy::Highest);
-        let low = select_semver_tag_ref(&refs, &range, SemverSelectionPolicy::Lowest);
+        let candidates = collect_semver_candidates(&refs, &range);
+        let high = select_semver_tag_ref_parity(&candidates, SemverSelectionPolicy::Highest);
+        let low = select_semver_tag_ref_parity(&candidates, SemverSelectionPolicy::Lowest);
         assert_eq!(high, Some(("refs/tags/v1.2.5".to_string(), "c".repeat(64))));
         assert_eq!(low, Some(("refs/tags/v1.2.0".to_string(), "a".repeat(64))));
+    }
+
+    #[test]
+    fn semver_rank_ignores_build_metadata_and_uses_ref_tie_break() {
+        let refs = vec![
+            RefEntry {
+                name: "refs/tags/v1.2.5+z".to_string(),
+                hash: Some("b".repeat(64)),
+            },
+            RefEntry {
+                name: "refs/tags/v1.2.5+a".to_string(),
+                hash: Some("a".repeat(64)),
+            },
+            RefEntry {
+                name: "refs/tags/v1.2.4".to_string(),
+                hash: Some("c".repeat(64)),
+            },
+        ];
+        let range = VersionReq::parse("^1.2.0").expect("valid range");
+        let candidates = collect_semver_candidates(&refs, &range);
+        let high = select_semver_tag_ref_parity(&candidates, SemverSelectionPolicy::Highest);
+        assert_eq!(
+            high,
+            Some(("refs/tags/v1.2.5+a".to_string(), "a".repeat(64)))
+        );
+        assert_eq!(candidates[1].rank, candidates[2].rank);
     }
 
     #[test]
