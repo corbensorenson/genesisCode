@@ -9,7 +9,7 @@
   },
   "input_identities": {
     "policy_sha256": "1e446e626e47893fa3000989748830e4e6d243743929941d7bec4fa83551deae",
-    "roadmap_sha256": "260937d6fb2fda632408db31039c5d648eeb8edb2b2680d187e8d1654da7e7f2",
+    "roadmap_sha256": "5daa0eecda3b33ce8a9a8c578e7633ea60533c6e9aea2fcc8d1ae38c49ed8ec6",
     "schema_sha256": "89c0e0733837cdba5518fece3a6609af0a9ddb05d470a534c0d0baeb202a5b88"
   },
   "kind": "genesis/roadmap-execution-manifest-v0.1",
@@ -27208,7 +27208,7 @@
         "declared_artifacts": [
           "docs/research/GENESIS_FOUNDRY.md"
         ],
-        "deliverable": "Write `docs/research/GENESIS_FOUNDRY.md` and an ADR defining purpose, non-goals, FD maturity, proof-status vocabulary, candidate/task/law/promotion authorities, one-way dependency rule, compatibility policy, decommissioning, and exact distinctions among rediscovery, implementation improvement, regime-specific improvement, new local composition, candidate novelty, and externally reviewed novelty. The handoff text is input, not copied authority; every undecidable or aspirational claim is narrowed to a falsifiable contract.",
+        "deliverable": "Write `docs/research/GENESIS_FOUNDRY.md` and an ADR defining the constitutional abstraction ratchet, finite immutable generations, bounded sibling basis branches, the reusable-mechanism target, purpose, non-goals, FD maturity, `PROVEN|REFUTED|UNKNOWN` claim status, candidate/task/law/promotion authorities, one-way dependency rule, compatibility, branch merge/retirement/archive, decommissioning, and exact distinctions among rediscovery, implementation improvement, regime-specific improvement, new local composition, candidate novelty, and externally reviewed novelty. Formalize expressible, constructible, feasible, discoverable, verifiable, and promotable closures without claiming they are equal. Searching inside generation `g` and proposing a grammar, verifier, representation, task-authority, or basis change for `g+1` are different acts: no generation may adopt and use its own constitutional proposal to certify that proposal. The handoff text is input, not copied authority; EML contributes only the measurable basis-size versus construction/search/proof/cost question, Assembly Theory contributes only typed construction/reuse/history, and G\u00f6del/Blum/No-Free-Lunch motivate boundaries and portfolios rather than mystical or universal claims. Every undecidable or aspirational claim is narrowed to a falsifiable contract.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27223,7 +27223,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Write `docs/research/GENESIS_FOUNDRY.md` and an ADR defining purpose, non-goals, FD maturity, proof-status vocabulary, candidate/task/law/promotion authorities, one-way dependency rule, compatibility policy, decommissioning, and exact distinctions among rediscovery, implementation improvement, regime-specific improvement, new local composition, candidate novelty, and externally reviewed novelty. The handoff text is input, not copied authority; every undecidable or aspirational claim is narrowed to a falsifiable contract.",
+      "objective": "Write `docs/research/GENESIS_FOUNDRY.md` and an ADR defining the constitutional abstraction ratchet, finite immutable generations, bounded sibling basis branches, the reusable-mechanism target, purpose, non-goals, FD maturity, `PROVEN|REFUTED|UNKNOWN` claim status, candidate/task/law/promotion authorities, one-way dependency rule, compatibility, branch merge/retirement/archive, decommissioning, and exact distinctions among rediscovery, implementation improvement, regime-specific improvement, new local composition, candidate novelty, and externally reviewed novelty. Formalize expressible, constructible, feasible, discoverable, verifiable, and promotable closures without claiming they are equal. Searching inside generation `g` and proposing a grammar, verifier, representation, task-authority, or basis change for `g+1` are different acts: no generation may adopt and use its own constitutional proposal to certify that proposal. The handoff text is input, not copied authority; EML contributes only the measurable basis-size versus construction/search/proof/cost question, Assembly Theory contributes only typed construction/reuse/history, and G\u00f6del/Blum/No-Free-Lunch motivate boundaries and portfolios rather than mystical or universal claims. Every undecidable or aspirational claim is narrowed to a falsifiable contract.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27354,7 +27354,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Model combinatorial exhaustion, malformed graphs, nontermination, resource escape, undefined-behavior exploitation, verifier/oracle leakage, hardcoding, benchmark overfit, proof laundering, false-law poisoning, search-engine authority capture, history deletion, complexity ratchet, novelty inflation, dependency confusion, and compromised research artifacts. Identify the smallest independent proof/receipt checker TCB, provision generator/verifier/benchmark/promotion roles separately, and prove hostile mutations fail closed without weakening GenesisCode invariants.",
+        "deliverable": "Model combinatorial exhaustion, malformed graphs, nontermination, resource escape, undefined-behavior exploitation, verifier/oracle leakage, hardcoding, benchmark overfit, proof laundering, false-law poisoning, search-engine authority capture, linear-basis lock-in, abstraction overexposure, engine/basis and representation/basis co-adaptation, branch explosion, descendant-productivity confounding, task-family pseudo-replication, history deletion, complexity ratchet, novelty inflation, dependency confusion, and compromised research artifacts. Identify the smallest independent proof/receipt checker TCB, provision generator/verifier/task/benchmark/promotion roles separately, and prove hostile mutations fail closed without weakening GenesisCode invariants. Branch count, diversity, expiry, merge, retirement, and archive limits are policy inputs; primitive-only and prior-release baselines are permanent controls, not expendable underperformers.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27369,7 +27369,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Model combinatorial exhaustion, malformed graphs, nontermination, resource escape, undefined-behavior exploitation, verifier/oracle leakage, hardcoding, benchmark overfit, proof laundering, false-law poisoning, search-engine authority capture, history deletion, complexity ratchet, novelty inflation, dependency confusion, and compromised research artifacts. Identify the smallest independent proof/receipt checker TCB, provision generator/verifier/benchmark/promotion roles separately, and prove hostile mutations fail closed without weakening GenesisCode invariants.",
+      "objective": "Model combinatorial exhaustion, malformed graphs, nontermination, resource escape, undefined-behavior exploitation, verifier/oracle leakage, hardcoding, benchmark overfit, proof laundering, false-law poisoning, search-engine authority capture, linear-basis lock-in, abstraction overexposure, engine/basis and representation/basis co-adaptation, branch explosion, descendant-productivity confounding, task-family pseudo-replication, history deletion, complexity ratchet, novelty inflation, dependency confusion, and compromised research artifacts. Identify the smallest independent proof/receipt checker TCB, provision generator/verifier/task/benchmark/promotion roles separately, and prove hostile mutations fail closed without weakening GenesisCode invariants. Branch count, diversity, expiry, merge, retirement, and archive limits are policy inputs; primitive-only and prior-release baselines are permanent controls, not expendable underperformers.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27428,7 +27428,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Version closed schemas for mechanism/law manifests, semantic profiles, task specifications, candidate graphs, search manifests/checkpoints, verification and benchmark receipts, counterexamples, Pareto frontiers, abstraction proposals, promotion decisions, rejection/supersession records, and closed replay bundles. Use domain-separated canonical hashing, explicit parent/grammar/catalog/tool identities, bounded parsers, unknown-field rejection, migration fixtures, and independent decoding; a changed assumption, verifier, lowering, target, or proof invalidates inherited status.",
+        "deliverable": "Version closed schemas for `FoundryGenerationManifest`, `BasisBranchManifest`, mechanism/law manifests, semantic profiles, task specifications and genealogy, candidate graphs, search manifests/checkpoints, verification and benchmark receipts, counterexamples and scoped negative knowledge, Pareto frontiers, causal shadow trials, factorial basis-engine/representation trials, generation deltas, catalytic influence, abstraction proposals, promotion decisions, invalidation, rejection/supersession/retirement records, and closed replay bundles. Each generation binds Core release, prior Algorithms release, grammar, five knowledge catalogs, task authority, engine set, verifier set, cost profiles, presentation/card inputs, branch policy, seeds, budgets, and parent generations before execution. Keep `semantic_id`, `construction_id`, `lineage_id`, `artifact_id`, `evidence_id`, `interface_id`, `presentation_id`, and `generation_branch_id` distinct and domain-separated: semantic equivalence never collapses construction, discovery, evidence, cost, interface, presentation, or release history. Use canonical hashing, explicit parent/grammar/catalog/tool identities, bounded parsers, unknown-field rejection, migration fixtures, and independent decoding; a changed assumption, verifier, lowering, target, proof, task genealogy, documentation/card input, or generation basis invalidates inherited status at the affected dimension.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27443,7 +27443,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Version closed schemas for mechanism/law manifests, semantic profiles, task specifications, candidate graphs, search manifests/checkpoints, verification and benchmark receipts, counterexamples, Pareto frontiers, abstraction proposals, promotion decisions, rejection/supersession records, and closed replay bundles. Use domain-separated canonical hashing, explicit parent/grammar/catalog/tool identities, bounded parsers, unknown-field rejection, migration fixtures, and independent decoding; a changed assumption, verifier, lowering, target, or proof invalidates inherited status.",
+      "objective": "Version closed schemas for `FoundryGenerationManifest`, `BasisBranchManifest`, mechanism/law manifests, semantic profiles, task specifications and genealogy, candidate graphs, search manifests/checkpoints, verification and benchmark receipts, counterexamples and scoped negative knowledge, Pareto frontiers, causal shadow trials, factorial basis-engine/representation trials, generation deltas, catalytic influence, abstraction proposals, promotion decisions, invalidation, rejection/supersession/retirement records, and closed replay bundles. Each generation binds Core release, prior Algorithms release, grammar, five knowledge catalogs, task authority, engine set, verifier set, cost profiles, presentation/card inputs, branch policy, seeds, budgets, and parent generations before execution. Keep `semantic_id`, `construction_id`, `lineage_id`, `artifact_id`, `evidence_id`, `interface_id`, `presentation_id`, and `generation_branch_id` distinct and domain-separated: semantic equivalence never collapses construction, discovery, evidence, cost, interface, presentation, or release history. Use canonical hashing, explicit parent/grammar/catalog/tool identities, bounded parsers, unknown-field rejection, migration fixtures, and independent decoding; a changed assumption, verifier, lowering, target, proof, task genealogy, documentation/card input, or generation basis invalidates inherited status at the affected dimension.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27502,7 +27502,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Represent typed partial/terminal DAGs with ports, effects, semantic profile, pre/postconditions, produced invariants, unresolved obligations, representations, resource estimates, lineage, and explicit serial/parallel/conditional/fixed-iteration/divide-recombine/feedback/representation/incremental operators. Canonical serialization is stable across insertion order and hosts; malformed, cyclic-when-forbidden, type-incompatible, effect-incompatible, and resource-impossible graphs fail before execution. Expose a small research-only `genesis-foundry` CLI whose check commands are read-only and whose generation commands emit receipts.",
+        "deliverable": "Represent typed partial/terminal shared DAGs with ports, effects, semantic profile, pre/postconditions, produced invariants, unresolved obligations, library references, representations, resource estimates, construction and discovery lineage, applicability, dispatcher/fallback structure, and explicit serial/parallel/conditional/fixed-iteration/divide-recombine/feedback/representation/incremental operators. Classify artifacts as M0 primitive, M1 local motif, M2 reusable mechanism, M3 complete algorithm, M4 algorithm family, or M5 meta-mechanism without granting status from the label; optimize initial mining pressure toward M2 while retaining evidence for every level. Canonical serialization is stable across insertion order and hosts; malformed, cyclic-when-forbidden, type-incompatible, effect-incompatible, resource-impossible, identity-collapsing, or unbounded-dispatch graphs fail before execution. Expose a small research-only `genesis-foundry` CLI whose checks are read-only, whose generation commands emit receipts, and whose output always names the exact generation and basis branch.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27517,7 +27517,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Represent typed partial/terminal DAGs with ports, effects, semantic profile, pre/postconditions, produced invariants, unresolved obligations, representations, resource estimates, lineage, and explicit serial/parallel/conditional/fixed-iteration/divide-recombine/feedback/representation/incremental operators. Canonical serialization is stable across insertion order and hosts; malformed, cyclic-when-forbidden, type-incompatible, effect-incompatible, and resource-impossible graphs fail before execution. Expose a small research-only `genesis-foundry` CLI whose check commands are read-only and whose generation commands emit receipts.",
+      "objective": "Represent typed partial/terminal shared DAGs with ports, effects, semantic profile, pre/postconditions, produced invariants, unresolved obligations, library references, representations, resource estimates, construction and discovery lineage, applicability, dispatcher/fallback structure, and explicit serial/parallel/conditional/fixed-iteration/divide-recombine/feedback/representation/incremental operators. Classify artifacts as M0 primitive, M1 local motif, M2 reusable mechanism, M3 complete algorithm, M4 algorithm family, or M5 meta-mechanism without granting status from the label; optimize initial mining pressure toward M2 while retaining evidence for every level. Canonical serialization is stable across insertion order and hosts; malformed, cyclic-when-forbidden, type-incompatible, effect-incompatible, resource-impossible, identity-collapsing, or unbounded-dispatch graphs fail before execution. Expose a small research-only `genesis-foundry` CLI whose checks are read-only, whose generation commands emit receipts, and whose output always names the exact generation and basis branch.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27576,7 +27576,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Define Levels 0-3 without mistaking textbook algorithms for primitives; each entry binds types, profiles, effects, contracts, executable reference, laws, proof/test scope, cost model, provenance/license, deprecation, and pack fingerprint. Separate production-approved, research-certified, and speculative law sets; duplicate or weak mechanisms face a complexity budget and consolidation/deletion review.",
+        "deliverable": "Maintain distinct but linked catalogs for executable mechanisms/algorithm families, proof lemmas and schemas, scoped negative knowledge, representation transformations, and search knowledge, with laws explicitly tiered as production-approved, research-certified, or speculative. Each entry binds types, profiles, effects, contracts, executable or checkable reference, applicability, dependencies, proof/test scope, cost and carrying-cost model, provenance/license, invalidation, deprecation, and pack fingerprint. Negative records are `heuristic`, `observed-bounded`, `exhaustive-bounded`, `solver-certified`, `proof-checked`, or `invalidated`; only their exact status and assumptions permit pruning. Search knowledge can improve proposal order but never becomes verifier, task, destination, or production authority. Duplicate, weak, overexposed, or expensive mechanisms face consolidation/deletion review and every addition consumes a vocabulary, context, proof-maintenance, compatibility, and review budget.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27591,7 +27591,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Define Levels 0-3 without mistaking textbook algorithms for primitives; each entry binds types, profiles, effects, contracts, executable reference, laws, proof/test scope, cost model, provenance/license, deprecation, and pack fingerprint. Separate production-approved, research-certified, and speculative law sets; duplicate or weak mechanisms face a complexity budget and consolidation/deletion review.",
+      "objective": "Maintain distinct but linked catalogs for executable mechanisms/algorithm families, proof lemmas and schemas, scoped negative knowledge, representation transformations, and search knowledge, with laws explicitly tiered as production-approved, research-certified, or speculative. Each entry binds types, profiles, effects, contracts, executable or checkable reference, applicability, dependencies, proof/test scope, cost and carrying-cost model, provenance/license, invalidation, deprecation, and pack fingerprint. Negative records are `heuristic`, `observed-bounded`, `exhaustive-bounded`, `solver-certified`, `proof-checked`, or `invalidated`; only their exact status and assumptions permit pruning. Search knowledge can improve proposal order but never becomes verifier, task, destination, or production authority. Duplicate, weak, overexposed, or expensive mechanisms face consolidation/deletion review and every addition consumes a vocabulary, context, proof-maintenance, compatibility, and review budget.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27619,7 +27619,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Build the versioned mechanism, law, and pack catalog",
+      "title": "Build separate versioned knowledge catalogs",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -27650,7 +27650,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Define task families by input domain, output relation, preservation, approximation, effects, resources, target profiles, generators, adversaries, reference relation, verifier configuration, hidden material, and alternative-solution policy. Precommit task and oracle identities before target search, separate development/calibration/held-out sets, preserve task lineage under mutation/interpolation, and prevent generators or search engines from changing acceptance after observing candidates.",
+        "deliverable": "Define task families by input domain, output relation, preservation, approximation, effects, resources, target profiles, generators, adversaries, reference relation, verifier configuration, hidden material, alternative-solution policy, oracle-family relation, application source, and genealogy edges such as generalizes, specializes, adversarial-to, and held-out-sibling-of. Precommit task and oracle identities before target search; separate development, calibration, abstraction-transfer, frontier, adversarial, application-derived, and meta-diagnostic sets; preserve lineage under mutation/interpolation; cluster related lineages during inference; and prevent generators or search engines from changing acceptance after observing candidates. Task evolution is independently governed, can affect only a later generation, and cannot use active or held-out answers to construct its own evidence.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27665,7 +27665,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Define task families by input domain, output relation, preservation, approximation, effects, resources, target profiles, generators, adversaries, reference relation, verifier configuration, hidden material, and alternative-solution policy. Precommit task and oracle identities before target search, separate development/calibration/held-out sets, preserve task lineage under mutation/interpolation, and prevent generators or search engines from changing acceptance after observing candidates.",
+      "objective": "Define task families by input domain, output relation, preservation, approximation, effects, resources, target profiles, generators, adversaries, reference relation, verifier configuration, hidden material, alternative-solution policy, oracle-family relation, application source, and genealogy edges such as generalizes, specializes, adversarial-to, and held-out-sibling-of. Precommit task and oracle identities before target search; separate development, calibration, abstraction-transfer, frontier, adversarial, application-derived, and meta-diagnostic sets; preserve lineage under mutation/interpolation; cluster related lineages during inference; and prevent generators or search engines from changing acceptance after observing candidates. Task evolution is independently governed, can affect only a later generation, and cannot use active or held-out answers to construct its own evidence.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27693,7 +27693,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Create independent task authority",
+      "title": "Create independent task authority and genealogy",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -27724,7 +27724,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Store mechanisms, laws, tasks, candidates, checkpoints, verifier/benchmark receipts, counterexamples, negative results, discarded/pruned commitments, promotion decisions, and supersession edges in a research registry distinct from the package registry. Content identity, transactional writes, corruption detection, garbage-collection policy, export/import, transparency commitments, privacy redaction, and deterministic replay preserve history; no dashboard or mutable alias is evidence authority.",
+        "deliverable": "Preserve logically distinct construction, discovery-phylogeny, semantic-relation, evidence/claim, catalytic-influence, task-genealogy, and authority/release-dependency planes even if one physical store backs them. Store generation and branch ancestry, mechanisms, laws, tasks, candidates, checkpoints, verifier/benchmark receipts, counterexamples, scoped negative results, proof and representation knowledge, discarded/pruned commitments, causal trials, failed abstractions, branch merge/retirement/archive decisions, promotion decisions, invalidations, and supersession edges in a research registry distinct from the package registry. Content identity, transactional writes, corruption detection, compaction membership proofs, export/import, transparency commitments, privacy redaction, and deterministic replay preserve history; no semantic quotient erases cost or lineage distinctions, and no dashboard, mutable alias, descendant count, or catalytic edge is evidence authority.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27739,7 +27739,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Store mechanisms, laws, tasks, candidates, checkpoints, verifier/benchmark receipts, counterexamples, negative results, discarded/pruned commitments, promotion decisions, and supersession edges in a research registry distinct from the package registry. Content identity, transactional writes, corruption detection, garbage-collection policy, export/import, transparency commitments, privacy redaction, and deterministic replay preserve history; no dashboard or mutable alias is evidence authority.",
+      "objective": "Preserve logically distinct construction, discovery-phylogeny, semantic-relation, evidence/claim, catalytic-influence, task-genealogy, and authority/release-dependency planes even if one physical store backs them. Store generation and branch ancestry, mechanisms, laws, tasks, candidates, checkpoints, verifier/benchmark receipts, counterexamples, scoped negative results, proof and representation knowledge, discarded/pruned commitments, causal trials, failed abstractions, branch merge/retirement/archive decisions, promotion decisions, invalidations, and supersession edges in a research registry distinct from the package registry. Content identity, transactional writes, corruption detection, compaction membership proofs, export/import, transparency commitments, privacy redaction, and deterministic replay preserve history; no semantic quotient erases cost or lineage distinctions, and no dashboard, mutable alias, descendant count, or catalytic edge is evidence authority.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27767,7 +27767,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Implement append-only research memory",
+      "title": "Implement append-only seven-plane research memory",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -27798,7 +27798,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Execute candidates with no ambient effects under deterministic logical steps/allocation plus hard CPU, wall, memory, output, process, disk, checkpoint, and descendant-lifecycle limits. Seeded work allocation, ordering, resumable checkpoints, cancellation, lease cleanup, and crash recovery are replayable; resource exhaustion is a typed terminal result, and repeated timeout/kill/reap stress leaves no worker, descendant, pipe, lock, or artifact lease alive.",
+        "deliverable": "Execute candidates with no ambient effects under deterministic logical steps/allocation plus hard CPU, wall, memory, output, process, disk, checkpoint, branch, and descendant-lifecycle limits. Freeze generation inputs before work, enforce maximum active branches, minimum diversity distance, per-lineage budgets, expiry and stopping rules, and forbid same-run mutation of grammar, basis, task authority, verifier, cost profile, or engine. Seeded work allocation, task ordering, matched shadow-branch budgets, resumable checkpoints, cancellation, lease cleanup, and crash recovery are replayable; resource exhaustion is a typed terminal result, and repeated timeout/kill/reap stress leaves no worker, descendant, pipe, lock, branch lease, or artifact lease alive.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27813,7 +27813,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Execute candidates with no ambient effects under deterministic logical steps/allocation plus hard CPU, wall, memory, output, process, disk, checkpoint, and descendant-lifecycle limits. Seeded work allocation, ordering, resumable checkpoints, cancellation, lease cleanup, and crash recovery are replayable; resource exhaustion is a typed terminal result, and repeated timeout/kill/reap stress leaves no worker, descendant, pipe, lock, or artifact lease alive.",
+      "objective": "Execute candidates with no ambient effects under deterministic logical steps/allocation plus hard CPU, wall, memory, output, process, disk, checkpoint, branch, and descendant-lifecycle limits. Freeze generation inputs before work, enforce maximum active branches, minimum diversity distance, per-lineage budgets, expiry and stopping rules, and forbid same-run mutation of grammar, basis, task authority, verifier, cost profile, or engine. Seeded work allocation, task ordering, matched shadow-branch budgets, resumable checkpoints, cancellation, lease cleanup, and crash recovery are replayable; resource exhaustion is a typed terminal result, and repeated timeout/kill/reap stress leaves no worker, descendant, pipe, lock, branch lease, or artifact lease alive.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27841,7 +27841,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Enforce hostile-candidate containment and reproducible scheduling",
+      "title": "Enforce hostile-candidate containment, immutable generations, and reproducible matched scheduling",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -27872,7 +27872,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "The checker runs without the search engine or mutable registry and combines structural/type/effect validation, contract checks, differential/property/metamorphic/adversarial tests, exhaustive bounded checks, symbolic/SMT adapters, proof-assistant replay, and artifact-to-theorem/translation validation as applicable. It minimizes and retains counterexamples, rejects forged/wrong-profile/stale/partial receipts, distinguishes unknown from false, and never converts tests or model judgment into a proof.",
+        "deliverable": "The checker runs without the search engine or mutable registry and combines structural/type/effect validation, contract checks, differential/property/metamorphic/adversarial tests, exhaustive bounded checks, symbolic/SMT adapters, proof-assistant replay, and artifact-to-theorem/translation validation as applicable. It emits exact `PROVEN`, `REFUTED`, or `UNKNOWN` status scoped to semantic profile, assumptions, lowering, artifact, and budget; a correct but presently unprovable candidate remains unknown rather than false. It minimizes and retains counterexamples, validates negative-knowledge status before pruning, rejects forged/wrong-generation/wrong-branch/wrong-profile/stale/partial receipts, and never converts tests, compression, descendant utility, model judgment, or search success into a proof.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27887,7 +27887,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "The checker runs without the search engine or mutable registry and combines structural/type/effect validation, contract checks, differential/property/metamorphic/adversarial tests, exhaustive bounded checks, symbolic/SMT adapters, proof-assistant replay, and artifact-to-theorem/translation validation as applicable. It minimizes and retains counterexamples, rejects forged/wrong-profile/stale/partial receipts, distinguishes unknown from false, and never converts tests or model judgment into a proof.",
+      "objective": "The checker runs without the search engine or mutable registry and combines structural/type/effect validation, contract checks, differential/property/metamorphic/adversarial tests, exhaustive bounded checks, symbolic/SMT adapters, proof-assistant replay, and artifact-to-theorem/translation validation as applicable. It emits exact `PROVEN`, `REFUTED`, or `UNKNOWN` status scoped to semantic profile, assumptions, lowering, artifact, and budget; a correct but presently unprovable candidate remains unknown rather than false. It minimizes and retains counterexamples, validates negative-knowledge status before pruning, rejects forged/wrong-generation/wrong-branch/wrong-profile/stale/partial receipts, and never converts tests, compression, descendant utility, model judgment, or search success into a proof.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27946,7 +27946,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Start with compare, equality/order, select, compare-exchange, swap, rotate, min/max, load/store, and fixed network composition over bounded integers or symbolic comparison relations. Predeclare sort, min/max, median, top-k, short partition/dedup, prefix extrema, and merge tasks: sizes 3-5 are mandatory exhaustive calibration; sizes 6-8 advance only under explicit search/lower-bound budgets. Exclude arbitrary recursion, unbounded loops, effects, general mutation, floating point, LLM proposals, and novelty claims.",
+        "deliverable": "Start with compare, equality/order, select, compare-exchange, swap, rotate, min/max, bounded load/store, serial composition, and fixed network composition over bounded integers or symbolic comparison relations. Predeclare sort, min/max, median, top-k, short partition/dedup, prefix extrema, and merge lineages: sizes 3-5 are mandatory exhaustive calibration; sizes 6-8 advance only under explicit search/lower-bound budgets. Before search, freeze training/calibration versus held-out abstraction-transfer lineages and four basis conditions: primitive-only `B0`, small static expert `BH`, mined candidate `BL`, and `Bbad`, a deliberately irrelevant or overfit abstraction matched to `BL` on arity, implementation size, documentation/context size, activation frequency, grammar exposure, and compute allowance. Exclude arbitrary recursion, unbounded loops, effects, general mutation, floating point, LLM proposals, online library mutation, stochastic portfolios, task generation, grammar evolution, and novelty claims.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -27961,7 +27961,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Start with compare, equality/order, select, compare-exchange, swap, rotate, min/max, load/store, and fixed network composition over bounded integers or symbolic comparison relations. Predeclare sort, min/max, median, top-k, short partition/dedup, prefix extrema, and merge tasks: sizes 3-5 are mandatory exhaustive calibration; sizes 6-8 advance only under explicit search/lower-bound budgets. Exclude arbitrary recursion, unbounded loops, effects, general mutation, floating point, LLM proposals, and novelty claims.",
+      "objective": "Start with compare, equality/order, select, compare-exchange, swap, rotate, min/max, bounded load/store, serial composition, and fixed network composition over bounded integers or symbolic comparison relations. Predeclare sort, min/max, median, top-k, short partition/dedup, prefix extrema, and merge lineages: sizes 3-5 are mandatory exhaustive calibration; sizes 6-8 advance only under explicit search/lower-bound budgets. Before search, freeze training/calibration versus held-out abstraction-transfer lineages and four basis conditions: primitive-only `B0`, small static expert `BH`, mined candidate `BL`, and `Bbad`, a deliberately irrelevant or overfit abstraction matched to `BL` on arity, implementation size, documentation/context size, activation frequency, grammar exposure, and compute allowance. Exclude arbitrary recursion, unbounded loops, effects, general mutation, floating point, LLM proposals, online library mutation, stochastic portfolios, task generation, grammar evolution, and novelty claims.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -27989,7 +27989,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Freeze the pure bounded-sequence calibration pack",
+      "title": "Freeze the pure bounded-sequence calibration and transfer pack",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28242,7 +28242,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Keep symbolic operation/depth/space bounds, measured latency/memory/allocation/branch/cache/code-size/energy proxies, target profiles, conversion costs, amortization, and uncertainty separate. Retain raw samples, machine/tool/warm-state identities, outliers, timeouts, and applicability regimes; compare against reference, random-search, exhaustive/no-quotient, and simplest-known baselines. Never reduce incomparable profiles to an undeclared universal score.",
+        "deliverable": "Keep symbolic operation/depth/space bounds, measured latency/memory/allocation/branch/cache/code-size/energy proxies, target profiles, conversion costs, amortization, uncertainty, API/context size, documentation, proof maintenance, compatibility, dispatcher complexity, review burden, and deprecation cost separate. Retain raw samples, machine/tool/warm-state identities, outliers, timeouts, applicability regimes, task-lineage clusters, and opportunity/budget normalization; compare against reference, random-search, exhaustive/no-quotient, primitive-only, prior-release, static-expert, and simplest-known baselines. Track vector-backed generative leverage, interaction/synergy, descendant productivity, and catalytic influence as exploratory analyses only; none may become a scalar promotion oracle or hide a hard semantic, safety, portability, maintenance, or review regression.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28257,7 +28257,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Keep symbolic operation/depth/space bounds, measured latency/memory/allocation/branch/cache/code-size/energy proxies, target profiles, conversion costs, amortization, and uncertainty separate. Retain raw samples, machine/tool/warm-state identities, outliers, timeouts, and applicability regimes; compare against reference, random-search, exhaustive/no-quotient, and simplest-known baselines. Never reduce incomparable profiles to an undeclared universal score.",
+      "objective": "Keep symbolic operation/depth/space bounds, measured latency/memory/allocation/branch/cache/code-size/energy proxies, target profiles, conversion costs, amortization, uncertainty, API/context size, documentation, proof maintenance, compatibility, dispatcher complexity, review burden, and deprecation cost separate. Retain raw samples, machine/tool/warm-state identities, outliers, timeouts, applicability regimes, task-lineage clusters, and opportunity/budget normalization; compare against reference, random-search, exhaustive/no-quotient, primitive-only, prior-release, static-expert, and simplest-known baselines. Track vector-backed generative leverage, interaction/synergy, descendant productivity, and catalytic influence as exploratory analyses only; none may become a scalar promotion oracle or hide a hard semantic, safety, portability, maintenance, or review regression.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28285,7 +28285,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Implement multiobjective cost and Pareto evidence",
+      "title": "Implement multiobjective cost, carrying cost, and Pareto evidence",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28315,8 +28315,10 @@
         ]
       },
       "expected_outputs": {
-        "declared_artifacts": [],
-        "deliverable": "Predeclare known networks/results/lower bounds, intentionally broken candidates and receipts, search-engine ablations, anti-hardcoding variants, and cross-host replay. The system must rediscover several known optimal or near-optimal structures, reject every seeded false candidate/proof, preserve negative results, and explain misses before broader work. Search-space compression and speed count only if completeness/correctness claims remain valid.",
+        "declared_artifacts": [
+          "B0/BH/BL/Bbad"
+        ],
+        "deliverable": "Predeclare known networks/results/lower bounds, intentionally broken candidates and receipts, anti-hardcoding variants, one recurring typed motif expected to be mineable, `B0/BH/BL/Bbad` basis conditions, and cross-host replay. First rediscover several known optimal or near-optimal structures, reject every seeded false candidate/proof, preserve negative results, and explain misses. Then extract the motif from calibration candidates and run a held-out causal shadow trial with identical task order, engine version, seed, logical/host budgets, verifier, cost profiles, and stopping rules and no between-condition tuning. Measure the full vector of solve rate, time to FD2/FD4, candidate and verifier counts, proof size/check time, Pareto frontier, solution diversity, failures, review burden, and context/API cost. `BL` must materially improve a declared Pareto region over `B0`, survive the matched `Bbad` control, and preserve correctness. Where an engine or representation changes, run the predeclared 2x2 factorial conditions needed to separate basis, engine/representation, and interaction effects. Search-space compression, corpus frequency, descendant utility, and speed count only when causal attribution and completeness/correctness claims remain valid.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28331,7 +28333,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Predeclare known networks/results/lower bounds, intentionally broken candidates and receipts, search-engine ablations, anti-hardcoding variants, and cross-host replay. The system must rediscover several known optimal or near-optimal structures, reject every seeded false candidate/proof, preserve negative results, and explain misses before broader work. Search-space compression and speed count only if completeness/correctness claims remain valid.",
+      "objective": "Predeclare known networks/results/lower bounds, intentionally broken candidates and receipts, anti-hardcoding variants, one recurring typed motif expected to be mineable, `B0/BH/BL/Bbad` basis conditions, and cross-host replay. First rediscover several known optimal or near-optimal structures, reject every seeded false candidate/proof, preserve negative results, and explain misses. Then extract the motif from calibration candidates and run a held-out causal shadow trial with identical task order, engine version, seed, logical/host budgets, verifier, cost profiles, and stopping rules and no between-condition tuning. Measure the full vector of solve rate, time to FD2/FD4, candidate and verifier counts, proof size/check time, Pareto frontier, solution diversity, failures, review burden, and context/API cost. `BL` must materially improve a declared Pareto region over `B0`, survive the matched `Bbad` control, and preserve correctness. Where an engine or representation changes, run the predeclared 2x2 factorial conditions needed to separate basis, engine/representation, and interaction effects. Search-space compression, corpus frequency, descendant utility, and speed count only when causal attribution and completeness/correctness claims remain valid.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28359,7 +28361,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Prove construct validity with calibration and mutations",
+      "title": "Prove construct and abstraction-ratchet validity with calibration, causal controls, and mutations",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28390,7 +28392,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "From a clean isolated checkout, deterministically search, verify, compare, explain, export, and replay the bounded sequence suite; a second operator reproduces its closed bundles without the producer or model. Publish complete methods, lineage, counterexamples, Pareto sets, compute/storage costs, calibration misses, limitations, and explicit no-novelty/no-production claims. This is the research calibration checkpoint and the hard gate for library promotion and every later Foundry search mode or pack.",
+        "deliverable": "From a clean isolated checkout, deterministically search, verify, compare, extract the one bounded motif, execute the matched shadow and bad-abstraction trials, explain, export, and replay the bounded sequence suite; a second operator reproduces every branch and closed bundle without the producer or model. Publish complete generation and basis manifests, seven-plane lineage, task genealogy, counterexamples, Pareto sets, causal vectors, null/negative outcomes, carry costs, compute/storage/review costs, calibration misses, limitations, and explicit no-novelty/no-production/no-general-learner claims. The terminal generation delta lists the proposed motif plus every accepted, rejected, unknown, retired, and invalidated disposition. This is the research calibration checkpoint and the hard gate for destination review and every later Foundry search mode or pack.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28405,7 +28407,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "From a clean isolated checkout, deterministically search, verify, compare, explain, export, and replay the bounded sequence suite; a second operator reproduces its closed bundles without the producer or model. Publish complete methods, lineage, counterexamples, Pareto sets, compute/storage costs, calibration misses, limitations, and explicit no-novelty/no-production claims. This is the research calibration checkpoint and the hard gate for library promotion and every later Foundry search mode or pack.",
+      "objective": "From a clean isolated checkout, deterministically search, verify, compare, extract the one bounded motif, execute the matched shadow and bad-abstraction trials, explain, export, and replay the bounded sequence suite; a second operator reproduces every branch and closed bundle without the producer or model. Publish complete generation and basis manifests, seven-plane lineage, task genealogy, counterexamples, Pareto sets, causal vectors, null/negative outcomes, carry costs, compute/storage/review costs, calibration misses, limitations, and explicit no-novelty/no-production/no-general-learner claims. The terminal generation delta lists the proposed motif plus every accepted, rejected, unknown, retired, and invalidated disposition. This is the research calibration checkpoint and the hard gate for destination review and every later Foundry search mode or pack.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28433,7 +28435,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Release the Foundry Calibration snapshot",
+      "title": "Release the Foundry Calibration and first abstraction-ratchet snapshot",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28466,7 +28468,7 @@
         "declared_artifacts": [
           "genesis/algorithms"
         ],
-        "deliverable": "Establish the supplied `genesis/algorithms` package collection and a closed promotion schema that binds source candidate and calibration snapshot, exact destination API/contract, supported semantic and target profiles, proof/test/counterexample scope, complexity and measured cost, provenance/license, deterministic fallback, compatibility/migration, maintainer, review/signature threshold, rollback, and supersession. Seed the release with useful `.gc` reference algorithms plus only those fixed-domain specialized sequence variants independently accepted from F2.q; generic APIs must remain correct outside a specialization through explicit applicability checks and fallbacks. Generate compact human/agent documentation, package-local examples, symbol cards, and package evidence; reproduce build/test/package/install/use from a clean checkout with `foundry/` deleted. Foundry operators can submit proposals but cannot review, sign, publish, or mutate the destination; a run against library N may only propose N+1. Publish the signed library and Foundry Foundation snapshot together with all accepted/rejected decisions and explicit no-novelty claims. This closes MF and activates the finite R8.3.a-b GenesisExamples/GenesisApps seed plus later isolated Foundry expansion; Bench and Challenge remain frozen until R8.3.b, and no Genesis Model implementation is authorized.",
+        "deliverable": "Establish the supplied `genesis/algorithms` package collection and a closed promotion schema that binds source candidate, immutable generation/basis branch, causal trial, calibration snapshot, exact destination API/contract/interface identity, supported semantic and target profiles, proof/test/counterexample scope, complexity, measured and carrying cost, provenance/license, deterministic applicability/dispatcher/fallback behavior, compatibility/migration, maintainer, review/signature threshold, rollback, and supersession. Seed the release with useful `.gc` reference algorithm families plus only those fixed-domain specialized sequence variants and the bounded reusable motif independently accepted from F2.q; generic APIs remain correct outside specializations through explicit applicability checks and fallbacks. Generate compact human/agent documentation, package-local examples, symbol cards, and package evidence; reproduce build/test/package/install/use from a clean checkout with `foundry/` deleted. Foundry operators can submit proposals but cannot review, sign, publish, mutate the destination, or reinterpret causal evidence; a run against library N may only propose N+1. Publish the signed library, Foundation snapshot, and first generation delta together with all accepted/rejected/unknown decisions, carry-cost evidence, branch dispositions, and explicit no-novelty claims. This closes MF and activates the finite R8.3.a-b GenesisExamples/GenesisApps seed plus later isolated Foundry expansion; Bench and Challenge remain frozen until R8.3.b, and no Genesis Model implementation is authorized.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28481,7 +28483,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Establish the supplied `genesis/algorithms` package collection and a closed promotion schema that binds source candidate and calibration snapshot, exact destination API/contract, supported semantic and target profiles, proof/test/counterexample scope, complexity and measured cost, provenance/license, deterministic fallback, compatibility/migration, maintainer, review/signature threshold, rollback, and supersession. Seed the release with useful `.gc` reference algorithms plus only those fixed-domain specialized sequence variants independently accepted from F2.q; generic APIs must remain correct outside a specialization through explicit applicability checks and fallbacks. Generate compact human/agent documentation, package-local examples, symbol cards, and package evidence; reproduce build/test/package/install/use from a clean checkout with `foundry/` deleted. Foundry operators can submit proposals but cannot review, sign, publish, or mutate the destination; a run against library N may only propose N+1. Publish the signed library and Foundry Foundation snapshot together with all accepted/rejected decisions and explicit no-novelty claims. This closes MF and activates the finite R8.3.a-b GenesisExamples/GenesisApps seed plus later isolated Foundry expansion; Bench and Challenge remain frozen until R8.3.b, and no Genesis Model implementation is authorized.",
+      "objective": "Establish the supplied `genesis/algorithms` package collection and a closed promotion schema that binds source candidate, immutable generation/basis branch, causal trial, calibration snapshot, exact destination API/contract/interface identity, supported semantic and target profiles, proof/test/counterexample scope, complexity, measured and carrying cost, provenance/license, deterministic applicability/dispatcher/fallback behavior, compatibility/migration, maintainer, review/signature threshold, rollback, and supersession. Seed the release with useful `.gc` reference algorithm families plus only those fixed-domain specialized sequence variants and the bounded reusable motif independently accepted from F2.q; generic APIs remain correct outside specializations through explicit applicability checks and fallbacks. Generate compact human/agent documentation, package-local examples, symbol cards, and package evidence; reproduce build/test/package/install/use from a clean checkout with `foundry/` deleted. Foundry operators can submit proposals but cannot review, sign, publish, mutate the destination, or reinterpret causal evidence; a run against library N may only propose N+1. Publish the signed library, Foundation snapshot, and first generation delta together with all accepted/rejected/unknown decisions, carry-cost evidence, branch dispositions, and explicit no-novelty claims. This closes MF and activates the finite R8.3.a-b GenesisExamples/GenesisApps seed plus later isolated Foundry expansion; Bench and Challenge remain frozen until R8.3.b, and no Genesis Model implementation is authorized.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28540,7 +28542,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Introduce beam, evolutionary, MCTS, solver-guided, e-graph exploration, and optional LLM proposal adapters one at a time behind the same candidate protocol. Each engine is deterministic when feasible or statistically specified otherwise, runs under identical authority/resource envelopes, cannot see hidden verifiers, and survives predeclared comparison against enumeration/random/simple heuristics before remaining enabled. Allocate bounded resources using only declared observable progress, diversity, uncertainty, and historical evidence; preserve fairness and starvation bounds, deterministic decisions for deterministic profiles, and complete allocation receipts. Fixed/equal allocation and single-best-engine baselines must be beaten on held-out task families before adaptive control is promoted; neither engine nor controller changes tasks, rewards, destination APIs, or promotion rules.",
+        "deliverable": "Introduce beam, evolutionary, MCTS, solver-guided, e-graph exploration, and optional LLM proposal adapters one at a time behind the same candidate protocol. Each engine is deterministic when feasible or statistically specified otherwise, runs under identical authority/resource envelopes, cannot see hidden verifiers, and survives predeclared comparison against enumeration/random/simple heuristics before remaining enabled. Maintain bounded candidate archives across behavior/construction/cost descriptors and bounded basis archives across vocabulary size, construction depth, proof burden, context cost, task coverage, transfer, representation profile, and descendant productivity; diversity is an exploration policy, never proof or promotion authority. Allocate resources using declared progress, diversity, uncertainty, and historical evidence with branch/lineage fairness, starvation bounds, opportunity normalization, deterministic decisions for deterministic profiles, and complete receipts. Fixed/equal allocation, single-best-engine, primitive-only, and prior-release baselines must be beaten on held-out task families before adaptive control is promoted; neither engine nor controller changes tasks, rewards, grammars, basis contents, destination APIs, or promotion rules inside a generation.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28555,7 +28557,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Introduce beam, evolutionary, MCTS, solver-guided, e-graph exploration, and optional LLM proposal adapters one at a time behind the same candidate protocol. Each engine is deterministic when feasible or statistically specified otherwise, runs under identical authority/resource envelopes, cannot see hidden verifiers, and survives predeclared comparison against enumeration/random/simple heuristics before remaining enabled. Allocate bounded resources using only declared observable progress, diversity, uncertainty, and historical evidence; preserve fairness and starvation bounds, deterministic decisions for deterministic profiles, and complete allocation receipts. Fixed/equal allocation and single-best-engine baselines must be beaten on held-out task families before adaptive control is promoted; neither engine nor controller changes tasks, rewards, destination APIs, or promotion rules.",
+      "objective": "Introduce beam, evolutionary, MCTS, solver-guided, e-graph exploration, and optional LLM proposal adapters one at a time behind the same candidate protocol. Each engine is deterministic when feasible or statistically specified otherwise, runs under identical authority/resource envelopes, cannot see hidden verifiers, and survives predeclared comparison against enumeration/random/simple heuristics before remaining enabled. Maintain bounded candidate archives across behavior/construction/cost descriptors and bounded basis archives across vocabulary size, construction depth, proof burden, context cost, task coverage, transfer, representation profile, and descendant productivity; diversity is an exploration policy, never proof or promotion authority. Allocate resources using declared progress, diversity, uncertainty, and historical evidence with branch/lineage fairness, starvation bounds, opportunity normalization, deterministic decisions for deterministic profiles, and complete receipts. Fixed/equal allocation, single-best-engine, primitive-only, and prior-release baselines must be beaten on held-out task families before adaptive control is promoted; neither engine nor controller changes tasks, rewards, grammars, basis contents, destination APIs, or promotion rules inside a generation.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28583,7 +28585,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Add plural search engines and an evidence-driven portfolio controller",
+      "title": "Add plural search engines, candidate/basis quality-diversity, and an evidence-driven portfolio controller",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28614,7 +28616,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Detect repeated successful subgraphs, anti-unify typed instances, infer the weakest candidate contract, verify instances and generalization, and compare search with/without the abstraction against a simple macro baseline including context, proof, compile, and review cost. Proposals remain versioned mesomachines until independent reuse across multiple task families and targets justifies catalog promotion; failed abstractions and deletion decisions remain searchable.",
+        "deliverable": "Detect repeated successful subgraphs and proof motifs, anti-unify typed instances, infer the weakest candidate contract, and propose individual mechanisms or bounded concept sets. Frequency, compression, salience, and descendant utility are proposal signals only. Every admission runs immutable held-out shadow branches with the same tasks, engines, seeds, budgets, verifier, cost profiles, and stopping rules; includes a matched bad-abstraction control; reports the complete outcome/carry-cost vector; and, when co-adaptation is possible, executes factorial basis-engine conditions. Proposals remain versioned research mechanisms until independently reproduced causal evidence across multiple task-family and target lineages justifies catalog promotion. Failed, neutral, overfit, redundant, interfering, deleted, and superseded abstractions remain searchable with branch and catalytic-influence history.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28629,7 +28631,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Detect repeated successful subgraphs, anti-unify typed instances, infer the weakest candidate contract, verify instances and generalization, and compare search with/without the abstraction against a simple macro baseline including context, proof, compile, and review cost. Proposals remain versioned mesomachines until independent reuse across multiple task families and targets justifies catalog promotion; failed abstractions and deletion decisions remain searchable.",
+      "objective": "Detect repeated successful subgraphs and proof motifs, anti-unify typed instances, infer the weakest candidate contract, and propose individual mechanisms or bounded concept sets. Frequency, compression, salience, and descendant utility are proposal signals only. Every admission runs immutable held-out shadow branches with the same tasks, engines, seeds, budgets, verifier, cost profiles, and stopping rules; includes a matched bad-abstraction control; reports the complete outcome/carry-cost vector; and, when co-adaptation is possible, executes factorial basis-engine conditions. Proposals remain versioned research mechanisms until independently reproduced causal evidence across multiple task-family and target lineages justifies catalog promotion. Failed, neutral, overfit, redundant, interfering, deleted, and superseded abstractions remain searchable with branch and catalytic-influence history.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28657,7 +28659,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Mine reusable abstractions without vocabulary inflation",
+      "title": "Mine and causally admit reusable abstractions without vocabulary inflation",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28688,7 +28690,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Generate candidate equalities/refinements from repeated e-graph evidence, abstraction structure, solver hypotheses, and model proposals, then search aggressively for counterexamples across semantic profiles. A law requires exact side conditions, proof or translation-validation strategy, independent replay, downstream poisoning analysis, complexity budget, rollback, and dependency tracing from every extraction; optimizer promotion is a separate `gc_patches` decision with stronger obligations than an ordinary implementation.",
+        "deliverable": "Generate candidate lemmas, invariants, proof schemas, equalities, and refinements from proof search, repeated e-graph evidence, abstraction structure, solver hypotheses, and model proposals, then search aggressively for counterexamples across semantic profiles. Each object requires exact side conditions, status, proof or translation-validation strategy, independent replay, downstream poisoning analysis, complexity/carrying-cost budget, rollback, and dependency tracing from every extraction and descendant claim. Grammar or verifier extensions are rare constitutional proposals for a later generation and cannot certify themselves. Optimizer promotion is a separate `gc_patches` decision with stronger obligations than an ordinary implementation.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28703,7 +28705,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Generate candidate equalities/refinements from repeated e-graph evidence, abstraction structure, solver hypotheses, and model proposals, then search aggressively for counterexamples across semantic profiles. A law requires exact side conditions, proof or translation-validation strategy, independent replay, downstream poisoning analysis, complexity budget, rollback, and dependency tracing from every extraction; optimizer promotion is a separate `gc_patches` decision with stronger obligations than an ordinary implementation.",
+      "objective": "Generate candidate lemmas, invariants, proof schemas, equalities, and refinements from proof search, repeated e-graph evidence, abstraction structure, solver hypotheses, and model proposals, then search aggressively for counterexamples across semantic profiles. Each object requires exact side conditions, status, proof or translation-validation strategy, independent replay, downstream poisoning analysis, complexity/carrying-cost budget, rollback, and dependency tracing from every extraction and descendant claim. Grammar or verifier extensions are rare constitutional proposals for a later generation and cannot certify themselves. Optimizer promotion is a separate `gc_patches` decision with stronger obligations than an ordinary implementation.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28731,7 +28733,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Discover laws under a stronger proof burden",
+      "title": "Discover reusable proof knowledge and laws under a stronger burden",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28762,7 +28764,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Search encode-operate-decode, sparse/dense and push/pull duals, delta maintenance, shared work, fast-path/fallback, and profile-guided whole-program specialization while charging conversion/state/fallback costs and preserving the authoritative semantics. Verify dispatcher thresholds and regime labels on precommitted distributions, retain robust alternatives rather than one universal winner, and translation-validate any target lowering or emitted artifact.",
+        "deliverable": "Search encode-operate-decode, sparse/dense and push/pull duals, delta maintenance, shared work, fast-path/fallback, and profile-guided whole-program specialization while charging conversion/state/fallback/context costs and preserving authoritative semantics. Treat a representation as a generation input with its own identity; compare basis and representation using matched and factorial trials rather than anecdotal winner runs. Verify applicability, dispatcher thresholds, regime labels, fallback reachability, and boundary behavior on precommitted distributions; retain robust alternatives rather than one universal winner; and translation-validate every target lowering or emitted artifact.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28777,7 +28779,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Search encode-operate-decode, sparse/dense and push/pull duals, delta maintenance, shared work, fast-path/fallback, and profile-guided whole-program specialization while charging conversion/state/fallback costs and preserving the authoritative semantics. Verify dispatcher thresholds and regime labels on precommitted distributions, retain robust alternatives rather than one universal winner, and translation-validate any target lowering or emitted artifact.",
+      "objective": "Search encode-operate-decode, sparse/dense and push/pull duals, delta maintenance, shared work, fast-path/fallback, and profile-guided whole-program specialization while charging conversion/state/fallback/context costs and preserving authoritative semantics. Treat a representation as a generation input with its own identity; compare basis and representation using matched and factorial trials rather than anecdotal winner runs. Verify applicability, dispatcher thresholds, regime labels, fallback reachability, and boundary behavior on precommitted distributions; retain robust alternatives rather than one universal winner; and translation-validate every target lowering or emitted artifact.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -28805,7 +28807,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Expand representations, incrementalization, specialization, and dispatch",
+      "title": "Expand representations, incrementalization, specialization, dispatch, and algorithm families through causal comparison",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
@@ -28836,7 +28838,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Add bounded bit manipulation first, then incremental collections, graph traversal, sparse structures, dynamic programming, parsing/encoding/compression, and numerical iteration only when each pack supplies independent task authority, semantics, generators/adversaries, references, proof strategy, cost profiles, calibration set, licenses, resource bounds, and claim boundary. A failed pack cannot weaken the common verifier or expand the kernel.",
+        "deliverable": "Add bounded bit manipulation first, then incremental collections, graph traversal, sparse structures, dynamic programming, parsing/encoding/compression, and numerical iteration only when each pack supplies independent task authority and genealogy, semantics, generators/adversaries, references, proof strategy, cost profiles, calibration and abstraction-transfer sets, licenses, resource bounds, claim boundary, and explicit accounting for vocabulary growth and cross-pack transfer. Pack tasks may propose later task evolution but cannot rewrite the active generation; a failed pack cannot weaken the common verifier, expand the kernel, or hide negative transfer behind aggregate yield.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -28851,7 +28853,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Add bounded bit manipulation first, then incremental collections, graph traversal, sparse structures, dynamic programming, parsing/encoding/compression, and numerical iteration only when each pack supplies independent task authority, semantics, generators/adversaries, references, proof strategy, cost profiles, calibration set, licenses, resource bounds, and claim boundary. A failed pack cannot weaken the common verifier or expand the kernel.",
+      "objective": "Add bounded bit manipulation first, then incremental collections, graph traversal, sparse structures, dynamic programming, parsing/encoding/compression, and numerical iteration only when each pack supplies independent task authority and genealogy, semantics, generators/adversaries, references, proof strategy, cost profiles, calibration and abstraction-transfer sets, licenses, resource bounds, claim boundary, and explicit accounting for vocabulary growth and cross-pack transfer. Pack tasks may propose later task evolution but cannot rewrite the active generation; a failed pack cannot weaken the common verifier, expand the kernel, or hide negative transfer behind aggregate yield.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -29061,7 +29063,7 @@
       },
       "expected_outputs": {
         "declared_artifacts": [],
-        "deliverable": "Generalize F2.r's independently governed path for later Genesis Algorithms releases, research examples, reusable mechanisms, other packages, stdlib implementations, optimizer rewrites, compiler specializations, and rejected/archive status using semantic patches, threshold review, compatibility/migration, canarying, rollback, incident response, and post-promotion monitoring. Publish independently reproducible Foundry snapshots with mechanism/law/task/counterexample/lineage memories, total resource and review costs, correction/supersession history, and external literature/expert review before any historical novelty claim. Every search binds a prior immutable library release and every promoted release is rebuilt without Foundry; no promotion makes Foundry a production runtime dependency.",
+        "deliverable": "Generalize F2.r's independently governed path for later Genesis Algorithms releases, research examples, reusable mechanisms, proof knowledge, other packages, stdlib implementations, optimizer rewrites, compiler specializations, and rejected/archive status using semantic patches, threshold review, compatibility/migration, canarying, rollback, incident response, and post-promotion monitoring. Operate bounded sibling basis branches with explicit parentage, merge trials, expiry, retirement, archive, invalidation propagation, prior-release controls, and generation-delayed grammar/verifier/task proposals; never mutate the baseline of the run that produced a proposal. Publish independently reproducible snapshots with all seven graph planes, five knowledge catalogs, branch dispositions, causal and null trials, mechanism/law/task/counterexample lineage, total resource/carry/review costs, correction/supersession history, and external literature/expert review before any historical novelty claim. Every search binds a prior immutable library release and every promoted release is rebuilt and verified without Foundry; no promotion makes Foundry a production runtime dependency.",
         "durable_evidence_required": true,
         "mutable_e0_sufficient": false
       },
@@ -29076,7 +29078,7 @@
         "reject self-verification, unsigned authority changes, and incomplete independent evidence",
         "reject autonomous changes to governance roots, self-approval, benchmark overfitting, and v1 compatibility regressions"
       ],
-      "objective": "Generalize F2.r's independently governed path for later Genesis Algorithms releases, research examples, reusable mechanisms, other packages, stdlib implementations, optimizer rewrites, compiler specializations, and rejected/archive status using semantic patches, threshold review, compatibility/migration, canarying, rollback, incident response, and post-promotion monitoring. Publish independently reproducible Foundry snapshots with mechanism/law/task/counterexample/lineage memories, total resource and review costs, correction/supersession history, and external literature/expert review before any historical novelty claim. Every search binds a prior immutable library release and every promoted release is rebuilt without Foundry; no promotion makes Foundry a production runtime dependency.",
+      "objective": "Generalize F2.r's independently governed path for later Genesis Algorithms releases, research examples, reusable mechanisms, proof knowledge, other packages, stdlib implementations, optimizer rewrites, compiler specializations, and rejected/archive status using semantic patches, threshold review, compatibility/migration, canarying, rollback, incident response, and post-promotion monitoring. Operate bounded sibling basis branches with explicit parentage, merge trials, expiry, retirement, archive, invalidation propagation, prior-release controls, and generation-delayed grammar/verifier/task proposals; never mutate the baseline of the run that produced a proposal. Publish independently reproducible snapshots with all seven graph planes, five knowledge catalogs, branch dispositions, causal and null trials, mechanism/law/task/counterexample lineage, total resource/carry/review costs, correction/supersession history, and external literature/expert review before any historical novelty claim. Every search binds a prior immutable library release and every promoted release is rebuilt and verified without Foundry; no promotion makes Foundry a production runtime dependency.",
       "owner_paths": [
         "ROADMAP.md",
         "docs/program",
@@ -29104,7 +29106,7 @@
       },
       "start_ready": false,
       "state": "open",
-      "title": "Operationalize subsequent library releases, destination promotion, and long-term research memory",
+      "title": "Operationalize branching generations, subsequent library releases, destination promotion, and long-term research memory",
       "unsatisfied_prerequisites": [
         "R3.4.d",
         "R9.4.f",
