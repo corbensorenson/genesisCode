@@ -1,0 +1,120 @@
+(def selfhost/pkg-publish-authority::bytes-length?
+  (fn (value)
+    (fn (length)
+      (if (selfhost/pkg-publish-authority::bytes? value)
+        ((core/int::eq? (core/bytes::len value)) length)
+        false))))
+
+(def selfhost/pkg-publish-authority::optional-role-valid?
+  (fn (term)
+    (if ((selfhost/pkg-publish-authority::has-key? term) (quote :role))
+      (let ((role ((selfhost/pkg-publish-authority::field term) (quote :role))))
+        (if (selfhost/pkg-publish-authority::nil? role)
+          true
+          (let ((text (selfhost/pkg-publish-authority::text role)))
+            (if (selfhost/pkg-publish-authority::nil? text)
+              false
+              ((core/int::lt? 0) (core/str::len (selfhost/policy::trim text)))))))
+      true)))
+
+(def selfhost/pkg-publish-authority::commit-signing-hash
+  (fn (commit)
+    (let ((unsigned (((core/map::put commit) (quote :attestations)) [])))
+      (let ((bytes (selfhost/pkg-publish-authority::canonical-bytes unsigned)))
+        (if (selfhost/pkg-publish-authority::nil? bytes)
+          nil
+          (let ((domain ((core/bytes::concat b"GCv0.2\x00") b"vcs\x00commit-signing-hash\x00")))
+            (let ((digest (core/crypto::blake3 ((core/bytes::concat domain) bytes))))
+              (if (core/error::is? digest) nil digest))))))))
+
+(def selfhost/pkg-publish-authority::commit-sign-message
+  (fn (signing-h)
+    ((core/bytes::concat ((core/bytes::concat b"GCv0.2\x00") b"vcs\x00commit-sign\x00")) signing-h)))
+
+(def selfhost/pkg-publish-authority::attestation-valid?
+  (fn (term)
+    (fn (signing-h)
+      (if (selfhost/pkg-publish-authority::map? term)
+        (let
+          ((type ((selfhost/pkg-publish-authority::field term) (quote :type)))
+            (version ((selfhost/pkg-publish-authority::field term) (quote :v)))
+            (alg ((selfhost/pkg-publish-authority::field term) (quote :alg)))
+            (declared-h ((selfhost/pkg-publish-authority::field term) (quote :signing-h)))
+            (pk ((selfhost/pkg-publish-authority::field term) (quote :pk)))
+            (sig ((selfhost/pkg-publish-authority::field term) (quote :sig))))
+          (if
+            (if (selfhost/pkg-publish-authority::sym? type)
+              ((core/sym::eq? type) (quote :vcs/attestation))
+              false)
+            (if
+              (if (selfhost/pkg-publish-authority::int? version) ((core/int::eq? version) 1) false)
+              (if (selfhost/pkg-publish-authority::str? alg)
+                (if ((selfhost/pkg-publish-authority::bytes-length? declared-h) 32)
+                  (if ((core/eq? declared-h) signing-h)
+                    (if ((selfhost/pkg-publish-authority::bytes-length? pk) 32)
+                      (if ((selfhost/pkg-publish-authority::bytes-length? sig) 64)
+                        (selfhost/pkg-publish-authority::optional-role-valid? term)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false))
+        false))))
+
+(def selfhost/pkg-publish-authority::crypto-request
+  (fn (object)
+    (fn (class)
+      (fn (signing-h)
+        (fn (sign-message)
+          (let ((term ((selfhost/pkg-publish-authority::field object) (quote :term))))
+            (let
+              (
+                (base
+                  {
+                    :alg ((selfhost/pkg-publish-authority::field term) (quote :alg))
+                    :allowed-public-keys
+                      ((selfhost/pkg-publish-authority::field class) (quote :allowed-public-keys))
+                    :attestation-h ((selfhost/pkg-publish-authority::field object) (quote :h))
+                    :pk ((selfhost/pkg-publish-authority::field term) (quote :pk))
+                    :sig ((selfhost/pkg-publish-authority::field term) (quote :sig))
+                    :sign-message sign-message
+                    :signing-h signing-h}))
+              (((core/map::put base) (quote :request-h)) (selfhost/hash::hash-term base)))))))))
+
+(def selfhost/pkg-publish-authority::crypto-requests-loop
+  (fn (objects)
+    (fn (class)
+      (fn (signing-h)
+        (fn (sign-message)
+          (fn (index)
+            (fn (output)
+              (if ((core/int::eq? index) (core/vec::len objects))
+                (selfhost/pkg-publish-authority::internal-ok output)
+                (let ((object ((core/vec::get objects) index)))
+                  (let ((term ((selfhost/pkg-publish-authority::field object) (quote :term))))
+                    (if ((selfhost/pkg-publish-authority::attestation-valid? term) signing-h)
+                      (
+                        (((((selfhost/pkg-publish-authority::crypto-requests-loop objects) class) signing-h) sign-message)
+                          ((core/int::add index) 1))
+                        ((core/vec::push output)
+                          ((((selfhost/pkg-publish-authority::crypto-request object) class) signing-h)
+                            sign-message)))
+                      (selfhost/pkg-publish-authority::internal-bad "core/pkg/bad-attestation"))))))))))))
+
+(def selfhost/pkg-publish-authority::crypto-requests
+  (fn (objects)
+    (fn (class)
+      (fn (commit)
+        (if ((selfhost/pkg-publish-authority::field class) (quote :require-signatures))
+          (let ((signing-h (selfhost/pkg-publish-authority::commit-signing-hash commit)))
+            (if ((selfhost/pkg-publish-authority::bytes-length? signing-h) 32)
+              (
+                (
+                  ((((selfhost/pkg-publish-authority::crypto-requests-loop objects) class) signing-h)
+                    (selfhost/pkg-publish-authority::commit-sign-message signing-h))
+                  0)
+                [])
+              (selfhost/pkg-publish-authority::internal-bad "core/pkg/bad-commit")))
+          (selfhost/pkg-publish-authority::internal-ok []))))))

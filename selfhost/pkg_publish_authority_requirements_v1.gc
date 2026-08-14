@@ -1,0 +1,223 @@
+(def selfhost/pkg-publish-authority::requirements-modules-loop?
+  (fn (modules)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len modules))
+        true
+        (let ((module ((core/vec::get modules) index)))
+          (if (selfhost/pkg-publish-authority::map? module)
+            (let
+              ((path ((selfhost/pkg-publish-authority::field module) (quote :path)))
+                (exports ((selfhost/pkg-publish-authority::field module) (quote :exports))))
+              (if (selfhost/pkg-publish-authority::nonempty-trimmed-str? path)
+                (if (selfhost/pkg-publish-authority::vec? exports)
+                  (if ((core/int::lt? 0) (core/vec::len exports))
+                    (if ((selfhost/pkg-publish-authority::text-vector-loop? exports) 0)
+                      ((selfhost/pkg-publish-authority::requirements-modules-loop? modules)
+                        ((core/int::add index) 1))
+                      false)
+                    false)
+                  false)
+                false))
+            false))))))
+
+(def selfhost/pkg-publish-authority::requirements-modules-count
+  (fn (links)
+    (if ((selfhost/pkg-publish-authority::has-key? links) (quote :modules))
+      (let ((modules ((selfhost/pkg-publish-authority::field links) (quote :modules))))
+        (if (selfhost/pkg-publish-authority::nil? modules)
+          0
+          (if (selfhost/pkg-publish-authority::vec? modules)
+            (if ((selfhost/pkg-publish-authority::requirements-modules-loop? modules) 0)
+              (core/vec::len modules)
+              -1)
+            -1)))
+      0)))
+
+(def selfhost/pkg-publish-authority::requirements-obligations-loop?
+  (fn (values)
+    (fn (obligations)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          true
+          (if
+            ((selfhost/pkg-publish-authority::obligation-link-member? obligations)
+              ((core/vec::get values) index))
+            (((selfhost/pkg-publish-authority::requirements-obligations-loop? values) obligations)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/pkg-publish-authority::requirements-obligations-count
+  (fn (links)
+    (fn (obligations)
+      (if ((selfhost/pkg-publish-authority::has-key? links) (quote :obligations))
+        (let ((values ((selfhost/pkg-publish-authority::field links) (quote :obligations))))
+          (if (selfhost/pkg-publish-authority::nil? values)
+            0
+            (if (selfhost/pkg-publish-authority::vec? values)
+              (if
+                (((selfhost/pkg-publish-authority::requirements-obligations-loop? values) obligations)
+                  0)
+                (core/vec::len values)
+                -1)
+              -1)))
+        0))))
+
+(def selfhost/pkg-publish-authority::requirements-kinds-loop?
+  (fn (values)
+    (fn (observed)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          true
+          (if
+            ((selfhost/pkg-publish-authority::observed-kind? observed)
+              ((core/vec::get values) index))
+            (((selfhost/pkg-publish-authority::requirements-kinds-loop? values) observed)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/pkg-publish-authority::requirements-kinds-count
+  (fn (links)
+    (fn (observed)
+      (if ((selfhost/pkg-publish-authority::has-key? links) (quote :evidence-kinds))
+        (let ((values ((selfhost/pkg-publish-authority::field links) (quote :evidence-kinds))))
+          (if (selfhost/pkg-publish-authority::nil? values)
+            0
+            (if (selfhost/pkg-publish-authority::vec? values)
+              (if (((selfhost/pkg-publish-authority::requirements-kinds-loop? values) observed) 0)
+                (core/vec::len values)
+                -1)
+              -1)))
+        0))))
+
+(def selfhost/pkg-publish-authority::requirements-links-valid?
+  (fn (links)
+    (fn (obligations)
+      (fn (observed)
+        (if (selfhost/pkg-publish-authority::map? links)
+          (let
+            ((modules (selfhost/pkg-publish-authority::requirements-modules-count links))
+              (obligation-links
+                ((selfhost/pkg-publish-authority::requirements-obligations-count links) obligations))
+              (kind-links
+                ((selfhost/pkg-publish-authority::requirements-kinds-count links) observed)))
+            (if ((core/int::lt? modules) 0)
+              false
+              (if ((core/int::lt? obligation-links) 0)
+                false
+                (if ((core/int::lt? kind-links) 0)
+                  false
+                  ((core/int::lt? 0)
+                    ((core/int::add ((core/int::add modules) obligation-links)) kind-links))))))
+          false)))))
+
+(def selfhost/pkg-publish-authority::requirements-level-valid?
+  (fn (value)
+    (let ((level (selfhost/pkg-publish-authority::normalize-symbol-like value)))
+      (if (selfhost/pkg-publish-authority::nil? level)
+        false
+        (if ((core/eq? level) ":system")
+          true
+          (if ((core/eq? level) ":hlr") true ((core/eq? level) ":llr")))))))
+
+(def selfhost/pkg-publish-authority::requirement-entry-valid?
+  (fn (entry)
+    (fn (obligations)
+      (fn (observed)
+        (if (selfhost/pkg-publish-authority::map? entry)
+          (if
+            (selfhost/pkg-publish-authority::nonempty-trimmed-str?
+              ((selfhost/pkg-publish-authority::field entry) (quote :id)))
+            (if
+              (selfhost/pkg-publish-authority::requirements-level-valid?
+                ((selfhost/pkg-publish-authority::field entry) (quote :level)))
+              (if
+                ((selfhost/pkg-publish-authority::optional-nonempty-string-vector-valid? entry)
+                  (quote :parents))
+                (if
+                  ((selfhost/pkg-publish-authority::optional-nonempty-string-vector-valid? entry)
+                    (quote :hazards))
+                  (
+                    (
+                      (selfhost/pkg-publish-authority::requirements-links-valid?
+                        ((selfhost/pkg-publish-authority::field entry) (quote :links)))
+                      obligations)
+                    observed)
+                  false)
+                false)
+              false)
+            false)
+          false)))))
+
+(def selfhost/pkg-publish-authority::requirements-entries-loop?
+  (fn (entries)
+    (fn (obligations)
+      (fn (observed)
+        (fn (index)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            true
+            (if
+              (
+                ((selfhost/pkg-publish-authority::requirement-entry-valid? ((core/vec::get entries) index))
+                  obligations)
+                observed)
+              ((((selfhost/pkg-publish-authority::requirements-entries-loop? entries) obligations) observed)
+                ((core/int::add index) 1))
+              false)))))))
+
+(def selfhost/pkg-publish-authority::requirements-trace-valid?
+  (fn (term)
+    (fn (facts)
+      (fn (commit)
+        (fn (observed)
+          (if
+            ((selfhost/pkg-publish-authority::special-evidence-header-valid? term)
+              ":requirements-trace")
+            (if
+              (
+                (core/eq?
+                  (selfhost/pkg-publish-authority::normalize-symbol-like
+                    ((selfhost/pkg-publish-authority::field term) (quote :status))))
+                ":verified")
+              (if
+                (selfhost/store-authority::hash?
+                  ((selfhost/pkg-publish-authority::field term) (quote :graph-h)))
+                (if
+                  (
+                    (
+                      (selfhost/pkg-publish-authority::release-valid?
+                        ((selfhost/pkg-publish-authority::field term) (quote :release)))
+                      facts)
+                    commit)
+                  (let
+                    ((entries ((selfhost/pkg-publish-authority::field term) (quote :requirements))))
+                    (if (selfhost/pkg-publish-authority::vec? entries)
+                      (if ((core/int::lt? 0) (core/vec::len entries))
+                        (
+                          (
+                            ((selfhost/pkg-publish-authority::requirements-entries-loop? entries)
+                              ((selfhost/pkg-publish-authority::field commit) (quote :obligations)))
+                            observed)
+                          0)
+                        false)
+                      false))
+                  false)
+                false)
+              false)
+            false))))))
+
+(def selfhost/pkg-publish-authority::requirements-traces-loop?
+  (fn (terms)
+    (fn (facts)
+      (fn (commit)
+        (fn (observed)
+          (fn (index)
+            (if ((core/int::eq? index) (core/vec::len terms))
+              true
+              (if
+                (
+                  (((selfhost/pkg-publish-authority::requirements-trace-valid? ((core/vec::get terms) index)) facts)
+                    commit)
+                  observed)
+                (((((selfhost/pkg-publish-authority::requirements-traces-loop? terms) facts) commit) observed)
+                  ((core/int::add index) 1))
+                false))))))))

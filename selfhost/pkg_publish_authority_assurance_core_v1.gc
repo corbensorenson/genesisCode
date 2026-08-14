@@ -1,0 +1,118 @@
+(def selfhost/pkg-publish-authority::text
+  (fn (value)
+    (if (selfhost/pkg-publish-authority::str? value)
+      value
+      (if (selfhost/pkg-publish-authority::sym? value) (core/sym::to-str value) nil))))
+
+(def selfhost/pkg-publish-authority::normalize-symbol-like
+  (fn (value)
+    (let ((text (selfhost/pkg-publish-authority::text value)))
+      (if (selfhost/pkg-publish-authority::nil? text)
+        nil
+        (let ((trimmed (selfhost/policy::trim text)))
+          (if ((selfhost/pkg-lock-read::starts-with? trimmed) ":")
+            trimmed
+            ((core/str::concat ":") trimmed)))))))
+
+(def selfhost/pkg-publish-authority::nonempty-trimmed-str?
+  (fn (value)
+    (if (selfhost/pkg-publish-authority::str? value)
+      ((core/int::lt? 0) (core/str::len (selfhost/policy::trim value)))
+      false)))
+
+(def selfhost/pkg-publish-authority::text-valid?
+  (fn (value)
+    (if (selfhost/pkg-publish-authority::str? value)
+      true
+      (selfhost/pkg-publish-authority::sym? value))))
+
+(def selfhost/pkg-publish-authority::text-vector-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/pkg-publish-authority::text-valid? ((core/vec::get values) index))
+          ((selfhost/pkg-publish-authority::text-vector-loop? values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-publish-authority::nonempty-string-vector-loop?
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if (selfhost/pkg-publish-authority::nonempty-trimmed-str? ((core/vec::get values) index))
+          ((selfhost/pkg-publish-authority::nonempty-string-vector-loop? values)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-publish-authority::optional-nonempty-string-vector-valid?
+  (fn (map)
+    (fn (key)
+      (if ((selfhost/pkg-publish-authority::has-key? map) key)
+        (let ((value ((selfhost/pkg-publish-authority::field map) key)))
+          (if (selfhost/pkg-publish-authority::nil? value)
+            true
+            (if (selfhost/pkg-publish-authority::vec? value)
+              ((selfhost/pkg-publish-authority::nonempty-string-vector-loop? value) 0)
+              false)))
+        true))))
+
+(def selfhost/pkg-publish-authority::optional-bound-hash-valid?
+  (fn (map)
+    (fn (key)
+      (fn (expected)
+        (if ((selfhost/pkg-publish-authority::has-key? map) key)
+          (let ((value ((selfhost/pkg-publish-authority::field map) key)))
+            (if (selfhost/pkg-publish-authority::nil? value)
+              true
+              (if (selfhost/store-authority::hash? value) ((core/eq? value) expected) false)))
+          true)))))
+
+(def selfhost/pkg-publish-authority::release-valid?
+  (fn (release)
+    (fn (facts)
+      (fn (commit)
+        (if (selfhost/pkg-publish-authority::map? release)
+          (let
+            ((snapshot ((selfhost/pkg-publish-authority::field release) (quote :snapshot)))
+              (commit-h ((selfhost/pkg-publish-authority::field facts) (quote :commit-h)))
+              (policy-h ((selfhost/pkg-publish-authority::field facts) (quote :policy-h)))
+              (result-h ((selfhost/pkg-publish-authority::field commit) (quote :result))))
+            (if (selfhost/store-authority::hash? snapshot)
+              (if ((core/eq? snapshot) result-h)
+                (if
+                  (((selfhost/pkg-publish-authority::optional-bound-hash-valid? release) (quote :commit))
+                    commit-h)
+                  (((selfhost/pkg-publish-authority::optional-bound-hash-valid? release) (quote :policy))
+                    policy-h)
+                  false)
+                false)
+              false))
+          false)))))
+
+(def selfhost/pkg-publish-authority::special-evidence-header-valid?
+  (fn (term)
+    (fn (expected-kind)
+      (if (selfhost/pkg-publish-authority::evidence-valid? term)
+        (
+          (core/eq?
+            (selfhost/pkg-publish-authority::normalize-symbol-like
+              ((selfhost/pkg-publish-authority::field term) (quote :kind))))
+          expected-kind)
+        false))))
+
+(def selfhost/pkg-publish-authority::observed-kind?
+  (fn (observed)
+    (fn (value)
+      (let ((kind (selfhost/pkg-publish-authority::normalize-symbol-like value)))
+        (if (selfhost/pkg-publish-authority::nil? kind)
+          false
+          ((selfhost/pkg-publish-authority::has-key? observed) kind))))))
+
+(def selfhost/pkg-publish-authority::obligation-link-member?
+  (fn (obligations)
+    (fn (value)
+      (let ((text (selfhost/pkg-publish-authority::text value)))
+        (if (selfhost/pkg-publish-authority::nil? text)
+          false
+          (((selfhost/pkg-publish-authority::obligation-member-loop? obligations) text) 0))))))

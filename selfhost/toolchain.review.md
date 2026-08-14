@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `a3d5935edfa979b23d268e29eef2655ea8b8a2e1a18759b441d1e393d3f64ea2`
-- Freshness artifact hash: `a3d5935edfa979b23d268e29eef2655ea8b8a2e1a18759b441d1e393d3f64ea2`
-- Freshness source hash: `b3120e192f430c50d8d8ddd7b392a5a65bb1bdf36e587cf3b8cb5dfc233676d2`
-- Source aggregate hash (module path + module sha256): `7b18f71244ff55d1f59efcbe4d9567424829d087193b9c75842a263d1abed075`
+- Artifact sha256: `f32fbe1e043def36d4e5f7524b2485c7e7ced849cb5c701cf5c23ee8186e9383`
+- Freshness artifact hash: `f32fbe1e043def36d4e5f7524b2485c7e7ced849cb5c701cf5c23ee8186e9383`
+- Freshness source hash: `f610f219a3f92910590a47eb3f26e238f10d9a41abde6930d4c7e627b80ff261`
+- Source aggregate hash (module path + module sha256): `da63a0e515c6b1e757cd54ea84d6c42de6adcb436fdcf482399881acbd5ba1c8`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `101`
+- Module count: `107`
 
 ## Module Summary
 
@@ -96,8 +96,14 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_publish_glob_v1.gc` | 522 | 24945 | 21 | `889e56fe7854ce24` |
 | `selfhost/pkg_publish_policy_core_v1.gc` | 252 | 9604 | 34 | `d21993c138dda0a2` |
 | `selfhost/pkg_publish_policy_v1.gc` | 601 | 26342 | 29 | `fa6b3136e6333a4d` |
-| `selfhost/pkg_publish_authority_core_v1.gc` | 138 | 5359 | 16 | `95f05d94239756c9` |
+| `selfhost/pkg_publish_authority_core_v1.gc` | 162 | 6210 | 20 | `4c59a79aa71a72a2` |
 | `selfhost/pkg_publish_authority_inspect_v1.gc` | 91 | 4667 | 8 | `98e04edfca3a359e` |
+| `selfhost/pkg_publish_authority_objects_v1.gc` | 220 | 8893 | 19 | `562225c6b3b1316d` |
+| `selfhost/pkg_publish_authority_assurance_core_v1.gc` | 118 | 4789 | 12 | `5801063158ff124d` |
+| `selfhost/pkg_publish_authority_requirements_v1.gc` | 223 | 9211 | 12 | `c0a8adae4fa8e833` |
+| `selfhost/pkg_publish_authority_qualification_v1.gc` | 154 | 6427 | 8 | `4ce5d89616ebe489` |
+| `selfhost/pkg_publish_authority_crypto_v1.gc` | 120 | 5853 | 8 | `e426d1d2bf0c0220` |
+| `selfhost/pkg_publish_authority_prepare_v1.gc` | 210 | 10711 | 10 | `764ba38e122c523b` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -200,8 +206,14 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_publish_glob_v1.gc`: `selfhost/pkg-publish-glob::good`, `selfhost/pkg-publish-glob::bad`, `selfhost/pkg-publish-glob::byte-at`, `selfhost/pkg-publish-glob::byte-equal`, `selfhost/pkg-publish-glob::skip-stars`, `selfhost/pkg-publish-glob::recursive-component?`, `selfhost/pkg-publish-glob::star`, `selfhost/pkg-publish-glob::star-loop`
 - `selfhost/pkg_publish_policy_core_v1.gc`: `selfhost/pkg-publish-policy::tag`, `selfhost/pkg-publish-policy::map?`, `selfhost/pkg-publish-policy::vec?`, `selfhost/pkg-publish-policy::str?`, `selfhost/pkg-publish-policy::sym?`, `selfhost/pkg-publish-policy::int?`, `selfhost/pkg-publish-policy::bool?`, `selfhost/pkg-publish-policy::nil?`
 - `selfhost/pkg_publish_policy_v1.gc`: `selfhost/pkg-publish-policy::optional-strings`, `selfhost/pkg-publish-policy::optional-texts`, `selfhost/pkg-publish-policy::optional-kinds`, `selfhost/pkg-publish-policy::patterns-valid-loop?`, `selfhost/pkg-publish-policy::validated-patterns`, `selfhost/pkg-publish-policy::obligation-kind-map-loop`, `selfhost/pkg-publish-policy::obligation-kind-map`, `selfhost/pkg-publish-policy::signature-flag`
-- `selfhost/pkg_publish_authority_core_v1.gc`: `selfhost/pkg-publish-authority::tag`, `selfhost/pkg-publish-authority::nil?`, `selfhost/pkg-publish-authority::map?`, `selfhost/pkg-publish-authority::str?`, `selfhost/pkg-publish-authority::sym?`, `selfhost/pkg-publish-authority::int?`, `selfhost/pkg-publish-authority::field`, `selfhost/pkg-publish-authority::nonempty-str?`
+- `selfhost/pkg_publish_authority_core_v1.gc`: `selfhost/pkg-publish-authority::tag`, `selfhost/pkg-publish-authority::nil?`, `selfhost/pkg-publish-authority::map?`, `selfhost/pkg-publish-authority::str?`, `selfhost/pkg-publish-authority::sym?`, `selfhost/pkg-publish-authority::int?`, `selfhost/pkg-publish-authority::vec?`, `selfhost/pkg-publish-authority::bytes?`
 - `selfhost/pkg_publish_authority_inspect_v1.gc`: `selfhost/pkg-publish-authority::obligation-text`, `selfhost/pkg-publish-authority::obligation-member-loop?`, `selfhost/pkg-publish-authority::required-obligations-loop?`, `selfhost/pkg-publish-authority::required-obligations-present?`, `selfhost/pkg-publish-authority::inspect-value`, `selfhost/pkg-publish-authority::reject-policy-result`, `selfhost/pkg-publish-authority::inspect-facts`, `selfhost/pkg-publish-authority::inspect`
+- `selfhost/pkg_publish_authority_objects_v1.gc`: `selfhost/pkg-publish-authority::internal-ok`, `selfhost/pkg-publish-authority::internal-bad`, `selfhost/pkg-publish-authority::internal-ok?`, `selfhost/pkg-publish-authority::internal-value`, `selfhost/pkg-publish-authority::bytes-hash`, `selfhost/pkg-publish-authority::canonical-bytes`, `selfhost/pkg-publish-authority::object-valid?`, `selfhost/pkg-publish-authority::objects-valid-loop?`
+- `selfhost/pkg_publish_authority_assurance_core_v1.gc`: `selfhost/pkg-publish-authority::text`, `selfhost/pkg-publish-authority::normalize-symbol-like`, `selfhost/pkg-publish-authority::nonempty-trimmed-str?`, `selfhost/pkg-publish-authority::text-valid?`, `selfhost/pkg-publish-authority::text-vector-loop?`, `selfhost/pkg-publish-authority::nonempty-string-vector-loop?`, `selfhost/pkg-publish-authority::optional-nonempty-string-vector-valid?`, `selfhost/pkg-publish-authority::optional-bound-hash-valid?`
+- `selfhost/pkg_publish_authority_requirements_v1.gc`: `selfhost/pkg-publish-authority::requirements-modules-loop?`, `selfhost/pkg-publish-authority::requirements-modules-count`, `selfhost/pkg-publish-authority::requirements-obligations-loop?`, `selfhost/pkg-publish-authority::requirements-obligations-count`, `selfhost/pkg-publish-authority::requirements-kinds-loop?`, `selfhost/pkg-publish-authority::requirements-kinds-count`, `selfhost/pkg-publish-authority::requirements-links-valid?`, `selfhost/pkg-publish-authority::requirements-level-valid?`
+- `selfhost/pkg_publish_authority_qualification_v1.gc`: `selfhost/pkg-publish-authority::qualification-requirements-valid?`, `selfhost/pkg-publish-authority::qualification-tools-loop?`, `selfhost/pkg-publish-authority::qualification-tools-valid?`, `selfhost/pkg-publish-authority::qualification-test-valid?`, `selfhost/pkg-publish-authority::qualification-tests-loop?`, `selfhost/pkg-publish-authority::qualification-tests-valid?`, `selfhost/pkg-publish-authority::tool-qualification-valid?`, `selfhost/pkg-publish-authority::tool-qualifications-loop?`
+- `selfhost/pkg_publish_authority_crypto_v1.gc`: `selfhost/pkg-publish-authority::bytes-length?`, `selfhost/pkg-publish-authority::optional-role-valid?`, `selfhost/pkg-publish-authority::commit-signing-hash`, `selfhost/pkg-publish-authority::commit-sign-message`, `selfhost/pkg-publish-authority::attestation-valid?`, `selfhost/pkg-publish-authority::crypto-request`, `selfhost/pkg-publish-authority::crypto-requests-loop`, `selfhost/pkg-publish-authority::crypto-requests`
+- `selfhost/pkg_publish_authority_prepare_v1.gc`: `selfhost/pkg-publish-authority::prepare-request-shape?`, `selfhost/pkg-publish-authority::prepare-mechanism-valid?`, `selfhost/pkg-publish-authority::prepare-value`, `selfhost/pkg-publish-authority::reject-internal`, `selfhost/pkg-publish-authority::prepare-crypto`, `selfhost/pkg-publish-authority::prepare-assurance`, `selfhost/pkg-publish-authority::prepare-evidence`, `selfhost/pkg-publish-authority::prepare-objects`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`

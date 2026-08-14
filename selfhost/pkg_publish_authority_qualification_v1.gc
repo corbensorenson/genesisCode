@@ -1,0 +1,154 @@
+(def selfhost/pkg-publish-authority::qualification-requirements-valid?
+  (fn (values)
+    (if (selfhost/pkg-publish-authority::vec? values)
+      (if ((core/int::lt? 0) (core/vec::len values))
+        ((selfhost/pkg-publish-authority::nonempty-string-vector-loop? values) 0)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::qualification-tools-loop?
+  (fn (tools)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len tools))
+        true
+        (let ((tool ((core/vec::get tools) index)))
+          (if (selfhost/pkg-publish-authority::map? tool)
+            (if
+              (selfhost/pkg-publish-authority::nonempty-trimmed-str?
+                ((selfhost/pkg-publish-authority::field tool) (quote :name)))
+              (if
+                (selfhost/store-authority::hash?
+                  ((selfhost/pkg-publish-authority::field tool) (quote :blake3)))
+                ((selfhost/pkg-publish-authority::qualification-tools-loop? tools)
+                  ((core/int::add index) 1))
+                false)
+              false)
+            false))))))
+
+(def selfhost/pkg-publish-authority::qualification-tools-valid?
+  (fn (tools)
+    (if (selfhost/pkg-publish-authority::vec? tools)
+      (if ((core/int::lt? 0) (core/vec::len tools))
+        ((selfhost/pkg-publish-authority::qualification-tools-loop? tools) 0)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::qualification-test-valid?
+  (fn (test)
+    (fn (facts)
+      (fn (commit)
+        (if (selfhost/pkg-publish-authority::map? test)
+          (if
+            (selfhost/pkg-publish-authority::nonempty-trimmed-str?
+              ((selfhost/pkg-publish-authority::field test) (quote :id)))
+            (if
+              (selfhost/store-authority::hash?
+                ((selfhost/pkg-publish-authority::field test) (quote :artifact)))
+              (if
+                (selfhost/store-authority::hash?
+                  ((selfhost/pkg-publish-authority::field test) (quote :manifest)))
+                (if
+                  (selfhost/pkg-publish-authority::nonempty-trimmed-str?
+                    ((selfhost/pkg-publish-authority::field test) (quote :run-id)))
+                  (if
+                    (selfhost/pkg-publish-authority::nonempty-trimmed-str?
+                      ((selfhost/pkg-publish-authority::field test) (quote :runner)))
+                    (if
+                      (selfhost/pkg-publish-authority::nonempty-trimmed-str?
+                        ((selfhost/pkg-publish-authority::field test) (quote :profile)))
+                      (if
+                        ((core/eq? ((selfhost/pkg-publish-authority::field test) (quote :snapshot)))
+                          ((selfhost/pkg-publish-authority::field commit) (quote :result)))
+                        (if
+                          (((selfhost/pkg-publish-authority::optional-bound-hash-valid? test) (quote :policy))
+                            ((selfhost/pkg-publish-authority::field facts) (quote :policy-h)))
+                          (
+                            (core/eq?
+                              (selfhost/pkg-publish-authority::normalize-symbol-like
+                                ((selfhost/pkg-publish-authority::field test) (quote :result))))
+                            ":pass")
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)))))
+
+(def selfhost/pkg-publish-authority::qualification-tests-loop?
+  (fn (tests)
+    (fn (facts)
+      (fn (commit)
+        (fn (index)
+          (if ((core/int::eq? index) (core/vec::len tests))
+            true
+            (if
+              (((selfhost/pkg-publish-authority::qualification-test-valid? ((core/vec::get tests) index)) facts)
+                commit)
+              ((((selfhost/pkg-publish-authority::qualification-tests-loop? tests) facts) commit)
+                ((core/int::add index) 1))
+              false)))))))
+
+(def selfhost/pkg-publish-authority::qualification-tests-valid?
+  (fn (tests)
+    (fn (facts)
+      (fn (commit)
+        (if (selfhost/pkg-publish-authority::vec? tests)
+          (if ((core/int::lt? 0) (core/vec::len tests))
+            ((((selfhost/pkg-publish-authority::qualification-tests-loop? tests) facts) commit) 0)
+            false)
+          false)))))
+
+(def selfhost/pkg-publish-authority::tool-qualification-valid?
+  (fn (term)
+    (fn (facts)
+      (fn (commit)
+        (if
+          ((selfhost/pkg-publish-authority::special-evidence-header-valid? term)
+            ":tool-qualification")
+          (if
+            (
+              (core/eq?
+                (selfhost/pkg-publish-authority::normalize-symbol-like
+                  ((selfhost/pkg-publish-authority::field term) (quote :status))))
+              ":qualified")
+            (if
+              (
+                (
+                  (selfhost/pkg-publish-authority::release-valid?
+                    ((selfhost/pkg-publish-authority::field term) (quote :release)))
+                  facts)
+                commit)
+              (if
+                (selfhost/pkg-publish-authority::qualification-requirements-valid?
+                  ((selfhost/pkg-publish-authority::field term) (quote :requirements)))
+                (if
+                  (selfhost/pkg-publish-authority::qualification-tools-valid?
+                    ((selfhost/pkg-publish-authority::field term) (quote :tools)))
+                  (
+                    (
+                      (selfhost/pkg-publish-authority::qualification-tests-valid?
+                        ((selfhost/pkg-publish-authority::field term) (quote :qualification-tests)))
+                      facts)
+                    commit)
+                  false)
+                false)
+              false)
+            false)
+          false)))))
+
+(def selfhost/pkg-publish-authority::tool-qualifications-loop?
+  (fn (terms)
+    (fn (facts)
+      (fn (commit)
+        (fn (index)
+          (if ((core/int::eq? index) (core/vec::len terms))
+            true
+            (if
+              (((selfhost/pkg-publish-authority::tool-qualification-valid? ((core/vec::get terms) index)) facts)
+                commit)
+              ((((selfhost/pkg-publish-authority::tool-qualifications-loop? terms) facts) commit)
+                ((core/int::add index) 1))
+              false)))))))

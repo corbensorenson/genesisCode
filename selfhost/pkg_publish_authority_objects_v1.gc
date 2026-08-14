@@ -1,0 +1,220 @@
+(def selfhost/pkg-publish-authority::internal-ok
+  (fn (value)
+    {
+      :code nil
+      :ok true
+      :value value}))
+
+(def selfhost/pkg-publish-authority::internal-bad
+  (fn (code)
+    {
+      :code code
+      :ok false
+      :value nil}))
+
+(def selfhost/pkg-publish-authority::internal-ok?
+  (fn (result) ((selfhost/pkg-publish-authority::field result) (quote :ok))))
+
+(def selfhost/pkg-publish-authority::internal-value
+  (fn (result) ((selfhost/pkg-publish-authority::field result) (quote :value))))
+
+(def selfhost/pkg-publish-authority::bytes-hash
+  (fn (bytes)
+    (let ((digest (core/crypto::blake3 bytes)))
+      (if (core/error::is? digest) nil (core/bytes::to-hex digest)))))
+
+(def selfhost/pkg-publish-authority::canonical-bytes
+  (fn (term)
+    (let ((printed (selfhost/printer::print-term term)))
+      (if (core/error::is? printed)
+        nil
+        (let ((bytes (core/str::to-utf8 printed))) (if (core/error::is? bytes) nil bytes))))))
+
+(def selfhost/pkg-publish-authority::object-valid?
+  (fn (object)
+    (fn (expected-h)
+      (if ((selfhost/store-authority::exact-map? object) [:bytes :h :term])
+        (let
+          ((bytes ((selfhost/pkg-publish-authority::field object) (quote :bytes)))
+            (hash ((selfhost/pkg-publish-authority::field object) (quote :h)))
+            (term ((selfhost/pkg-publish-authority::field object) (quote :term))))
+          (if (selfhost/pkg-publish-authority::bytes? bytes)
+            (if (selfhost/store-authority::hash? hash)
+              (if ((core/eq? hash) expected-h)
+                (if ((core/eq? (selfhost/pkg-publish-authority::bytes-hash bytes)) hash)
+                  ((core/eq? (selfhost/pkg-publish-authority::canonical-bytes term)) bytes)
+                  false)
+                false)
+              false)
+            false))
+        false))))
+
+(def selfhost/pkg-publish-authority::objects-valid-loop?
+  (fn (objects)
+    (fn (expected)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len expected))
+          true
+          (if
+            ((selfhost/pkg-publish-authority::object-valid? ((core/vec::get objects) index))
+              ((core/vec::get expected) index))
+            (((selfhost/pkg-publish-authority::objects-valid-loop? objects) expected)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/pkg-publish-authority::objects-valid?
+  (fn (objects)
+    (fn (expected)
+      (if (selfhost/pkg-publish-authority::vec? objects)
+        (if ((core/int::eq? (core/vec::len objects)) (core/vec::len expected))
+          (((selfhost/pkg-publish-authority::objects-valid-loop? objects) expected) 0)
+          false)
+        false))))
+
+(def selfhost/pkg-publish-authority::evidence-data-valid?
+  (fn (term)
+    (if ((selfhost/pkg-publish-authority::has-key? term) (quote :data))
+      (let ((data ((selfhost/pkg-publish-authority::field term) (quote :data))))
+        (if (selfhost/pkg-publish-authority::nil? data)
+          true
+          (if (selfhost/pkg-publish-authority::str? data)
+            (selfhost/store-authority::hash? data)
+            true)))
+      true)))
+
+(def selfhost/pkg-publish-authority::optional-evidence-hashes-valid?
+  (fn (term)
+    (fn (key)
+      (if ((selfhost/pkg-publish-authority::has-key? term) key)
+        (selfhost/commit::hash-vector? ((selfhost/pkg-publish-authority::field term) key))
+        true))))
+
+(def selfhost/pkg-publish-authority::evidence-valid?
+  (fn (term)
+    (if (selfhost/pkg-publish-authority::map? term)
+      (let
+        ((type ((selfhost/pkg-publish-authority::field term) (quote :type)))
+          (version ((selfhost/pkg-publish-authority::field term) (quote :v)))
+          (kind ((selfhost/pkg-publish-authority::field term) (quote :kind))))
+        (if
+          (if (selfhost/pkg-publish-authority::sym? type)
+            ((core/sym::eq? type) (quote :vcs/evidence))
+            false)
+          (if (if (selfhost/pkg-publish-authority::int? version) ((core/int::eq? version) 1) false)
+            (if (selfhost/pkg-publish-authority::sym? kind)
+              (if
+                ((selfhost/pkg-publish-authority::optional-evidence-hashes-valid? term)
+                  (quote :inputs))
+                (if
+                  ((selfhost/pkg-publish-authority::optional-evidence-hashes-valid? term)
+                    (quote :outputs))
+                  (selfhost/pkg-publish-authority::evidence-data-valid? term)
+                  false)
+                false)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-publish-authority::evidence-scan-loop
+  (fn (objects)
+    (fn (index)
+      (fn (kinds)
+        (fn (requirements)
+          (fn (qualifications)
+            (if ((core/int::eq? index) (core/vec::len objects))
+              (selfhost/pkg-publish-authority::internal-ok
+                {
+                  :kinds kinds
+                  :qualifications qualifications
+                  :requirements requirements})
+              (let
+                ((term ((selfhost/pkg-publish-authority::field ((core/vec::get objects) index)) (quote :term))))
+                (if (selfhost/pkg-publish-authority::evidence-valid? term)
+                  (let
+                    (
+                      (kind
+                        (selfhost/pkg-publish-policy::normalize-kind
+                          ((selfhost/pkg-publish-authority::field term) (quote :kind)))))
+                    (
+                      (
+                        (((selfhost/pkg-publish-authority::evidence-scan-loop objects) ((core/int::add index) 1))
+                          (((core/map::put kinds) kind) true))
+                        (if ((core/eq? kind) ":requirements-trace")
+                          ((core/vec::push requirements) term)
+                          requirements))
+                      (if ((core/eq? kind) ":tool-qualification")
+                        ((core/vec::push qualifications) term)
+                        qualifications)))
+                  (selfhost/pkg-publish-authority::internal-bad "core/pkg/bad-evidence"))))))))))
+
+(def selfhost/pkg-publish-authority::evidence-scan
+  (fn (objects) (((((selfhost/pkg-publish-authority::evidence-scan-loop objects) 0) {}) []) [])))
+
+(def selfhost/pkg-publish-authority::kind-set-add-loop
+  (fn (values)
+    (fn (index)
+      (fn (set)
+        (if ((core/int::eq? index) (core/vec::len values))
+          set
+          (((selfhost/pkg-publish-authority::kind-set-add-loop values) ((core/int::add index) 1))
+            (((core/map::put set) ((core/vec::get values) index)) true)))))))
+
+(def selfhost/pkg-publish-authority::obligation-kind-set-loop
+  (fn (entries)
+    (fn (obligations)
+      (fn (index)
+        (fn (set)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            set
+            (let ((entry ((core/vec::get entries) index)))
+              (let ((obligation ((core/vec::get entry) 0)) (kinds ((core/vec::get entry) 1)))
+                (
+                  (((selfhost/pkg-publish-authority::obligation-kind-set-loop entries) obligations)
+                    ((core/int::add index) 1))
+                  (if
+                    (((selfhost/pkg-publish-authority::obligation-member-loop? obligations) obligation)
+                      0)
+                    (((selfhost/pkg-publish-authority::kind-set-add-loop kinds) 0) set)
+                    set))))))))))
+
+(def selfhost/pkg-publish-authority::required-kind-set
+  (fn (class)
+    (fn (commit)
+      (let
+        (
+          (base
+            (
+              (
+                (selfhost/pkg-publish-authority::kind-set-add-loop
+                  ((selfhost/pkg-publish-authority::field class) (quote :required-evidence-kinds)))
+                0)
+              {}))
+          (obligation-kinds
+            ((selfhost/pkg-publish-authority::field class) (quote :obligation-evidence-kinds)))
+          (obligations ((selfhost/pkg-publish-authority::field commit) (quote :obligations))))
+        (
+          (
+            ((selfhost/pkg-publish-authority::obligation-kind-set-loop (core/map::entries obligation-kinds))
+              obligations)
+            0)
+          base)))))
+
+(def selfhost/pkg-publish-authority::kind-set-contained-loop?
+  (fn (required-entries)
+    (fn (observed)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len required-entries))
+          true
+          (if
+            ((selfhost/pkg-publish-authority::has-key? observed)
+              ((core/vec::get ((core/vec::get required-entries) index)) 0))
+            (((selfhost/pkg-publish-authority::kind-set-contained-loop? required-entries) observed)
+              ((core/int::add index) 1))
+            false))))))
+
+(def selfhost/pkg-publish-authority::kind-set-contained?
+  (fn (required)
+    (fn (observed)
+      (((selfhost/pkg-publish-authority::kind-set-contained-loop? (core/map::entries required)) observed)
+        0))))

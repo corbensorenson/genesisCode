@@ -1,0 +1,210 @@
+(def selfhost/pkg-publish-authority::prepare-request-shape?
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [
+          :facts
+          :kind
+          :mechanism
+          :phase
+          :v])
+      (if
+        ((core/eq? ((selfhost/pkg-publish-authority::field request) (quote :kind)))
+          "genesis/pkg-publish-authority-request-v0.1")
+        (if
+          (if
+            (selfhost/pkg-publish-authority::int?
+              ((selfhost/pkg-publish-authority::field request) (quote :v)))
+            ((core/int::eq? ((selfhost/pkg-publish-authority::field request) (quote :v))) 1)
+            false)
+          (if
+            (selfhost/pkg-publish-authority::sym?
+              ((selfhost/pkg-publish-authority::field request) (quote :phase)))
+            ((core/sym::eq? ((selfhost/pkg-publish-authority::field request) (quote :phase)))
+              (quote :prepare))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::prepare-mechanism-valid?
+  (fn (mechanism)
+    (if ((selfhost/store-authority::exact-map? mechanism) [:attestations :evidence :inspect-h])
+      (if
+        (selfhost/store-authority::hash?
+          ((selfhost/pkg-publish-authority::field mechanism) (quote :inspect-h)))
+        (if
+          (selfhost/pkg-publish-authority::vec?
+            ((selfhost/pkg-publish-authority::field mechanism) (quote :evidence)))
+          (selfhost/pkg-publish-authority::vec?
+            ((selfhost/pkg-publish-authority::field mechanism) (quote :attestations)))
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-publish-authority::prepare-value
+  (fn (requests)
+    (let ((base {:crypto-requests requests}))
+      (((core/map::put base) (quote :prepare-h)) (selfhost/hash::hash-term base)))))
+
+(def selfhost/pkg-publish-authority::reject-internal
+  (fn (request)
+    (fn (result)
+      (fn (message)
+        (
+          ((selfhost/pkg-publish-authority::reject request)
+            ((selfhost/pkg-publish-authority::field result) (quote :code)))
+          message)))))
+
+(def selfhost/pkg-publish-authority::prepare-crypto
+  (fn (request)
+    (fn (class)
+      (fn (commit)
+        (fn (attestations)
+          (let
+            ((crypto (((selfhost/pkg-publish-authority::crypto-requests attestations) class) commit)))
+            (if (selfhost/pkg-publish-authority::internal-ok? crypto)
+              ((selfhost/pkg-publish-authority::accept request)
+                (selfhost/pkg-publish-authority::prepare-value
+                  (selfhost/pkg-publish-authority::internal-value crypto)))
+              (((selfhost/pkg-publish-authority::reject-internal request) crypto)
+                "publication attestation or signing domain is invalid"))))))))
+
+(def selfhost/pkg-publish-authority::prepare-assurance
+  (fn (request)
+    (fn (facts)
+      (fn (class)
+        (fn (commit)
+          (fn (attestations)
+            (fn (scan)
+              (fn (required)
+                (let
+                  ((observed ((selfhost/pkg-publish-authority::field scan) (quote :kinds)))
+                    (requirements
+                      ((selfhost/pkg-publish-authority::field scan) (quote :requirements)))
+                    (qualifications
+                      ((selfhost/pkg-publish-authority::field scan) (quote :qualifications))))
+                  (if ((selfhost/pkg-publish-authority::kind-set-contained? required) observed)
+                    (if
+                      (if
+                        ((selfhost/pkg-publish-authority::has-key? required) ":requirements-trace")
+                        (if ((core/int::eq? (core/vec::len requirements)) 0)
+                          false
+                          (((((selfhost/pkg-publish-authority::requirements-traces-loop? requirements) facts) commit) observed)
+                            0))
+                        true)
+                      (if
+                        (if
+                          ((selfhost/pkg-publish-authority::has-key? required) ":tool-qualification")
+                          (if ((core/int::eq? (core/vec::len qualifications)) 0)
+                            false
+                            ((((selfhost/pkg-publish-authority::tool-qualifications-loop? qualifications) facts) commit)
+                              0))
+                          true)
+                        ((((selfhost/pkg-publish-authority::prepare-crypto request) class) commit)
+                          attestations)
+                        (((selfhost/pkg-publish-authority::reject request) "core/pkg/invalid-tool-qualification")
+                          "required tool-qualification evidence is absent or invalid"))
+                      (((selfhost/pkg-publish-authority::reject request) "core/pkg/invalid-requirements-trace")
+                        "required requirements-trace evidence is absent or invalid"))
+                    (((selfhost/pkg-publish-authority::reject request) "core/pkg/missing-evidence-kind")
+                      "commit evidence does not satisfy the selected class kinds")))))))))))
+
+(def selfhost/pkg-publish-authority::prepare-evidence
+  (fn (request)
+    (fn (facts)
+      (fn (class)
+        (fn (commit)
+          (fn (evidence)
+            (fn (attestations)
+              (if
+                (if
+                  ((core/int::lt? 0)
+                    (core/vec::len
+                      ((selfhost/pkg-publish-authority::field class) (quote :required-obligations))))
+                  ((core/int::eq? (core/vec::len evidence)) 0)
+                  false)
+                (((selfhost/pkg-publish-authority::reject request) "core/pkg/missing-evidence")
+                  "commit has required obligations but no evidence")
+                (let ((scan-result (selfhost/pkg-publish-authority::evidence-scan evidence)))
+                  (if (selfhost/pkg-publish-authority::internal-ok? scan-result)
+                    (let
+                      ((required ((selfhost/pkg-publish-authority::required-kind-set class) commit)))
+                      (
+                        ((((((selfhost/pkg-publish-authority::prepare-assurance request) facts) class) commit) attestations)
+                          (selfhost/pkg-publish-authority::internal-value scan-result))
+                        required))
+                    (((selfhost/pkg-publish-authority::reject-internal request) scan-result)
+                      "publication evidence schema is invalid")))))))))))
+
+(def selfhost/pkg-publish-authority::prepare-objects
+  (fn (request)
+    (fn (facts)
+      (fn (class)
+        (fn (commit)
+          (fn (mechanism)
+            (let
+              ((evidence ((selfhost/pkg-publish-authority::field mechanism) (quote :evidence)))
+                (attestations
+                  ((selfhost/pkg-publish-authority::field mechanism) (quote :attestations))))
+              (if
+                ((selfhost/pkg-publish-authority::objects-valid? evidence)
+                  ((selfhost/pkg-publish-authority::field commit) (quote :evidence)))
+                (if
+                  ((selfhost/pkg-publish-authority::objects-valid? attestations)
+                    ((selfhost/pkg-publish-authority::field commit) (quote :attestations)))
+                  ((((((selfhost/pkg-publish-authority::prepare-evidence request) facts) class) commit) evidence)
+                    attestations)
+                  (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+                    "attestation envelopes do not exactly cover the inspect request"))
+                (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+                  "evidence envelopes do not exactly cover the inspect request")))))))))
+
+(def selfhost/pkg-publish-authority::prepare-bound
+  (fn (request)
+    (fn (facts)
+      (fn (mechanism)
+        (fn (inspect-result)
+          (let
+            ((inspect-value ((selfhost/pkg-publish-authority::field inspect-result) (quote :value)))
+              (commit ((selfhost/pkg-publish-authority::field facts) (quote :commit)))
+              (policy ((selfhost/pkg-publish-authority::field facts) (quote :policy)))
+              (refname ((selfhost/pkg-publish-authority::field facts) (quote :ref))))
+            (if
+              ((core/eq? ((selfhost/pkg-publish-authority::field mechanism) (quote :inspect-h)))
+                ((selfhost/pkg-publish-authority::field inspect-value) (quote :inspect-h)))
+              (let ((selection ((selfhost/pkg-publish-policy::select policy) refname)))
+                (if ((selfhost/pkg-publish-authority::field selection) (quote :ok))
+                  (
+                    (
+                      (((selfhost/pkg-publish-authority::prepare-objects request) facts)
+                        ((selfhost/pkg-publish-authority::field selection) (quote :value)))
+                      commit)
+                    mechanism)
+                  ((selfhost/pkg-publish-authority::reject-policy-result request) selection)))
+              (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+                "prepare inspect identity mismatch"))))))))
+
+(def selfhost/pkg-publish-authority::prepare
+  (fn (request)
+    (if (selfhost/pkg-publish-authority::prepare-request-shape? request)
+      (let
+        ((facts ((selfhost/pkg-publish-authority::field request) (quote :facts)))
+          (mechanism ((selfhost/pkg-publish-authority::field request) (quote :mechanism))))
+        (if (selfhost/pkg-publish-authority::facts-shape? facts)
+          (if (selfhost/pkg-publish-authority::facts-identities-match? facts)
+            (if (selfhost/pkg-publish-authority::prepare-mechanism-valid? mechanism)
+              (let
+                ((inspect-result ((selfhost/pkg-publish-authority::inspect-facts request) facts)))
+                (if ((selfhost/pkg-publish-authority::field inspect-result) (quote :ok))
+                  ((((selfhost/pkg-publish-authority::prepare-bound request) facts) mechanism)
+                    inspect-result)
+                  inspect-result))
+              (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+                "prepare mechanism is malformed"))
+            (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-payload")
+              "policy or commit identity contradicts its raw term"))
+          (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-payload")
+            "publish facts fields or values are invalid")))
+      (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
+        "prepare request envelope is invalid"))))
