@@ -89,6 +89,9 @@
     "selfhost/pkg_verify_plan_v1.gc"
     "selfhost/pkg_verify_finalize_v1.gc"
     "selfhost/pkg_verify_authority_v1.gc"
+    "selfhost/pkg_scaffold_core_v1.gc"
+    "selfhost/pkg_scaffold_render_v1.gc"
+    "selfhost/pkg_scaffold_authority_v1.gc"
     "selfhost/pkg_semver_select_authority_v1.gc"
     "selfhost/pkg_bridge_authority_v1.gc"
     "selfhost/pkg_snapshot_authority_v1.gc"
@@ -173,6 +176,7 @@
     core/pkg::resolution-workflow-authority
     core/pkg::install-authority
     core/pkg::verify-authority
+    core/pkg::scaffold-authority
     core/pkg::semver-select-authority
     core/cli::stage1-transform-module
     core/cli::store-get-program

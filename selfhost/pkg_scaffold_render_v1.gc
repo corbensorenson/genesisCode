@@ -1,0 +1,152 @@
+; Canonical dynamic document rendering for gcpm scaffold.
+
+(def selfhost/pkg-scaffold::cat3
+  (fn (a)
+    (fn (b)
+      (fn (c)
+        ((selfhost/pkg-scaffold::append ((selfhost/pkg-scaffold::append a) b)) c)))))
+
+(def selfhost/pkg-scaffold::workspace-body
+  (fn (workspace)
+    (fn (package)
+      (fn (policy)
+        (fn (registry)
+          (fn (backend)
+            (fn (release-backend)
+              (fn (primary)
+                (let
+                  ((escaped-policy (selfhost/pkg-scaffold::toml-string policy))
+                    (escaped-registry
+                      (if (core/list::is-nil? registry)
+                        nil
+                        (selfhost/pkg-scaffold::toml-string registry))))
+                  (let
+                    ((registry-line
+                      (if (core/list::is-nil? escaped-registry)
+                        ""
+                        (((selfhost/pkg-scaffold::cat3 "registry = \"") escaped-registry) "\"\n")))
+                      (policy-line
+                        (((selfhost/pkg-scaffold::cat3 "policy = \"") escaped-policy) "\"\n")))
+                    (let ((out0 ((selfhost/pkg-scaffold::append "version = 1\nworkspace = \"") workspace)))
+                      (let ((out1 ((selfhost/pkg-scaffold::append out0) "\"\n\n[[members]]\nname = \"")))
+                        (let ((out2 ((selfhost/pkg-scaffold::append out1) package)))
+                          (let ((out3 ((selfhost/pkg-scaffold::append out2) "\"\npath = \".\"\nrole = \"app\"\n\n[defaults]\n")))
+                            (let ((out4 ((selfhost/pkg-scaffold::append out3) registry-line)))
+                              (let ((out5 ((selfhost/pkg-scaffold::append out4) policy-line)))
+                                (let ((out6 ((selfhost/pkg-scaffold::append out5) "runtime_backend = \"")))
+                                  (let ((out7 ((selfhost/pkg-scaffold::append out6) backend)))
+                                    (let ((out8 ((selfhost/pkg-scaffold::append out7) "\"\n\n[profiles.\"backend\"]\ncaps_policy = \"caps.backend.toml\"\n")))
+                                      (let ((out9 ((selfhost/pkg-scaffold::append out8) registry-line)))
+                                        (let ((out10 ((selfhost/pkg-scaffold::append out9) policy-line)))
+                                          (let ((out11 ((selfhost/pkg-scaffold::append out10) "runtime_backend = \"backend\"\n\n[profiles.\"ci\"]\ncaps_policy = \"caps.ci.toml\"\n")))
+                                            (let ((out12 ((selfhost/pkg-scaffold::append out11) registry-line)))
+                                              (let ((out13 ((selfhost/pkg-scaffold::append out12) policy-line)))
+                                                (let ((out14 ((selfhost/pkg-scaffold::append out13) "runtime_backend = \"headless\"\n\n[profiles.\"dev\"]\ncaps_policy = \"caps.toml\"\n")))
+                                                  (let ((out15 ((selfhost/pkg-scaffold::append out14) registry-line)))
+                                                    (let ((out16 ((selfhost/pkg-scaffold::append out15) policy-line)))
+                                                      (let ((out17 ((selfhost/pkg-scaffold::append out16) "runtime_backend = \"")))
+                                                        (let ((out18 ((selfhost/pkg-scaffold::append out17) backend)))
+                                                          (let ((out19 ((selfhost/pkg-scaffold::append out18) "\"\n\n[profiles.\"release\"]\ncaps_policy = \"caps.release.toml\"\n")))
+                                                            (let ((out20 ((selfhost/pkg-scaffold::append out19) registry-line)))
+                                                              (let ((out21 ((selfhost/pkg-scaffold::append out20) policy-line)))
+                                                                (let ((out22 ((selfhost/pkg-scaffold::append out21) "runtime_backend = \"")))
+                                                                  (let ((out23 ((selfhost/pkg-scaffold::append out22) release-backend)))
+                                                                    (let ((out24 ((selfhost/pkg-scaffold::append out23) "\"\n\n[tasks.\"build-primary\"]\ncmd = \"build\"\npkg = \"package.toml\"\nargs = [\"--target\", \"")))
+                                                                      (let ((out25 ((selfhost/pkg-scaffold::append out24) primary)))
+                                                                        ((selfhost/pkg-scaffold::append out25)
+                                                                          "\"]\n\n[tasks.\"optimize\"]\ncmd = \"optimize\"\nfile = \"src/main.gc\"\nargs = [\"--stage1-gate\"]\n\n[tasks.\"pack\"]\ncmd = \"pack\"\npkg = \"package.toml\"\n\n[tasks.\"run\"]\ncmd = \"run\"\nfile = \"src/main.gc\"\nargs = [\"--caps\", \"caps.toml\"]\n\n[tasks.\"test\"]\ncmd = \"test\"\npkg = \"package.toml\"\n\n[tasks.\"typecheck\"]\ncmd = \"typecheck\"\npkg = \"package.toml\"\n\n")))))))))))))))))))))))))))))))))))))
+(def selfhost/pkg-scaffold::lock-body
+  (fn (workspace)
+    (fn (policy)
+      (fn (registry)
+        (let
+          ((escaped-policy (selfhost/pkg-scaffold::toml-string policy))
+            (escaped-registry
+              (if (core/list::is-nil? registry)
+                nil
+                (selfhost/pkg-scaffold::toml-string registry))))
+          (let ((out0 ((selfhost/pkg-scaffold::append "version = 2\nworkspace = \"") workspace)))
+            (let ((out1 ((selfhost/pkg-scaffold::append out0) "\"\npolicy = \"")))
+              (let ((out2 ((selfhost/pkg-scaffold::append out1) escaped-policy)))
+                (let ((out3 ((selfhost/pkg-scaffold::append out2) "\"\n")))
+                  (let
+                    ((out4
+                      (if (core/list::is-nil? escaped-registry)
+                        out3
+                        ((selfhost/pkg-scaffold::append
+                            ((selfhost/pkg-scaffold::append out3)
+                              "\n[registries]\ndefault = \""))
+                          ((selfhost/pkg-scaffold::append escaped-registry) "\"\n")))))
+                    ((selfhost/pkg-scaffold::append out4) "\n[requirements]\n\n[locked]\n\n")))))))))))
+
+(def selfhost/pkg-scaffold::package-body
+  (fn (package)
+    ((selfhost/pkg-scaffold::append
+        ((selfhost/pkg-scaffold::append "schema = 1\nname = \"") package))
+      "\"\nversion = \"0.1.0\"\nobligations = []\ndependencies = []\ntests = []\nproperty_tests = []\ncaps_policy = \"caps.toml\"\n\n[[modules]]\npath = \"src/main.gc\"\n")))
+
+(def selfhost/pkg-scaffold::module-body
+  (fn (namespace)
+    (fn (archetype)
+      (let ((out0 ((selfhost/pkg-scaffold::append "(def ::meta\n  (quote\n    {\n      :caps []\n      :exports [") namespace)))
+        (let ((out1 ((selfhost/pkg-scaffold::append out0) "::main]\n      :types {")))
+          (let ((out2 ((selfhost/pkg-scaffold::append out1) namespace)))
+            (let ((out3 ((selfhost/pkg-scaffold::append out2) "::main ?}}))\n\n(def ")))
+              (let ((out4 ((selfhost/pkg-scaffold::append out3) namespace)))
+                (let ((out5 ((selfhost/pkg-scaffold::append out4) "::main\n  (fn (_)\n    {\n      :archetype :")))
+                  (let ((out6 ((selfhost/pkg-scaffold::append out5) archetype)))
+                    (let ((out7 ((selfhost/pkg-scaffold::append out6) "\n      :status \"scaffold-ok\"}))\n\n")))
+                      (let ((out8 ((selfhost/pkg-scaffold::append out7) namespace)))
+                        ((selfhost/pkg-scaffold::append out8) "::main\n")))))))))))))
+
+(def selfhost/pkg-scaffold::deploy-body
+  (fn (archetype)
+    (fn (backend)
+      (fn (primary)
+        (let ((out0 ((selfhost/pkg-scaffold::append "schema = \"genesis/gcpm-scaffold-deploy-presets-v0.1\"\narchetype = \"") archetype)))
+          (let ((out1 ((selfhost/pkg-scaffold::append out0) "\"\nruntime_backend = \"")))
+            (let ((out2 ((selfhost/pkg-scaffold::append out1) backend)))
+              (let ((out3 ((selfhost/pkg-scaffold::append out2) "\"\nprimary_target = \"")))
+                (let ((out4 ((selfhost/pkg-scaffold::append out3) primary)))
+                  ((selfhost/pkg-scaffold::append out4)
+                    (if ((core/eq? archetype) "mobile")
+                      "\"\nsecondary_targets = [\"android\"]\n"
+                      "\"\nsecondary_targets = []\n")))))))))))
+
+(def selfhost/pkg-scaffold::readme-body
+  (fn (workspace)
+    (fn (package)
+      (fn (archetype)
+        (fn (backend)
+          (fn (primary)
+            (let ((out0 ((selfhost/pkg-scaffold::append "# ") workspace)))
+              (let ((out1 ((selfhost/pkg-scaffold::append out0) "\n\nDeterministic `gcpm scaffold` workspace for archetype `")))
+                (let ((out2 ((selfhost/pkg-scaffold::append out1) archetype)))
+                  (let ((out3 ((selfhost/pkg-scaffold::append out2) "`.\n\n## Quick Start\n\n1. `genesis gcpm --caps caps.toml test --pkg package.toml`\n2. `genesis gcpm --caps caps.toml run run`\n3. `genesis gcpm --caps caps.toml env --profile dev`\n4. `genesis gcpm --caps caps.toml build --pkg package.toml --target ")))
+                    (let ((out4 ((selfhost/pkg-scaffold::append out3) primary)))
+                      (let ((out5 ((selfhost/pkg-scaffold::append out4) "`\n\n## Scaffold Contract\n\n- package: `")))
+                        (let ((out6 ((selfhost/pkg-scaffold::append out5) package)))
+                          (let ((out7 ((selfhost/pkg-scaffold::append out6) "`\n- runtime backend profile: `")))
+                            (let ((out8 ((selfhost/pkg-scaffold::append out7) backend)))
+                              ((selfhost/pkg-scaffold::append out8)
+                                "`\n- deploy presets: `deploy/presets.toml`\n"))))))))))))))))
+
+(def selfhost/pkg-scaffold::record
+  (fn (file)
+    (((selfhost/pkg-scaffold::cat3 ((core/map::get file) (quote :path))) ":")
+      ((core/map::get file) (quote :h)))))
+
+(def selfhost/pkg-scaffold::scaffold-h
+  (fn (files)
+    (let ((records0 []))
+      (let ((records1 ((core/vec::push records0) (selfhost/pkg-scaffold::record ((core/vec::get files) 9)))))
+        (let ((records2 ((core/vec::push records1) (selfhost/pkg-scaffold::record ((core/vec::get files) 8)))))
+          (let ((records3 ((core/vec::push records2) (selfhost/pkg-scaffold::record ((core/vec::get files) 6)))))
+            (let ((records4 ((core/vec::push records3) (selfhost/pkg-scaffold::record ((core/vec::get files) 7)))))
+              (let ((records5 ((core/vec::push records4) (selfhost/pkg-scaffold::record ((core/vec::get files) 5)))))
+                (let ((records6 ((core/vec::push records5) (selfhost/pkg-scaffold::record ((core/vec::get files) 4)))))
+                  (let ((records7 ((core/vec::push records6) (selfhost/pkg-scaffold::record ((core/vec::get files) 1)))))
+                    (let ((records8 ((core/vec::push records7) (selfhost/pkg-scaffold::record ((core/vec::get files) 0)))))
+                      (let ((records9 ((core/vec::push records8) (selfhost/pkg-scaffold::record ((core/vec::get files) 2)))))
+                        (let ((records10 ((core/vec::push records9) (selfhost/pkg-scaffold::record ((core/vec::get files) 3)))))
+                          (selfhost/pkg-scaffold::hash-body ((core/str::join records10) "\n")))))))))))))))

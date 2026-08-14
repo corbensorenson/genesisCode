@@ -1,0 +1,192 @@
+; Artifact-loaded semantic authority for deterministic gcpm scaffold plans.
+
+(def selfhost/pkg-scaffold::request-kind "genesis/pkg-scaffold-authority-request-v0.1")
+(def selfhost/pkg-scaffold::result-kind "genesis/pkg-scaffold-authority-result-v0.1")
+
+(def selfhost/pkg-scaffold::envelope
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {:code code :kind selfhost/pkg-scaffold::result-kind :message message :ok ok
+              :request-h request-h :v 1 :value value}))))))
+
+(def selfhost/pkg-scaffold::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-scaffold::envelope request-h) false) "core/pkg/bad-scaffold")
+          message) nil))))
+
+(def selfhost/pkg-scaffold::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-scaffold::envelope request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-scaffold::request?
+  (fn (request)
+    (if ((selfhost/pkg-lock-read::exact-map? request)
+          [:archetype :kind :name :policy :registry-default :root :runtime-backend
+            :static-files :v])
+      (if ((core/eq? ((core/map::get request) (quote :kind)))
+            selfhost/pkg-scaffold::request-kind)
+        (if ((core/eq? ((core/map::get request) (quote :v))) 1)
+          (if (selfhost/pkg-scaffold::archetype?
+                ((core/map::get request) (quote :archetype)))
+            (if (if (selfhost/pkg-scaffold::nonempty-str?
+                      ((core/map::get request) (quote :name)))
+                  ((selfhost/pkg-scaffold::bounded-str?
+                      ((core/map::get request) (quote :name))) 256)
+                  false)
+              (if (if (selfhost/pkg-scaffold::nonempty-str?
+                        ((core/map::get request) (quote :policy)))
+                    ((selfhost/pkg-scaffold::bounded-str?
+                        ((core/map::get request) (quote :policy))) 1024)
+                    false)
+                (if ((selfhost/pkg-scaffold::optional-bounded-str?
+                      ((core/map::get request) (quote :registry-default))) 4096)
+                  (if ((selfhost/pkg-scaffold::bounded-str?
+                        ((core/map::get request) (quote :root))) 4096)
+                    (if ((selfhost/pkg-scaffold::optional-bounded-str?
+                          ((core/map::get request) (quote :runtime-backend))) 32)
+                      (selfhost/pkg-scaffold::vec?
+                        ((core/map::get request) (quote :static-files)))
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-scaffold::static-files?
+  (fn (files)
+    (if ((core/int::eq? (core/vec::len files)) 4)
+      (if (((selfhost/pkg-scaffold::static-file-valid? ((core/vec::get files) 0))
+            "caps.toml") "c59cc9fc2d22e351df9f1ca0993f5287747dd04424dd2ab29dc9c40b5feeaebe")
+        (if (((selfhost/pkg-scaffold::static-file-valid? ((core/vec::get files) 1))
+              "caps.ci.toml") "263a3a57675d9f02d3b7f3e63e567556e26e9a8826c9c2f18a3de2608707bc1f")
+          (if (((selfhost/pkg-scaffold::static-file-valid? ((core/vec::get files) 2))
+                "caps.release.toml") "facc334d775e73441b8861a5119af13be4b4f53fa548e039d99de28a7a78a388")
+            (((selfhost/pkg-scaffold::static-file-valid? ((core/vec::get files) 3))
+              "caps.backend.toml") "df2d9cd700e2e45ee809db493119db52882baf94af8fc1b6f343d3de97d491c7")
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-scaffold::build
+  (fn (request-h)
+    (fn (request)
+      (let
+        ((archetype ((core/map::get request) (quote :archetype)))
+          (workspace
+            (selfhost/pkg-scaffold::normalize-name
+              ((core/map::get request) (quote :name))))
+          (policy ((core/map::get request) (quote :policy)))
+          (registry ((core/map::get request) (quote :registry-default)))
+          (root ((core/map::get request) (quote :root)))
+          (override
+            (selfhost/pkg-scaffold::normalize-backend
+              ((core/map::get request) (quote :runtime-backend))))
+          (static ((core/map::get request) (quote :static-files))))
+        (if (if (core/list::is-nil? workspace)
+              true
+              ((core/int::eq? (core/str::len workspace)) 0))
+          ((selfhost/pkg-scaffold::reject request-h)
+            "scaffold name must contain ASCII alphanumeric characters")
+          (if (if (core/list::is-nil?
+                    ((core/map::get request) (quote :runtime-backend)))
+                false
+                (core/list::is-nil? override))
+            ((selfhost/pkg-scaffold::reject request-h)
+              "runtime backend is outside the closed profile inventory")
+            (if (selfhost/pkg-scaffold::static-files? static)
+              (let
+                ((backend
+                  (if (core/list::is-nil? override)
+                    (selfhost/pkg-scaffold::default-backend archetype)
+                    override))
+                  (release-backend
+                    ((selfhost/pkg-scaffold::release-backend archetype)
+                      (if (core/list::is-nil? override)
+                        (selfhost/pkg-scaffold::default-backend archetype)
+                        override)))
+                  (primary (selfhost/pkg-scaffold::primary-target archetype))
+                  (package
+                    ((selfhost/pkg-scaffold::append
+                        ((selfhost/pkg-scaffold::append workspace) "-")) archetype))
+                  (namespace
+                    ((selfhost/pkg-scaffold::append "pkg/")
+                      (selfhost/pkg-scaffold::module-suffix workspace))))
+                (let
+                  ((file0
+                    ((selfhost/pkg-scaffold::file "genesis.workspace.toml")
+                      (((((((selfhost/pkg-scaffold::workspace-body workspace) package) policy)
+                            registry) backend) release-backend) primary)))
+                    (file1
+                      ((selfhost/pkg-scaffold::file "genesis.lock")
+                        (((selfhost/pkg-scaffold::lock-body workspace) policy) registry)))
+                    (file2
+                      ((selfhost/pkg-scaffold::file "package.toml")
+                        (selfhost/pkg-scaffold::package-body package)))
+                    (file3
+                      ((selfhost/pkg-scaffold::file "src/main.gc")
+                        ((selfhost/pkg-scaffold::module-body namespace) archetype)))
+                    (file4
+                      ((selfhost/pkg-scaffold::file "deploy/presets.toml")
+                        (((selfhost/pkg-scaffold::deploy-body archetype) backend) primary)))
+                    (file5
+                      ((selfhost/pkg-scaffold::file "caps.toml")
+                        ((core/map::get ((core/vec::get static) 0)) (quote :body))))
+                    (file6
+                      ((selfhost/pkg-scaffold::file "caps.ci.toml")
+                        ((core/map::get ((core/vec::get static) 1)) (quote :body))))
+                    (file7
+                      ((selfhost/pkg-scaffold::file "caps.release.toml")
+                        ((core/map::get ((core/vec::get static) 2)) (quote :body))))
+                    (file8
+                      ((selfhost/pkg-scaffold::file "caps.backend.toml")
+                        ((core/map::get ((core/vec::get static) 3)) (quote :body))))
+                    (file9
+                      ((selfhost/pkg-scaffold::file "README.gcpm.md")
+                        (((((selfhost/pkg-scaffold::readme-body workspace) package) archetype)
+                            backend) primary))))
+                  (let ((files0 []))
+                    (let ((files1 ((core/vec::push files0) file0)))
+                      (let ((files2 ((core/vec::push files1) file1)))
+                        (let ((files3 ((core/vec::push files2) file2)))
+                          (let ((files4 ((core/vec::push files3) file3)))
+                            (let ((files5 ((core/vec::push files4) file4)))
+                              (let ((files6 ((core/vec::push files5) file5)))
+                                (let ((files7 ((core/vec::push files6) file6)))
+                                  (let ((files8 ((core/vec::push files7) file7)))
+                                    (let ((files9 ((core/vec::push files8) file8)))
+                                      (let ((files ((core/vec::push files9) file9)))
+                                        (let
+                                          ((scaffold-h (selfhost/pkg-scaffold::scaffold-h files))
+                                            (paths
+                                              ["genesis.workspace.toml" "genesis.lock" "package.toml" "src/main.gc"
+                                                "deploy/presets.toml" "caps.toml" "caps.ci.toml" "caps.release.toml"
+                                                "caps.backend.toml" "README.gcpm.md"]))
+                                          ((selfhost/pkg-scaffold::accept request-h)
+                                            {
+                                              :files files
+                                              :report
+                                                {
+                                                  :archetype archetype :files paths :files-written 10 :ok true
+                                                  :package package :root root :runtime-backend-profile backend
+                                                  :scaffold-h scaffold-h :workspace workspace}})))))))))))))))
+              ((selfhost/pkg-scaffold::reject request-h)
+                "static scaffold template identity mismatch"))))))))
+
+(def core/pkg::scaffold-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-scaffold::map? request)
+        (if (selfhost/pkg-scaffold::request? request)
+          ((selfhost/pkg-scaffold::build request-h) request)
+          ((selfhost/pkg-scaffold::reject request-h) "scaffold request is malformed"))
+        ((selfhost/pkg-scaffold::reject request-h) "scaffold request must be map")))))

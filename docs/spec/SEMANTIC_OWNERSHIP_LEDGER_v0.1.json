@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "bf491997a3c05b91eb1ecca652ad12b3464a4fe8850152b1dcc69aaec6ccad5e",
+  "contentIdentitySha256": "7fe8e57849b58a959c143ad1c533ba3a04b7aad2ed4aec75fe08138bdc331d32",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1955,36 +1955,52 @@
       "commandSelectors": [
         "pkg/*"
       ],
-      "currentLevel": null,
-      "fallbackReachability": "host-authoritative",
-      "hostBindingPaths": [],
+      "currentLevel": "H0",
+      "fallbackReachability": "reachable-parity-harness",
+      "hostBindingPaths": [
+        "crates/gc_cli_driver/src"
+      ],
       "id": "SD-PACKAGE-WORKSPACE",
       "internalOnly": false,
       "limitations": [
-        "Rust currently computes workspace and scaffold outputs"
+        "Artifact-loaded GenesisCode exclusively owns gcpm scaffold identifier normalization, closed archetype admission, backend and target selection, six dynamic document bodies, identity-pinned static-template admission, fixed file order, body and aggregate identities, and the exact report under genesis/selfhost-pkg-scaffold-authority-v0.1; Rust retains bounded static capability-template observations, strict result and cross-document decoding, whole-plan path and conflict preflight, and exact-byte persistence mechanisms",
+        "Workspace init, migration, environment, task, and manifest decisions remain host-authoritative; generic TOML, filesystem and path policy, crash-atomic multi-file commit, and WASI scaffold support remain unproven, so SD-PACKAGE-WORKSPACE remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
       ],
       "producingImplementationPaths": [
+        "selfhost/toolchain.gc",
+        "selfhost/pkg_scaffold_core_v1.gc",
+        "selfhost/pkg_scaffold_render_v1.gc",
+        "selfhost/pkg_scaffold_authority_v1.gc",
+        "crates/gc_cli_driver/src/pkg_scaffold.rs",
+        "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
       ],
       "productionAuthorityPaths": [
+        "selfhost/pkg_scaffold_core_v1.gc",
+        "selfhost/pkg_scaffold_render_v1.gc",
+        "selfhost/pkg_scaffold_authority_v1.gc",
+        "crates/gc_cli_driver/src/pkg_scaffold.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
-        "docs/spec/GCPM_BUNDLE_v0.1.md"
+        "docs/spec/GCPM_BUNDLE_v0.1.md",
+        "docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.md"
       ],
       "stage0Domains": [
         "S0-R"
       ],
       "testPaths": [
+        "crates/gc_cli/tests/cli_pkg_scaffold.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs"
       ],
       "title": "Workspace, scaffold, manifest, migration, and environment decisions",
       "verifierPaths": [
-        "scripts/check_gcpm_operation_contract_pack.sh"
+        "scripts/check_gcpm_operation_contract_pack.sh",
+        "scripts/lib/selfhost_pkg_scaffold_authority.py"
       ]
     },
     {

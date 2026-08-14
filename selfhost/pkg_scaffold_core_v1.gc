@@ -1,0 +1,244 @@
+; Closed validation, normalization, and identity helpers for gcpm scaffold.
+
+(def selfhost/pkg-scaffold::append (fn (a) (fn (b) ((core/str::concat a) b))))
+
+(def selfhost/pkg-scaffold::str?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :str))))
+
+(def selfhost/pkg-scaffold::vec?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :vec))))
+
+(def selfhost/pkg-scaffold::map?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :map))))
+
+(def selfhost/pkg-scaffold::nonempty-str?
+  (fn (value)
+    (if (selfhost/pkg-scaffold::str? value)
+      ((core/int::lt? 0) (core/str::len value))
+      false)))
+
+(def selfhost/pkg-scaffold::optional-str?
+  (fn (value)
+    (if (core/list::is-nil? value) true (selfhost/pkg-scaffold::str? value))))
+
+(def selfhost/pkg-scaffold::bounded-str?
+  (fn (value)
+    (fn (limit)
+      (if (selfhost/pkg-scaffold::str? value)
+        (if ((core/int::lt? limit) (core/str::len value)) false true)
+        false))))
+
+(def selfhost/pkg-scaffold::optional-bounded-str?
+  (fn (value)
+    (fn (limit)
+      (if (core/list::is-nil? value)
+        true
+        ((selfhost/pkg-scaffold::bounded-str? value) limit)))))
+
+(def selfhost/pkg-scaffold::ascii-lower?
+  (fn (byte) (if ((core/int::lt? 96) byte) ((core/int::lt? byte) 123) false)))
+
+(def selfhost/pkg-scaffold::ascii-upper?
+  (fn (byte) (if ((core/int::lt? 64) byte) ((core/int::lt? byte) 91) false)))
+
+(def selfhost/pkg-scaffold::ascii-digit?
+  (fn (byte) (if ((core/int::lt? 47) byte) ((core/int::lt? byte) 58) false)))
+
+(def selfhost/pkg-scaffold::separator?
+  (fn (byte)
+    (if ((core/int::eq? byte) 32)
+      true
+      (if ((core/int::eq? byte) 45) true ((core/int::eq? byte) 95)))))
+
+(def selfhost/pkg-scaffold::normalize-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (out)
+        (fn (previous-dash)
+          (if ((core/int::eq? index) (core/bytes::len bytes))
+            (if previous-dash
+              (core/str::from-utf8
+                (((core/bytes::slice out) 0) ((core/int::sub (core/bytes::len out)) 1)))
+              (core/str::from-utf8 out))
+            (let ((byte ((core/bytes::get bytes) index)))
+              (if (selfhost/pkg-scaffold::ascii-lower? byte)
+                ((((selfhost/pkg-scaffold::normalize-loop bytes)
+                    ((core/int::add index) 1))
+                  ((core/bytes::concat out) (((core/bytes::slice bytes) index) 1))) false)
+                (if (selfhost/pkg-scaffold::ascii-digit? byte)
+                  ((((selfhost/pkg-scaffold::normalize-loop bytes)
+                      ((core/int::add index) 1))
+                    ((core/bytes::concat out) (((core/bytes::slice bytes) index) 1))) false)
+                  (if (selfhost/pkg-scaffold::ascii-upper? byte)
+                    (let
+                      ((lower
+                        (((core/bytes::slice b"abcdefghijklmnopqrstuvwxyz")
+                            ((core/int::sub byte) 65)) 1)))
+                      ((((selfhost/pkg-scaffold::normalize-loop bytes)
+                          ((core/int::add index) 1))
+                        ((core/bytes::concat out) lower)) false))
+                    (if (selfhost/pkg-scaffold::separator? byte)
+                      (if (if ((core/int::eq? (core/bytes::len out)) 0) true previous-dash)
+                        ((((selfhost/pkg-scaffold::normalize-loop bytes)
+                            ((core/int::add index) 1)) out) previous-dash)
+                        ((((selfhost/pkg-scaffold::normalize-loop bytes)
+                            ((core/int::add index) 1))
+                          ((core/bytes::concat out) b"-")) true))
+                      ((((selfhost/pkg-scaffold::normalize-loop bytes)
+                          ((core/int::add index) 1)) out) previous-dash))))))))))))
+
+(def selfhost/pkg-scaffold::normalize-name
+  (fn (value)
+    (if (selfhost/pkg-scaffold::str? value)
+      (let ((bytes (core/str::to-utf8 value)))
+        (if ((core/int::lt? 256) (core/bytes::len bytes))
+          nil
+          ((((selfhost/pkg-scaffold::normalize-loop bytes) 0) b"") false)))
+      nil)))
+
+(def selfhost/pkg-scaffold::archetype?
+  (fn (value)
+    (if (selfhost/pkg-scaffold::str? value)
+      (if ((core/eq? value) "web")
+        true
+        (if ((core/eq? value) "service")
+          true
+          (if ((core/eq? value) "desktop")
+            true
+            (if ((core/eq? value) "mobile")
+              true
+              (if ((core/eq? value) "xr-game") true ((core/eq? value) "data-ai"))))))
+      false)))
+
+(def selfhost/pkg-scaffold::normalize-backend
+  (fn (value)
+    (if (core/list::is-nil? value)
+      nil
+      (if ((core/eq? value) "headless")
+        "headless"
+        (if ((core/eq? value) "profile-headless")
+          "headless"
+          (if ((core/eq? value) "gpu")
+            "gpu"
+            (if ((core/eq? value) "profile-gpu")
+              "gpu"
+              (if ((core/eq? value) "gfx")
+                "gfx"
+                (if ((core/eq? value) "profile-gfx")
+                  "gfx"
+                  (if ((core/eq? value) "backend")
+                    "backend"
+                    (if ((core/eq? value) "profile-backend") "backend" nil)))))))))))
+
+(def selfhost/pkg-scaffold::default-backend
+  (fn (archetype)
+    (if ((core/eq? archetype) "service")
+      "backend"
+      (if ((core/eq? archetype) "mobile")
+        "gpu"
+        (if ((core/eq? archetype) "data-ai") "gpu" "gfx")))))
+
+(def selfhost/pkg-scaffold::primary-target
+  (fn (archetype)
+    (if ((core/eq? archetype) "service")
+      "service-runtime"
+      (if ((core/eq? archetype) "desktop")
+        "desktop"
+        (if ((core/eq? archetype) "mobile")
+          "ios"
+          (if ((core/eq? archetype) "data-ai") "service-runtime" "web"))))))
+
+(def selfhost/pkg-scaffold::release-backend
+  (fn (archetype)
+    (fn (selected)
+      (if ((core/eq? archetype) "service")
+        "backend"
+        (if ((core/eq? archetype) "data-ai") "gpu" selected)))))
+
+(def selfhost/pkg-scaffold::replace-dashes-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (parts)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          (core/str::from-utf8 (core/bytes::join parts))
+          (((selfhost/pkg-scaffold::replace-dashes-loop bytes)
+              ((core/int::add index) 1))
+            ((core/vec::push parts)
+              (if ((core/int::eq? ((core/bytes::get bytes) index)) 45)
+                b"_"
+                (((core/bytes::slice bytes) index) 1)))))))))
+
+(def selfhost/pkg-scaffold::module-suffix
+  (fn (workspace)
+    (((selfhost/pkg-scaffold::replace-dashes-loop (core/str::to-utf8 workspace)) 0) [])))
+
+(def selfhost/pkg-scaffold::hash-body
+  (fn (body)
+    (core/bytes::to-hex (core/crypto::blake3 (core/str::to-utf8 body)))))
+
+(def selfhost/pkg-scaffold::toml-control-fragment
+  (fn (byte)
+    (let
+      ((digits b"0123456789abcdef")
+        (high (((core/bytes::slice b"0123456789abcdef") ((core/int::div byte) 16)) 1))
+        (low (((core/bytes::slice b"0123456789abcdef") ((core/int::mod byte) 16)) 1)))
+      ((core/bytes::concat ((core/bytes::concat b"\\u00") high)) low))))
+
+(def selfhost/pkg-scaffold::toml-fragment
+  (fn (bytes)
+    (fn (index)
+      (let ((byte ((core/bytes::get bytes) index)))
+        (if ((core/int::eq? byte) 34)
+          b"\\\""
+          (if ((core/int::eq? byte) 92)
+            b"\\\\"
+            (if ((core/int::eq? byte) 8)
+              b"\\b"
+              (if ((core/int::eq? byte) 9)
+                b"\\t"
+                (if ((core/int::eq? byte) 10)
+                  b"\\n"
+                  (if ((core/int::eq? byte) 12)
+                    b"\\f"
+                    (if ((core/int::eq? byte) 13)
+                      b"\\r"
+                      (if (if ((core/int::lt? byte) 32) true ((core/int::eq? byte) 127))
+                        (selfhost/pkg-scaffold::toml-control-fragment byte)
+                        (((core/bytes::slice bytes) index) 1)))))))))))))
+
+(def selfhost/pkg-scaffold::toml-escape-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (parts)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          (core/str::from-utf8 (core/bytes::join parts))
+          (((selfhost/pkg-scaffold::toml-escape-loop bytes) ((core/int::add index) 1))
+            ((core/vec::push parts) ((selfhost/pkg-scaffold::toml-fragment bytes) index))))))))
+
+(def selfhost/pkg-scaffold::toml-string
+  (fn (value)
+    (((selfhost/pkg-scaffold::toml-escape-loop (core/str::to-utf8 value)) 0) [])))
+
+(def selfhost/pkg-scaffold::file
+  (fn (path)
+    (fn (body) {:body body :h (selfhost/pkg-scaffold::hash-body body) :path path})))
+
+(def selfhost/pkg-scaffold::static-file?
+  (fn (value)
+    (if ((selfhost/pkg-lock-read::exact-map? value) [:body :path])
+      (if (selfhost/pkg-scaffold::str? ((core/map::get value) (quote :body)))
+        (selfhost/pkg-scaffold::str? ((core/map::get value) (quote :path)))
+        false)
+      false)))
+
+(def selfhost/pkg-scaffold::static-file-valid?
+  (fn (value)
+    (fn (path)
+      (fn (hash)
+        (if (selfhost/pkg-scaffold::static-file? value)
+          (if ((core/eq? ((core/map::get value) (quote :path))) path)
+            ((core/eq?
+                (selfhost/pkg-scaffold::hash-body
+                  ((core/map::get value) (quote :body)))) hash)
+            false)
+          false)))))

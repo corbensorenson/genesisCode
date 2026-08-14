@@ -2,16 +2,40 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, hash_term};
-use gc_pkg::{
-    GenesisLock, RUNTIME_BACKEND_BACKEND, RUNTIME_BACKEND_GFX, RUNTIME_BACKEND_GPU,
-    RUNTIME_BACKEND_HEADLESS, WorkspaceConfig, WorkspaceMember, WorkspaceProfile, WorkspaceTask,
-    normalize_runtime_backend_profile,
-};
+use gc_kernel::{Apply, Value};
+use gc_pkg::{GenesisLock, WorkspaceConfig};
+
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Retained only as an explicit compatibility oracle.
+#[path = "pkg_scaffold/parity.rs"]
+mod parity;
 
 use crate::pkg_caps_templates::{
     CAPS_CI_DEFAULT, CAPS_DEV_DEFAULT, CAPS_RELEASE_DEFAULT, render_backend_caps_policy,
 };
 use crate::pkg_workspace_ops::LocalPkgResult;
+
+const AUTHORITY_BINDING: &str = "core/pkg::scaffold-authority";
+const REQUEST_KIND: &str = "genesis/pkg-scaffold-authority-request-v0.1";
+const RESULT_KIND: &str = "genesis/pkg-scaffold-authority-result-v0.1";
+const FILE_PATHS: [&str; 10] = [
+    "genesis.workspace.toml",
+    "genesis.lock",
+    "package.toml",
+    "src/main.gc",
+    "deploy/presets.toml",
+    "caps.toml",
+    "caps.ci.toml",
+    "caps.release.toml",
+    "caps.backend.toml",
+    "README.gcpm.md",
+];
+
+#[derive(Debug)]
+struct AuthorizedScaffold {
+    files: Vec<(PathBuf, String)>,
+    report: Term,
+}
 
 pub(crate) struct PkgScaffoldArgs<'a> {
     pub(crate) archetype: &'a str,
@@ -23,430 +47,436 @@ pub(crate) struct PkgScaffoldArgs<'a> {
     pub(crate) registry_default: Option<&'a str>,
 }
 
-pub(crate) fn handle_scaffold(args: PkgScaffoldArgs<'_>) -> Result<LocalPkgResult, String> {
-    let archetype = Archetype::parse(args.archetype)?;
-    let workspace_name = normalize_identifier(args.name);
-    if workspace_name.is_empty() {
-        return Err("scaffold name must contain alphanumeric characters".to_string());
-    }
-    let module_suffix = workspace_name.replace('-', "_");
-    let module_ns = format!("pkg/{module_suffix}");
-    let package_name = format!("{workspace_name}-{}", archetype.id());
-    let runtime_backend = resolve_runtime_backend(archetype, args.runtime_backend)?;
-
-    let mut ws = WorkspaceConfig::empty(workspace_name.clone());
-    ws.members = vec![WorkspaceMember {
-        name: package_name.clone(),
-        path: ".".to_string(),
-        role: Some("app".to_string()),
-    }];
-    ws.defaults.policy = Some(args.policy.to_string());
-    ws.defaults.runtime_backend = Some(runtime_backend.clone());
-    ws.defaults.registry = args.registry_default.map(|s| s.to_string());
-    ws.profiles = build_workspace_profiles(
-        args.policy,
-        args.registry_default,
-        runtime_backend.as_str(),
-        archetype,
-    );
-    ws.tasks = build_workspace_tasks(archetype);
-
-    let mut lock = GenesisLock::empty(workspace_name.clone());
-    lock.policy = args.policy.to_string();
-    if let Some(registry_default) = args.registry_default {
-        lock.registries
-            .insert("default".to_string(), registry_default.to_string());
-    }
-
-    let ws_body = ws.to_toml_canonical();
-    let lock_body = lock.to_toml_canonical();
-    let package_body = render_package_toml(&package_name);
-    let module_body = render_module_template(&module_ns, archetype);
-    let deploy_body = render_deploy_preset(archetype, runtime_backend.as_str());
-    let readme_body = render_readme(
-        &workspace_name,
-        &package_name,
-        archetype,
-        runtime_backend.as_str(),
-    );
-    let backend_caps_body = render_backend_caps_policy(None, None);
-
-    let files: Vec<(PathBuf, String)> = vec![
-        (PathBuf::from("genesis.workspace.toml"), ws_body),
-        (PathBuf::from("genesis.lock"), lock_body),
-        (PathBuf::from("package.toml"), package_body),
-        (PathBuf::from("src/main.gc"), module_body),
-        (PathBuf::from("deploy/presets.toml"), deploy_body),
-        (PathBuf::from("caps.toml"), CAPS_DEV_DEFAULT.to_string()),
-        (PathBuf::from("caps.ci.toml"), CAPS_CI_DEFAULT.to_string()),
-        (
-            PathBuf::from("caps.release.toml"),
-            CAPS_RELEASE_DEFAULT.to_string(),
-        ),
-        (PathBuf::from("caps.backend.toml"), backend_caps_body),
-        (PathBuf::from("README.gcpm.md"), readme_body),
+pub(crate) fn handle_scaffold(
+    cli: &crate::Cli,
+    args: PkgScaffoldArgs<'_>,
+) -> Result<LocalPkgResult, String> {
+    let static_files = vec![
+        ("caps.toml", CAPS_DEV_DEFAULT.to_string()),
+        ("caps.ci.toml", CAPS_CI_DEFAULT.to_string()),
+        ("caps.release.toml", CAPS_RELEASE_DEFAULT.to_string()),
+        ("caps.backend.toml", render_backend_caps_policy(None, None)),
     ];
-
-    for (rel, body) in &files {
-        let path = args.root.join(rel);
-        write_scaffold_file(&path, body.as_bytes(), args.force)?;
-    }
-
-    let mut file_hash_records = Vec::with_capacity(files.len());
-    let mut rel_paths = Vec::with_capacity(files.len());
-    for (rel, body) in &files {
-        let rel_s = rel.display().to_string();
-        let file_h = blake3::hash(body.as_bytes()).to_hex().to_string();
-        file_hash_records.push(format!("{rel_s}:{file_h}"));
-        rel_paths.push(Term::Str(rel_s));
-    }
-    file_hash_records.sort();
-    let scaffold_h = blake3::hash(file_hash_records.join("\n").as_bytes())
-        .to_hex()
-        .to_string();
-
-    let value = Term::Map(
+    let request = Term::Map(
         [
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
-            (
-                TermOrdKey(Term::symbol(":workspace")),
-                Term::Str(workspace_name),
-            ),
-            (
-                TermOrdKey(Term::symbol(":package")),
-                Term::Str(package_name),
-            ),
             (
                 TermOrdKey(Term::symbol(":archetype")),
-                Term::Str(archetype.id().to_string()),
+                Term::Str(args.archetype.to_string()),
             ),
             (
-                TermOrdKey(Term::symbol(":runtime-backend-profile")),
-                Term::Str(runtime_backend),
+                TermOrdKey(Term::symbol(":kind")),
+                Term::Str(REQUEST_KIND.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":name")),
+                Term::Str(args.name.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":policy")),
+                Term::Str(args.policy.to_string()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":registry-default")),
+                args.registry_default
+                    .map(|value| Term::Str(value.to_string()))
+                    .unwrap_or(Term::Nil),
             ),
             (
                 TermOrdKey(Term::symbol(":root")),
                 Term::Str(args.root.display().to_string()),
             ),
             (
-                TermOrdKey(Term::symbol(":files-written")),
-                Term::Int((rel_paths.len() as i64).into()),
+                TermOrdKey(Term::symbol(":runtime-backend")),
+                args.runtime_backend
+                    .map(|value| Term::Str(value.to_string()))
+                    .unwrap_or(Term::Nil),
             ),
-            (TermOrdKey(Term::symbol(":files")), Term::Vector(rel_paths)),
             (
-                TermOrdKey(Term::symbol(":scaffold-h")),
-                Term::Str(scaffold_h),
+                TermOrdKey(Term::symbol(":static-files")),
+                Term::Vector(
+                    static_files
+                        .iter()
+                        .map(|(path, body)| {
+                            Term::Map(
+                                [
+                                    (TermOrdKey(Term::symbol(":body")), Term::Str(body.clone())),
+                                    (
+                                        TermOrdKey(Term::symbol(":path")),
+                                        Term::Str((*path).to_string()),
+                                    ),
+                                ]
+                                .into_iter()
+                                .collect(),
+                            )
+                        })
+                        .collect(),
+                ),
             ),
+            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
         ]
         .into_iter()
         .collect(),
     );
+    let request_hash = hex32(hash_term(&request));
+    let mut context = crate::mk_ctx(cli);
+    let prelude = crate::build_prelude(&mut context);
+    let mut environment = prelude.env;
+    crate::load_selfhost_toolchain(cli, &mut context, &mut environment)
+        .map_err(|error| format!("load scaffold authority: {error:?}"))?;
+    let authority = environment
+        .get(AUTHORITY_BINDING)
+        .ok_or_else(|| format!("missing binding {AUTHORITY_BINDING}"))?;
+    let value = authority
+        .apply(&mut context, Value::data(request))
+        .map_err(|error| format!("{AUTHORITY_BINDING} failed: {error}"))?;
+    if let Some((code, message, _)) = crate::extract_protocol_error(&context, &value) {
+        return Err(format!(
+            "{AUTHORITY_BINDING} returned sealed error: {code}: {message}"
+        ));
+    }
+    let authorized = decode_authorized_scaffold(
+        value,
+        &request_hash,
+        args.root,
+        args.archetype,
+        args.policy,
+        args.registry_default,
+        &static_files,
+    )?;
+
+    preflight_scaffold(args.root, &authorized.files, args.force)?;
+    for (relative, body) in &authorized.files {
+        write_scaffold_file(&args.root.join(relative), body.as_bytes(), true)?;
+    }
 
     Ok(LocalPkgResult {
         kind: "genesis/pkg-scaffold-v0.1",
         log_op: "pkg-scaffold",
-        program_hash: hash_term(&value),
-        value,
+        program_hash: hash_term(&authorized.report),
+        value: authorized.report,
     })
 }
 
-#[derive(Clone, Copy)]
-enum Archetype {
-    Web,
-    Service,
-    Desktop,
-    Mobile,
-    XrGame,
-    DataAi,
-}
-
-impl Archetype {
-    fn parse(raw: &str) -> Result<Self, String> {
-        match raw.trim().to_ascii_lowercase().as_str() {
-            "web" => Ok(Self::Web),
-            "service" => Ok(Self::Service),
-            "desktop" => Ok(Self::Desktop),
-            "mobile" => Ok(Self::Mobile),
-            "xr-game" => Ok(Self::XrGame),
-            "data-ai" => Ok(Self::DataAi),
-            _ => Err(
-                "unknown archetype; expected one of: web|service|desktop|mobile|xr-game|data-ai"
-                    .to_string(),
-            ),
+fn decode_authorized_scaffold(
+    value: Value,
+    request_hash: &str,
+    root: &Path,
+    requested_archetype: &str,
+    requested_policy: &str,
+    requested_registry: Option<&str>,
+    static_files: &[(&str, String)],
+) -> Result<AuthorizedScaffold, String> {
+    let Some(Term::Map(envelope)) = value.to_plain_term() else {
+        return Err(format!(
+            "scaffold authority returned non-map: {}",
+            value.debug_repr()
+        ));
+    };
+    require_exact_fields(
+        &envelope,
+        &[
+            ":code",
+            ":kind",
+            ":message",
+            ":ok",
+            ":request-h",
+            ":v",
+            ":value",
+        ],
+        "scaffold envelope",
+    )?;
+    require_string(&envelope, ":kind", RESULT_KIND)?;
+    require_int(&envelope, ":v", 1)?;
+    require_string(&envelope, ":request-h", request_hash)?;
+    match field(&envelope, ":ok")? {
+        Term::Bool(false) => {
+            require_nil(&envelope, ":value")?;
+            let code = required_string(&envelope, ":code")?;
+            if code != "core/pkg/bad-scaffold" {
+                return Err("scaffold rejection code is outside closed inventory".to_string());
+            }
+            return Err(format!(
+                "{code}: {}",
+                required_string(&envelope, ":message")?
+            ));
         }
-    }
-
-    fn id(self) -> &'static str {
-        match self {
-            Self::Web => "web",
-            Self::Service => "service",
-            Self::Desktop => "desktop",
-            Self::Mobile => "mobile",
-            Self::XrGame => "xr-game",
-            Self::DataAi => "data-ai",
+        Term::Bool(true) => {
+            require_nil(&envelope, ":code")?;
+            require_nil(&envelope, ":message")?;
         }
+        _ => return Err("scaffold envelope :ok must be bool".to_string()),
     }
-
-    fn default_runtime_backend(self) -> &'static str {
-        match self {
-            Self::Web | Self::Desktop | Self::XrGame => RUNTIME_BACKEND_GFX,
-            Self::Service => RUNTIME_BACKEND_BACKEND,
-            Self::Mobile | Self::DataAi => RUNTIME_BACKEND_GPU,
-        }
+    let Term::Map(result) = field(&envelope, ":value")? else {
+        return Err("scaffold result :value must be map".to_string());
+    };
+    require_exact_fields(result, &[":files", ":report"], "scaffold result")?;
+    let Term::Vector(file_terms) = field(result, ":files")? else {
+        return Err("scaffold result :files must be vector".to_string());
+    };
+    if file_terms.len() != FILE_PATHS.len() {
+        return Err("scaffold result file count mismatch".to_string());
     }
-
-    fn primary_build_target(self) -> &'static str {
-        match self {
-            Self::Web => "web",
-            Self::Service => "service-runtime",
-            Self::Desktop => "desktop",
-            Self::Mobile => "ios",
-            Self::XrGame => "web",
-            Self::DataAi => "service-runtime",
-        }
-    }
-}
-
-fn resolve_runtime_backend(
-    archetype: Archetype,
-    runtime_backend_override: Option<&str>,
-) -> Result<String, String> {
-    let chosen = runtime_backend_override.unwrap_or(archetype.default_runtime_backend());
-    normalize_runtime_backend_profile(chosen).ok_or_else(|| {
-        format!("invalid runtime backend `{chosen}`; expected one of headless|gpu|gfx|backend")
-    })
-}
-
-fn build_workspace_profiles(
-    policy: &str,
-    registry_default: Option<&str>,
-    runtime_backend: &str,
-    archetype: Archetype,
-) -> BTreeMap<String, WorkspaceProfile> {
-    let registry = registry_default.map(|s| s.to_string());
-    let mut profiles = BTreeMap::new();
-    profiles.insert(
-        "dev".to_string(),
-        WorkspaceProfile {
-            caps_policy: Some("caps.toml".to_string()),
-            registry: registry.clone(),
-            policy: Some(policy.to_string()),
-            toolchain: None,
-            runtime_backend: Some(runtime_backend.to_string()),
-        },
-    );
-    profiles.insert(
-        "backend".to_string(),
-        WorkspaceProfile {
-            caps_policy: Some("caps.backend.toml".to_string()),
-            registry: registry_default.map(|s| s.to_string()),
-            policy: Some(policy.to_string()),
-            toolchain: None,
-            runtime_backend: Some(RUNTIME_BACKEND_BACKEND.to_string()),
-        },
-    );
-    profiles.insert(
-        "ci".to_string(),
-        WorkspaceProfile {
-            caps_policy: Some("caps.ci.toml".to_string()),
-            registry: registry.clone(),
-            policy: Some(policy.to_string()),
-            toolchain: None,
-            runtime_backend: Some(RUNTIME_BACKEND_HEADLESS.to_string()),
-        },
-    );
-    profiles.insert(
-        "release".to_string(),
-        WorkspaceProfile {
-            caps_policy: Some("caps.release.toml".to_string()),
-            registry,
-            policy: Some(policy.to_string()),
-            toolchain: None,
-            runtime_backend: Some(match archetype {
-                Archetype::Service => RUNTIME_BACKEND_BACKEND.to_string(),
-                Archetype::DataAi => RUNTIME_BACKEND_GPU.to_string(),
-                _ => runtime_backend.to_string(),
-            }),
-        },
-    );
-    profiles
-}
-
-fn build_workspace_tasks(archetype: Archetype) -> BTreeMap<String, WorkspaceTask> {
-    let mut tasks = BTreeMap::new();
-    tasks.insert(
-        "test".to_string(),
-        WorkspaceTask {
-            cmd: "test".to_string(),
-            file: None,
-            pkg: Some("package.toml".to_string()),
-            args: vec![],
-        },
-    );
-    tasks.insert(
-        "pack".to_string(),
-        WorkspaceTask {
-            cmd: "pack".to_string(),
-            file: None,
-            pkg: Some("package.toml".to_string()),
-            args: vec![],
-        },
-    );
-    tasks.insert(
-        "typecheck".to_string(),
-        WorkspaceTask {
-            cmd: "typecheck".to_string(),
-            file: None,
-            pkg: Some("package.toml".to_string()),
-            args: vec![],
-        },
-    );
-    tasks.insert(
-        "run".to_string(),
-        WorkspaceTask {
-            cmd: "run".to_string(),
-            file: Some("src/main.gc".to_string()),
-            pkg: None,
-            args: vec!["--caps".to_string(), "caps.toml".to_string()],
-        },
-    );
-    tasks.insert(
-        "optimize".to_string(),
-        WorkspaceTask {
-            cmd: "optimize".to_string(),
-            file: Some("src/main.gc".to_string()),
-            pkg: None,
-            args: vec!["--stage1-gate".to_string()],
-        },
-    );
-    tasks.insert(
-        "build-primary".to_string(),
-        WorkspaceTask {
-            cmd: "build".to_string(),
-            file: None,
-            pkg: Some("package.toml".to_string()),
-            args: vec![
-                "--target".to_string(),
-                archetype.primary_build_target().to_string(),
-            ],
-        },
-    );
-    tasks
-}
-
-fn render_package_toml(package_name: &str) -> String {
-    format!(
-        r#"schema = 1
-name = "{package_name}"
-version = "0.1.0"
-obligations = []
-dependencies = []
-tests = []
-property_tests = []
-caps_policy = "caps.toml"
-
-[[modules]]
-path = "src/main.gc"
-"#
-    )
-}
-
-fn render_module_template(module_ns: &str, archetype: Archetype) -> String {
-    format!(
-        r#"(def ::meta
-  (quote
-    {{
-      :caps []
-      :exports [{module_ns}::main]
-      :types {{{module_ns}::main ?}}}}))
-
-(def {module_ns}::main
-  (fn (_)
-    {{
-      :archetype :{}
-      :status "scaffold-ok"}}))
-
-{module_ns}::main
-"#,
-        archetype.id()
-    )
-}
-
-fn render_deploy_preset(archetype: Archetype, runtime_backend: &str) -> String {
-    let mut out = format!(
-        r#"schema = "genesis/gcpm-scaffold-deploy-presets-v0.1"
-archetype = "{}"
-runtime_backend = "{}"
-primary_target = "{}"
-"#,
-        archetype.id(),
-        runtime_backend,
-        archetype.primary_build_target(),
-    );
-    if matches!(archetype, Archetype::Mobile) {
-        out.push_str("secondary_targets = [\"android\"]\n");
-    } else {
-        out.push_str("secondary_targets = []\n");
-    }
-    out
-}
-
-fn render_readme(
-    workspace_name: &str,
-    package_name: &str,
-    archetype: Archetype,
-    runtime_backend: &str,
-) -> String {
-    format!(
-        r#"# {workspace_name}
-
-Deterministic `gcpm scaffold` workspace for archetype `{}`.
-
-## Quick Start
-
-1. `genesis gcpm --caps caps.toml test --pkg package.toml`
-2. `genesis gcpm --caps caps.toml run run`
-3. `genesis gcpm --caps caps.toml env --profile dev`
-4. `genesis gcpm --caps caps.toml build --pkg package.toml --target {}`
-
-## Scaffold Contract
-
-- package: `{package_name}`
-- runtime backend profile: `{runtime_backend}`
-- deploy presets: `deploy/presets.toml`
-"#,
-        archetype.id(),
-        archetype.primary_build_target(),
-    )
-}
-
-fn normalize_identifier(raw: &str) -> String {
-    let mut out = String::new();
-    let mut prev_dash = false;
-    for ch in raw.trim().chars() {
-        let normalized = match ch {
-            'a'..='z' | '0'..='9' => Some(ch),
-            'A'..='Z' => Some(ch.to_ascii_lowercase()),
-            '_' | '-' | ' ' => Some('-'),
-            _ => None,
+    let mut files = Vec::with_capacity(file_terms.len());
+    let mut records = Vec::with_capacity(file_terms.len());
+    for (index, term) in file_terms.iter().enumerate() {
+        let Term::Map(file) = term else {
+            return Err("scaffold file entry must be map".to_string());
         };
-        if let Some(c) = normalized {
-            if c == '-' {
-                if out.is_empty() || prev_dash {
-                    continue;
-                }
-                prev_dash = true;
-                out.push(c);
-            } else {
-                prev_dash = false;
-                out.push(c);
+        require_exact_fields(file, &[":body", ":h", ":path"], "scaffold file")?;
+        let path = required_string(file, ":path")?;
+        if path != FILE_PATHS[index] {
+            return Err(format!("scaffold file order/path mismatch at {index}"));
+        }
+        let body = required_string(file, ":body")?.to_string();
+        let declared_hash = required_string(file, ":h")?;
+        let actual_hash = blake3::hash(body.as_bytes()).to_hex().to_string();
+        if declared_hash != actual_hash {
+            return Err(format!("scaffold file hash contradicts body for {path}"));
+        }
+        if (5..=8).contains(&index) {
+            let (expected_path, expected_body) = &static_files[index - 5];
+            if path != *expected_path || &body != expected_body {
+                return Err(format!(
+                    "scaffold static file contradicts observation for {path}"
+                ));
+            }
+        }
+        records.push(format!("{path}:{declared_hash}"));
+        files.push((PathBuf::from(path), body));
+    }
+    records.sort();
+    let scaffold_hash = blake3::hash(records.join("\n").as_bytes())
+        .to_hex()
+        .to_string();
+
+    let report = field(result, ":report")?.clone();
+    let Term::Map(report_fields) = &report else {
+        return Err("scaffold report must be map".to_string());
+    };
+    require_exact_fields(
+        report_fields,
+        &[
+            ":archetype",
+            ":files",
+            ":files-written",
+            ":ok",
+            ":package",
+            ":root",
+            ":runtime-backend-profile",
+            ":scaffold-h",
+            ":workspace",
+        ],
+        "scaffold report",
+    )?;
+    require_int(report_fields, ":files-written", FILE_PATHS.len() as i64)?;
+    if field(report_fields, ":ok")? != &Term::Bool(true) {
+        return Err("scaffold report :ok must be true".to_string());
+    }
+    require_string(report_fields, ":root", &root.display().to_string())?;
+    require_string(report_fields, ":scaffold-h", &scaffold_hash)?;
+    let Term::Vector(report_paths) = field(report_fields, ":files")? else {
+        return Err("scaffold report :files must be vector".to_string());
+    };
+    let expected_paths = FILE_PATHS
+        .iter()
+        .map(|path| Term::Str((*path).to_string()))
+        .collect::<Vec<_>>();
+    if report_paths != &expected_paths {
+        return Err("scaffold report file inventory contradicts plan".to_string());
+    }
+    require_string(report_fields, ":archetype", requested_archetype)?;
+
+    let workspace = WorkspaceConfig::from_toml_str(Path::new(FILE_PATHS[0]), &files[0].1)
+        .map_err(|error| format!("scaffold workspace document is invalid: {error}"))?;
+    require_string(report_fields, ":workspace", &workspace.workspace)?;
+    if workspace.members.len() != 1 || workspace.members[0].path != "." {
+        return Err("scaffold workspace member inventory is not closed".to_string());
+    }
+    require_string(report_fields, ":package", &workspace.members[0].name)?;
+    if workspace.defaults.policy.as_deref() != Some(requested_policy)
+        || workspace.defaults.registry.as_deref() != requested_registry
+    {
+        return Err("scaffold workspace defaults contradict request".to_string());
+    }
+    let backend = workspace
+        .defaults
+        .runtime_backend
+        .as_deref()
+        .ok_or_else(|| "scaffold workspace omits runtime backend".to_string())?;
+    require_string(report_fields, ":runtime-backend-profile", backend)?;
+
+    let lock = GenesisLock::from_toml_str(Path::new(FILE_PATHS[1]), &files[1].1)
+        .map_err(|error| format!("scaffold lock document is invalid: {error}"))?;
+    if lock.workspace != workspace.workspace || lock.policy != requested_policy {
+        return Err("scaffold lock contradicts workspace or request".to_string());
+    }
+    match requested_registry {
+        Some(registry) if lock.registries.get("default").map(String::as_str) == Some(registry) => {}
+        None if !lock.registries.contains_key("default") => {}
+        _ => return Err("scaffold lock registry contradicts request".to_string()),
+    }
+    Ok(AuthorizedScaffold { files, report })
+}
+
+fn preflight_scaffold(root: &Path, files: &[(PathBuf, String)], force: bool) -> Result<(), String> {
+    preflight_directory_chain(root)?;
+    for (relative, _) in files {
+        if relative.is_absolute()
+            || relative
+                .components()
+                .any(|component| !matches!(component, std::path::Component::Normal(_)))
+        {
+            return Err(format!(
+                "scaffold authority returned unsafe relative path: {}",
+                relative.display()
+            ));
+        }
+        let path = root.join(relative);
+        if let Some(parent) = path.parent() {
+            preflight_directory_chain(parent)?;
+        }
+        match std::fs::symlink_metadata(&path) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(format!(
+                    "refusing scaffold destination symlink: {}",
+                    path.display()
+                ));
+            }
+            Ok(metadata) if !metadata.is_file() => {
+                return Err(format!(
+                    "scaffold destination is not a regular file: {}",
+                    path.display()
+                ));
+            }
+            Ok(_) if !force => {
+                return Err(format!(
+                    "refusing to overwrite existing path without --force: {}",
+                    path.display()
+                ));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(format!(
+                    "inspect scaffold destination {}: {error}",
+                    path.display()
+                ));
             }
         }
     }
-    while out.ends_with('-') {
-        out.pop();
+    Ok(())
+}
+
+fn preflight_directory_chain(path: &Path) -> Result<(), String> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|error| format!("resolve scaffold working directory: {error}"))?
+            .join(path)
+    };
+    let mut prefix = PathBuf::new();
+    let mut missing = false;
+    for component in absolute.components() {
+        prefix.push(component.as_os_str());
+        if missing {
+            continue;
+        }
+        match std::fs::symlink_metadata(&prefix) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(format!(
+                    "refusing scaffold directory symlink: {}",
+                    prefix.display()
+                ));
+            }
+            Ok(metadata) if !metadata.is_dir() => {
+                return Err(format!(
+                    "scaffold directory component is not a directory: {}",
+                    prefix.display()
+                ));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => missing = true,
+            Err(error) => {
+                return Err(format!(
+                    "inspect scaffold directory {}: {error}",
+                    prefix.display()
+                ));
+            }
+        }
     }
-    out
+    Ok(())
+}
+
+fn require_exact_fields(
+    fields: &BTreeMap<TermOrdKey, Term>,
+    names: &[&str],
+    label: &str,
+) -> Result<(), String> {
+    let expected = names
+        .iter()
+        .map(|name| TermOrdKey(Term::symbol(*name)))
+        .collect::<std::collections::BTreeSet<_>>();
+    if fields
+        .keys()
+        .cloned()
+        .collect::<std::collections::BTreeSet<_>>()
+        == expected
+    {
+        Ok(())
+    } else {
+        Err(format!("{label} field set mismatch"))
+    }
+}
+
+fn field<'a>(fields: &'a BTreeMap<TermOrdKey, Term>, name: &str) -> Result<&'a Term, String> {
+    fields
+        .get(&TermOrdKey(Term::symbol(name)))
+        .ok_or_else(|| format!("scaffold result missing {name}"))
+}
+
+fn required_string<'a>(
+    fields: &'a BTreeMap<TermOrdKey, Term>,
+    name: &str,
+) -> Result<&'a str, String> {
+    match field(fields, name)? {
+        Term::Str(value) => Ok(value),
+        _ => Err(format!("scaffold result {name} must be string")),
+    }
+}
+
+fn require_string(
+    fields: &BTreeMap<TermOrdKey, Term>,
+    name: &str,
+    expected: &str,
+) -> Result<(), String> {
+    if required_string(fields, name)? == expected {
+        Ok(())
+    } else {
+        Err(format!("scaffold result {name} mismatch"))
+    }
+}
+
+fn require_int(
+    fields: &BTreeMap<TermOrdKey, Term>,
+    name: &str,
+    expected: i64,
+) -> Result<(), String> {
+    match field(fields, name)? {
+        Term::Int(value) if value.to_string() == expected.to_string() => Ok(()),
+        _ => Err(format!("scaffold result {name} mismatch")),
+    }
+}
+
+fn require_nil(fields: &BTreeMap<TermOrdKey, Term>, name: &str) -> Result<(), String> {
+    match field(fields, name)? {
+        Term::Nil => Ok(()),
+        _ => Err(format!("scaffold result {name} must be nil")),
+    }
+}
+
+fn hex32(bytes: [u8; 32]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 fn write_scaffold_file(path: &Path, bytes: &[u8], force: bool) -> Result<(), String> {
@@ -484,32 +514,20 @@ fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         {
             Ok(mut file) => {
                 use std::io::Write as _;
-                file.write_all(bytes)?;
+                if let Err(error) = file.write_all(bytes) {
+                    drop(file);
+                    let _ = std::fs::remove_file(&candidate);
+                    return Err(error);
+                }
                 break candidate;
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(error) => return Err(error),
         }
     };
-    std::fs::rename(&tmp, path)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Archetype, normalize_identifier, resolve_runtime_backend};
-
-    #[test]
-    fn normalize_identifier_compacts_and_lowers() {
-        assert_eq!(normalize_identifier("  My Demo_App  "), "my-demo-app");
-        assert_eq!(normalize_identifier("!!!"), "");
+    if let Err(error) = std::fs::rename(&tmp, path) {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(error);
     }
-
-    #[test]
-    fn resolve_runtime_backend_validates_aliases() {
-        assert_eq!(
-            resolve_runtime_backend(Archetype::Web, Some("profile-gfx")).unwrap(),
-            "gfx".to_string()
-        );
-        assert!(resolve_runtime_backend(Archetype::Web, Some("weird")).is_err());
-    }
+    Ok(())
 }

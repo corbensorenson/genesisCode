@@ -224,15 +224,18 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             policy,
             registry_default,
         } => Some(
-            pkg_scaffold::handle_scaffold(pkg_scaffold::PkgScaffoldArgs {
-                archetype,
-                name,
-                root,
-                force: *force,
-                runtime_backend: runtime_backend.as_deref(),
-                policy,
-                registry_default: registry_default.as_deref(),
-            })
+            pkg_scaffold::handle_scaffold(
+                cli,
+                pkg_scaffold::PkgScaffoldArgs {
+                    archetype,
+                    name,
+                    root,
+                    force: *force,
+                    runtime_backend: runtime_backend.as_deref(),
+                    policy,
+                    registry_default: registry_default.as_deref(),
+                },
+            )
             .map_err(|e| cli_err(EX_PARSE, "pkg/scaffold", e))?,
         ),
         PkgCmd::Build {

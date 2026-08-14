@@ -1,0 +1,57 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::scaffold-authority",
+  "contentIdentitySha256": "79b58446d529ffa55dfaeea381b472310103f8186869f87a8f7ac034ac7ec774",
+  "decisionInventory": [
+    "ascii-identifier-normalization",
+    "closed-six-archetype-admission",
+    "runtime-backend-alias-default-and-release-selection",
+    "primary-target-and-mobile-secondary-target-selection",
+    "canonical-six-dynamic-document-rendering",
+    "identity-pinned-four-static-template-admission",
+    "fixed-ten-file-order-and-body-identities",
+    "aggregate-scaffold-identity-and-exact-report"
+  ],
+  "hostMechanisms": [
+    "artifact-only-bounded-authority-evaluation",
+    "four-static-capability-template-byte-observations",
+    "strict-request-bound-result-and-cross-document-decoding",
+    "whole-plan-path-conflict-type-and-symlink-preflight",
+    "exact-byte-temporary-file-persistence-and-atomic-per-file-rename"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_scaffold_authority.py",
+  "kind": "genesis/selfhost-pkg-scaffold-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "crash-atomic-multi-file-commit",
+    "filesystem-or-path-policy-authority",
+    "generic-toml-authority",
+    "h2-workspace-closure",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "static-capability-template-generation",
+    "wasi-scaffold-support",
+    "workspace-init-migration-environment-task-or-manifest-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/pkg-scaffold-authority-request-v0.1",
+  "resultKind": "genesis/pkg-scaffold-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_scaffold_core_v1.gc",
+    "selfhost/pkg_scaffold_render_v1.gc",
+    "selfhost/pkg_scaffold_authority_v1.gc"
+  ],
+  "sourceSha256": "85413167cb1afc6d0784495bb1c01482a0731225e8514b4e6c95a20751f3877e",
+  "spec": "docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

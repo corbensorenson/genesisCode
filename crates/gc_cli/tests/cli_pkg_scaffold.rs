@@ -139,3 +139,185 @@ fn gcpm_scaffold_requires_force_to_overwrite_existing_files() {
     let repaired = fs::read_to_string(package_path).unwrap();
     assert!(repaired.contains("name = \"svc-core-service\""));
 }
+
+#[test]
+fn gcpm_scaffold_covers_closed_archetype_decision_matrix() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let cases = [
+        ("web", "gfx", "web", false),
+        ("service", "backend", "service-runtime", false),
+        ("desktop", "gfx", "desktop", false),
+        ("mobile", "gpu", "ios", true),
+        ("xr-game", "gfx", "web", false),
+        ("data-ai", "gpu", "service-runtime", false),
+    ];
+
+    for (archetype, backend, primary, has_android) in cases {
+        let root_name = format!("case-{archetype}");
+        cargo_bin_cmd!("genesis")
+            .current_dir(dir)
+            .args(["--json", "gcpm", "--caps"])
+            .arg(&caps)
+            .args([
+                "scaffold",
+                "--archetype",
+                archetype,
+                "--name",
+                "Decision Matrix",
+                "--root",
+                &root_name,
+            ])
+            .assert()
+            .success();
+
+        let root = dir.join(root_name);
+        let workspace =
+            gc_pkg::WorkspaceConfig::load(&root.join("genesis.workspace.toml")).unwrap();
+        assert_eq!(workspace.defaults.runtime_backend.as_deref(), Some(backend));
+        let deploy = fs::read_to_string(root.join("deploy/presets.toml")).unwrap();
+        assert!(deploy.contains(&format!("archetype = \"{archetype}\"")));
+        assert!(deploy.contains(&format!("primary_target = \"{primary}\"")));
+        assert_eq!(
+            deploy.contains("secondary_targets = [\"android\"]"),
+            has_android
+        );
+    }
+}
+
+#[test]
+fn gcpm_scaffold_round_trips_escaped_toml_metadata() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let policy = "policy:\"quoted\\line\n\t\u{1}";
+    let registry = "gen://registry/\"quoted\\line\n\t\u{1}";
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "scaffold",
+            "--archetype",
+            "web",
+            "--name",
+            "escaped-metadata",
+            "--root",
+            "escaped",
+            "--policy",
+            policy,
+            "--registry-default",
+            registry,
+        ])
+        .assert()
+        .success();
+
+    let root = dir.join("escaped");
+    let workspace = gc_pkg::WorkspaceConfig::load(&root.join("genesis.workspace.toml")).unwrap();
+    let lock = gc_pkg::GenesisLock::load(&root.join("genesis.lock")).unwrap();
+    assert_eq!(workspace.defaults.policy.as_deref(), Some(policy));
+    assert_eq!(workspace.defaults.registry.as_deref(), Some(registry));
+    assert_eq!(lock.policy, policy);
+    assert_eq!(
+        lock.registries.get("default").map(String::as_str),
+        Some(registry)
+    );
+}
+
+#[test]
+fn gcpm_scaffold_rejects_invalid_backend_without_mutation() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let root = dir.join("rejected");
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "scaffold",
+            "--archetype",
+            "web",
+            "--name",
+            "rejected",
+            "--root",
+            "rejected",
+            "--runtime-backend",
+            "not-a-profile",
+        ])
+        .assert()
+        .failure();
+
+    assert!(
+        !root.exists(),
+        "rejected authority must not create its root"
+    );
+}
+
+#[test]
+fn gcpm_scaffold_preflights_late_collision_before_any_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let root = dir.join("collision");
+    fs::create_dir_all(&root).unwrap();
+    fs::write(root.join("caps.release.toml"), "retain-me\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "scaffold",
+            "--archetype",
+            "web",
+            "--name",
+            "collision",
+            "--root",
+            "collision",
+        ])
+        .assert()
+        .failure();
+
+    assert_eq!(
+        fs::read_to_string(root.join("caps.release.toml")).unwrap(),
+        "retain-me\n"
+    );
+    assert!(!root.join("genesis.workspace.toml").exists());
+    assert!(!root.join("src").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn gcpm_scaffold_rejects_parent_symlink_without_external_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let root = dir.join("symlinked");
+    let outside = dir.join("outside");
+    fs::create_dir_all(&root).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    std::os::unix::fs::symlink(&outside, root.join("src")).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "scaffold",
+            "--archetype",
+            "web",
+            "--name",
+            "symlinked",
+            "--root",
+            "symlinked",
+        ])
+        .assert()
+        .failure();
+
+    assert!(!outside.join("main.gc").exists());
+    assert!(!root.join("genesis.workspace.toml").exists());
+}

@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 368,
+    "canonicalSources": 370,
     "diagnostics": 201,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 139,
+    "schemas": 140,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "037e965c8c66a0a57a7f6b52322b15ae8da46c975b9a7137cd7f562da8bbb4b3"
+      "sha256": "621065eddb87ae1c63310b6e28c3b5b33546d69b2913dd4c62253df5f7430c6d"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "c6b6f8d492e68cd76518d5563de378d1724e446e6b3665ca85be93abd534c570"
+      "sha256": "d7817f2b0447824b96ad880367712623e9d2e16bdf0e555fb300cc650240dc25"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "0c2a7708ad868a66ab67e8501079ab412a8a08c2e428e5955d0ba40f678ca050"
+      "sha256": "b9305054222b64978b7f6d731b808539f1a5c46ca0c873ca729b03a82dfe34d7"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -1203,6 +1203,14 @@
       "sha256": "16c60cf9fa3b3f39c7f03643a690b6bb2352889ed0c6ca5218b0ee019c690355"
     },
     {
+      "path": "docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.md",
+      "sha256": "2fba831eea355bd7a3076f78d45235aa65f29152d61fe070ab96f86c0338c157"
+    },
+    {
+      "path": "docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.schema.json",
+      "sha256": "fc452a07cd8eee2fb507acc2178f7bea31385d921a86ba1470ec74660e35c86d"
+    },
+    {
       "path": "docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md",
       "sha256": "b83ffc54a55a944b6197a9fce66bc1819b6ae2fa9dd353caa92882f7292f75a0"
     },
@@ -1296,7 +1304,7 @@
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-      "sha256": "312db291ba39082bf84c2d9ad6404479f929663a7ab3ab1c89501bb5a5995e1c"
+      "sha256": "0c17af0cfd09b0d6dc3ef8a0ee131a9366e4d6d49da3fb91f4fb28179aded16f"
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",
@@ -1464,7 +1472,7 @@
     },
     {
       "path": "docs/status/SELFHOST_AUTHORITY_v0.1.md",
-      "sha256": "9d5569ef6516a4ccdcb49c5a7f2e75b3ebdcfbd8241f3337a897a1c58d2775e9"
+      "sha256": "6cf98dd09030f5808b9305126ea1a5bf89363fdb20e7e26cb168790ffbc796c7"
     },
     {
       "path": "docs/status/SELFHOST_CUTOVER.md",

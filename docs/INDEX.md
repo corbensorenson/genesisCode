@@ -256,6 +256,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package verify profile.
 - `policies/selfhost_pkg_verify_authority_v0.1.json` - content-addressed verify planning, terminal disposition, accounting, bounded mechanisms, and nonclaims.
 - `scripts/lib/selfhost_pkg_verify_authority.py` - independent verify source/artifact/route/order/fail-fast/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.md` - normative partial R4.2.e scaffold normalization, archetype, rendering, identity, preflight, and report authority boundary.
+- `docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package scaffold profile.
+- `policies/selfhost_pkg_scaffold_authority_v0.1.json` - content-addressed scaffold decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
+- `scripts/lib/selfhost_pkg_scaffold_authority.py` - independent scaffold source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
 - `policies/selfhost_pkg_resolution_workflow_authority_v0.1.json` - content-addressed workflow decision inventory, residual host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_resolution_workflow_authority.py` - independent workflow source/artifact/route/oracle/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md` - normative partial R4.2.e semver policy-extremum, lexical tie-break, and empty-candidate authority boundary.
