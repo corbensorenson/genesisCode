@@ -3,11 +3,15 @@ use std::path::{Path, PathBuf};
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
 use gc_kernel::{MemLimits, StepLimit};
+#[cfg(any(test, feature = "parity-harness"))]
+use gc_pkg::WorkspaceTask;
 use gc_pkg::{
     PackageManifest, RUNTIME_BACKEND_HEADLESS, UpdatePolicy, WorkspaceConfig, WorkspaceMember,
-    WorkspaceTask, normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
+    normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
 };
 
+#[path = "pkg_workspace_migrate.rs"]
+mod pkg_workspace_migrate;
 #[path = "pkg_workspace_new.rs"]
 mod pkg_workspace_new;
 #[path = "pkg_workspace_ops_backend.rs"]
@@ -199,6 +203,26 @@ fn handle_remove_parity(name: &str, lock: &Path) -> Result<LocalPkgResult, Strin
 }
 
 pub(crate) fn handle_migrate(
+    cli: &crate::Cli,
+    pkg: &Path,
+    lock: &Path,
+    workspace_file: &Path,
+    workspace_override: Option<&str>,
+    registry_default: Option<&str>,
+) -> Result<LocalPkgResult, String> {
+    pkg_workspace_migrate::handle_migrate(
+        cli,
+        pkg,
+        lock,
+        workspace_file,
+        workspace_override,
+        registry_default,
+    )
+}
+
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Retained only as an explicit compatibility oracle.
+fn handle_migrate_parity(
     pkg: &Path,
     lock: &Path,
     workspace_file: &Path,
@@ -360,6 +384,7 @@ fn parse_member_spec(spec: &str) -> Result<WorkspaceMember, String> {
     }
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn relative_to_cwd_or_literal(p: &Path) -> String {
     if let Ok(cwd) = std::env::current_dir()
         && let Ok(rel) = p.strip_prefix(&cwd)
@@ -443,6 +468,7 @@ fn workspace_store_dir(workspace_file: &Path) -> PathBuf {
         .join("store")
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn is_hash_hex_64(s: &str) -> bool {
     s.len() == 64 && s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
 }

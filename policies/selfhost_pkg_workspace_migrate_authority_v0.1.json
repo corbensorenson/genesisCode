@@ -1,0 +1,51 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::workspace-migrate-authority",
+  "contentIdentitySha256": "5f6e8756d9b9478f59580c11c56edc8a40c70ff3f729e0d82bede2633c6e7b41",
+  "decisionInventory": [
+    "optional-workspace-name-default-selection",
+    "bounded-dependency-admission-and-snapshot-hash-filtering",
+    "canonical-workspace-member-defaults-and-task-rendering",
+    "canonical-lock-model-construction-and-lock-writer-composition",
+    "request-bound-migration-report-and-body-identity"
+  ],
+  "hostMechanisms": [
+    "bounded-manifest-parse-and-path-observation",
+    "artifact-only-bounded-authority-evaluation",
+    "strict-request-bound-result-and-cross-document-decoding",
+    "two-destination-regular-file-ancestor-and-symlink-preflight",
+    "exact-byte-temporary-file-persistence-and-atomic-rename"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
+  "kind": "genesis/selfhost-pkg-workspace-migrate-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "crash-atomic-multi-file-commit-or-recovery",
+    "filesystem-or-path-policy-authority",
+    "generic-toml-or-path-authority",
+    "h2-workspace-closure",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-workspace-migrate-support",
+    "workspace-environment-task-resolution-or-manifest-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/pkg-workspace-migrate-authority-request-v0.1",
+  "resultKind": "genesis/pkg-workspace-migrate-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_workspace_migrate_authority_v1.gc"
+  ],
+  "sourceSha256": "6bdbe2dab5c8cef064f2e6f2cb70196d1d6ae4fce58d140f00195334dcde98fe",
+  "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

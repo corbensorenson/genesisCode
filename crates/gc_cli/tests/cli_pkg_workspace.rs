@@ -902,6 +902,8 @@ path = "lib.gc"
     );
     let ws_src = fs::read_to_string(dir.join("genesis.workspace.toml")).unwrap();
     assert!(ws_src.contains("workspace = \"mono\""));
+    assert!(ws_src.contains("path = \".\""));
+    assert!(ws_src.contains("[tasks.\"pack\"]"));
     assert!(ws_src.contains("[tasks.\"test\"]"));
 
     let lock_src = fs::read_to_string(dir.join("genesis.lock")).unwrap();
@@ -910,6 +912,137 @@ path = "lib.gc"
         lock_src
             .contains("snapshot:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
     );
+    let report = parse_coreform_value_map(&out);
+    assert_eq!(
+        report
+            .get(&TermOrdKey(Term::symbol(":dep-count")))
+            .and_then(|term| match term {
+                Term::Int(value) => value.to_string().parse::<i64>().ok(),
+                _ => None,
+            }),
+        Some(1)
+    );
+}
+
+#[test]
+fn gcpm_migrate_defaults_name_and_filters_unusable_dependency_hashes() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("lib.gc"), "(def lib::x 1)\nlib::x\n").unwrap();
+    fs::write(
+        dir.join("package.toml"),
+        r#"
+name = "mini"
+version = "0.1.0"
+obligations = []
+dependencies = [
+  { name = "good", path = "deps/good", hash = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" },
+  { name = "bad", path = "deps/bad", hash = "not-a-snapshot" },
+  { name = "local", path = "deps/local" },
+]
+
+[[modules]]
+path = "lib.gc"
+"#,
+    )
+    .unwrap();
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["migrate", "--pkg", "package.toml"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let workspace = WorkspaceConfig::load(&dir.join("genesis.workspace.toml")).unwrap();
+    assert_eq!(workspace.workspace, "mini");
+    assert_eq!(workspace.members[0].path, ".");
+    let lock = GenesisLock::load(&dir.join("genesis.lock")).unwrap();
+    assert_eq!(lock.workspace, "mini");
+    assert_eq!(lock.requirements.len(), 1);
+    assert_eq!(
+        lock.requirements["good"].selector,
+        "snapshot:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    );
+    let report = parse_coreform_value_map(&out);
+    assert_eq!(
+        report
+            .get(&TermOrdKey(Term::symbol(":dep-count")))
+            .and_then(|term| match term {
+                Term::Int(value) => value.to_string().parse::<i64>().ok(),
+                _ => None,
+            }),
+        Some(3)
+    );
+}
+
+#[test]
+fn gcpm_migrate_rejects_empty_workspace_without_writes() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("package.toml"),
+        "name = \"mini\"\nversion = \"0.1.0\"\nmodules = []\nobligations = []\n",
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["migrate", "--workspace", ""])
+        .assert()
+        .failure();
+    assert!(!dir.join("genesis.lock").exists());
+    assert!(!dir.join("genesis.workspace.toml").exists());
+}
+
+#[test]
+fn gcpm_migrate_preflights_all_destinations_before_writing() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("package.toml"),
+        "name = \"mini\"\nversion = \"0.1.0\"\nmodules = []\nobligations = []\n",
+    )
+    .unwrap();
+    fs::create_dir(dir.join("blocked-workspace")).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "migrate",
+            "--lock",
+            "nested/genesis.lock",
+            "--workspace-file",
+            "blocked-workspace",
+        ])
+        .assert()
+        .failure();
+    assert!(!dir.join("nested").exists());
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "migrate",
+            "--lock",
+            "same.toml",
+            "--workspace-file",
+            "same.toml",
+        ])
+        .assert()
+        .failure();
+    assert!(!dir.join("same.toml").exists());
 }
 
 #[test]

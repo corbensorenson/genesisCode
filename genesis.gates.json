@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "0d0d2e78358019cb40afe325e384fee31e616714d25e3e7c784c122742ade1fc",
+      "inputIdentitySha256": "c38cfcea5090ab11b4d230079bba12902b25e348c7e2fdb1acc811e9b36fa6cc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -569,7 +569,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "7aa344ad9c6fe769ddc8e7d42240dcdbb8de93bb982e19c9ac0380957762b4c8",
+      "inputIdentitySha256": "b6cc3a35c3cbcce3491b336dd50ae6331c92d1ca219499f781ae5572a3a19f3a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1134,6 +1134,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -1598,6 +1599,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -1773,6 +1775,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -2030,6 +2033,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -2255,6 +2259,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -2575,7 +2580,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "2203b2768d31041134dd5d1607026be769f606763a7acc5ecae5088d550182c8",
+      "inputIdentitySha256": "6e1b5de16834e920542289d995027582cedee3ada25eeab363ac4cce64aa9939",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2703,7 +2708,7 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "6c0425ddb071be1b5e3779d8c8d17e6b09b2a4df0e28dde0d337692333b6dd66",
+      "inputIdentitySha256": "49e189ab364c3d40c416f58fdf493839c622744f10ab357b6e1a33ad87018c77",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -2774,7 +2779,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2920,6 +2925,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -3384,6 +3390,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -3559,6 +3566,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -3816,6 +3824,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -4041,6 +4050,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -4256,7 +4266,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4402,6 +4412,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -4866,6 +4877,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -5041,6 +5053,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -5298,6 +5311,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -5523,6 +5537,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -5613,7 +5628,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5759,6 +5774,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -6223,6 +6239,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -6398,6 +6415,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -6655,6 +6673,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -6880,6 +6899,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -6958,7 +6978,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "ffcafe6810496e40a1e609549331245de3d4f3c7f44eadd3453008ffc317c283",
+      "inputIdentitySha256": "b0b415bd68c2de7f226b4c17a4d4bccb56017f1dd3cf057e2888a81ca56854fb",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7049,7 +7069,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7195,6 +7215,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -7659,6 +7680,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -7834,6 +7856,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -8091,6 +8114,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -8316,6 +8340,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -8694,7 +8719,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "138509a7dcf9aa5b4abe0e4e2a7f18fc0e03f4fd6c577f9755c975b76daecf52",
+      "inputIdentitySha256": "d95e985db737c3254cac98f449cf6836ba88d6cb1bd406f8ddedaca5cc8bdb90",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -8909,7 +8934,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "cdcae40a94183ca7f4510049537901dab9c4a17f43e2b6a0a23a27521a842808",
+      "inputIdentitySha256": "6677c18b92e7751886d4b597bcabedf6718715844cff3407273b4a739da9e149",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8977,7 +9002,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9123,6 +9148,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -9587,6 +9613,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -9762,6 +9789,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -10019,6 +10047,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -10244,6 +10273,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -10479,7 +10509,7 @@
       "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "8e0538bdc1e6ebe8ad76fe392cafb0f43bd4d68dc5eebd915e6792f40f5c5ad4",
+      "inputIdentitySha256": "804b6fe61bf5ac1a76c90b1c450160dfbd8719363fae9bd43810228d39674527",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -10622,7 +10652,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "b63c05680f3500b3b69f4eae53f856e0992bfbf114c6f71d0c5777cfbdea2d54",
+      "inputIdentitySha256": "133c9abfc2d83f534bf8a720dd213cc9a7849c309a0f892d75029ff3a065d480",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10696,7 +10726,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "0bcaa1a81e10a83087d013f51700a61d91a8775f8acb04709af114ad066b792e",
+      "inputIdentitySha256": "6d5afe72d1b04368d2142f9fa6e87d8c46a02a7b45ac5a886f908d770355d10a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10738,6 +10768,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -10968,6 +10999,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -11048,6 +11080,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -11103,6 +11136,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -11229,6 +11263,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -11354,7 +11389,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "3c4d9821dd6556ea1cf3c148ca76f4abed60d90ba710da293af55520619da924",
+      "inputIdentitySha256": "6c21207b0bd0e708a574786cdb2cb609404c5933e7fb8ba64af9476211a54774",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11541,7 +11576,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -11687,6 +11722,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -12151,6 +12187,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -12326,6 +12363,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -12583,6 +12621,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -12808,6 +12847,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -12882,7 +12922,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "0d0d2e78358019cb40afe325e384fee31e616714d25e3e7c784c122742ade1fc",
+      "inputIdentitySha256": "c38cfcea5090ab11b4d230079bba12902b25e348c7e2fdb1acc811e9b36fa6cc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13241,7 +13281,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "0d0d2e78358019cb40afe325e384fee31e616714d25e3e7c784c122742ade1fc",
+      "inputIdentitySha256": "c38cfcea5090ab11b4d230079bba12902b25e348c7e2fdb1acc811e9b36fa6cc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13600,7 +13640,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "0d0d2e78358019cb40afe325e384fee31e616714d25e3e7c784c122742ade1fc",
+      "inputIdentitySha256": "c38cfcea5090ab11b4d230079bba12902b25e348c7e2fdb1acc811e9b36fa6cc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13959,7 +13999,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "0d0d2e78358019cb40afe325e384fee31e616714d25e3e7c784c122742ade1fc",
+      "inputIdentitySha256": "c38cfcea5090ab11b4d230079bba12902b25e348c7e2fdb1acc811e9b36fa6cc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14372,7 +14412,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "352afc30d8bb58d583d75b093c5b4054deec23fa4e38ffeba117122310c8bc02",
+      "inputIdentitySha256": "b3e832f79d73ac469b39552ab59f01ab718c55505c6eee0bc4acf53c1a7d71f8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -14515,7 +14555,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14661,6 +14701,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -15125,6 +15166,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -15300,6 +15342,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -15557,6 +15600,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -15782,6 +15826,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -16514,7 +16559,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16660,6 +16705,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -17124,6 +17170,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -17299,6 +17346,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -17556,6 +17604,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -17781,6 +17830,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -17859,7 +17909,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18060,7 +18110,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18206,6 +18256,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -18670,6 +18721,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -18845,6 +18897,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -19102,6 +19155,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -19327,6 +19381,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -19580,7 +19635,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19988,7 +20043,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20134,6 +20189,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -20598,6 +20654,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -20773,6 +20830,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -21030,6 +21088,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -21255,6 +21314,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -21569,7 +21629,7 @@
       "executionIdentitySha256": "4f13742fb8c5256887c35c413e766cd8aaf9994d2abdacd92135a157d34e069e",
       "expectedDurationSeconds": 15,
       "id": "gate/planning-docs-fresh",
-      "inputIdentitySha256": "d86c60411897dd6d3522b085e8dd3cf84d22c379503fc114e2bfcc534cb83ef1",
+      "inputIdentitySha256": "13389b131a1a68ddd14ac148216cc5fd365e8477a9bc85e870772f7718b82bdc",
       "inputs": {
         "paths": [
           "docs/AGENT_ONBOARDING_v0.1.md",
@@ -21626,7 +21686,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21772,6 +21832,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -22236,6 +22297,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -22411,6 +22473,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -22668,6 +22731,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -22893,6 +22957,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -23163,7 +23228,7 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "bdb0c52e25aa81060272b76f91b917763e9e05fe4903c8f02f7dc395fc948514",
+      "inputIdentitySha256": "aea984a1316cf3201044090716dec6907f5834dcc7967f4496f5322b97c9eea8",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -23299,7 +23364,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "80f6e8a6fa29f8cedcc23b33b161cbbfaf53ced542f785811c9a1f1e966e01e0",
+      "inputIdentitySha256": "916c32df53938805bf3273c275ceb57d5f28f2918c92a7d6cfe12fa47080f6ca",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -23500,7 +23565,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "c135aba9be3e0b54228e9c9fee22e24d9d4c44d841964cf81b2d3fa5523f5210",
+      "inputIdentitySha256": "e2ff7b887d50c3153029e53fb402720291c850d0a4bbcada11bd469f03770b76",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -23715,7 +23780,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "52d248ed668eae934fa04d01fdcf6b4278768f664164eea42b1483ce4ef89e8e",
+      "inputIdentitySha256": "121046cfe5a6a7b4b5cb2540acc431d69a9c9b58b7cc0ab634c284fc9d0eebcc",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -23781,7 +23846,7 @@
       "executionIdentitySha256": "8f5310e9a5301ac5e50ca6fceb9746bc7a9eb296b438b2dbbfe00fbb7b91b932",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "2ea594ea5269bc5a567b9eaa6aedb5bdd9cb551f9ba231d4d0c7eb0c5bdb2a6f",
+      "inputIdentitySha256": "224767969254b548356ef7ece9e8745b81930cbdc74106808e4e9cf8e0c70436",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -23874,7 +23939,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "100d19792b8a152427b4e854ee23842823ceb62c4de71d9e2eecb8443155f781",
+      "inputIdentitySha256": "f84b46ccf7feb9c96f9686e1368d7066e399df00763d0782a727fc8fe217fe4e",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -23950,7 +24015,7 @@
       "executionIdentitySha256": "42697c907b00290611339f0db66de06fc10fbd461fee6ab8c0e0726ac51325f3",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-workloads",
-      "inputIdentitySha256": "d97d3e3847cf9f6ce5b5ab7aec8e6fe2936ff8b197d3cbcad5cce20af7c6dd20",
+      "inputIdentitySha256": "c9064a8d251e8dc855d48d021d2c2bbe41ae38fd670d1f06869f5099ae108fd8",
       "inputs": {
         "paths": [
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
@@ -24121,7 +24186,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -24471,7 +24536,7 @@
       "executionIdentitySha256": "2cb630dc95963b8f1f56eb63ade2ab93c476ff6caaad083666376d8ec86ed971",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "6c9b7e9168ca1a1847b2fe7b11b6fd85907e1c7d2b8dcd865f60904df14dc8b7",
+      "inputIdentitySha256": "b26d0b46371cb33deeda4bc961efd9c0d0f6938264f52febcfbdb0f38b85ec3e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24548,10 +24613,10 @@
       ],
       "diskBudgetMiB": 4096,
       "entrypoint": "scripts/check_selfhost_boundary.sh",
-      "executionIdentitySha256": "ac9e9331d417831f3f44f170aba647f6dcca6edfe8e47b5afb56874a274449bc",
+      "executionIdentitySha256": "b0426c6f77ef7b237eaa90dc0b9b315ad9ce3d98fac9080f286efb987bb88243",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "33b79f8ed374226640761fe6bf104b11367517739ec0a927e85855057b976a09",
+      "inputIdentitySha256": "e6f379b1afbe6a545cb21b4c284e9d02049a6d700928b7babbd6b0498765a714",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24591,6 +24656,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -24812,6 +24878,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -24863,6 +24930,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -24905,6 +24973,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -24987,6 +25056,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -25031,7 +25101,7 @@
         "maxShards": 0,
         "mode": "dependency-dag"
       },
-      "sourceSha256": "ed7d47917651962baf8ebdafdbbe5d16491924d48d161b1226b2f68bdf283880",
+      "sourceSha256": "60a479ac550c807f20cd49bcf507067ea8e87ebf4222996ef41550d124e6f6ad",
       "tools": [
         "bash",
         "cargo",
@@ -25049,7 +25119,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "9624756aca2576a75bf6deef1582f88731577ffea5c9e8bd0dde5b79095d3b67",
+      "inputIdentitySha256": "c3a981e0a7ad79b1e3e6ea8d7fddf18b3a5f51c8cc4b0327d6c9b91d9262bee9",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25120,7 +25190,7 @@
       "executionIdentitySha256": "31ea6993c7fcee4f72d4359ffa9c18009525b26d4a1587ddb2bc2e0e559ee21c",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-doc-runtime-parity",
-      "inputIdentitySha256": "dbf2b9785ed45d28eb9b026ef8a17993b2aca80f0de0762a4def7c16d1420a38",
+      "inputIdentitySha256": "50e0572afd70de5a05aef191dfcce3820c93f74cdc21ff656ddf1fe5d68d4d5e",
       "inputs": {
         "paths": [
           "docs/spec/CLI.md",
@@ -25226,7 +25296,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "5ae1da4796c0155e0a1c9ad52ad86e8e4c146655af4256667245623f876e0338",
+      "inputIdentitySha256": "b3b257489c638cd7b144838a0a81716c1578f198919615185958d182f6590eb6",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25369,7 +25439,7 @@
       "executionIdentitySha256": "de98a9b2dd03b246bd228fb5aa58e6c216ddd3e98c2db5a2dfe508c302766370",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-refactor-guard",
-      "inputIdentitySha256": "d4ffc8d5ba4b48b70c91965846bc4dfd03e94cba7c5f544d4e5912586e103ce1",
+      "inputIdentitySha256": "97adc3a30c85d4d4ed12d6c2b1e8524054bb17d2a6276a9b02ec9d8fb6f50b88",
       "inputs": {
         "paths": [
           "scripts/check_selfhost_refactor_guard.sh",
@@ -25487,7 +25557,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "5930539a41010f647f2b08e91359df965ec944efabe1fd6a398a268653ca6b4c",
+      "inputIdentitySha256": "a2336cb1145b647a2a50a8a0c1e6da2b94af8f94cdf9125a439b3aae3e01135a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25554,7 +25624,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26027,7 +26097,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26173,6 +26243,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -26637,6 +26708,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -26812,6 +26884,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -27069,6 +27142,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -27294,6 +27368,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -27486,7 +27561,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "5f58d08aca3bb4a65bb91fee41b9c07ee1517d4e42feacc819e6c442c455d17a",
+      "inputIdentitySha256": "2445d5458c31a1dfa02b12f976de756e852bdf2ae2fb35fb14565004a8ddde01",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -27632,6 +27707,7 @@
           "crates/gc_cli_driver/src/pkg_scaffold.rs",
           "crates/gc_cli_driver/src/pkg_scaffold/parity.rs",
           "crates/gc_cli_driver/src/pkg_self_opt.rs",
+          "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
           "crates/gc_cli_driver/src/pkg_workspace_new.rs",
           "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
           "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
@@ -28096,6 +28172,7 @@
           "docs/spec/SELFHOST_PKG_SNAPSHOT_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+          "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
           "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
           "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
@@ -28271,6 +28348,7 @@
           "policies/selfhost_pkg_semver_select_authority_v0.1.json",
           "policies/selfhost_pkg_snapshot_authority_v0.1.json",
           "policies/selfhost_pkg_verify_authority_v0.1.json",
+          "policies/selfhost_pkg_workspace_migrate_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_new_authority_v0.1.json",
           "policies/selfhost_pkg_workspace_remove_authority_v0.1.json",
           "policies/selfhost_policy_alias_authority_v0.1.json",
@@ -28528,6 +28606,7 @@
           "scripts/lib/selfhost_pkg_semver_select_authority.py",
           "scripts/lib/selfhost_pkg_snapshot_authority.py",
           "scripts/lib/selfhost_pkg_verify_authority.py",
+          "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
           "scripts/lib/selfhost_pkg_workspace_new_authority.py",
           "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
           "scripts/lib/selfhost_policy_alias_authority.py",
@@ -28753,6 +28832,7 @@
           "selfhost/pkg_verify_core_v1.gc",
           "selfhost/pkg_verify_finalize_v1.gc",
           "selfhost/pkg_verify_plan_v1.gc",
+          "selfhost/pkg_workspace_migrate_authority_v1.gc",
           "selfhost/pkg_workspace_new_authority_v1.gc",
           "selfhost/pkg_workspace_remove_authority_v1.gc",
           "selfhost/policy_authority_v1.gc",
@@ -28952,7 +29032,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "dfc48dcb612fc381488dfc668d058b9319fa6b35757b34d71924fc97309ed27a",
+      "inputIdentitySha256": "6ececb1a2b447e3006ebf229aab60e7795d22ed6855f9ad7460fa4ebad81867a",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -29025,7 +29105,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "bea627af97dc34b4dace1f238bed737b8b8869fdfcec1f7e9c96cc81995c972c",
+      "inputIdentitySha256": "5669db52f5f5c17f32c82b206ef9d561663af2fde1276a262ff4497dee845325",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -29387,7 +29467,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29544,7 +29624,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "9c205ce0b28737009f5e468b8892001569836b382176e9cfe929f6d30ec24f9d",
+      "inputIdentitySha256": "324733abee2ab765143de830ff63c3e5de690f0ec8b0402c235d814eab9b5d10",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29703,7 +29783,7 @@
       "executionIdentitySha256": "352025cc70b36a3be61f30d540c703e68cd628f85dd842ac902f78dacb6f2a9b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "f42a862913c129d81a863e2c4f77476aaf074087bf57169f2618e4f700f8aaab",
+      "inputIdentitySha256": "4eb4dd7bf4340ee034f133f4e309b8334642063a3c9853ebc4ed9185b8ea320d",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29771,7 +29851,7 @@
       "executionIdentitySha256": "caee314389a77784b0c3c074c9eff14a366f994fe9917d18d3200987629a8342",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-pack",
-      "inputIdentitySha256": "30bc0f548835fb43bdee4378467010299b22f6a1754e5c661be1e0cc5cc117bb",
+      "inputIdentitySha256": "b113b850c180f604e26e36356b25b3855d4a890c026e1dd278efdcb521c5b4cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29863,7 +29943,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "25c4e47af233e8e1ecd57320392d77dfa5f19594f3ed0ff9e1d012d74cce6a8e"
+        "sha256": "2e66d382a36347a97b10475da60b7ca31b47388ca6d2e686c2262f2caf9941f9"
       },
       {
         "path": "genesis.prerequisites.json",

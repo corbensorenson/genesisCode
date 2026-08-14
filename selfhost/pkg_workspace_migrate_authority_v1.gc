@@ -1,0 +1,281 @@
+; Closed semantic authority for legacy package-to-workspace migration.
+
+(def selfhost/pkg-workspace-migrate::request-kind
+  "genesis/pkg-workspace-migrate-authority-request-v0.1")
+(def selfhost/pkg-workspace-migrate::result-kind
+  "genesis/pkg-workspace-migrate-authority-result-v0.1")
+
+(def selfhost/pkg-workspace-migrate::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind selfhost/pkg-workspace-migrate::result-kind
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-workspace-migrate::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-workspace-migrate::result request-h) false)
+          "core/pkg/bad-workspace-migrate")
+        message)
+      nil))))
+
+(def selfhost/pkg-workspace-migrate::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-workspace-migrate::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-workspace-migrate::dependency?
+  (fn (dependency)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? dependency) [:hash :name :path])
+      (let
+        ((name ((core/map::get dependency) (quote :name)))
+          (path ((core/map::get dependency) (quote :path)))
+          (hash ((core/map::get dependency) (quote :hash))))
+        (if
+          (if (((selfhost/pkg-scaffold::bounded-str? name) 1024))
+            ((core/int::lt? 0) (core/str::len name))
+            false)
+          (if (((selfhost/pkg-scaffold::bounded-str? path) 4096))
+            (if ((core/int::lt? 0) (core/str::len path))
+              (((selfhost/pkg-scaffold::optional-bounded-str? hash) 128))
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-workspace-migrate::requirement
+  (fn (hash)
+    {
+      :registry "default"
+      :selector ((core/str::concat "snapshot:") hash)
+      :strategy (quote :pinned)
+      :tag-policy nil
+      :update-policy (quote :manual)}))
+
+(def selfhost/pkg-workspace-migrate::requirements-loop
+  (fn (dependencies)
+    (fn (index)
+      (fn (requirements)
+        (if ((core/int::eq? index) (core/vec::len dependencies))
+          {:ok true :requirements requirements}
+          (let ((dependency ((core/vec::get dependencies) index)))
+            (if (selfhost/pkg-workspace-migrate::dependency? dependency)
+              (let
+                ((name ((core/map::get dependency) (quote :name)))
+                  (hash ((core/map::get dependency) (quote :hash))))
+                (((selfhost/pkg-workspace-migrate::requirements-loop dependencies)
+                    ((core/int::add index) 1))
+                  (if
+                    (if (selfhost/pkg-lock-read::str? hash)
+                      (selfhost/pkg-resolution-plan::hash64? hash)
+                      false)
+                    (((core/map::put requirements) name)
+                      (selfhost/pkg-workspace-migrate::requirement hash))
+                    requirements)))
+              {:ok false :requirements {}})))))))
+
+(def selfhost/pkg-workspace-migrate::requirements
+  (fn (dependencies)
+    (((selfhost/pkg-workspace-migrate::requirements-loop dependencies) 0) {})))
+
+(def selfhost/pkg-workspace-migrate::registry-line
+  (fn (registry)
+    (if (core/list::is-nil? registry)
+      ""
+      ((selfhost/pkg-scaffold::append "registry = ")
+        ((selfhost/pkg-scaffold::append
+          (selfhost/pkg-workspace-new::toml-quoted registry)) "\n")))))
+
+(def selfhost/pkg-workspace-migrate::task
+  (fn (name)
+    (fn (command)
+      (fn (package-path)
+        (let
+          ((head
+            ((selfhost/pkg-scaffold::append "[tasks.")
+              (selfhost/pkg-workspace-new::toml-quoted name))))
+          (let ((with-label ((selfhost/pkg-scaffold::append head) "]\ncmd = ")))
+            (let
+              ((with-command
+                ((selfhost/pkg-scaffold::append with-label)
+                  (selfhost/pkg-workspace-new::toml-quoted command))))
+              ((selfhost/pkg-scaffold::append with-command)
+                ((selfhost/pkg-scaffold::append "\npkg = ")
+                  ((selfhost/pkg-scaffold::append
+                    (selfhost/pkg-workspace-new::toml-quoted package-path)) "\n\n"))))))))))
+
+(def selfhost/pkg-workspace-migrate::workspace-body
+  (fn (workspace)
+    (fn (package-name)
+      (fn (member-path)
+        (fn (package-path)
+          (fn (registry)
+            (let
+              ((head
+                ((selfhost/pkg-scaffold::append "version = 1\nworkspace = ")
+                  ((selfhost/pkg-scaffold::append
+                    (selfhost/pkg-workspace-new::toml-quoted workspace)) "\n\n")))
+                (member
+                  ((selfhost/pkg-scaffold::append "[[members]]\nname = ")
+                    ((selfhost/pkg-scaffold::append
+                      (selfhost/pkg-workspace-new::toml-quoted package-name))
+                      ((selfhost/pkg-scaffold::append "\npath = ")
+                        ((selfhost/pkg-scaffold::append
+                          (selfhost/pkg-workspace-new::toml-quoted member-path))
+                          "\nrole = \"package\"\n\n")))))
+                (defaults
+                  ((selfhost/pkg-scaffold::append "[defaults]\n")
+                    ((selfhost/pkg-scaffold::append
+                      (selfhost/pkg-workspace-migrate::registry-line registry))
+                      "policy = \"policy:default-v0.1\"\n\n")))
+                (pack
+                  (((selfhost/pkg-workspace-migrate::task "pack") "pack") package-path))
+                (test
+                  (((selfhost/pkg-workspace-migrate::task "test") "test") package-path)))
+              ((selfhost/pkg-scaffold::append head)
+                ((selfhost/pkg-scaffold::append member)
+                  ((selfhost/pkg-scaffold::append defaults)
+                    ((selfhost/pkg-scaffold::append pack) test)))))))))))
+
+(def selfhost/pkg-workspace-migrate::lock-model
+  (fn (workspace)
+    (fn (registry)
+      (fn (requirements)
+        {
+          :artifacts {}
+          :locked {}
+          :policy "policy:default-v0.1"
+          :registries (if (core/list::is-nil? registry) {} {"default" registry})
+          :requirements requirements
+          :version 2
+          :workspace workspace}))))
+
+(def selfhost/pkg-workspace-migrate::finish
+  (fn (request-h)
+    (fn (request)
+      (fn (requirements)
+        (let
+          ((workspace0 ((core/map::get request) (quote :workspace)))
+            (package-name ((core/map::get request) (quote :package-name)))
+            (member-path ((core/map::get request) (quote :member-path)))
+            (package-path ((core/map::get request) (quote :package-path)))
+            (registry ((core/map::get request) (quote :registry-default)))
+            (lock-path ((core/map::get request) (quote :lock)))
+            (workspace-path ((core/map::get request) (quote :workspace-file))))
+          (let ((workspace (if (core/list::is-nil? workspace0) package-name workspace0)))
+          (let
+            ((body
+              (((((selfhost/pkg-workspace-migrate::workspace-body workspace)
+                    package-name)
+                  member-path)
+                package-path)
+                registry)))
+            ((selfhost/pkg-workspace-migrate::accept request-h)
+              {
+                :lock-model
+                  (((selfhost/pkg-workspace-migrate::lock-model workspace) registry)
+                    ((core/map::get requirements) (quote :requirements)))
+                :report {
+                  :dep-count
+                    (core/vec::len ((core/map::get request) (quote :dependencies)))
+                  :lock lock-path
+                  :lock-h nil
+                  :ok true
+                  :workspace workspace
+                  :workspace-file workspace-path
+                  :workspace-h (selfhost/pkg-scaffold::hash-body body)}
+                :workspace-body body}))))))))
+
+(def selfhost/pkg-workspace-migrate::request-values-valid?
+  (fn (request)
+    (let
+      ((workspace ((core/map::get request) (quote :workspace)))
+        (package-name ((core/map::get request) (quote :package-name)))
+        (package-path ((core/map::get request) (quote :package-path)))
+        (member-path ((core/map::get request) (quote :member-path)))
+        (lock-path ((core/map::get request) (quote :lock)))
+        (workspace-path ((core/map::get request) (quote :workspace-file)))
+        (registry ((core/map::get request) (quote :registry-default)))
+        (dependencies ((core/map::get request) (quote :dependencies))))
+      (if (((selfhost/pkg-scaffold::optional-bounded-str? workspace) 1024))
+        (if
+          (if (core/list::is-nil? workspace)
+            true
+            ((core/int::lt? 0) (core/str::len workspace)))
+          (if (selfhost/pkg-scaffold::nonempty-str? package-name)
+            (if (((selfhost/pkg-scaffold::bounded-str? package-name) 1024))
+              (if (selfhost/pkg-scaffold::nonempty-str? package-path)
+                (if (((selfhost/pkg-scaffold::bounded-str? package-path) 4096))
+                  (if (selfhost/pkg-scaffold::nonempty-str? member-path)
+                    (if (((selfhost/pkg-scaffold::bounded-str? member-path) 4096))
+                      (if (selfhost/pkg-scaffold::nonempty-str? lock-path)
+                        (if (((selfhost/pkg-scaffold::bounded-str? lock-path) 4096))
+                          (if (selfhost/pkg-scaffold::nonempty-str? workspace-path)
+                            (if (((selfhost/pkg-scaffold::bounded-str? workspace-path) 4096))
+                              (if (((selfhost/pkg-scaffold::optional-bounded-str? registry) 4096))
+                                (if (selfhost/pkg-scaffold::vec? dependencies)
+                                  (if ((core/int::lt? 1024) (core/vec::len dependencies))
+                                    false
+                                    true)
+                                  false)
+                                false)
+                              false)
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false))))
+
+(def core/pkg::workspace-migrate-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-scaffold::map? request)
+        (if
+          ((selfhost/pkg-lock-read::exact-map? request)
+            [:dependencies :kind :lock :member-path :package-name :package-path
+             :registry-default :v :workspace :workspace-file])
+          (if
+            (if
+              (if (selfhost/pkg-lock-read::str?
+                    ((core/map::get request) (quote :kind)))
+                ((core/eq? ((core/map::get request) (quote :kind)))
+                  selfhost/pkg-workspace-migrate::request-kind)
+                false)
+              (if (selfhost/pkg-lock-read::int?
+                    ((core/map::get request) (quote :v)))
+                ((core/int::eq? ((core/map::get request) (quote :v))) 1)
+                false)
+              false)
+            (if (selfhost/pkg-workspace-migrate::request-values-valid? request)
+              (let
+                ((requirements
+                  (selfhost/pkg-workspace-migrate::requirements
+                    ((core/map::get request) (quote :dependencies)))))
+                (if ((core/map::get requirements) (quote :ok))
+                  (((selfhost/pkg-workspace-migrate::finish request-h) request) requirements)
+                  ((selfhost/pkg-workspace-migrate::reject request-h)
+                    "dependency fields are malformed")))
+              ((selfhost/pkg-workspace-migrate::reject request-h)
+                "migration request values are invalid"))
+            ((selfhost/pkg-workspace-migrate::reject request-h)
+              "migration request kind or version mismatch"))
+          ((selfhost/pkg-workspace-migrate::reject request-h)
+            "migration request fields mismatch"))
+        ((selfhost/pkg-workspace-migrate::reject request-h)
+          "migration request must be map")))))

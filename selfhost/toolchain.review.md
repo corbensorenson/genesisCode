@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `07986e46bf96465e3242f9d4785fb45b5a6135c85e69eea784d92dbda9f01a0f`
-- Freshness artifact hash: `07986e46bf96465e3242f9d4785fb45b5a6135c85e69eea784d92dbda9f01a0f`
-- Freshness source hash: `6a5adb234f17290e6f132941fee80e0dec6e5528ac40670291e27423bc6bf82f`
-- Source aggregate hash (module path + module sha256): `4ed5eef9a2d4e6440d594ddc3f681b4ef87ffa907dd371027bff866ddb0be444`
+- Artifact sha256: `73f2a7518dd9940d0ae5bbdb2fd1d1c59967ec0f7ca89923131ecbdc8266284f`
+- Freshness artifact hash: `73f2a7518dd9940d0ae5bbdb2fd1d1c59967ec0f7ca89923131ecbdc8266284f`
+- Freshness source hash: `ce43c9fc4e145ffb7d925ec1f27ef03ca743f7e2f1ae0fd9e77d7ee9be1c7cda`
+- Source aggregate hash (module path + module sha256): `5806b902eaf09d8086508d009779c0edc1ecfc715610812ca9024822c4ab5000`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `129`
+- Module count: `130`
 
 ## Module Summary
 
@@ -108,6 +108,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_scaffold_authority_v1.gc` | 192 | 10266 | 9 | `c4b63fb072ce0828` |
 | `selfhost/pkg_workspace_new_authority_v1.gc` | 357 | 16460 | 26 | `9a172d1208e7c0cc` |
 | `selfhost/pkg_workspace_remove_authority_v1.gc` | 172 | 6825 | 12 | `ceb198ed6e8afc23` |
+| `selfhost/pkg_workspace_migrate_authority_v1.gc` | 281 | 12305 | 16 | `aaeaf0a9dbceb9ce` |
 | `selfhost/pkg_semver_select_authority_v1.gc` | 176 | 7400 | 11 | `9b3fc573e02fb224` |
 | `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
 | `selfhost/pkg_snapshot_authority_v1.gc` | 174 | 6623 | 12 | `db2d90994b97fdd7` |
@@ -240,6 +241,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_scaffold_authority_v1.gc`: `selfhost/pkg-scaffold::request-kind`, `selfhost/pkg-scaffold::result-kind`, `selfhost/pkg-scaffold::envelope`, `selfhost/pkg-scaffold::reject`, `selfhost/pkg-scaffold::accept`, `selfhost/pkg-scaffold::request?`, `selfhost/pkg-scaffold::static-files?`, `selfhost/pkg-scaffold::build`
 - `selfhost/pkg_workspace_new_authority_v1.gc`: `selfhost/pkg-workspace-new::request-kind`, `selfhost/pkg-workspace-new::result-kind`, `selfhost/pkg-workspace-new::find-byte`, `selfhost/pkg-workspace-new::last-slash`, `selfhost/pkg-workspace-new::trim`, `selfhost/pkg-workspace-new::toml-control-fragment`, `selfhost/pkg-workspace-new::c1-control?`, `selfhost/pkg-workspace-new::toml-step`
 - `selfhost/pkg_workspace_remove_authority_v1.gc`: `selfhost/pkg-workspace-remove::request-kind`, `selfhost/pkg-workspace-remove::result-kind`, `selfhost/pkg-workspace-remove::bytes-equal-loop`, `selfhost/pkg-workspace-remove::string-equal?`, `selfhost/pkg-workspace-remove::remove-loop`, `selfhost/pkg-workspace-remove::remove-name`, `selfhost/pkg-workspace-remove::result`, `selfhost/pkg-workspace-remove::reject`
+- `selfhost/pkg_workspace_migrate_authority_v1.gc`: `selfhost/pkg-workspace-migrate::request-kind`, `selfhost/pkg-workspace-migrate::result-kind`, `selfhost/pkg-workspace-migrate::result`, `selfhost/pkg-workspace-migrate::reject`, `selfhost/pkg-workspace-migrate::accept`, `selfhost/pkg-workspace-migrate::dependency?`, `selfhost/pkg-workspace-migrate::requirement`, `selfhost/pkg-workspace-migrate::requirements-loop`
 - `selfhost/pkg_semver_select_authority_v1.gc`: `selfhost/pkg-semver-select::vec?`, `selfhost/pkg-semver-select::int?`, `selfhost/pkg-semver-select::candidate?`, `selfhost/pkg-semver-select::candidates-valid?`, `selfhost/pkg-semver-select::bytes-lex-lt?`, `selfhost/pkg-semver-select::str-lex-lt?`, `selfhost/pkg-semver-select::better?`, `selfhost/pkg-semver-select::select-loop`
 - `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
 - `selfhost/pkg_snapshot_authority_v1.gc`: `selfhost/pkg-snapshot::bytes?`, `selfhost/pkg-snapshot::module-valid?`, `selfhost/pkg-snapshot::modules-valid-loop?`, `selfhost/pkg-snapshot::modules-valid?`, `selfhost/pkg-snapshot::facts-valid?`, `selfhost/pkg-snapshot::object`, `selfhost/pkg-snapshot::build-modules-loop`, `selfhost/pkg-snapshot::build`

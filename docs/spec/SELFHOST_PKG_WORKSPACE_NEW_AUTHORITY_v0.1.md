@@ -1,7 +1,7 @@
 # Self-hosted package workspace authorities v0.1
 
 Status: normative partial authority contract for `R4.2.e`. The filename is retained for stable
-references; this document governs both workspace-new and workspace-remove authority profiles.
+references; this document governs workspace-new, workspace-remove, and workspace-migrate profiles.
 
 ## Workspace-new scope
 
@@ -94,9 +94,54 @@ identities, empty names, non-map lock sections, writer rejection, malformed or h
 bytes, removal of the wrong key, mutation or loss of unrelated fields, false removal dispositions,
 and symlink destinations. The prior Rust producer is compiled only for tests or `parity-harness`.
 
+## Workspace-migrate contract
+
+Production `gcpm migrate` loads `core/pkg::workspace-migrate-authority` from the exact self-host
+artifact. Rust parses the legacy package manifest and supplies only bounded observations in the
+closed request `[:dependencies :kind :lock :member-path :package-name :package-path
+:registry-default :v :workspace :workspace-file]`. `:workspace` is nil or a non-empty override;
+GenesisCode selects the package name when it is nil. Paths and names are non-empty strings bounded
+to 4,096 and 1,024 UTF-8 bytes respectively, registry is nil or at most 4,096 bytes, and the
+dependency vector contains at most 1,024 exact `[:hash :name :path]` maps. Each dependency name
+and path is non-empty; hash is nil or a string of at most 128 bytes. A malformed dependency rejects
+the complete request.
+
+GenesisCode exclusively owns workspace-name defaulting, dependency snapshot eligibility, the
+canonical lock model, the one-member workspace model, fixed `pack` and `test` tasks, canonical
+workspace bytes, workspace identity, dependency count, and request-bound report facts. A dependency
+becomes a manual pinned `default` requirement only when its hash is exactly 64 ASCII hexadecimal
+characters; missing or unusable hashes are intentionally omitted while still contributing to the
+legacy-compatible dependency count. Repeated valid names use ordered last-entry-wins map semantics.
+The lock model is version 2 with `policy:default-v0.1`, optional `default` registry, empty locked and
+artifact maps, and eligible requirements. The workspace is version 1 with one `package` member,
+optional default registry, default policy, no profiles, and lexical `pack` then `test` task sections
+bound to the observed package path.
+
+Every result uses the closed request-hash-bound workspace authority envelope. Success contains
+exactly `[:lock-model :report :workspace-body]`; the authority report contains exactly
+`[:dep-count :lock :lock-h :ok :workspace :workspace-file :workspace-h]`, with nil `:lock-h` until
+the independently governed `core/pkg::lock-write-authority` accepts the exact model. Rust may insert
+only that writer-issued, byte-verified lock hash into the already closed report. Rejection uses only
+`core/pkg/bad-workspace-migrate` and a nil value.
+
+Rust remains a bounded mechanism adapter. It transports manifest/path observations, evaluates the
+two artifact authorities separately, strictly decodes all field inventories and request identities,
+independently parses both proposed documents, reconstructs no semantic output, and cross-checks
+workspace, member, defaults, tasks, registries, requirements, selectors, strategies, policies, and
+hashes against the original observations. Before any directory creation or file write it rejects
+identical destinations, symlinked ancestors or destinations, and existing non-file destinations.
+Accepted outputs use same-directory temporary files and atomic rename individually. The former
+complete Rust migration producer is test/`parity-harness` only and is not a production fallback.
+
+The boundary rejects open or substituted request/result maps, wrong request identities, empty
+overrides, malformed dependency facts, writer rejection, malformed or hash-contradictory bytes,
+document/report contradictions, identical paths, symlink boundaries, and non-file destinations.
+Preflight guarantees these known destination conflicts cause no file mutation; this profile does
+not claim pairwise crash atomicity after the first individually atomic rename.
+
 ## Nonclaims
 
-These profiles do not claim generic TOML or path semantics; workspace migrate, environment, task,
-manifest, or scaffold authority; filesystem policy; pairwise crash-atomic two-file commit; WASI
-support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint; or release
-qualification.
+These profiles do not claim generic TOML or path semantics; workspace environment, general task
+resolution, manifest, or scaffold authority; filesystem policy; pairwise crash-atomic two-file
+commit or recovery; WASI support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap
+fixpoint; or release qualification.

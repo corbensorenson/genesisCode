@@ -250,7 +250,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("workspace ownership ledger must remain truthful H0")
     limitations = "\n".join(row.get("limitations", [])).lower()
     require_markers(limitations, [
-        "migration", "environment", "task", "manifest", "host-authoritative",
+        "environment", "task", "manifest", "host-authoritative",
         "generic toml", "crash-atomic", "wasi",
     ], "workspace ownership residual limitations")
 
@@ -306,7 +306,12 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_cli_driver/src/pkg_scaffold/parity.rs", "pub(super) fn handle_scaffold_parity(", "pub(super) fn handle_scaffold(", "parity")
     source_mutation("crates/gc_cli/tests/cli_pkg_scaffold.rs", "gcpm_scaffold_preflights_late_collision_before_any_write", "legacy_collision_test", "integration")
     source_mutation("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", "genesis/selfhost-pkg-scaffold-authority-v0.1", "native-scaffold", "ledger")
-    source_mutation("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", "Workspace migration", "Workspace retained", "residual ledger")
+    source_mutation(
+        "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
+        "Workspace environment",
+        "Workspace retained",
+        "residual ledger",
+    )
 
     controls = 0
     for changed_profile, overrides, name in mutations:

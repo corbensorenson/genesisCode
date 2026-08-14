@@ -275,6 +275,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             registry_default,
         } => Some(
             pkg_workspace_ops::handle_migrate(
+                cli,
                 pkg,
                 lock,
                 workspace_file,

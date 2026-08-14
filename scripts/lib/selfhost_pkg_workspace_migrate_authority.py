@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent custody verifier for package workspace-remove authority."""
+"""Independent custody verifier for package workspace-migrate authority."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def load_json(path: Path):
         fail(f"cannot read {path}: {error}")
 
 
-SOURCE_MODULES = ["selfhost/pkg_workspace_remove_authority_v1.gc"]
+SOURCE_MODULES = ["selfhost/pkg_workspace_migrate_authority_v1.gc"]
 FIELDS = {
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
     "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
@@ -55,37 +55,38 @@ FIELDS = {
 }
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
-    "binding": "core/pkg::workspace-remove-authority",
+    "binding": "core/pkg::workspace-migrate-authority",
     "decisionInventory": [
-        "exact-requirement-and-locked-key-removal",
-        "non-target-lock-model-preservation",
-        "absent-name-noop-disposition",
-        "canonical-lock-writer-composition",
-        "request-bound-workspace-remove-disposition",
+        "optional-workspace-name-default-selection",
+        "bounded-dependency-admission-and-snapshot-hash-filtering",
+        "canonical-workspace-member-defaults-and-task-rendering",
+        "canonical-lock-model-construction-and-lock-writer-composition",
+        "request-bound-migration-report-and-body-identity",
     ],
     "hostMechanisms": [
-        "bounded-lock-file-read-and-typed-model-transport",
+        "bounded-manifest-parse-and-path-observation",
         "artifact-only-bounded-authority-evaluation",
         "strict-request-bound-result-and-cross-document-decoding",
-        "regular-file-ancestor-and-symlink-preflight",
+        "two-destination-regular-file-ancestor-and-symlink-preflight",
         "exact-byte-temporary-file-persistence-and-atomic-rename",
     ],
     "hostOracle": {"parityOnly": True, "productionRequired": False, "removalTask": "R4.2.e"},
-    "independentVerifier": "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
-    "kind": "genesis/selfhost-pkg-workspace-remove-authority-v0.1",
+    "independentVerifier": "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
+    "kind": "genesis/selfhost-pkg-workspace-migrate-authority-v0.1",
     "productionEntrypoints": ["genesis"],
-    "requestKind": "genesis/pkg-workspace-remove-authority-request-v0.1",
-    "resultKind": "genesis/pkg-workspace-remove-authority-result-v0.1",
-    "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json",
+    "requestKind": "genesis/pkg-workspace-migrate-authority-request-v0.1",
+    "resultKind": "genesis/pkg-workspace-migrate-authority-result-v0.1",
+    "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_MIGRATE_AUTHORITY_v0.1.schema.json",
     "sourceModules": SOURCE_MODULES,
     "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
     "version": "0.1.0",
 }
 NONCLAIMS = {
-    "bootstrap-fixpoint", "filesystem-or-path-policy-authority",
-    "generic-toml-or-path-authority", "h2-workspace-closure", "r4-2-e-closure",
-    "release-qualification", "sh-c-closure", "wasi-workspace-remove-support",
-    "workspace-migrate-environment-task-or-manifest-authority",
+    "bootstrap-fixpoint", "crash-atomic-multi-file-commit-or-recovery",
+    "filesystem-or-path-policy-authority", "generic-toml-or-path-authority",
+    "h2-workspace-closure", "r4-2-e-closure", "release-qualification",
+    "sh-c-closure", "wasi-workspace-migrate-support",
+    "workspace-environment-task-resolution-or-manifest-authority",
 }
 
 
@@ -150,7 +151,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     module = text(root, SOURCE_MODULES[0], overrides)
     manifest = text(root, "selfhost/toolchain_manifest.gc", overrides)
     artifact = text(root, profile["artifact"], overrides)
-    adapter = text(root, "crates/gc_cli_driver/src/pkg_workspace_remove.rs", overrides)
+    adapter = text(root, "crates/gc_cli_driver/src/pkg_workspace_migrate.rs", overrides)
     custody = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops.rs", overrides)
     route = text(root, "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs", overrides)
     tests = text(root, "crates/gc_cli/tests/cli_pkg_workspace.rs", overrides)
@@ -159,45 +160,48 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     )
 
     require_markers(module, [
-        "(def core/pkg::workspace-remove-authority", profile["requestKind"],
-        profile["resultKind"], "selfhost/pkg-workspace-remove::remove-loop",
-        "selfhost/pkg-workspace-remove::string-equal?", "core/pkg/bad-workspace-remove",
-        ":requirements ((core/map::get requirements) (quote :map))",
-    ], "GenesisCode workspace-remove authority")
+        "(def core/pkg::workspace-migrate-authority", profile["requestKind"],
+        profile["resultKind"], "selfhost/pkg-workspace-migrate::requirements-loop",
+        "selfhost/pkg-resolution-plan::hash64?", "selfhost/pkg-workspace-migrate::workspace-body",
+        "selfhost/pkg-workspace-migrate::lock-model", "core/pkg/bad-workspace-migrate",
+        ":workspace-h (selfhost/pkg-scaffold::hash-body body)",
+    ], "GenesisCode workspace-migrate authority")
     for marker in (profile["binding"], *SOURCE_MODULES):
         if marker not in manifest:
-            fail(f"toolchain manifest missing workspace-remove marker: {marker}")
+            fail(f"toolchain manifest missing workspace-migrate marker: {marker}")
         if marker not in artifact:
-            fail(f"published artifact missing workspace-remove marker: {marker}")
+            fail(f"published artifact missing workspace-migrate marker: {marker}")
 
     require_markers(adapter, [
         "const AUTHORITY_BINDING", "const LOCK_WRITE_BINDING", ".get(AUTHORITY_BINDING)",
-        ".get(LOCK_WRITE_BINDING)", "decode_plan(", "decode_lock_write(",
+        ".get(LOCK_WRITE_BINDING)", "decode_authorized(", "decode_lock_write(",
         "require_exact_fields(", "GenesisLock::from_toml_str",
-        "validate_candidate(&original, &candidate, name)",
-        "workspace-remove authority :removed contradicts input", "preflight_lock_path(lock_path)",
-        "file_type().is_symlink()", "atomic_write_text(lock_path, &bytes)",
-    ], "strict workspace-remove adapter")
-    production = adapter[adapter.index("pub(super) fn handle_remove("):adapter.index("fn decode_plan(")]
-    decode_at = production.find("decode_plan(")
+        "workspace-migrate lock contradicts request", "preflight_paths(lock_path, workspace_path)",
+        "file_type().is_symlink()", "atomic_write_text(lock_path, &lock_bytes)",
+    ], "strict workspace-migrate adapter")
+    production = adapter[adapter.index("pub(super) fn handle_migrate("):adapter.index("fn migration_request(")]
+    decode_at = production.find("decode_authorized(")
     writer_at = production.find(".get(LOCK_WRITE_BINDING)")
-    preflight_at = production.find("preflight_lock_path(lock_path)")
-    write_at = production.find("atomic_write_text(lock_path, &bytes)")
-    if min(decode_at, writer_at, preflight_at, write_at) < 0 or not decode_at < writer_at < preflight_at < write_at:
-        fail("workspace-remove authority/preflight/write causal order drift")
-    if "to_toml_canonical" in production or "handle_remove_parity" in production:
-        fail("native workspace-remove fallback reachable in production")
+    writer_decode_at = production.find("decode_lock_write(")
+    cross_check_at = production.find("validate_documents(")
+    preflight_at = production.find("preflight_paths(lock_path, workspace_path)")
+    write_at = production.find("atomic_write_text(lock_path, &lock_bytes)")
+    positions = [decode_at, writer_at, writer_decode_at, cross_check_at, preflight_at, write_at]
+    if min(positions) < 0 or positions != sorted(positions):
+        fail("workspace-migrate authority/preflight/write causal order drift")
+    if "to_toml_canonical" in production or "handle_migrate_parity" in production:
+        fail("native workspace-migrate fallback reachable in production")
     require_markers(custody, [
-        "#[cfg(any(test, feature = \"parity-harness\"))]", "fn handle_remove_parity(",
-        "pkg_workspace_remove::handle_remove(cli, name, lock)",
-    ], "retained workspace-remove oracle")
-    require_markers(route, ["pkg_workspace_ops::handle_remove(cli, name, lock)"], "remove route")
+        "#[cfg(any(test, feature = \"parity-harness\"))]", "fn handle_migrate_parity(",
+        "pkg_workspace_migrate::handle_migrate(",
+    ], "retained workspace-migrate oracle")
+    require_markers(route, ["pkg_workspace_ops::handle_migrate(", "cli,"], "migrate route")
     require_markers(tests, [
-        "gcpm_remove_deletes_requirement_and_locked_entry",
-        "gcpm_remove_absent_name_is_canonical_noop",
-        "gcpm_remove_rejects_empty_name_without_write",
-        "gcpm_remove_rejects_lock_symlink_without_write",
-    ], "workspace-remove integration evidence")
+        "gcpm_migrate_creates_workspace_and_lock_from_package_manifest",
+        "gcpm_migrate_defaults_name_and_filters_unusable_dependency_hashes",
+        "gcpm_migrate_rejects_empty_workspace_without_writes",
+        "gcpm_migrate_preflights_all_destinations_before_writing",
+    ], "workspace-migrate integration evidence")
 
     rows = ledger.get("semanticDecisions")
     if not isinstance(rows, list):
@@ -208,7 +212,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     joined = json.dumps(row, sort_keys=True)
     require_markers(joined, [
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
-        "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
         "Workspace environment, task-resolution, and manifest decisions remain host-authoritative",
     ], "workspace ownership ledger")
 
@@ -224,7 +228,7 @@ def validate_all(root: Path, profile, schema, overrides=None) -> None:
 def self_test(root: Path, profile, schema) -> int:
     paths = SOURCE_MODULES + [
         "selfhost/toolchain_manifest.gc", profile["artifact"],
-        "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
         "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
@@ -240,7 +244,7 @@ def self_test(root: Path, profile, schema) -> int:
         mutations.append((changed, {}, name))
 
     for name, value in (
-        ("binding", "core/pkg::legacy-workspace-remove"),
+        ("binding", "core/pkg::legacy-workspace-migrate"),
         ("decisionInventory", profile["decisionInventory"][:-1]),
         ("hostMechanisms", profile["hostMechanisms"][:-1]),
         ("hostOracle", {"parityOnly": False, "productionRequired": True, "removalTask": "R4.2.e"}),
@@ -254,18 +258,18 @@ def self_test(root: Path, profile, schema) -> int:
             fail(f"self-test marker absent for {name}")
         mutations.append((profile, {path: sources[path].replace(old, new, 1)}, name))
 
-    source_mutation(SOURCE_MODULES[0], "(def core/pkg::workspace-remove-authority", "(def core/pkg::legacy-remove", "source")
-    source_mutation(SOURCE_MODULES[0], "selfhost/pkg-workspace-remove::string-equal?", "core/eq?", "comparison")
-    source_mutation("selfhost/toolchain_manifest.gc", profile["binding"], "core/pkg::missing-remove", "manifest")
-    mutations.append((profile, {profile["artifact"]: sources[profile["artifact"]].replace(profile["binding"], "core/pkg::missing-remove")}, "artifact"))
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", ".get(AUTHORITY_BINDING)", ".get(\"native\")", "loader")
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", ".get(LOCK_WRITE_BINDING)", ".get(\"native-writer\")", "writer route")
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "validate_candidate(&original, &candidate, name)", "Ok(())", "cross-check")
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "preflight_lock_path(lock_path)?", "Ok(())?", "preflight")
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "file_type().is_symlink()", "file_type().is_file()", "symlink")
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_ops.rs", "fn handle_remove_parity(", "fn handle_remove(", "parity")
-    source_mutation("crates/gc_cli/tests/cli_pkg_workspace.rs", "gcpm_remove_rejects_lock_symlink_without_write", "legacy_symlink_test", "integration")
-    source_mutation("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", profile["kind"], "native-workspace-remove", "ledger")
+    source_mutation(SOURCE_MODULES[0], "(def core/pkg::workspace-migrate-authority", "(def core/pkg::legacy-migrate", "source")
+    source_mutation(SOURCE_MODULES[0], "selfhost/pkg-resolution-plan::hash64?", "core/str::len", "hash filter")
+    source_mutation("selfhost/toolchain_manifest.gc", profile["binding"], "core/pkg::missing-migrate", "manifest")
+    mutations.append((profile, {profile["artifact"]: sources[profile["artifact"]].replace(profile["binding"], "core/pkg::missing-migrate")}, "artifact"))
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_migrate.rs", ".get(AUTHORITY_BINDING)", ".get(\"native\")", "loader")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_migrate.rs", ".get(LOCK_WRITE_BINDING)", ".get(\"native-writer\")", "writer route")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_migrate.rs", "workspace-migrate lock contradicts request", "legacy lock accepted", "cross-check")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_migrate.rs", "preflight_paths(lock_path, workspace_path)?", "Ok(())?", "preflight")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_migrate.rs", "file_type().is_symlink()", "file_type().is_file()", "symlink")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_ops.rs", "fn handle_migrate_parity(", "fn handle_migrate(", "parity")
+    source_mutation("crates/gc_cli/tests/cli_pkg_workspace.rs", "gcpm_migrate_preflights_all_destinations_before_writing", "legacy_preflight_test", "integration")
+    source_mutation("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", profile["kind"], "native-workspace-migrate", "ledger")
 
     controls = 0
     for changed_profile, overrides, name in mutations:
@@ -304,11 +308,11 @@ def main(argv=None) -> int:
         validate_all(root, profile, schema)
         controls = self_test(root, profile, schema) if args.self_test else 0
         print(
-            "selfhost-pkg-workspace-remove-authority: ok "
+            "selfhost-pkg-workspace-migrate-authority: ok "
             f"profile={profile['contentIdentitySha256']} controls={controls}"
         )
     except CheckError as error:
-        print(f"selfhost-pkg-workspace-remove-authority: {error}", file=sys.stderr)
+        print(f"selfhost-pkg-workspace-migrate-authority: {error}", file=sys.stderr)
         return 1
     return 0
 
