@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 366,
+    "canonicalSources": 368,
     "diagnostics": 201,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 138,
+    "schemas": 139,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "e58e5004b690fc590a1f6c7a4bc57dbb7c4bf6a66d7e13830308d1611304248e"
+      "sha256": "037e965c8c66a0a57a7f6b52322b15ae8da46c975b9a7137cd7f562da8bbb4b3"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "818428133ed7b4b0334257883ea53530d00c3d6df48f2f793316d3ed6e067e4c"
+      "sha256": "c6b6f8d492e68cd76518d5563de378d1724e446e6b3665ca85be93abd534c570"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -1132,7 +1132,7 @@
     },
     {
       "path": "docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.md",
-      "sha256": "cea0d72113af2ce43d88ea53f5234cdcfa5c7ab24c44b21416b3f91d00cc71df"
+      "sha256": "18253db769c59d13e620eae0745c92873664a04b6bdb7de75d8268ba3d2feeae"
     },
     {
       "path": "docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json",
@@ -1219,6 +1219,14 @@
       "sha256": "569f30c61ceb2cdee2fd347f17b335552d0ec15b54bcbeb635b3b904cd20d390"
     },
     {
+      "path": "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
+      "sha256": "7d21f6e71eea521e8d7219a53f84939b82f9bb2961be4da83df680f7492cb2ff"
+    },
+    {
+      "path": "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+      "sha256": "750bead96420f4257fee3b6d4e7373703383337bcc3921755957f9c5b87dbee9"
+    },
+    {
       "path": "docs/spec/SELFHOST_POLICY_ALIAS_AUTHORITY_v0.1.md",
       "sha256": "a97e45891b0f7ad3ffe7ea0908fbdbee04ba76297f7754ceeda931c482464a0a"
     },
@@ -1288,7 +1296,7 @@
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-      "sha256": "a4e9921d864f447cda57df6823c3dc4f5402074bea97017c6bfac8abfeb22f8e"
+      "sha256": "312db291ba39082bf84c2d9ad6404479f929663a7ab3ab1c89501bb5a5995e1c"
     },
     {
       "path": "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.md",

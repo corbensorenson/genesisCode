@@ -1,0 +1,110 @@
+; Closed data vocabulary for package verification authority.
+
+(def selfhost/pkg-verify::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind "genesis/pkg-verify-result-v0.1"
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-verify::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-verify::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-verify::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-verify::result request-h) false)
+          "core/pkg/bad-authority-request") message) nil))))
+
+(def selfhost/pkg-verify::append
+  (fn (left) (fn (right) ((core/str::concat left) right))))
+
+(def selfhost/pkg-verify::artifact-message
+  (fn (prefix) (fn (hash) ((selfhost/pkg-verify::append prefix) hash))))
+
+(def selfhost/pkg-verify::snapshot-status?
+  (fn (value)
+    (if (selfhost/pkg-resolution-workflow::symbol? value)
+      (if ((core/sym::eq? value) (quote :available))
+        true
+        (if ((core/sym::eq? value) (quote :missing))
+          true
+          (if ((core/sym::eq? value) (quote :corrupt))
+            true
+            ((core/sym::eq? value) (quote :bad-snapshot)))))
+      false)))
+
+(def selfhost/pkg-verify::hash-status?
+  (fn (value)
+    (if (selfhost/pkg-resolution-workflow::symbol? value)
+      (if ((core/sym::eq? value) (quote :present))
+        true
+        (if ((core/sym::eq? value) (quote :missing))
+          true
+          ((core/sym::eq? value) (quote :corrupt))))
+      false)))
+
+(def selfhost/pkg-verify::closure-status?
+  (fn (value)
+    (if (selfhost/pkg-resolution-workflow::symbol? value)
+      (if ((core/sym::eq? value) (quote :ok))
+        true
+        (if ((core/sym::eq? value) (quote :missing))
+          true
+          (if ((core/sym::eq? value) (quote :corrupt))
+            true
+            (if ((core/sym::eq? value) (quote :bad-commit))
+              true
+              (if ((core/sym::eq? value) (quote :snapshot-mismatch))
+                true
+                (if ((core/sym::eq? value) (quote :missing-evidence))
+                  true
+                  (if ((core/sym::eq? value) (quote :bad-evidence))
+                    true
+                    ((core/sym::eq? value) (quote :bad-attestation)))))))))
+      false)))
+
+(def selfhost/pkg-verify::optional-string?
+  (fn (value)
+    (if (core/list::is-nil? value) true (selfhost/pkg-lock-read::str? value))))
+
+(def selfhost/pkg-verify::nonempty-string?
+  (fn (value)
+    (if (selfhost/pkg-lock-read::str? value)
+      ((core/int::lt? 0) (core/str::len value))
+      false)))
+
+(def selfhost/pkg-verify::bytes-lex-lt?
+  (fn (left)
+    (fn (right)
+      (fn (index)
+        (let ((left-len (core/bytes::len left)) (right-len (core/bytes::len right)))
+          (if ((core/int::eq? index) left-len)
+            ((core/int::lt? index) right-len)
+            (if ((core/int::eq? index) right-len)
+              false
+              (let
+                ((left-byte ((core/bytes::get left) index))
+                  (right-byte ((core/bytes::get right) index)))
+                (if ((core/int::lt? left-byte) right-byte)
+                  true
+                  (if ((core/int::eq? left-byte) right-byte)
+                    (((selfhost/pkg-verify::bytes-lex-lt? left) right)
+                      ((core/int::add index) 1))
+                    false))))))))))
+
+(def selfhost/pkg-verify::str-lex-lt?
+  (fn (left)
+    (fn (right)
+      (((selfhost/pkg-verify::bytes-lex-lt? (core/str::to-utf8 left))
+        (core/str::to-utf8 right)) 0))))

@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `6cb3b23fcea8e2ea34bb8f716da1f7bba101e1ae3db38d32e41f2c32db2ffa60`
-- Freshness artifact hash: `6cb3b23fcea8e2ea34bb8f716da1f7bba101e1ae3db38d32e41f2c32db2ffa60`
-- Freshness source hash: `cdc016501ad8c19e6c054e5856e2c09c3ae4587df9f1bc5007d6b2eeefa80fc2`
-- Source aggregate hash (module path + module sha256): `bbcc87ecb6229d5301202b99ef9443bd88292faaf5bb8c605007fffe7f8d7bb1`
+- Artifact sha256: `9896296508f4f8c1be3c2d73690246b5a02dc9eae703c05ecae8af3c5c986d3d`
+- Freshness artifact hash: `9896296508f4f8c1be3c2d73690246b5a02dc9eae703c05ecae8af3c5c986d3d`
+- Freshness source hash: `e60d8266b4eb925701e9b2db260d2f820222447a0d88dcec1d36a4d2ac0f4964`
+- Source aggregate hash (module path + module sha256): `adbfadf7fb28ae288367a98efd5310a58981fab484792e729559115c45a92ed1`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `120`
+- Module count: `124`
 
 ## Module Summary
 
@@ -99,6 +99,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_install_plan_v1.gc` | 58 | 2500 | 3 | `76c588dde686fe4a` |
 | `selfhost/pkg_install_finalize_v1.gc` | 188 | 9121 | 9 | `a82a289a421d1eb3` |
 | `selfhost/pkg_install_authority_v1.gc` | 99 | 5256 | 4 | `dfd147c3fcfd6ff0` |
+| `selfhost/pkg_verify_core_v1.gc` | 110 | 3693 | 12 | `c7da3c7c7c48232c` |
+| `selfhost/pkg_verify_plan_v1.gc` | 31 | 1173 | 3 | `a3991023a6be7683` |
+| `selfhost/pkg_verify_finalize_v1.gc` | 279 | 14651 | 12 | `4eda8a52eb494c50` |
+| `selfhost/pkg_verify_authority_v1.gc` | 61 | 3238 | 4 | `20efc6c44cadb3ec` |
 | `selfhost/pkg_semver_select_authority_v1.gc` | 176 | 7400 | 11 | `9b3fc573e02fb224` |
 | `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
 | `selfhost/pkg_snapshot_authority_v1.gc` | 174 | 6623 | 12 | `db2d90994b97fdd7` |
@@ -222,6 +226,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_install_plan_v1.gc`: `selfhost/pkg-install::steps-loop`, `selfhost/pkg-install::build-plan`, `selfhost/pkg-install::plan-value`
 - `selfhost/pkg_install_finalize_v1.gc`: `selfhost/pkg-install::hash-observation?`, `selfhost/pkg-install::hash-observations-loop?`, `selfhost/pkg-install::hash-observations?`, `selfhost/pkg-install::observation?`, `selfhost/pkg-install::resolution-coherent?`, `selfhost/pkg-install::hashes-fold`, `selfhost/pkg-install::step-fold`, `selfhost/pkg-install::observations-loop`
 - `selfhost/pkg_install_authority_v1.gc`: `selfhost/pkg-install::plan-request?`, `selfhost/pkg-install::finalize-request?`, `selfhost/pkg-install::finalize`, `core/pkg::install-authority`
+- `selfhost/pkg_verify_core_v1.gc`: `selfhost/pkg-verify::result`, `selfhost/pkg-verify::accept`, `selfhost/pkg-verify::reject`, `selfhost/pkg-verify::append`, `selfhost/pkg-verify::artifact-message`, `selfhost/pkg-verify::snapshot-status?`, `selfhost/pkg-verify::hash-status?`, `selfhost/pkg-verify::closure-status?`
+- `selfhost/pkg_verify_plan_v1.gc`: `selfhost/pkg-verify::steps-loop`, `selfhost/pkg-verify::build-plan`, `selfhost/pkg-verify::plan-value`
+- `selfhost/pkg_verify_finalize_v1.gc`: `selfhost/pkg-verify::hash-observation?`, `selfhost/pkg-verify::hashes-valid-loop`, `selfhost/pkg-verify::hashes-valid`, `selfhost/pkg-verify::closure-observation?`, `selfhost/pkg-verify::closure-coherent?`, `selfhost/pkg-verify::observation?`, `selfhost/pkg-verify::error`, `selfhost/pkg-verify::hashes-fold`
+- `selfhost/pkg_verify_authority_v1.gc`: `selfhost/pkg-verify::plan-request?`, `selfhost/pkg-verify::finalize-request?`, `selfhost/pkg-verify::finalize`, `core/pkg::verify-authority`
 - `selfhost/pkg_semver_select_authority_v1.gc`: `selfhost/pkg-semver-select::vec?`, `selfhost/pkg-semver-select::int?`, `selfhost/pkg-semver-select::candidate?`, `selfhost/pkg-semver-select::candidates-valid?`, `selfhost/pkg-semver-select::bytes-lex-lt?`, `selfhost/pkg-semver-select::str-lex-lt?`, `selfhost/pkg-semver-select::better?`, `selfhost/pkg-semver-select::select-loop`
 - `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
 - `selfhost/pkg_snapshot_authority_v1.gc`: `selfhost/pkg-snapshot::bytes?`, `selfhost/pkg-snapshot::module-valid?`, `selfhost/pkg-snapshot::modules-valid-loop?`, `selfhost/pkg-snapshot::modules-valid?`, `selfhost/pkg-snapshot::facts-valid?`, `selfhost/pkg-snapshot::object`, `selfhost/pkg-snapshot::build-modules-loop`, `selfhost/pkg-snapshot::build`

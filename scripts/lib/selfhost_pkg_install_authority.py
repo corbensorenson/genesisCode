@@ -90,7 +90,7 @@ NONCLAIMS = {
     "non-publish-artifact-validation-authority", "r4-2-e-closure",
     "ref-or-registry-transport-authority", "release-qualification",
     "semver-grammar-range-rank-authority", "sh-c-closure",
-    "verify-workflow-authority", "workspace-scaffolding-authority",
+    "workspace-scaffolding-authority",
 }
 
 

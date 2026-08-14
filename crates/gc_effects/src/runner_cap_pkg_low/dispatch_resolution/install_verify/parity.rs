@@ -271,3 +271,127 @@ pub(super) fn handle_pkg_install_parity(
     );
     Ok(Value::data(Term::Map(m)))
 }
+
+pub(super) fn handle_pkg_verify_parity(
+    payload: &Term,
+    pol: Option<&OpPolicy>,
+    store: Option<&ArtifactStore>,
+    lock_authority: Option<&mut PkgLockReadAuthority>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<Value, EffectsError> {
+    let store = store.ok_or_else(|| {
+        EffectsError::Log("missing artifact store for core/pkg-low::verify".to_string())
+    })?;
+    let lock_s = match payload_pkg_lock(payload) {
+        Ok(s) => s,
+        Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
+    };
+    let base_dir = effective_base_dir(pol)?;
+    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+        Ok(p) => p,
+        Err(e) => {
+            return Ok(mk_error(
+                error_tok,
+                "core/pkg/missing-lock",
+                format!("{e}"),
+                Some(op),
+            ));
+        }
+    };
+    let lock = match load_lock_model(lock_authority, &lock_path, error_tok, op) {
+        Ok(lock) => lock,
+        Err(error) => return Ok(error),
+    };
+    let mut ok = true;
+    let mut missing_hashes = Vec::new();
+    let mut checked = 0_u64;
+    for (name, entry) in &lock.locked {
+        let snapshot_hex = &entry.snapshot;
+        if !store.path_for(snapshot_hex).exists() {
+            ok = false;
+            missing_hashes.push(Term::Str(snapshot_hex.clone()));
+            continue;
+        }
+        if store.verify_hex(snapshot_hex).is_err() {
+            return Ok(mk_error(
+                error_tok,
+                "core/store/corruption",
+                format!("artifact store corruption: {snapshot_hex}"),
+                Some(op),
+            ));
+        }
+        let snapshot_term = match store_get_term(store, snapshot_hex) {
+            Ok(term) => term,
+            Err(error) => {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/bad-snapshot",
+                    error.to_string(),
+                    Some(op),
+                ));
+            }
+        };
+        let snapshot = match gc_vcs::Snapshot::from_term(&snapshot_term) {
+            Ok(snapshot) => snapshot,
+            Err(error) => {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/pkg/bad-snapshot",
+                    error.to_string(),
+                    Some(op),
+                ));
+            }
+        };
+        let mut hashes = vec![snapshot_hex.clone()];
+        hashes.extend(snapshot.shallow_refs());
+        hashes.sort();
+        hashes.dedup();
+        for hash in hashes {
+            if !store.path_for(&hash).exists() {
+                ok = false;
+                missing_hashes.push(Term::Str(hash));
+                continue;
+            }
+            if store.verify_hex(&hash).is_err() {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/store/corruption",
+                    format!("artifact store corruption: {hash}"),
+                    Some(op),
+                ));
+            }
+            checked = checked.saturating_add(1);
+        }
+        if let Some(commit_hex) = &entry.commit {
+            match validate_commit_artifact_closure(
+                store,
+                name,
+                snapshot_hex,
+                commit_hex,
+                true,
+                error_tok,
+                op,
+            ) {
+                Ok(count) => checked = checked.saturating_add(count),
+                Err(error) => return Ok(error),
+            }
+        }
+    }
+    Ok(Value::data(Term::Map(
+        [
+            (TermOrdKey(Term::symbol(":ok")), Term::Bool(ok)),
+            (TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s)),
+            (
+                TermOrdKey(Term::symbol(":checked")),
+                Term::Int(checked.into()),
+            ),
+            (
+                TermOrdKey(Term::symbol(":missing")),
+                Term::Vector(missing_hashes),
+            ),
+        ]
+        .into_iter()
+        .collect(),
+    )))
+}

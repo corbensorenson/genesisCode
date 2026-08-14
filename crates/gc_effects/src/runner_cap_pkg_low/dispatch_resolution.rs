@@ -481,6 +481,7 @@ pub(super) fn dispatch_resolution(
             pol,
             store,
             lock_authority.as_deref_mut(),
+            identity_authority,
             error_tok,
             op,
         ),

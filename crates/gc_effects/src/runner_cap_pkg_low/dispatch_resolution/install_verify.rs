@@ -3,9 +3,12 @@ use super::*;
 #[cfg(any(test, feature = "parity-oracle"))]
 #[path = "install_verify/parity.rs"]
 mod parity;
+#[path = "install_verify/verify_observation.rs"]
+mod verify_observation;
 
 #[cfg(any(test, feature = "parity-oracle"))]
-use parity::handle_pkg_install_parity;
+use parity::{handle_pkg_install_parity, handle_pkg_verify_parity};
+use verify_observation::observe_verify_commit_closure;
 
 #[expect(
     clippy::too_many_arguments,
@@ -476,9 +479,26 @@ pub(super) fn handle_pkg_verify(
     pol: Option<&OpPolicy>,
     store: Option<&ArtifactStore>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
+    identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
+    let Some(authority) = identity_authority else {
+        #[cfg(any(test, feature = "parity-oracle"))]
+        {
+            return handle_pkg_verify_parity(payload, pol, store, lock_authority, error_tok, op);
+        }
+        #[cfg(not(any(test, feature = "parity-oracle")))]
+        {
+            return Ok(mk_error(
+                error_tok,
+                "core/pkg/authority-error",
+                "package verify requires the artifact-loaded GenesisCode verify authority"
+                    .to_string(),
+                Some(op),
+            ));
+        }
+    };
     let store = store.ok_or_else(|| {
         EffectsError::Log("missing artifact store for core/pkg-low::verify".to_string())
     })?;
@@ -499,50 +519,63 @@ pub(super) fn handle_pkg_verify(
             ));
         }
     };
-    let l = match load_lock_model(lock_authority, &lock_path, error_tok, op) {
-        Ok(x) => x,
+    let lock = match load_lock_model(lock_authority, &lock_path, error_tok, op) {
+        Ok(lock) => lock,
         Err(error) => return Ok(error),
     };
+    let model = crate::pkg_lock_write_authority::lock_model_payload(&lock_s, &lock)
+        .map_err(|error| EffectsError::Log(error.to_string()))?;
+    let plan = authority
+        .plan_verify(model)
+        .map_err(|error| EffectsError::Log(error.to_string()))?;
+    let mut observations = Vec::with_capacity(plan.steps.len());
 
-    let mut ok = true;
-    let mut missing_hashes: Vec<Term> = Vec::new();
-    let mut checked: u64 = 0;
-
-    for (name, le) in &l.locked {
-        let snapshot_hex = &le.snapshot;
+    for step in &plan.steps {
+        let snapshot_hex = &step.snapshot;
         if !store.path_for(snapshot_hex).exists() {
-            ok = false;
-            missing_hashes.push(Term::Str(snapshot_hex.clone()));
+            observations.push(PkgVerifyObservation {
+                closure: None,
+                detail: None,
+                hashes: Vec::new(),
+                name: step.name.clone(),
+                snapshot_status: PkgVerifySnapshotStatus::Missing,
+            });
             continue;
         }
         if store.verify_hex(snapshot_hex).is_err() {
-            return Ok(mk_error(
-                error_tok,
-                "core/store/corruption",
-                format!("artifact store corruption: {snapshot_hex}"),
-                Some(op),
-            ));
+            observations.push(PkgVerifyObservation {
+                closure: None,
+                detail: None,
+                hashes: Vec::new(),
+                name: step.name.clone(),
+                snapshot_status: PkgVerifySnapshotStatus::Corrupt,
+            });
+            break;
         }
         let snap_term = match store_get_term(store, snapshot_hex) {
             Ok(t) => t,
             Err(e) => {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/pkg/bad-snapshot",
-                    e.to_string(),
-                    Some(op),
-                ));
+                observations.push(PkgVerifyObservation {
+                    closure: None,
+                    detail: Some(e.to_string()),
+                    hashes: Vec::new(),
+                    name: step.name.clone(),
+                    snapshot_status: PkgVerifySnapshotStatus::BadSnapshot,
+                });
+                break;
             }
         };
         let snap = match gc_vcs::Snapshot::from_term(&snap_term) {
             Ok(s) => s,
             Err(e) => {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/pkg/bad-snapshot",
-                    e.to_string(),
-                    Some(op),
-                ));
+                observations.push(PkgVerifyObservation {
+                    closure: None,
+                    detail: Some(e.to_string()),
+                    hashes: Vec::new(),
+                    name: step.name.clone(),
+                    snapshot_status: PkgVerifySnapshotStatus::BadSnapshot,
+                });
+                break;
             }
         };
         let mut hashes: Vec<String> = Vec::new();
@@ -550,49 +583,56 @@ pub(super) fn handle_pkg_verify(
         hashes.extend(snap.shallow_refs());
         hashes.sort();
         hashes.dedup();
+        let mut hash_observations = Vec::with_capacity(hashes.len());
+        let mut terminal = false;
         for h in hashes {
             if !store.path_for(&h).exists() {
-                ok = false;
-                missing_hashes.push(Term::Str(h));
+                hash_observations.push(PkgVerifyHashObservation {
+                    hash: h,
+                    status: PkgVerifyHashStatus::Missing,
+                });
                 continue;
             }
             if store.verify_hex(&h).is_err() {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/store/corruption",
-                    format!("artifact store corruption: {h}"),
-                    Some(op),
-                ));
+                hash_observations.push(PkgVerifyHashObservation {
+                    hash: h,
+                    status: PkgVerifyHashStatus::Corrupt,
+                });
+                terminal = true;
+                break;
             }
-            checked = checked.saturating_add(1);
+            hash_observations.push(PkgVerifyHashObservation {
+                hash: h,
+                status: PkgVerifyHashStatus::Present,
+            });
         }
-
-        if let Some(commit_hex) = &le.commit {
-            match validate_commit_artifact_closure(
-                store,
-                name,
-                snapshot_hex,
-                commit_hex,
-                true,
-                error_tok,
-                op,
-            ) {
-                Ok(n) => checked = checked.saturating_add(n),
-                Err(v) => return Ok(v),
-            }
+        let closure = if terminal {
+            None
+        } else if let Some(commit_hex) = &step.commit {
+            let observation = observe_verify_commit_closure(store, snapshot_hex, commit_hex);
+            terminal = observation.status != PkgVerifyClosureStatus::Ok;
+            Some(observation)
+        } else {
+            None
+        };
+        observations.push(PkgVerifyObservation {
+            closure,
+            detail: None,
+            hashes: hash_observations,
+            name: step.name.clone(),
+            snapshot_status: PkgVerifySnapshotStatus::Available,
+        });
+        if terminal {
+            break;
         }
     }
-
-    let mut m = BTreeMap::new();
-    m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(ok));
-    m.insert(TermOrdKey(Term::symbol(":lock")), Term::Str(lock_s));
-    m.insert(
-        TermOrdKey(Term::symbol(":checked")),
-        Term::Int((checked as i64).into()),
-    );
-    m.insert(
-        TermOrdKey(Term::symbol(":missing")),
-        Term::Vector(missing_hashes),
-    );
-    Ok(Value::data(Term::Map(m)))
+    match authority
+        .finalize_verify(&plan, &observations)
+        .map_err(|error| EffectsError::Log(error.to_string()))?
+    {
+        PkgVerifyFinalized::Report(report) => Ok(Value::data(report)),
+        PkgVerifyFinalized::Error { code, message } => {
+            Ok(mk_error(error_tok, &code, message, Some(op)))
+        }
+    }
 }

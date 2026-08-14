@@ -1,0 +1,31 @@
+; Authoritative deterministic package verification plan.
+
+(def selfhost/pkg-verify::steps-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          out
+          (let
+            ((entry ((core/vec::get entries) index))
+              (name ((core/vec::get ((core/vec::get entries) index)) 0))
+              (locked ((core/vec::get ((core/vec::get entries) index)) 1)))
+            (((selfhost/pkg-verify::steps-loop entries) ((core/int::add index) 1))
+              ((core/vec::push out)
+                {
+                  :commit ((core/map::get locked) (quote :commit))
+                  :name name
+                  :snapshot ((core/map::get locked) (quote :snapshot))}))))))))
+
+(def selfhost/pkg-verify::build-plan
+  (fn (model)
+    {
+      :dependencies
+        (((selfhost/pkg-verify::steps-loop
+            (core/map::entries ((core/map::get model) (quote :locked)))) 0) [])
+      :lock ((core/map::get model) (quote :lock))}))
+
+(def selfhost/pkg-verify::plan-value
+  (fn (model)
+    (let ((plan (selfhost/pkg-verify::build-plan model)))
+      {:plan plan :plan-h (selfhost/hash::hash-term plan)})))

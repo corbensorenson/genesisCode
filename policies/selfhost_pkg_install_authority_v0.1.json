@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-14",
   "binding": "core/pkg::install-authority",
-  "contentIdentitySha256": "b0037f30a25b2649b862fc26f706b261dcf91d19b11e0b2c4d7ca5538c6d45b7",
+  "contentIdentitySha256": "e7e7a7c75eed3964d8780dced412d9513659a149e092f4f6a5c663e83528fdb3",
   "decisionInventory": [
     "frozen-missing-lock-admission-and-ordered-diagnostic-set",
     "ordered-dependency-install-plan",
@@ -40,7 +40,6 @@
     "release-qualification",
     "semver-grammar-range-rank-authority",
     "sh-c-closure",
-    "verify-workflow-authority",
     "workspace-scaffolding-authority"
   ],
   "productionEntrypoints": [

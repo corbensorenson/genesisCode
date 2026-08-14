@@ -267,6 +267,14 @@ python3 scripts/lib/selfhost_pkg_install_authority.py \
   --schema docs/spec/SELFHOST_PKG_INSTALL_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e verify authority is partial: GenesisCode owns ordered verification,
+# terminal disposition, accounting, and report semantics around bounded host mechanisms.
+python3 scripts/lib/selfhost_pkg_verify_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_verify_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.e semver selection is partial: GenesisCode owns policy extrema and
 # lexical tie-breaking; semver parsing, ranking, refs, and transport remain H0.
 python3 scripts/lib/selfhost_pkg_semver_select_authority.py \

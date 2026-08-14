@@ -84,5 +84,5 @@ are not a production fallback.
 
 This contract does not claim semver grammar/range/rank authority, ref or registry transport
 authority, complete dependency graph solving, non-publish artifact/commit validation authority,
-generic lock or TOML syntax authority, verify workflow authority, workspace scaffolding, H2 package
-resolution, `R4.2.e` or SH-C closure, bootstrap fixpoint, or release qualification.
+generic lock or TOML syntax authority, workspace scaffolding, H2 package resolution, `R4.2.e` or
+SH-C closure, bootstrap fixpoint, or release qualification.

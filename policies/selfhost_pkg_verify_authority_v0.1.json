@@ -1,0 +1,60 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::verify-authority",
+  "contentIdentitySha256": "dcefd83511036eb2676f8905eab9a0e229914cbbc450ae8a6b3610079ec5a5d0",
+  "decisionInventory": [
+    "ordered-locked-dependency-verification-plan",
+    "canonical-hash-observation-order-and-prefix-binding",
+    "missing-snapshot-and-shallow-reference-reporting",
+    "fail-fast-terminal-observation-admission",
+    "closed-corruption-and-schema-error-disposition",
+    "commit-closure-error-code-and-message-selection",
+    "checked-missing-and-success-accounting",
+    "request-bound-exact-public-report"
+  ],
+  "hostMechanisms": [
+    "artifact-only-shared-context-bootstrap-and-bounded-evaluation",
+    "typed-lock-model-plan-observation-and-result-transport",
+    "bounded-artifact-presence-and-blake3-integrity-checks",
+    "snapshot-commit-evidence-and-attestation-schema-parsing",
+    "bounded-commit-closure-traversal",
+    "sealed-diagnostic-rendering"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_verify_authority.py",
+  "kind": "genesis/selfhost-pkg-verify-authority-v0.1",
+  "nonclaims": [
+    "artifact-store-or-blake3-mechanism-authority",
+    "bootstrap-fixpoint",
+    "complete-graph-solving",
+    "generic-lock-or-toml-syntax-authority",
+    "h2-package-resolution",
+    "r4-2-e-closure",
+    "ref-or-registry-transport-authority",
+    "release-qualification",
+    "schema-parser-authority",
+    "sh-c-closure",
+    "workspace-scaffolding-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/pkg-verify-request-v0.1",
+  "resultKind": "genesis/pkg-verify-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_verify_core_v1.gc",
+    "selfhost/pkg_verify_plan_v1.gc",
+    "selfhost/pkg_verify_finalize_v1.gc",
+    "selfhost/pkg_verify_authority_v1.gc"
+  ],
+  "sourceSha256": "d9b5e0528e1e18262fca62dd50d9382d29312cfd99120d574e57550ca2566d56",
+  "spec": "docs/spec/SELFHOST_PKG_VERIFY_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

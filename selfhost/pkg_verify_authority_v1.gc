@@ -1,0 +1,61 @@
+; Closed plan/finalize authority for core/pkg-low::verify.
+
+(def selfhost/pkg-verify::plan-request?
+  (fn (request)
+    (if ((selfhost/pkg-lock-read::exact-map? request) [:kind :model :op :v])
+      (selfhost/pkg-resolution-workflow::model? ((core/map::get request) (quote :model)))
+      false)))
+
+(def selfhost/pkg-verify::finalize-request?
+  (fn (request)
+    (if ((selfhost/pkg-lock-read::exact-map? request)
+          [:kind :model :observations :op :plan :plan-h :v])
+      (if (selfhost/pkg-resolution-workflow::model? ((core/map::get request) (quote :model)))
+        (selfhost/pkg-lock-read::vec? ((core/map::get request) (quote :observations)))
+        false)
+      false)))
+
+(def selfhost/pkg-verify::finalize
+  (fn (request-h)
+    (fn (request)
+      (let
+        ((expected (selfhost/pkg-verify::build-plan ((core/map::get request) (quote :model))))
+          (declared ((core/map::get request) (quote :plan)))
+          (declared-h ((core/map::get request) (quote :plan-h))))
+        (if ((core/eq? (selfhost/hash::hash-term expected)) declared-h)
+          (if ((core/eq? (selfhost/hash::hash-term declared)) declared-h)
+            (let
+              ((value
+                ((selfhost/pkg-verify::final-value expected)
+                  ((core/map::get request) (quote :observations)))))
+              (if (core/list::is-nil? ((core/map::get value) (quote :decision)))
+                ((selfhost/pkg-verify::reject request-h)
+                  ((core/map::get value) (quote :message)))
+                ((selfhost/pkg-verify::accept request-h) value)))
+            ((selfhost/pkg-verify::reject request-h) "declared verify plan identity mismatch"))
+          ((selfhost/pkg-verify::reject request-h)
+            "verify plan identity does not match authoritative recomputation"))))))
+
+(def core/pkg::verify-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if ((core/eq? ((core/map::get request) (quote :kind)))
+              "genesis/pkg-verify-request-v0.1")
+          (if ((core/eq? ((core/map::get request) (quote :v))) 1)
+            (let ((op ((core/map::get request) (quote :op))))
+              (if ((core/sym::eq? op) (quote :plan))
+                (if (selfhost/pkg-verify::plan-request? request)
+                  ((selfhost/pkg-verify::accept request-h)
+                    (selfhost/pkg-verify::plan-value
+                      ((core/map::get request) (quote :model))))
+                  ((selfhost/pkg-verify::reject request-h) "verify plan request is malformed"))
+                (if ((core/sym::eq? op) (quote :finalize))
+                  (if (selfhost/pkg-verify::finalize-request? request)
+                    ((selfhost/pkg-verify::finalize request-h) request)
+                    ((selfhost/pkg-verify::reject request-h)
+                      "verify finalize request is malformed"))
+                  ((selfhost/pkg-verify::reject request-h) "request :op is unsupported"))))
+            ((selfhost/pkg-verify::reject request-h) "request :v must be 1"))
+          ((selfhost/pkg-verify::reject request-h) "request :kind mismatch"))
+        ((selfhost/pkg-verify::reject request-h) "request must be map")))))

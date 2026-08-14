@@ -1,0 +1,279 @@
+; Exact observation binding, fail-fast diagnostics, and verify report authority.
+
+(def selfhost/pkg-verify::hash-observation?
+  (fn (value)
+    (if ((selfhost/pkg-lock-read::exact-map? value) [:h :status])
+      (if (selfhost/pkg-install::hash? ((core/map::get value) (quote :h)))
+        (selfhost/pkg-verify::hash-status? ((core/map::get value) (quote :status)))
+        false)
+      false)))
+
+(def selfhost/pkg-verify::hashes-valid-loop
+  (fn (values)
+    (fn (index)
+      (fn (previous)
+        (fn (contains-snapshot)
+          (fn (snapshot)
+            (if ((core/int::eq? index) (core/vec::len values))
+              {:contains-snapshot contains-snapshot :valid true}
+              (let ((value ((core/vec::get values) index)))
+                (if (selfhost/pkg-verify::hash-observation? value)
+                  (let ((hash ((core/map::get value) (quote :h))))
+                    (if (if (core/list::is-nil? previous)
+                          true
+                          ((selfhost/pkg-verify::str-lex-lt? previous) hash))
+                      (((((selfhost/pkg-verify::hashes-valid-loop values)
+                              ((core/int::add index) 1)) hash)
+                          (if ((core/eq? hash) snapshot) true contains-snapshot)) snapshot)
+                      {:message "verify hash observations must be strictly sorted and unique"
+                        :valid false}))
+                  {:message "verify hash observation is malformed" :valid false})))))))))
+
+(def selfhost/pkg-verify::hashes-valid
+  (fn (values)
+    (fn (snapshot)
+      (if (selfhost/pkg-lock-read::vec? values)
+        (((((selfhost/pkg-verify::hashes-valid-loop values) 0) nil) false) snapshot)
+        {:message "verify hashes must be a vector" :valid false}))))
+
+(def selfhost/pkg-verify::closure-observation?
+  (fn (value)
+    (if ((selfhost/pkg-lock-read::exact-map? value) [:checked :detail :hash :status])
+      (if (selfhost/pkg-install::nonnegative-int? ((core/map::get value) (quote :checked)))
+        (if (selfhost/pkg-verify::optional-string? ((core/map::get value) (quote :detail)))
+          (if (selfhost/pkg-install::optional-hash? ((core/map::get value) (quote :hash)))
+            (selfhost/pkg-verify::closure-status? ((core/map::get value) (quote :status)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-verify::closure-coherent?
+  (fn (value)
+    (let
+      ((status ((core/map::get value) (quote :status)))
+        (checked ((core/map::get value) (quote :checked)))
+        (detail ((core/map::get value) (quote :detail)))
+        (hash ((core/map::get value) (quote :hash))))
+      (if ((core/sym::eq? status) (quote :ok))
+        (if ((core/int::eq? checked) 0)
+          false
+          (if (core/list::is-nil? detail) (core/list::is-nil? hash) false))
+        (if (if ((core/sym::eq? status) (quote :missing))
+              true
+              ((core/sym::eq? status) (quote :corrupt)))
+          (if ((core/int::eq? checked) 0)
+            (if (selfhost/pkg-install::hash? hash) (core/list::is-nil? detail) false)
+            false)
+          (if (if ((core/sym::eq? status) (quote :bad-commit))
+                true
+                (if ((core/sym::eq? status) (quote :bad-evidence))
+                  true
+                  ((core/sym::eq? status) (quote :bad-attestation))))
+            (if ((core/int::eq? checked) 0)
+              (if (core/list::is-nil? hash)
+                (selfhost/pkg-verify::nonempty-string? detail)
+                false)
+              false)
+            (if ((core/int::eq? checked) 0)
+              (if (core/list::is-nil? hash) (core/list::is-nil? detail) false)
+              false)))))))
+
+(def selfhost/pkg-verify::observation?
+  (fn (value)
+    (if ((selfhost/pkg-lock-read::exact-map? value)
+          [:closure :detail :hashes :name :snapshot-status])
+      (if (selfhost/pkg-lock-read::str? ((core/map::get value) (quote :name)))
+        (if (selfhost/pkg-verify::snapshot-status?
+              ((core/map::get value) (quote :snapshot-status)))
+          (if (selfhost/pkg-verify::optional-string? ((core/map::get value) (quote :detail)))
+            (let ((closure ((core/map::get value) (quote :closure))))
+              (if (core/list::is-nil? closure)
+                true
+                (if (selfhost/pkg-verify::closure-observation? closure)
+                  (selfhost/pkg-verify::closure-coherent? closure)
+                  false)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-verify::error
+  (fn (code) (fn (message) {:code code :message message :state (quote :error)})))
+
+(def selfhost/pkg-verify::hashes-fold
+  (fn (hashes)
+    (fn (index)
+      (fn (state)
+        (if ((core/int::eq? index) (core/vec::len hashes))
+          state
+          (let
+            ((observation ((core/vec::get hashes) index))
+              (hash ((core/map::get ((core/vec::get hashes) index)) (quote :h)))
+              (status ((core/map::get ((core/vec::get hashes) index)) (quote :status))))
+            (if ((core/sym::eq? status) (quote :corrupt))
+              ((selfhost/pkg-verify::error "core/store/corruption")
+                ((selfhost/pkg-verify::artifact-message "artifact store corruption: ") hash))
+              (((selfhost/pkg-verify::hashes-fold hashes) ((core/int::add index) 1))
+                (if ((core/sym::eq? status) (quote :present))
+                  {
+                    :checked ((core/int::add ((core/map::get state) (quote :checked))) 1)
+                    :missing ((core/map::get state) (quote :missing))
+                    :state (quote :continue)}
+                  {
+                    :checked ((core/map::get state) (quote :checked))
+                    :missing ((core/vec::push ((core/map::get state) (quote :missing))) hash)
+                    :state (quote :continue)})))))))))
+
+(def selfhost/pkg-verify::closure-fold
+  (fn (step)
+    (fn (closure)
+      (fn (state)
+        (let
+          ((status ((core/map::get closure) (quote :status)))
+            (hash ((core/map::get closure) (quote :hash)))
+            (detail ((core/map::get closure) (quote :detail)))
+            (name ((core/map::get step) (quote :name))))
+          (if ((core/sym::eq? status) (quote :ok))
+            {
+              :checked ((core/int::add ((core/map::get state) (quote :checked)))
+                ((core/map::get closure) (quote :checked)))
+              :missing ((core/map::get state) (quote :missing))
+              :state (quote :continue)}
+            (if ((core/sym::eq? status) (quote :missing))
+              ((selfhost/pkg-verify::error "core/store/not-found")
+                ((selfhost/pkg-verify::artifact-message "artifact not found: ") hash))
+              (if ((core/sym::eq? status) (quote :corrupt))
+                ((selfhost/pkg-verify::error "core/store/corruption")
+                  ((selfhost/pkg-verify::artifact-message "artifact store corruption: ") hash))
+                (if ((core/sym::eq? status) (quote :bad-commit))
+                  ((selfhost/pkg-verify::error "core/pkg/bad-commit") detail)
+                  (if ((core/sym::eq? status) (quote :snapshot-mismatch))
+                    ((selfhost/pkg-verify::error "core/pkg/commit-snapshot-mismatch")
+                      ((selfhost/pkg-verify::append
+                        "commit.result != locked.snapshot for ") name))
+                    (if ((core/sym::eq? status) (quote :missing-evidence))
+                      ((selfhost/pkg-verify::error "core/pkg/missing-evidence")
+                        ((selfhost/pkg-verify::append
+                          "commit has obligations but no evidence for ") name))
+                      (if ((core/sym::eq? status) (quote :bad-evidence))
+                        ((selfhost/pkg-verify::error "core/pkg/bad-evidence") detail)
+                        ((selfhost/pkg-verify::error "core/pkg/bad-attestation") detail)))))))))))))
+
+(def selfhost/pkg-verify::step-fold
+  (fn (step)
+    (fn (observation)
+      (fn (state)
+        (if ((core/eq? ((core/map::get step) (quote :name)))
+              ((core/map::get observation) (quote :name)))
+          (let
+            ((snapshot ((core/map::get step) (quote :snapshot)))
+              (status ((core/map::get observation) (quote :snapshot-status)))
+              (detail ((core/map::get observation) (quote :detail)))
+              (hashes ((core/map::get observation) (quote :hashes)))
+              (closure ((core/map::get observation) (quote :closure)))
+              (commit ((core/map::get step) (quote :commit))))
+            (if ((core/sym::eq? status) (quote :missing))
+              (if (if (if ((core/int::eq? (core/vec::len hashes)) 0)
+                        (core/list::is-nil? closure) false)
+                    (core/list::is-nil? detail) false)
+                {
+                  :checked ((core/map::get state) (quote :checked))
+                  :missing ((core/vec::push ((core/map::get state) (quote :missing))) snapshot)
+                  :state (quote :continue)}
+                {:message "missing snapshot observation has trailing facts"
+                  :state (quote :invalid)})
+              (if ((core/sym::eq? status) (quote :corrupt))
+                (if (if (if ((core/int::eq? (core/vec::len hashes)) 0)
+                          (core/list::is-nil? closure) false)
+                      (core/list::is-nil? detail) false)
+                  ((selfhost/pkg-verify::error "core/store/corruption")
+                    ((selfhost/pkg-verify::artifact-message "artifact store corruption: ") snapshot))
+                  {:message "corrupt snapshot observation has trailing facts"
+                    :state (quote :invalid)})
+                (if ((core/sym::eq? status) (quote :bad-snapshot))
+                  (if (if (if ((core/int::eq? (core/vec::len hashes)) 0)
+                            (core/list::is-nil? closure) false)
+                        (selfhost/pkg-verify::nonempty-string? detail) false)
+                    ((selfhost/pkg-verify::error "core/pkg/bad-snapshot") detail)
+                    {:message "bad snapshot observation is incoherent"
+                      :state (quote :invalid)})
+                  (if (core/list::is-nil? detail)
+                    (let ((valid-hashes ((selfhost/pkg-verify::hashes-valid hashes) snapshot)))
+                    (if ((core/map::get valid-hashes) (quote :valid))
+                      (let ((next (((selfhost/pkg-verify::hashes-fold hashes) 0) state)))
+                        (if ((core/sym::eq? ((core/map::get next) (quote :state)))
+                              (quote :continue))
+                          (if ((core/map::get valid-hashes) (quote :contains-snapshot))
+                            (if (core/list::is-nil? commit)
+                              (if (core/list::is-nil? closure)
+                                next
+                                {:message "closure supplied for dependency without commit"
+                                  :state (quote :invalid)})
+                              (if (selfhost/pkg-verify::closure-observation? closure)
+                                (((selfhost/pkg-verify::closure-fold step) closure) next)
+                                {:message "available committed dependency requires closure observation"
+                                  :state (quote :invalid)}))
+                            {:message "verify hash observations omit planned snapshot"
+                              :state (quote :invalid)})
+                          next))
+                      {:message ((core/map::get valid-hashes) (quote :message))
+                        :state (quote :invalid)}))
+                    {:message "available snapshot observation carries detail"
+                      :state (quote :invalid)})))))
+          {:message "verify observation name mismatch" :state (quote :invalid)})))))
+
+(def selfhost/pkg-verify::observations-loop
+  (fn (steps)
+    (fn (observations)
+      (fn (index)
+        (fn (state)
+          (if ((core/int::eq? index) (core/vec::len observations))
+            (if ((core/int::eq? index) (core/vec::len steps))
+              {:checked ((core/map::get state) (quote :checked))
+                :missing ((core/map::get state) (quote :missing)) :state (quote :complete)}
+              {:message "verify observations ended without fatal result"
+                :state (quote :invalid)})
+            (if ((core/int::lt? index) (core/vec::len steps))
+              (let ((observation ((core/vec::get observations) index)))
+                (if (selfhost/pkg-verify::observation? observation)
+                  (let ((next (((selfhost/pkg-verify::step-fold
+                                  ((core/vec::get steps) index)) observation) state)))
+                    (if ((core/sym::eq? ((core/map::get next) (quote :state)))
+                          (quote :continue))
+                      ((((selfhost/pkg-verify::observations-loop steps) observations)
+                          ((core/int::add index) 1)) next)
+                      (if ((core/int::eq? ((core/int::add index) 1))
+                            (core/vec::len observations))
+                        next
+                        {:message "verify observations continue after terminal result"
+                          :state (quote :invalid)})))
+                  {:message "verify observation is malformed" :state (quote :invalid)}))
+              {:message "verify observation count exceeds plan" :state (quote :invalid)})))))))
+
+(def selfhost/pkg-verify::final-value
+  (fn (plan)
+    (fn (observations)
+      (let
+        ((state
+          ((((selfhost/pkg-verify::observations-loop
+                ((core/map::get plan) (quote :dependencies))) observations) 0)
+            {:checked 0 :missing [] :state (quote :continue)})))
+        (if ((core/sym::eq? ((core/map::get state) (quote :state))) (quote :complete))
+          {
+            :code nil
+            :decision (quote :report)
+            :message nil
+            :report
+              {
+                :checked ((core/map::get state) (quote :checked))
+                :lock ((core/map::get plan) (quote :lock))
+                :missing ((core/map::get state) (quote :missing))
+                :ok
+                  ((core/int::eq?
+                      (core/vec::len ((core/map::get state) (quote :missing)))) 0)}}
+          (if ((core/sym::eq? ((core/map::get state) (quote :state))) (quote :error))
+            {:code ((core/map::get state) (quote :code))
+              :decision (quote :error)
+              :message ((core/map::get state) (quote :message)) :report nil}
+            state))))))

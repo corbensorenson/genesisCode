@@ -350,7 +350,10 @@ pub fn run(
                     if pkg_resolution_identity_authority.is_none()
                         && matches!(
                             req.op.as_str(),
-                            "core/pkg-low::lock" | "core/pkg-low::update" | "core/pkg-low::install"
+                            "core/pkg-low::lock"
+                                | "core/pkg-low::update"
+                                | "core/pkg-low::install"
+                                | "core/pkg-low::verify"
                         )
                     {
                         pkg_resolution_identity_authority = run_try!(
