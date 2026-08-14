@@ -5,7 +5,7 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 358,
+    "canonicalSources": 359,
     "diagnostics": 201,
     "exampleFiles": 189,
     "hostOperations": 188,
@@ -48,7 +48,7 @@
     },
     {
       "path": "docs/INDEX.md",
-      "sha256": "601b25bf9e6d57765589ee82f504d49586c7aec5f0b2eeeafcdbaae67ad7509f"
+      "sha256": "3c5896192c858c1047e8f03344585dedd509e1e5503403c5fbce084a0d5bcb9a"
     },
     {
       "path": "docs/PAPER_v0.2.md",
@@ -1161,6 +1161,10 @@
     {
       "path": "docs/spec/SELFHOST_PKG_LOCK_WRITE_AUTHORITY_v0.1.schema.json",
       "sha256": "42d0799f125c92fa017893a2de6d1c05e437209bce8e1587f3cf0acb978b7126"
+    },
+    {
+      "path": "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md",
+      "sha256": "dd3818f5ab4b8ecefcf3d2a2bc2d869c6ebd7961d19fd72c8f968ac8fd32aa29"
     },
     {
       "path": "docs/spec/SELFHOST_PKG_RESOLUTION_IDENTITY_AUTHORITY_v0.1.md",

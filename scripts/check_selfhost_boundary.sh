@@ -297,18 +297,64 @@ resolve_base() {
   echo ""
 }
 
+diff_adds_semantic_tokens() {
+  local before="$1"
+  local after="$2"
+  if { diff -U0 "$before" "$after" || true; } \
+    | grep -E '^\+' \
+    | grep -Eq "$SEMANTIC_TOKEN_REGEX"; then
+    return 0
+  fi
+  return 1
+}
+
 check_added_semantic_tokens() {
   local base_ref="$1"
   local file="$2"
-  git diff -U0 "$base_ref"...HEAD -- "$file" \
-    | grep -E '^\+' \
-    | grep -Eq "$SEMANTIC_TOKEN_REGEX"
+  local before after found
+  before="$(mktemp)"
+  after="$(mktemp)"
+  git show "${base_ref}:${file}" 2>/dev/null \
+    | awk '/^#\[cfg\(test\)\]/{exit} {print}' >"$before" || true
+  awk '/^#\[cfg\(test\)\]/{exit} {print}' "$file" >"$after"
+  found=1
+  if diff_adds_semantic_tokens "$before" "$after"; then
+    found=0
+  fi
+  rm -f "$before" "$after"
+  return "$found"
 }
 
 check_full_file_semantic_tokens() {
   local file="$1"
-  grep -Eq "$SEMANTIC_TOKEN_REGEX" "$file"
+  awk '/^#\[cfg\(test\)\]/{exit} {print}' "$file" | grep -Eq "$SEMANTIC_TOKEN_REGEX"
 }
+
+scanner_self_test() {
+  local directory before production test_only
+  directory="$(mktemp -d)"
+  before="$directory/before.rs"
+  production="$directory/production.rs"
+  test_only="$directory/test_only.rs"
+  printf '%s\n' 'fn boundary() {}' >"$before"
+  printf '%s\n' 'fn boundary() { eval_term(); }' >"$production"
+  printf '%s\n' 'fn boundary() {}' '#[cfg(test)]' 'mod tests { fn test() { eval_term(); } }' \
+    | awk '/^#\[cfg\(test\)\]/{exit} {print}' >"$test_only"
+  if ! diff_adds_semantic_tokens "$before" "$production"; then
+    echo "selfhost-boundary scanner self-test failed: production addition was missed" >&2
+    rm -rf "$directory"
+    exit 1
+  fi
+  if diff_adds_semantic_tokens "$before" "$test_only"; then
+    echo "selfhost-boundary scanner self-test failed: test-only addition was treated as production" >&2
+    rm -rf "$directory"
+    exit 1
+  fi
+  rm -rf "$directory"
+  echo "selfhost-boundary-scanner-self-test: ok (controls=2)"
+}
+
+scanner_self_test
 
 list_production_rust_files() {
   if command -v rg >/dev/null 2>&1; then
@@ -351,7 +397,10 @@ else
       exit 0
     fi
   else
-    FILES_TO_SCAN="$(git diff --name-only "$BASE_REF"...HEAD -- 'crates/**/*.rs')"
+    FILES_TO_SCAN="$({
+      git diff --name-only "$BASE_REF" -- 'crates/**/*.rs'
+      git ls-files --others --exclude-standard -- 'crates/**/*.rs'
+    } | sort -u)"
     if [[ -z "$FILES_TO_SCAN" ]]; then
       echo "selfhost-boundary: no changed Rust files under crates/."
       exit 0
