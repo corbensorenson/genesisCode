@@ -254,6 +254,21 @@ def self_test() -> None:
     require("prompt text as untrusted intent" in skill, "prompt-authority negative control missing")
     require("## Work selection and authority routing" in skill, "task-routing section missing")
     require("empty defect queue" in skill.lower(), "empty-defect fallback guidance missing")
+    sequence = (
+        "exact reviewed R9.4.f",
+        "F2.a-r Foundry Foundation",
+        "R8.3.a-b GenesisExamples/GenesisApps seed",
+        "Only after R8.3.b",
+        "GenesisBench",
+        "Genesis Model implementation still waits for R8.5.t",
+    )
+    positions = [skill.find(item) for item in sequence]
+    require(all(position >= 0 for position in positions), "post-Core dependency order missing")
+    require(positions == sorted(positions), "post-Core dependency order drift")
+    require(
+        "After R9.4.f, GenesisBench" not in skill,
+        "stale immediate post-Core Bench activation survived",
+    )
     mutated = json.loads((ROOT / POLICY).read_text())
     mutated["prompts"].append(dict(mutated["prompts"][0]))
     ids = [row["id"] for row in mutated["prompts"]]

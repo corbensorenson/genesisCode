@@ -178,14 +178,29 @@ def validate_roadmap_gap_ids(gap_ids: Iterable[str]) -> None:
     if not roadmap_path.is_file():
         raise LedgerError("missing ROADMAP.md required for roadmap gap validation")
     roadmap = roadmap_path.read_text(encoding="utf-8")
+    task_states = {
+        match.group(2): match.group(1) == "x"
+        for match in re.finditer(
+            r"^- \[([ x])\] \*\*([RF][A-Za-z0-9.]+)\b", roadmap, re.MULTILINE
+        )
+    }
     missing = []
+    completed = []
     for gap_id in gap_ids:
-        if gap_id.startswith(("R", "F")) and f"**{gap_id} " not in roadmap:
-            missing.append(gap_id)
+        if gap_id.startswith(("R", "F")):
+            if gap_id not in task_states:
+                missing.append(gap_id)
+            elif task_states[gap_id]:
+                completed.append(gap_id)
     if missing:
         raise LedgerError(
             "gap catalog references task IDs absent from ROADMAP.md: "
             + ", ".join(sorted(missing))
+        )
+    if completed:
+        raise LedgerError(
+            "gap catalog references completed ROADMAP.md task IDs: "
+            + ", ".join(sorted(completed))
         )
 
 

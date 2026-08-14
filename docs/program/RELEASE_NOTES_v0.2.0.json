@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "fc8f39821216c12e1f25f4c8a1d4d115461312b0d685942613d19a5b6033fe75",
+  "contentIdentitySha256": "9c74462371952e86432cc5bea932b9a724cc37fa90f364f2bf6cef209806f1fd",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -47,7 +47,6 @@
             "E1:cap-coreform-identity/check-1"
           ],
           "gapIds": [
-            "R4.2.a",
             "R7.2.f"
           ],
           "id": "CAP-COREFORM-IDENTITY",
@@ -91,7 +90,6 @@
             "E1:cap-deny-default-policy/check-1"
           ],
           "gapIds": [
-            "R4.2.d",
             "R7.3.a"
           ],
           "id": "CAP-DENY-DEFAULT-POLICY",
@@ -105,7 +103,7 @@
             "windows-x86_64": "L0"
           },
           "releaseClaimEligible": false,
-          "selfhostLevel": "H0",
+          "selfhostLevel": "H2",
           "title": "Deny-by-default capability policy runtime"
         },
         {
@@ -127,7 +125,7 @@
             "windows-x86_64": "L0"
           },
           "releaseClaimEligible": false,
-          "selfhostLevel": "H0",
+          "selfhostLevel": "H2",
           "title": "Deterministic effect logs + replay checker"
         },
         {
@@ -135,7 +133,6 @@
             "E1:cap-semantic-vcs/check-1"
           ],
           "gapIds": [
-            "R4.2.c",
             "R4.2.e"
           ],
           "id": "CAP-SEMANTIC-VCS",
@@ -204,7 +201,6 @@
             "E1:cap-evidence-gated-publish/check-1"
           ],
           "gapIds": [
-            "R4.2.d",
             "R6.2.d"
           ],
           "id": "CAP-EVIDENCE-GATED-PUBLISH",
@@ -250,7 +246,6 @@
             "E1:cap-selfhost-frontend/check-3"
           ],
           "gapIds": [
-            "R4.2.a",
             "R4.2.g"
           ],
           "id": "CAP-SELFHOST-FRONTEND",
@@ -295,8 +290,9 @@
             "E1:cap-strict-no-fallback/check-1"
           ],
           "gapIds": [
-            "R4.1.c",
-            "R4.1.e"
+            "R4.2.e",
+            "R4.2.g",
+            "R4.4.c"
           ],
           "id": "CAP-STRICT-NO-FALLBACK",
           "immutableEvidenceIds": [],
@@ -320,7 +316,7 @@
             "E1:cap-agent-json-contracts/check-4"
           ],
           "gapIds": [
-            "R1.3.c"
+            "R1.3.f"
           ],
           "id": "CAP-AGENT-JSON-CONTRACTS",
           "immutableEvidenceIds": [],
@@ -342,7 +338,6 @@
             "E1:cap-agent-skill-pack/check-2"
           ],
           "gapIds": [
-            "R1.5.a",
             "R1.5.f"
           ],
           "id": "CAP-AGENT-SKILL-PACK",
@@ -387,7 +382,6 @@
             "E1:cap-agent-workload-parity/check-2"
           ],
           "gapIds": [
-            "R1.4.c",
             "R8.2.a"
           ],
           "id": "CAP-AGENT-WORKLOAD-PARITY",
@@ -1890,22 +1884,8 @@
           "affectedClaims": [
             "CAP-AGENT-JSON-CONTRACTS"
           ],
-          "id": "R1.3.c",
-          "summary": "Generate and verify the pinned MCP agent interface from canonical CLI schemas."
-        },
-        {
-          "affectedClaims": [
-            "CAP-AGENT-WORKLOAD-PARITY"
-          ],
-          "id": "R1.4.c",
-          "summary": "Build deterministic generation, repair, refactor, and deployment task benchmarks."
-        },
-        {
-          "affectedClaims": [
-            "CAP-AGENT-SKILL-PACK"
-          ],
-          "id": "R1.5.a",
-          "summary": "Generate the authoring skill from canonical language and capability inputs."
+          "id": "R1.3.f",
+          "summary": "Meet the cold, warm, large-workspace, parallel-agent, cancellation, and restart interface budgets."
         },
         {
           "affectedClaims": [
@@ -1938,53 +1918,18 @@
         },
         {
           "affectedClaims": [
-            "CAP-STRICT-NO-FALLBACK"
-          ],
-          "id": "R4.1.c",
-          "summary": "Maintain a semantic-ownership ledger for every production decision."
-        },
-        {
-          "affectedClaims": [
-            "CAP-STRICT-NO-FALLBACK"
-          ],
-          "id": "R4.1.e",
-          "summary": "Enforce selfhost and stage0 dependency boundaries structurally."
-        },
-        {
-          "affectedClaims": [
-            "CAP-COREFORM-IDENTITY",
-            "CAP-SELFHOST-FRONTEND"
-          ],
-          "id": "R4.2.a",
-          "summary": "Make frontend and canonicalization GenesisCode-produced with independent identity verification."
-        },
-        {
-          "affectedClaims": [
-            "CAP-SEMANTIC-VCS"
-          ],
-          "id": "R4.2.c",
-          "summary": "Make semantic patch and refactor behavior GenesisCode-authoritative."
-        },
-        {
-          "affectedClaims": [
-            "CAP-DENY-DEFAULT-POLICY",
-            "CAP-EVIDENCE-GATED-PUBLISH"
-          ],
-          "id": "R4.2.d",
-          "summary": "Make obligation and policy decision logic GenesisCode-authoritative."
-        },
-        {
-          "affectedClaims": [
             "CAP-ARTIFACT-GC",
             "CAP-PACKAGE-MANAGER",
-            "CAP-SEMANTIC-VCS"
+            "CAP-SEMANTIC-VCS",
+            "CAP-STRICT-NO-FALLBACK"
           ],
           "id": "R4.2.e",
           "summary": "Make package, registry, and VCS logic GenesisCode-authoritative."
         },
         {
           "affectedClaims": [
-            "CAP-SELFHOST-FRONTEND"
+            "CAP-SELFHOST-FRONTEND",
+            "CAP-STRICT-NO-FALLBACK"
           ],
           "id": "R4.2.g",
           "summary": "Make CLI and agent orchestration selfhost-authoritative without hidden Rust semantics."
@@ -2005,7 +1950,8 @@
         },
         {
           "affectedClaims": [
-            "CAP-SELFHOST-CUTOVER"
+            "CAP-SELFHOST-CUTOVER",
+            "CAP-STRICT-NO-FALLBACK"
           ],
           "id": "R4.4.c",
           "summary": "Prove cross-host bootstrap fixpoint on the tier-1 host matrix."
@@ -2674,7 +2620,7 @@
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
     "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json": "3eeb4593d1a0c89e90ad95c381e15c231fde5bec11a6fb61b0a0c550f398be61",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "d76723bca84b00660c868f5b8f18a3a165db4031d1eaddec3af358fbacb0fb73",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "6e6804e7e1ed47a10a3ad103851d59c8a7022cb6f54c6e2dbef882b9b9d31835",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",

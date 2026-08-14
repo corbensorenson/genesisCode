@@ -7,7 +7,7 @@
     "CAP-BROWSER-XR",
     "CAP-DEPLOYMENT-PIPELINE"
   ],
-  "audit_date": "2026-08-11",
+  "audit_date": "2026-08-14",
   "entries": [
     {
       "capability": "Pure deterministic kernel separated from effects",
@@ -54,7 +54,6 @@
         "E1:cap-coreform-identity/check-1"
       ],
       "gap_ids": [
-        "R4.2.a",
         "R7.2.f"
       ],
       "host_binding_paths": [],
@@ -123,7 +122,6 @@
         "E1:cap-deny-default-policy/check-1"
       ],
       "gap_ids": [
-        "R4.2.d",
         "R7.3.a"
       ],
       "host_binding_paths": [
@@ -142,7 +140,7 @@
         "windows-x86_64": "L0"
       },
       "owner": "effect-runtime",
-      "selfhost_level": "H0",
+      "selfhost_level": "H2",
       "spec_paths": [
         "docs/spec/CLI.md"
       ]
@@ -177,7 +175,7 @@
         "windows-x86_64": "L0"
       },
       "owner": "effect-runtime",
-      "selfhost_level": "H0",
+      "selfhost_level": "H2",
       "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SEALS_DISPATCH_REPLAY.md",
@@ -194,7 +192,6 @@
         "E1:cap-semantic-vcs/check-1"
       ],
       "gap_ids": [
-        "R4.2.c",
         "R4.2.e"
       ],
       "host_binding_paths": [],
@@ -305,7 +302,6 @@
         "E1:cap-evidence-gated-publish/check-1"
       ],
       "gap_ids": [
-        "R4.2.d",
         "R6.2.d"
       ],
       "host_binding_paths": [],
@@ -378,7 +374,6 @@
         "E1:cap-selfhost-frontend/check-3"
       ],
       "gap_ids": [
-        "R4.2.a",
         "R4.2.g"
       ],
       "host_binding_paths": [],
@@ -449,8 +444,9 @@
         "E1:cap-strict-no-fallback/check-1"
       ],
       "gap_ids": [
-        "R4.1.c",
-        "R4.1.e"
+        "R4.2.e",
+        "R4.2.g",
+        "R4.4.c"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -488,7 +484,7 @@
         "E1:cap-agent-json-contracts/check-4"
       ],
       "gap_ids": [
-        "R1.3.c"
+        "R1.3.f"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -527,7 +523,6 @@
         "E1:cap-agent-skill-pack/check-2"
       ],
       "gap_ids": [
-        "R1.5.a",
         "R1.5.f"
       ],
       "host_binding_paths": [],
@@ -600,7 +595,6 @@
         "E1:cap-agent-workload-parity/check-2"
       ],
       "gap_ids": [
-        "R1.4.c",
         "R8.2.a"
       ],
       "host_binding_paths": [],

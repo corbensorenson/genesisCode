@@ -1,6 +1,6 @@
 {
   "active_defect_ids": [],
-  "audit_date": "2026-08-11",
+  "audit_date": "2026-08-14",
   "claims": [
     {
       "category": "kernel",
@@ -47,7 +47,6 @@
         "E1:cap-coreform-identity/check-1"
       ],
       "gap_ids": [
-        "R4.2.a",
         "R7.2.f"
       ],
       "host_binding_paths": [],
@@ -118,7 +117,6 @@
         "E1:cap-deny-default-policy/check-1"
       ],
       "gap_ids": [
-        "R4.2.d",
         "R7.3.a"
       ],
       "host_binding_paths": [
@@ -138,7 +136,7 @@
         "windows-x86_64": "L0"
       },
       "owner": "effect-runtime",
-      "selfhost_level": "H0",
+      "selfhost_level": "H2",
       "spec_paths": [
         "docs/spec/CLI.md"
       ],
@@ -174,7 +172,7 @@
         "windows-x86_64": "L0"
       },
       "owner": "effect-runtime",
-      "selfhost_level": "H0",
+      "selfhost_level": "H2",
       "spec_paths": [
         "docs/spec/CLI.md",
         "docs/spec/SEALS_DISPATCH_REPLAY.md",
@@ -191,7 +189,6 @@
         "E1:cap-semantic-vcs/check-1"
       ],
       "gap_ids": [
-        "R4.2.c",
         "R4.2.e"
       ],
       "host_binding_paths": [],
@@ -305,7 +302,6 @@
         "E1:cap-evidence-gated-publish/check-1"
       ],
       "gap_ids": [
-        "R4.2.d",
         "R6.2.d"
       ],
       "host_binding_paths": [],
@@ -380,7 +376,6 @@
         "E1:cap-selfhost-frontend/check-3"
       ],
       "gap_ids": [
-        "R4.2.a",
         "R4.2.g"
       ],
       "host_binding_paths": [],
@@ -453,8 +448,9 @@
         "E1:cap-strict-no-fallback/check-1"
       ],
       "gap_ids": [
-        "R4.1.c",
-        "R4.1.e"
+        "R4.2.e",
+        "R4.2.g",
+        "R4.4.c"
       ],
       "host_binding_paths": [],
       "id": "CAP-STRICT-NO-FALLBACK",
@@ -493,7 +489,7 @@
         "E1:cap-agent-json-contracts/check-4"
       ],
       "gap_ids": [
-        "R1.3.c"
+        "R1.3.f"
       ],
       "host_binding_paths": [],
       "id": "CAP-AGENT-JSON-CONTRACTS",
@@ -533,7 +529,6 @@
         "E1:cap-agent-skill-pack/check-2"
       ],
       "gap_ids": [
-        "R1.5.a",
         "R1.5.f"
       ],
       "host_binding_paths": [],
@@ -608,7 +603,6 @@
         "E1:cap-agent-workload-parity/check-2"
       ],
       "gap_ids": [
-        "R1.4.c",
         "R8.2.a"
       ],
       "host_binding_paths": [],
@@ -1113,18 +1107,11 @@
     }
   ],
   "gap_catalog": {
-    "R1.3.c": "Generate and verify the pinned MCP agent interface from canonical CLI schemas.",
-    "R1.4.c": "Build deterministic generation, repair, refactor, and deployment task benchmarks.",
-    "R1.5.a": "Generate the authoring skill from canonical language and capability inputs.",
+    "R1.3.f": "Meet the cold, warm, large-workspace, parallel-agent, cancellation, and restart interface budgets.",
     "R1.5.f": "Validate skill distribution, offline use, token budgets, and multi-agent compatibility.",
     "R2.3.e": "Meet explicit incremental large-workspace agent-loop SLOs.",
     "R3.2.a": "Audit existing stage2/Wasm coverage and eliminate undeclared fallback.",
     "R3.2.b": "Validate source-to-Wasm translation and embedded artifact identity.",
-    "R4.1.c": "Maintain a semantic-ownership ledger for every production decision.",
-    "R4.1.e": "Enforce selfhost and stage0 dependency boundaries structurally.",
-    "R4.2.a": "Make frontend and canonicalization GenesisCode-produced with independent identity verification.",
-    "R4.2.c": "Make semantic patch and refactor behavior GenesisCode-authoritative.",
-    "R4.2.d": "Make obligation and policy decision logic GenesisCode-authoritative.",
     "R4.2.e": "Make package, registry, and VCS logic GenesisCode-authoritative.",
     "R4.2.g": "Make CLI and agent orchestration selfhost-authoritative without hidden Rust semantics.",
     "R4.3.a": "Split oversized host crates and meet source concentration budgets.",

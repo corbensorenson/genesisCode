@@ -45,23 +45,16 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
-- `R1.3.c`: Generate and verify the pinned MCP agent interface from canonical CLI schemas. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
-- `R1.4.c`: Build deterministic generation, repair, refactor, and deployment task benchmarks. Affected claims: `CAP-AGENT-WORKLOAD-PARITY`.
-- `R1.5.a`: Generate the authoring skill from canonical language and capability inputs. Affected claims: `CAP-AGENT-SKILL-PACK`.
+- `R1.3.f`: Meet the cold, warm, large-workspace, parallel-agent, cancellation, and restart interface budgets. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.5.f`: Validate skill distribution, offline use, token budgets, and multi-agent compatibility. Affected claims: `CAP-AGENT-SKILL-PACK`.
 - `R2.3.e`: Meet explicit incremental large-workspace agent-loop SLOs. Affected claims: `CAP-AGENT-WORKSPACE-PERF`.
 - `R3.2.a`: Audit existing stage2/Wasm coverage and eliminate undeclared fallback. Affected claims: `CAP-RUNTIME-SURFACES`, `CAP-STAGE2-WASM-VALIDATION`.
 - `R3.2.b`: Validate source-to-Wasm translation and embedded artifact identity. Affected claims: `CAP-STAGE2-WASM-VALIDATION`.
-- `R4.1.c`: Maintain a semantic-ownership ledger for every production decision. Affected claims: `CAP-STRICT-NO-FALLBACK`.
-- `R4.1.e`: Enforce selfhost and stage0 dependency boundaries structurally. Affected claims: `CAP-STRICT-NO-FALLBACK`.
-- `R4.2.a`: Make frontend and canonicalization GenesisCode-produced with independent identity verification. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-SELFHOST-FRONTEND`.
-- `R4.2.c`: Make semantic patch and refactor behavior GenesisCode-authoritative. Affected claims: `CAP-SEMANTIC-VCS`.
-- `R4.2.d`: Make obligation and policy decision logic GenesisCode-authoritative. Affected claims: `CAP-DENY-DEFAULT-POLICY`, `CAP-EVIDENCE-GATED-PUBLISH`.
-- `R4.2.e`: Make package, registry, and VCS logic GenesisCode-authoritative. Affected claims: `CAP-ARTIFACT-GC`, `CAP-PACKAGE-MANAGER`, `CAP-SEMANTIC-VCS`.
-- `R4.2.g`: Make CLI and agent orchestration selfhost-authoritative without hidden Rust semantics. Affected claims: `CAP-SELFHOST-FRONTEND`.
+- `R4.2.e`: Make package, registry, and VCS logic GenesisCode-authoritative. Affected claims: `CAP-ARTIFACT-GC`, `CAP-PACKAGE-MANAGER`, `CAP-SEMANTIC-VCS`, `CAP-STRICT-NO-FALLBACK`.
+- `R4.2.g`: Make CLI and agent orchestration selfhost-authoritative without hidden Rust semantics. Affected claims: `CAP-SELFHOST-FRONTEND`, `CAP-STRICT-NO-FALLBACK`.
 - `R4.3.a`: Split oversized host crates and meet source concentration budgets. Affected claims: `CAP-MODULAR-BOUNDARIES`.
 - `R4.3.b`: Generate repetitive host, Prelude, capability, MCP, codec, and parity bindings from one schema. Affected claims: `CAP-MODULAR-BOUNDARIES`.
-- `R4.4.c`: Prove cross-host bootstrap fixpoint on the tier-1 host matrix. Affected claims: `CAP-SELFHOST-CUTOVER`.
+- `R4.4.c`: Prove cross-host bootstrap fixpoint on the tier-1 host matrix. Affected claims: `CAP-SELFHOST-CUTOVER`, `CAP-STRICT-NO-FALLBACK`.
 - `R5.2.a`: Audit and reconcile deterministic concurrency specifications and runtime behavior. Affected claims: `CAP-CONCURRENCY-REPLAY`.
 - `R5.2.e`: Differentially explore and replay bounded schedules across tiers and hosts. Affected claims: `CAP-CONCURRENCY-REPLAY`.
 - `R5.5.a`: Adopt and pin the WebAssembly Component Model/WIT extension boundary. Affected claims: `CAP-PLUGIN-FFI`.
@@ -162,7 +155,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `fc8f39821216c12e1f25f4c8a1d4d115461312b0d685942613d19a5b6033fe75`.
+Machine-readable identity: `9c74462371952e86432cc5bea932b9a724cc37fa90f364f2bf6cef209806f1fd`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02
