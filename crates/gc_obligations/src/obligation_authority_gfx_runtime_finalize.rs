@@ -164,7 +164,7 @@ fn expected_gfx_golden_final(
             };
             if let Some(target) = target {
                 actual_hash = Term::Str(hex32(hash_term(target)));
-                if let Some(_) = &test.expect_png_hash {
+                if test.expect_png_hash.is_some() {
                     let render = exact_map(
                         &outcome.render,
                         "gfx renderer observation",

@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "c2adbff3524de0bca234e8ba370f75640a6bf3924675b18242010cd213fd1406",
+  "contentIdentitySha256": "fc8f39821216c12e1f25f4c8a1d4d115461312b0d685942613d19a5b6033fe75",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -1873,6 +1873,13 @@
           "role": "fixture-public-key",
           "sha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
           "testOnly": true
+        },
+        {
+          "claimedEvidenceClass": "none",
+          "path": "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json",
+          "role": "historical-workload-policy",
+          "sha256": "3eeb4593d1a0c89e90ad95c381e15c231fde5bec11a6fb61b0a0c550f398be61",
+          "testOnly": true
         }
       ]
     },
@@ -2659,18 +2666,19 @@
     "Cargo.lock": "ba28b65b338829a7db9fc4301f226a339c6aab81743b974ae5ca0de1601cbcae",
     "Cargo.toml": "36566f84c9351572596298906707431245352296c7718aa1035087f61d83ab32",
     "deny.toml": "efdae31392b03f5228bd48e96eb14ef718520ae19b4d9de064ef9ed1c19978e5",
-    "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "4ce9bed19d3dac8926a06a15f2edceaaaa038c3a9a814265b7bd13858359a173",
+    "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "d1aa20fa3652cf7cc5a122bea2c8e7d212c52009aea716fe2ce790617d91e109",
     "docs/program/evidence/GENESIS_EVIDENCE_ARTIFACT_TREE_v0.1.json": "1ee6541e1f594edce44ae99a9e17c5288c9cab7a4f0818528c821bdc11b15546",
     "docs/program/evidence/GENESIS_EVIDENCE_BUNDLE_v0.1.json": "1dcfce299a83bac9ba9601b064c3da8caa1ffa61602cca5446febc9132172e81",
     "docs/program/evidence/GENESIS_EVIDENCE_VERIFIER_NEGATIVE_VECTORS_v0.1.json": "5595e59ffce6727ad73987bac84fb2bc993cc0c113377d7d4fc18c443d168491",
     "docs/program/evidence/artifact/genesis-example.bin": "d8b1c4946a814e874c0eb109674d5e4fd49f84f3317794dc69d24b267a4aa72d",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
+    "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json": "3eeb4593d1a0c89e90ad95c381e15c231fde5bec11a6fb61b0a0c550f398be61",
     "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "d76723bca84b00660c868f5b8f18a3a165db4031d1eaddec3af358fbacb0fb73",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",
-    "genesis.version-surfaces.json": "643402a19527b77ef0432b7a0197d4ee658e413640961e0b93d826f8801e3278",
+    "genesis.version-surfaces.json": "12bb19e3f1010922c8796c56a764f50b7e5006df231dca944b6c6d669c72a3e1",
     "package-lock.json": "f5b2fa938c2c572fa8172b0f57418c10dca846791855fbd25b1b662b188097ed",
     "policies/evidence_storage_classes_v0.1.json": "b492fabe76d9f20a54f7488d9a6715225bdd1ee789dbe30df8aa2810e1da6459",
     "policies/release_notes_v0.1.json": "19bab59aa31dcbb7fdad9a234feb94958587481646f022952651416cb454d7c7",

@@ -367,7 +367,7 @@ fn preflight_scaffold(root: &Path, files: &[(PathBuf, String)], force: bool) -> 
     Ok(())
 }
 
-fn preflight_directory_chain(path: &Path) -> Result<(), String> {
+pub(crate) fn preflight_directory_chain(path: &Path) -> Result<(), String> {
     let absolute = if path.is_absolute() {
         path.to_path_buf()
     } else {
@@ -497,7 +497,7 @@ fn write_scaffold_file(path: &Path, bytes: &[u8], force: bool) -> Result<(), Str
     atomic_write_text(path, bytes).map_err(|e| format!("write {}: {e}", path.display()))
 }
 
-fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub(crate) fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
     let mut sequence = 0u64;
     let tmp = loop {

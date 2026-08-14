@@ -7,7 +7,7 @@ use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
 
 use super::{
     CExpr, COMPILED_MODULE_BLOB_MAGIC, CompiledCoverageSites, CompiledForm, CompiledModule,
-    SymbolInterner, VarResolution,
+    VarResolution,
 };
 
 pub(super) fn encode_compiled_module_blob(m: &CompiledModule) -> Result<Vec<u8>, KernelError> {
@@ -58,7 +58,6 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
     let statement_sites = cur.read_str_vec()?;
     let decision_sites = cur.read_str_vec()?;
     let forms_len = cur.read_count(1, "forms")?;
-    let mut interner = SymbolInterner::default();
     let mut forms = vec_with_capacity(forms_len, "compiled module forms")?;
     for _ in 0..forms_len {
         let tag = cur.read_u8()?;
@@ -66,7 +65,7 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             0 => {
                 let name = cur.read_str()?;
                 let module_slot = cur.read_u32()?;
-                let expr = decode_cexpr(&mut cur, &mut interner)?;
+                let expr = decode_cexpr(&mut cur)?;
                 forms.push(CompiledForm::Def {
                     name,
                     module_slot,
@@ -74,7 +73,7 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
                 });
             }
             1 => {
-                let expr = decode_cexpr(&mut cur, &mut interner)?;
+                let expr = decode_cexpr(&mut cur)?;
                 forms.push(CompiledForm::Expr(expr));
             }
             _ => {
@@ -147,7 +146,6 @@ fn encode_cexpr(out: &mut Vec<u8>, expr: &Arc<CExpr>) -> Result<(), KernelError>
         }
         CExpr::Var {
             name,
-            sym: _,
             resolution,
             statement_site,
         } => {
@@ -378,10 +376,7 @@ impl<'a> DecodeCursor<'a> {
     }
 }
 
-fn decode_cexpr(
-    cur: &mut DecodeCursor<'_>,
-    interner: &mut SymbolInterner,
-) -> Result<Arc<CExpr>, KernelError> {
+fn decode_cexpr(cur: &mut DecodeCursor<'_>) -> Result<Arc<CExpr>, KernelError> {
     let tag = cur.read_u8()?;
     let out = match tag {
         0 => CExpr::Atom(cur.read_term()?),
@@ -389,10 +384,8 @@ fn decode_cexpr(
             let name = cur.read_str()?;
             let statement_site = cur.read_u32()?;
             let resolution = decode_var_resolution(cur)?;
-            let sym = interner.intern(&name)?;
             CExpr::Var {
                 name,
-                sym,
                 resolution,
                 statement_site,
             }
@@ -410,7 +403,7 @@ fn decode_cexpr(
             let mut entries = vec_with_capacity(n, "compiled map entries")?;
             for _ in 0..n {
                 let key = TermOrdKey(cur.read_term()?);
-                let val = decode_cexpr(cur, interner)?;
+                let val = decode_cexpr(cur)?;
                 entries.push((key, val));
             }
             CExpr::Map(entries)
@@ -418,15 +411,15 @@ fn decode_cexpr(
         4 => CExpr::Quote(cur.read_term()?),
         5 => CExpr::If {
             decision_site: cur.read_u32()?,
-            cond: decode_cexpr(cur, interner)?,
-            then_expr: decode_cexpr(cur, interner)?,
-            else_expr: decode_cexpr(cur, interner)?,
+            cond: decode_cexpr(cur)?,
+            then_expr: decode_cexpr(cur)?,
+            else_expr: decode_cexpr(cur)?,
         },
         6 => {
             let n = cur.read_count(1, "begin expressions")?;
             let mut items = vec_with_capacity(n, "compiled begin expressions")?;
             for _ in 0..n {
-                items.push(decode_cexpr(cur, interner)?);
+                items.push(decode_cexpr(cur)?);
             }
             CExpr::Begin(items)
         }
@@ -435,16 +428,16 @@ fn decode_cexpr(
             let mut bindings = vec_with_capacity(n, "compiled let bindings")?;
             for _ in 0..n {
                 let name = cur.read_str()?;
-                let rhs = decode_cexpr(cur, interner)?;
+                let rhs = decode_cexpr(cur)?;
                 bindings.push((name, rhs));
             }
-            let body = decode_cexpr(cur, interner)?;
+            let body = decode_cexpr(cur)?;
             CExpr::Let(bindings, body)
         }
         8 => {
             let param = cur.read_str()?;
             let body_term = cur.read_term()?;
-            let body = decode_cexpr(cur, interner)?;
+            let body = decode_cexpr(cur)?;
             CExpr::FnUnary {
                 param,
                 body_term,
@@ -458,7 +451,7 @@ fn decode_cexpr(
             let n = cur.read_count(1, "primitive arguments")?;
             let mut args = vec_with_capacity(n, "compiled primitive arguments")?;
             for _ in 0..n {
-                args.push(decode_cexpr(cur, interner)?);
+                args.push(decode_cexpr(cur)?);
             }
             if let Some(op) = PrimOp::from_str(&op) {
                 CExpr::Prim { op, args }
@@ -467,16 +460,16 @@ fn decode_cexpr(
             }
         }
         10 => CExpr::SealNew,
-        11 => CExpr::Seal(decode_cexpr(cur, interner)?, decode_cexpr(cur, interner)?),
-        12 => CExpr::Unseal(decode_cexpr(cur, interner)?, decode_cexpr(cur, interner)?),
-        13 => CExpr::App(decode_cexpr(cur, interner)?, decode_cexpr(cur, interner)?),
+        11 => CExpr::Seal(decode_cexpr(cur)?, decode_cexpr(cur)?),
+        12 => CExpr::Unseal(decode_cexpr(cur)?, decode_cexpr(cur)?),
+        13 => CExpr::App(decode_cexpr(cur)?, decode_cexpr(cur)?),
         14 => {
             let extra_app_ticks = cur.read_u32()?;
-            let callee = decode_cexpr(cur, interner)?;
+            let callee = decode_cexpr(cur)?;
             let n = cur.read_count(1, "call arguments")?;
             let mut args = vec_with_capacity(n, "compiled call arguments")?;
             for _ in 0..n {
-                args.push(decode_cexpr(cur, interner)?);
+                args.push(decode_cexpr(cur)?);
             }
             CExpr::AppN {
                 callee,

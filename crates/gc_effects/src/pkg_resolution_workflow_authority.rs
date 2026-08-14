@@ -108,10 +108,6 @@ impl PkgResolutionIdentityAuthority {
         )
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "closed workflow protocol fields are explicit"
-    )]
     pub(crate) fn finalize_workflow(
         &mut self,
         workflow: PkgResolutionWorkflow,

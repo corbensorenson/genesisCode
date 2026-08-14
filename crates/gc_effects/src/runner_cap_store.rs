@@ -3,6 +3,10 @@ use super::*;
 use crate::runner_store_ops::payload_store_artifact;
 use crate::store_authority::StorePutDecision;
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "store writes keep payload, policy, authority, budget, and sealed-error boundaries explicit"
+)]
 pub(super) fn cap_store_put(
     op: &str,
     payload: &Term,

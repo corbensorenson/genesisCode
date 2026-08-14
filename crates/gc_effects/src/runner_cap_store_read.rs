@@ -320,6 +320,7 @@ fn finish_get(
     )))
 }
 
+#[cfg(not(any(test, feature = "parity-oracle")))]
 fn missing_authority(op: &str) -> EffectsError {
     EffectsError::Log(format!(
         "{op} requires the artifact-loaded GenesisCode store authority"

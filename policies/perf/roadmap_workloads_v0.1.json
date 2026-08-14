@@ -214,16 +214,16 @@
       "id": "PB-7",
       "inputs": [
         {
-          "bytes": 236014,
-          "path": "prelude/prelude.gc",
-          "role": "parse-corpus",
-          "sha256": "cd18a4cf8abe587f48e517cb56c1d33c52c0987781905c2c05ccc5da5655a775"
-        },
-        {
           "bytes": 17882,
-          "path": "selfhost/parse.gc",
+          "path": "benchmarks/roadmap/v0.1/pb7_parse.gc",
           "role": "parse-corpus",
           "sha256": "c703e7343f2d871a55ef8feee85e3c1ad4b76725ad4a6a1a063c49d07dbd7f07"
+        },
+        {
+          "bytes": 236014,
+          "path": "benchmarks/roadmap/v0.1/pb7_prelude.gc",
+          "role": "parse-corpus",
+          "sha256": "cd18a4cf8abe587f48e517cb56c1d33c52c0987781905c2c05ccc5da5655a775"
         }
       ],
       "measurement": {
@@ -347,20 +347,20 @@
       "id": "PB-10",
       "inputs": [
         {
-          "bytes": 312,
+          "bytes": 352,
           "path": "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
           "role": "bootstrap-protocol",
-          "sha256": "2a2ce38296344af0ea9b76bae16a3aef02347f5561efc6a4929cbedda3322c5d"
+          "sha256": "207bf349086d6db5dd11d6fdaa46e196ea8c01f4d5c0989668e70c3199d2316b"
         },
         {
           "bytes": 602110,
-          "path": "selfhost/toolchain.gc",
+          "path": "benchmarks/roadmap/v0.1/pb10_toolchain.gc",
           "role": "artifact-seed",
           "sha256": "9e5774160bae044f72847fcb5f120ce0ca50fe36fc18d9a24b8d84a183801c54"
         },
         {
           "bytes": 2637,
-          "path": "selfhost/toolchain_manifest.gc",
+          "path": "benchmarks/roadmap/v0.1/pb10_toolchain_manifest.gc",
           "role": "source-manifest",
           "sha256": "b34f9f40f15305019698f7c88efbe7c66c7fdc01a94380740d286da7197a29d7"
         }

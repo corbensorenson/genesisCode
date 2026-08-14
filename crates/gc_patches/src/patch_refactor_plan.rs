@@ -571,6 +571,10 @@ fn decode_report(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "semantic refactor planning keeps intent, symbol, workspace, frontend, and resource bounds explicit"
+)]
 pub fn plan_semantic_refactor_with_frontend(
     kind: &str,
     from_symbol: &str,

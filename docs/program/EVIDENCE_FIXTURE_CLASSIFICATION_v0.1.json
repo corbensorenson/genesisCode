@@ -44,6 +44,13 @@
       "role": "fixture-public-key",
       "sha256": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
       "testOnly": true
+    },
+    {
+      "claimedEvidenceClass": "none",
+      "path": "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json",
+      "role": "historical-workload-policy",
+      "sha256": "3eeb4593d1a0c89e90ad95c381e15c231fde5bec11a6fb61b0a0c550f398be61",
+      "testOnly": true
     }
   ],
   "kind": "genesis/evidence-fixture-classification-v0.1",

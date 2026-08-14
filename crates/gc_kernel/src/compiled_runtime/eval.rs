@@ -35,7 +35,6 @@ fn eval_cexpr_runtime_inner(
             }
             CExpr::Var {
                 name,
-                sym: _,
                 resolution,
                 statement_site,
             } => {

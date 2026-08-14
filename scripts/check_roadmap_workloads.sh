@@ -15,14 +15,14 @@ INPUTS=(
   benchmarks/roadmap/v0.1/pb4_vector_1000000.gc
   benchmarks/roadmap/v0.1/pb5_map_100000.gc
   benchmarks/roadmap/v0.1/pb6_trivial_check.gc
+  benchmarks/roadmap/v0.1/pb7_parse.gc
+  benchmarks/roadmap/v0.1/pb7_prelude.gc
   benchmarks/roadmap/v0.1/pb8_warm_request.jsonl
   benchmarks/roadmap/v0.1/pb9_semantic_parity_corpus.json
   benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json
+  benchmarks/roadmap/v0.1/pb10_toolchain.gc
+  benchmarks/roadmap/v0.1/pb10_toolchain_manifest.gc
   policies/reference_host_profiles_v0.1.json
-  prelude/prelude.gc
-  selfhost/parse.gc
-  selfhost/toolchain.gc
-  selfhost/toolchain_manifest.gc
   tests/spec/coreform/app_sugar.in.gc
   tests/spec/coreform/map_order.in.gc
   tests/spec/pkg_fail_budgets/budget.gc
@@ -56,4 +56,4 @@ after="$(snapshot)"
   exit 1
 }
 
-echo "roadmap-workloads-contract: ok (workloads=10 active=4 blocked=5 decision_gated=1 controls=12 check_mode=read_only)"
+echo "roadmap-workloads-contract: ok (workloads=10 active=4 blocked=5 decision_gated=1 controls=14 check_mode=read_only)"

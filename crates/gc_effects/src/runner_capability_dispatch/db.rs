@@ -82,94 +82,6 @@ fn db_positive_usize_from_policy(
     usize::try_from(raw).map_err(|_| format!("{key} exceeds platform usize range"))
 }
 
-#[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
-
-    use toml::Value as TomlValue;
-
-    use super::*;
-    use crate::policy::AuthorizedDatabasePolicy;
-
-    fn policy_with(key: &str, raw: TomlValue, authorized: AuthorizedDatabasePolicy) -> OpPolicy {
-        OpPolicy {
-            base_dir: None,
-            create_dirs: false,
-            timeout_ms: None,
-            log_inline_max_bytes: None,
-            extra: BTreeMap::from([(key.to_string(), raw)]),
-            authorized_cap: None,
-            authorized_max_bytes: None,
-            authorized_process_programs: None,
-            authorized_database: Some(authorized),
-            authorized_network: None,
-            authorized_crypto: None,
-            authorized_gpu: None,
-            authorized_gfx_profile: None,
-            authorized_xr_policy: None,
-            authorized_bridge_identity: None,
-            authorized_plugin: None,
-            authorized_ffi: None,
-            authorized_sync_credentials: None,
-        }
-    }
-
-    fn database_policy() -> AuthorizedDatabasePolicy {
-        AuthorizedDatabasePolicy {
-            target_allow: AuthorizedStringList::Absent,
-            query_classes: AuthorizedStringList::Absent,
-            max_result_bytes: AuthorizedMaxBytes::Absent,
-            max_row_count: AuthorizedMaxBytes::Absent,
-            max_value_bytes: AuthorizedMaxBytes::Absent,
-        }
-    }
-
-    #[test]
-    fn database_dispatch_consumes_authorized_policy_before_raw_policy() {
-        let mut target = database_policy();
-        target.target_allow = AuthorizedStringList::Valid(vec!["sqlite://safe".to_string()]);
-        let policy = policy_with(
-            "db_target_allow",
-            TomlValue::String("invalid raw fallback".to_string()),
-            target,
-        );
-        assert_eq!(
-            db_target_allowlist_from_policy(Some(&policy), "io/db::connect").unwrap(),
-            vec!["sqlite://safe".to_string()]
-        );
-
-        let mut bound = database_policy();
-        bound.max_result_bytes = AuthorizedMaxBytes::Valid(4096);
-        let policy = policy_with(
-            "max_result_bytes",
-            TomlValue::String("invalid raw fallback".to_string()),
-            bound,
-        );
-        assert_eq!(
-            db_positive_usize_from_policy(Some(&policy), "io/db::query", "max_result_bytes")
-                .unwrap(),
-            4096
-        );
-    }
-
-    #[test]
-    fn database_dispatch_preserves_authorized_policy_errors() {
-        let mut database = database_policy();
-        database.query_classes = AuthorizedStringList::InvalidEntry;
-        database.max_row_count = AuthorizedMaxBytes::NonPositive;
-        let policy = policy_with("ignored", TomlValue::Boolean(true), database);
-        assert_eq!(
-            db_query_class_allowlist_from_policy(Some(&policy), "io/db::query").unwrap_err(),
-            "allow_query_classes entries must be strings"
-        );
-        assert_eq!(
-            db_positive_usize_from_policy(Some(&policy), "io/db::query", "max_row_count")
-                .unwrap_err(),
-            "max_row_count must be greater than zero"
-        );
-    }
-}
-
 fn validate_db_target_policy(
     pol: Option<&OpPolicy>,
     target: &str,
@@ -448,5 +360,93 @@ pub(super) fn capability_io_db_kv_delete(
     match call_host_bridge(bridge_runtime, "db", op, payload, pol) {
         Ok(resp) => Ok(Value::data(resp)),
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use toml::Value as TomlValue;
+
+    use super::*;
+    use crate::policy::AuthorizedDatabasePolicy;
+
+    fn policy_with(key: &str, raw: TomlValue, authorized: AuthorizedDatabasePolicy) -> OpPolicy {
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra: BTreeMap::from([(key.to_string(), raw)]),
+            authorized_cap: None,
+            authorized_max_bytes: None,
+            authorized_process_programs: None,
+            authorized_database: Some(authorized),
+            authorized_network: None,
+            authorized_crypto: None,
+            authorized_gpu: None,
+            authorized_gfx_profile: None,
+            authorized_xr_policy: None,
+            authorized_bridge_identity: None,
+            authorized_plugin: None,
+            authorized_ffi: None,
+            authorized_sync_credentials: None,
+        }
+    }
+
+    fn database_policy() -> AuthorizedDatabasePolicy {
+        AuthorizedDatabasePolicy {
+            target_allow: AuthorizedStringList::Absent,
+            query_classes: AuthorizedStringList::Absent,
+            max_result_bytes: AuthorizedMaxBytes::Absent,
+            max_row_count: AuthorizedMaxBytes::Absent,
+            max_value_bytes: AuthorizedMaxBytes::Absent,
+        }
+    }
+
+    #[test]
+    fn database_dispatch_consumes_authorized_policy_before_raw_policy() {
+        let mut target = database_policy();
+        target.target_allow = AuthorizedStringList::Valid(vec!["sqlite://safe".to_string()]);
+        let policy = policy_with(
+            "db_target_allow",
+            TomlValue::String("invalid raw fallback".to_string()),
+            target,
+        );
+        assert_eq!(
+            db_target_allowlist_from_policy(Some(&policy), "io/db::connect").unwrap(),
+            vec!["sqlite://safe".to_string()]
+        );
+
+        let mut bound = database_policy();
+        bound.max_result_bytes = AuthorizedMaxBytes::Valid(4096);
+        let policy = policy_with(
+            "max_result_bytes",
+            TomlValue::String("invalid raw fallback".to_string()),
+            bound,
+        );
+        assert_eq!(
+            db_positive_usize_from_policy(Some(&policy), "io/db::query", "max_result_bytes")
+                .unwrap(),
+            4096
+        );
+    }
+
+    #[test]
+    fn database_dispatch_preserves_authorized_policy_errors() {
+        let mut database = database_policy();
+        database.query_classes = AuthorizedStringList::InvalidEntry;
+        database.max_row_count = AuthorizedMaxBytes::NonPositive;
+        let policy = policy_with("ignored", TomlValue::Boolean(true), database);
+        assert_eq!(
+            db_query_class_allowlist_from_policy(Some(&policy), "io/db::query").unwrap_err(),
+            "allow_query_classes entries must be strings"
+        );
+        assert_eq!(
+            db_positive_usize_from_policy(Some(&policy), "io/db::query", "max_row_count")
+                .unwrap_err(),
+            "max_row_count must be greater than zero"
+        );
     }
 }

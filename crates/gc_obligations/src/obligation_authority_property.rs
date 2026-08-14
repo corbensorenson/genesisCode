@@ -372,10 +372,10 @@ fn expected_property_plan_report(
     )
 }
 
-fn validate_property_outer<'a>(
-    term: &'a Term,
+fn validate_property_outer(
+    term: &Term,
     request_hash: [u8; 32],
-) -> Result<&'a BTreeMap<TermOrdKey, Term>, ObligationError> {
+) -> Result<&BTreeMap<TermOrdKey, Term>, ObligationError> {
     let map = exact_map(
         term,
         "property authority result",

@@ -234,6 +234,10 @@ pub(super) fn selfhost_report_term(
     Ok((ok, report))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "stored reports bind patch, package, acceptance, artifacts, semantic diff, frontend, and resource facts explicitly"
+)]
 pub(super) fn stored_selfhost_report_term(
     patch: &Patch,
     package_artifact: &str,

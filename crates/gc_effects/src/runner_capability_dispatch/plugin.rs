@@ -64,91 +64,6 @@ fn plugin_schema_allowlist_from_policy(
     .map(Some)
 }
 
-#[cfg(test)]
-mod authority_tests {
-    use super::*;
-    use toml::Value as TomlValue;
-
-    fn policy(plugin: AuthorizedPluginPolicy) -> OpPolicy {
-        OpPolicy {
-            base_dir: None,
-            create_dirs: false,
-            timeout_ms: None,
-            log_inline_max_bytes: None,
-            extra: BTreeMap::from([
-                (
-                    "allow_plugins".to_string(),
-                    TomlValue::String("raw fallback must not be used".to_string()),
-                ),
-                (
-                    "allow_commands".to_string(),
-                    TomlValue::String("raw fallback must not be used".to_string()),
-                ),
-                (
-                    "allow_schema_ids".to_string(),
-                    TomlValue::String("raw fallback must not be used".to_string()),
-                ),
-            ]),
-            authorized_cap: None,
-            authorized_max_bytes: None,
-            authorized_process_programs: None,
-            authorized_database: None,
-            authorized_network: None,
-            authorized_crypto: None,
-            authorized_gpu: None,
-            authorized_gfx_profile: None,
-            authorized_xr_policy: None,
-            authorized_bridge_identity: None,
-            authorized_plugin: Some(plugin),
-            authorized_ffi: None,
-            authorized_sync_credentials: None,
-        }
-    }
-
-    #[test]
-    fn plugin_dispatch_consumes_authorized_policy_before_raw_policy() {
-        let policy = policy(AuthorizedPluginPolicy {
-            plugins: AuthorizedStringList::Valid(vec!["demo".to_string()]),
-            commands: AuthorizedStringList::Valid(vec!["run".to_string()]),
-            schema_ids: AuthorizedStringList::Valid(vec!["schema.v1".to_string()]),
-        });
-        assert_eq!(
-            plugin_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap(),
-            vec!["demo"]
-        );
-        assert_eq!(
-            plugin_command_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap(),
-            vec!["run"]
-        );
-        assert_eq!(
-            plugin_schema_allowlist_from_policy(Some(&policy)).unwrap(),
-            Some(vec!["schema.v1".to_string()])
-        );
-    }
-
-    #[test]
-    fn plugin_dispatch_preserves_authorized_policy_errors_and_optional_schema() {
-        let policy = policy(AuthorizedPluginPolicy {
-            plugins: AuthorizedStringList::InvalidEntry,
-            commands: AuthorizedStringList::Empty,
-            schema_ids: AuthorizedStringList::Absent,
-        });
-        assert_eq!(
-            plugin_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap_err(),
-            "allow_plugins entries must be strings"
-        );
-        assert_eq!(
-            plugin_command_allowlist_from_policy(Some(&policy), "host/plugin::command")
-                .unwrap_err(),
-            "allow_commands must contain at least one entry"
-        );
-        assert_eq!(
-            plugin_schema_allowlist_from_policy(Some(&policy)).unwrap(),
-            None
-        );
-    }
-}
-
 pub(super) fn capability_host_plugin_command(
     op: &str,
     bridge_runtime: &mut HostBridgeRuntime,
@@ -297,5 +212,90 @@ pub(super) fn capability_host_plugin_command(
             Ok(Value::data(resp))
         }
         Err(err) => Ok(mk_bridge_error(error_tok, &err, Some(op))),
+    }
+}
+
+#[cfg(test)]
+mod authority_tests {
+    use super::*;
+    use toml::Value as TomlValue;
+
+    fn policy(plugin: AuthorizedPluginPolicy) -> OpPolicy {
+        OpPolicy {
+            base_dir: None,
+            create_dirs: false,
+            timeout_ms: None,
+            log_inline_max_bytes: None,
+            extra: BTreeMap::from([
+                (
+                    "allow_plugins".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+                (
+                    "allow_commands".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+                (
+                    "allow_schema_ids".to_string(),
+                    TomlValue::String("raw fallback must not be used".to_string()),
+                ),
+            ]),
+            authorized_cap: None,
+            authorized_max_bytes: None,
+            authorized_process_programs: None,
+            authorized_database: None,
+            authorized_network: None,
+            authorized_crypto: None,
+            authorized_gpu: None,
+            authorized_gfx_profile: None,
+            authorized_xr_policy: None,
+            authorized_bridge_identity: None,
+            authorized_plugin: Some(plugin),
+            authorized_ffi: None,
+            authorized_sync_credentials: None,
+        }
+    }
+
+    #[test]
+    fn plugin_dispatch_consumes_authorized_policy_before_raw_policy() {
+        let policy = policy(AuthorizedPluginPolicy {
+            plugins: AuthorizedStringList::Valid(vec!["demo".to_string()]),
+            commands: AuthorizedStringList::Valid(vec!["run".to_string()]),
+            schema_ids: AuthorizedStringList::Valid(vec!["schema.v1".to_string()]),
+        });
+        assert_eq!(
+            plugin_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap(),
+            vec!["demo"]
+        );
+        assert_eq!(
+            plugin_command_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap(),
+            vec!["run"]
+        );
+        assert_eq!(
+            plugin_schema_allowlist_from_policy(Some(&policy)).unwrap(),
+            Some(vec!["schema.v1".to_string()])
+        );
+    }
+
+    #[test]
+    fn plugin_dispatch_preserves_authorized_policy_errors_and_optional_schema() {
+        let policy = policy(AuthorizedPluginPolicy {
+            plugins: AuthorizedStringList::InvalidEntry,
+            commands: AuthorizedStringList::Empty,
+            schema_ids: AuthorizedStringList::Absent,
+        });
+        assert_eq!(
+            plugin_allowlist_from_policy(Some(&policy), "host/plugin::command").unwrap_err(),
+            "allow_plugins entries must be strings"
+        );
+        assert_eq!(
+            plugin_command_allowlist_from_policy(Some(&policy), "host/plugin::command")
+                .unwrap_err(),
+            "allow_commands must contain at least one entry"
+        );
+        assert_eq!(
+            plugin_schema_allowlist_from_policy(Some(&policy)).unwrap(),
+            None
+        );
     }
 }

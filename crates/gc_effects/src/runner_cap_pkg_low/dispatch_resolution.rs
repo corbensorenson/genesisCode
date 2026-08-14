@@ -24,7 +24,7 @@ pub(super) fn dispatch_resolution(
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     mut lock_authority: Option<&mut PkgLockReadAuthority>,
-    mut lock_write_authority: Option<&mut PkgLockWriteAuthority>,
+    lock_write_authority: Option<&mut PkgLockWriteAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
@@ -209,16 +209,11 @@ pub(super) fn dispatch_resolution(
                 .cloned()
                 .unwrap_or_default();
 
-            let (bytes, lock_h) = match render_resolved_lock(
-                lock_write_authority.as_deref_mut(),
-                &lock_s,
-                &l,
-                error_tok,
-                op,
-            ) {
-                Ok(result) => result,
-                Err(error) => return Ok(error),
-            };
+            let (bytes, lock_h) =
+                match render_resolved_lock(lock_write_authority, &lock_s, &l, error_tok, op) {
+                    Ok(result) => result,
+                    Err(error) => return Ok(error),
+                };
             let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
@@ -373,16 +368,11 @@ pub(super) fn dispatch_resolution(
                 .cloned()
                 .unwrap_or_default();
 
-            let (bytes, lock_h) = match render_resolved_lock(
-                lock_write_authority.as_deref_mut(),
-                &lock_s,
-                &l,
-                error_tok,
-                op,
-            ) {
-                Ok(result) => result,
-                Err(error) => return Ok(error),
-            };
+            let (bytes, lock_h) =
+                match render_resolved_lock(lock_write_authority, &lock_s, &l, error_tok, op) {
+                    Ok(result) => result,
+                    Err(error) => return Ok(error),
+                };
             let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
@@ -468,7 +458,7 @@ pub(super) fn dispatch_resolution(
             policy,
             store,
             refs,
-            lock_authority.as_deref_mut(),
+            lock_authority,
             identity_authority,
             budget,
             timeout_ms,
@@ -480,7 +470,7 @@ pub(super) fn dispatch_resolution(
             payload,
             pol,
             store,
-            lock_authority.as_deref_mut(),
+            lock_authority,
             identity_authority,
             error_tok,
             op,
@@ -521,7 +511,7 @@ fn render_resolved_lock(
     {
         let bytes = lock.to_toml_canonical().into_bytes();
         let lock_hash = blake3::hash(&bytes).to_hex().to_string();
-        return Ok((bytes, lock_hash));
+        Ok((bytes, lock_hash))
     }
 
     #[cfg(not(any(test, feature = "parity-oracle")))]
@@ -558,9 +548,8 @@ fn load_lock_model(
 
     #[cfg(any(test, feature = "parity-oracle"))]
     {
-        return gc_pkg::GenesisLock::load(path).map_err(|error| {
-            mk_error(error_tok, "core/pkg/bad-lock", error.to_string(), Some(op))
-        });
+        gc_pkg::GenesisLock::load(path)
+            .map_err(|error| mk_error(error_tok, "core/pkg/bad-lock", error.to_string(), Some(op)))
     }
 
     #[cfg(not(any(test, feature = "parity-oracle")))]

@@ -32,33 +32,6 @@ pub(crate) use compiled_runtime::{
 
 const COMPILED_MODULE_BLOB_MAGIC: &[u8] = b"GCKM5\0";
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub(crate) struct Sym(u32);
-
-#[derive(Clone, Debug, Default)]
-pub(crate) struct SymbolInterner {
-    ids: BTreeMap<String, Sym>,
-    names: Vec<String>,
-}
-
-impl SymbolInterner {
-    pub(crate) fn intern(&mut self, name: &str) -> Result<Sym, KernelError> {
-        if let Some(sym) = self.ids.get(name) {
-            return Ok(*sym);
-        }
-        let id = u32::try_from(self.names.len()).map_err(|_| {
-            KernelError::new(
-                KernelErrorKind::Internal,
-                "compiled symbol table exceeds u32 range",
-            )
-        })?;
-        let sym = Sym(id);
-        self.names.push(name.to_string());
-        self.ids.insert(name.to_string(), sym);
-        Ok(sym)
-    }
-}
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum VarResolution {
     Local { depth: u16, slot: u16 },
@@ -291,7 +264,6 @@ pub(crate) enum CExpr {
     Atom(Term),
     Var {
         name: String,
-        sym: Sym,
         resolution: VarResolution,
         statement_site: u32,
     },

@@ -226,10 +226,10 @@ fn closure_observation_term(observation: &PkgVerifyClosureObservation) -> Term {
     ])
 }
 
-fn decode_envelope<'a>(
-    term: &'a Term,
+fn decode_envelope(
+    term: &Term,
     request_hash: [u8; 32],
-) -> Result<Result<&'a Term, (String, String)>, EffectsError> {
+) -> Result<Result<&Term, (String, String)>, EffectsError> {
     let fields = exact_map(
         term,
         &[

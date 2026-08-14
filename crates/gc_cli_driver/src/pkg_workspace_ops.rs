@@ -8,6 +8,8 @@ use gc_pkg::{
     WorkspaceTask, normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
 };
 
+#[path = "pkg_workspace_new.rs"]
+mod pkg_workspace_new;
 #[path = "pkg_workspace_ops_backend.rs"]
 mod pkg_workspace_ops_backend;
 #[path = "pkg_workspace_ops_build.rs"]
@@ -27,6 +29,28 @@ pub(crate) struct LocalPkgResult {
 }
 
 pub(crate) fn handle_new(
+    cli: &crate::Cli,
+    workspace: &str,
+    lock: &Path,
+    workspace_file: &Path,
+    policy: &str,
+    registry_default: Option<&str>,
+    members: &[String],
+) -> Result<LocalPkgResult, String> {
+    pkg_workspace_new::handle_new(
+        cli,
+        workspace,
+        lock,
+        workspace_file,
+        policy,
+        registry_default,
+        members,
+    )
+}
+
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Retained only as an explicit compatibility oracle.
+fn handle_new_parity(
     workspace: &str,
     lock: &Path,
     workspace_file: &Path,
@@ -294,6 +318,7 @@ pub(crate) fn empty_log(program_hash: [u8; 32]) -> EffectLog {
     }
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_member_spec(spec: &str) -> Result<WorkspaceMember, String> {
     if let Some((name, path)) = spec.split_once('=') {
         if name.trim().is_empty() || path.trim().is_empty() {
@@ -421,4 +446,46 @@ fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 
 fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     pkg_workspace_ops_env::write_if_same_or_new(path, bytes)
+}
+
+#[cfg(test)]
+mod workspace_new_parity_tests {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use super::handle_new_parity;
+
+    static SAMPLE_ID: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn workspace_new_retained_oracle_has_stable_identities() {
+        let id = SAMPLE_ID.fetch_add(1, Ordering::Relaxed);
+        let root = std::env::temp_dir().join(format!(
+            "genesis-workspace-new-parity-{}-{id}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let lock = root.join("genesis.lock");
+        let workspace = root.join("genesis.workspace.toml");
+        handle_new_parity(
+            "ws",
+            &lock,
+            &workspace,
+            "policy:default-v0.1",
+            Some("gen://registry"),
+            &[],
+        )
+        .unwrap();
+        let lock_body = std::fs::read(&lock).unwrap();
+        let workspace_body = std::fs::read(&workspace).unwrap();
+        assert_eq!(
+            blake3::hash(&lock_body).to_hex().as_str(),
+            "649135d46f7c7e78cc52326dbe915f42a4c521232ff2fdb24c219992654ab5c2"
+        );
+        assert_eq!(
+            blake3::hash(&workspace_body).to_hex().as_str(),
+            "1913610e4cae447230fcaa5ca6a32449f0a25d76d9beec7796d2b1f18a4d85ea"
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
 }

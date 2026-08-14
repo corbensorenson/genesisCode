@@ -1,9 +1,9 @@
 version = 1
 
 # Active docs exclude files marked with `Deprecated Top-Level Doc:`. R4.2.e's
-# independently governed install, verify, and scaffold authorities add three
-# normative contracts.
-max_active_docs_md = 138
+# independently governed install, verify, scaffold, and workspace-new
+# authorities add four normative contracts.
+max_active_docs_md = 139
 
 # Active top-level leaf docs exclude docs/INDEX.md and docs/DEPRECATION_MAP_v0.1.md.
 max_active_top_level_docs_md = 6

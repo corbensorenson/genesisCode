@@ -327,7 +327,14 @@ bounded requests and requires both bounded maximum growth and a nonpositive
 Theil-Sen slope. PB-9 and PB-10 use all-match deterministic treatment; no
 statistical aggregation can hide a mismatch.
 
-`benchmarks/roadmap/v0.1/` contains the exact source and protocol fixtures.
+`benchmarks/roadmap/v0.1/` contains the exact source and protocol fixtures,
+including immutable PB-7 snapshots of the Prelude and self-host parser plus the
+PB-10 bootstrap seed, source manifest, and protocol. PB-7 and PB-10 never read
+their evolving production paths, so self-host migration cannot silently change
+the measured corpus, invalidate CI, or destroy cross-time comparison. The
+original signed E0 statement retains its exact workload policy beside the
+bundle; validation selects current or historical policy only by the statement's
+bound identity and never rewrites retained evidence.
 `scripts/lib/roadmap_workloads.py` independently recomputes every input and
 descriptor identity, validates transitive PB-9/PB-10 inputs, rejects path escape
 and duplicate keys, and checks availability and cross-field invariants.

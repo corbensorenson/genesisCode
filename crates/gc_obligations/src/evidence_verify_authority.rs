@@ -459,10 +459,10 @@ fn decode_decision(data: Term, checked: usize) -> Result<EvidenceDecision, Evide
             ],
         )
     })?;
-    if let Some(value) = fields.get(&key(":checked")) {
-        if integer_usize(value) != Some(checked) {
-            return Err(authority_error("authority checked-count mismatch"));
-        }
+    if let Some(value) = fields.get(&key(":checked"))
+        && integer_usize(value) != Some(checked)
+    {
+        return Err(authority_error("authority checked-count mismatch"));
     }
     let errors = required_strings(fields, ":errors", "evidence decision")?;
     let verified = required_bool(fields, ":verified", "evidence decision")?;

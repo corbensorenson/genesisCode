@@ -173,10 +173,6 @@ impl PkgLockReadAuthority {
         }
     }
 
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "the closed finalize protocol keeps every bound phase input explicit"
-    )]
     pub(crate) fn finalize_publish(
         &mut self,
         facts: &Term,

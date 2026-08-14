@@ -398,6 +398,10 @@ fn decode_report(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "semantic merge keeps intent, provenance, three workspaces, frontend, and resource bounds explicit"
+)]
 pub fn merge_semantic_workspaces_with_frontend(
     intent: &str,
     provenance: &Term,

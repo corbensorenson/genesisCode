@@ -26,6 +26,7 @@ snapshot() {
   python3 - "$BUNDLE" "$PUBLIC_KEY" \
     docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json \
     docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json \
+    docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json \
     policies/perf/roadmap_workloads_v0.1.json \
     policies/reference_host_profiles_v0.1.json \
     scripts/lib/roadmap_baseline.py \

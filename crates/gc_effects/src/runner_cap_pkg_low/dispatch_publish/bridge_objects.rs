@@ -13,7 +13,7 @@ pub(super) fn dispatch_bridge(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
-    mut authority: Option<&mut PkgLockReadAuthority>,
+    authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
     bridge_runtime: &mut HostBridgeRuntime,
     error_tok: SealId,
@@ -69,7 +69,7 @@ pub(super) fn dispatch_bridge(
             Some(op),
         ));
     }
-    let authority = authority.as_deref_mut().ok_or_else(|| {
+    let authority = authority.ok_or_else(|| {
         EffectsError::Log(
             "core/pkg-low::bridge requires the artifact-loaded GenesisCode bridge authority"
                 .to_string(),

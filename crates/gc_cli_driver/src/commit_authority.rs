@@ -89,7 +89,7 @@ fn decode_result(value: Value, request_hash: &str, command: &str) -> Result<Term
     }
     require_string(&fields, ":kind", RESULT_KIND)?;
     require_int(&fields, ":v", 1)?;
-    require_string(&fields, ":request-h", &request_hash)?;
+    require_string(&fields, ":request-h", request_hash)?;
     let ok = required_bool(&fields, ":ok")?;
     if !ok {
         require_nil(&fields, ":artifact")?;

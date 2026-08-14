@@ -241,8 +241,20 @@ def validate_authorities(root, data):
     manifest = read(root, "crates/gc_pkg/src/manifest.rs")
     require(manifest, "PACKAGE_MANIFEST_SCHEMA_VERSION: u64 = 1", "crates/gc_pkg/src/manifest.rs")
     require(manifest, "unsupported package manifest schema", "crates/gc_pkg/src/manifest.rs")
-    scaffold = read(root, "crates/gc_cli_driver/src/pkg_scaffold.rs")
-    require(scaffold, 'r#"schema = 1', "crates/gc_cli_driver/src/pkg_scaffold.rs")
+    scaffold_render = read(root, "selfhost/pkg_scaffold_render_v1.gc")
+    require(scaffold_render, '"schema = 1\\nname = \\""', "selfhost/pkg_scaffold_render_v1.gc")
+    scaffold_authority = read(root, "selfhost/pkg_scaffold_authority_v1.gc")
+    require(
+        scaffold_authority,
+        "(def core/pkg::scaffold-authority",
+        "selfhost/pkg_scaffold_authority_v1.gc",
+    )
+    scaffold_adapter = read(root, "crates/gc_cli_driver/src/pkg_scaffold.rs")
+    require(
+        scaffold_adapter,
+        'const AUTHORITY_BINDING: &str = "core/pkg::scaffold-authority";',
+        "crates/gc_cli_driver/src/pkg_scaffold.rs",
+    )
     package_files = sorted((root / "examples").rglob("package.toml"))
     package_files += sorted((root / "tests").rglob("package.toml"))
     if not package_files:

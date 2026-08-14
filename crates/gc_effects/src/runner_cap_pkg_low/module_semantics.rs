@@ -209,6 +209,10 @@ pub(super) fn handle_load_package(
     Ok(Value::data(Term::Map(out)))
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "snapshot dispatch keeps payload, policy, store, authority, budget, and sealed-error boundaries explicit"
+)]
 pub(super) fn handle_snapshot(
     payload: &Term,
     pol: Option<&OpPolicy>,

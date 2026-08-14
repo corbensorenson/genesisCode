@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `1b8799921ed8a669d318caf6d5cbe83242e51553ca1c1da278f6ed552f5a7e82`
-- Freshness artifact hash: `1b8799921ed8a669d318caf6d5cbe83242e51553ca1c1da278f6ed552f5a7e82`
-- Freshness source hash: `0f4ea51736c5128b1f99030a8e2d72cdf10f7303eacd60455caa0a8aac3aae64`
-- Source aggregate hash (module path + module sha256): `0bc260e96cf4a64ebfdc57f7d9eb8bd0b6202dfd7e33dac75a1eb71e8186e92f`
+- Artifact sha256: `be018ea08a8d431fe03c2510c7a2781b8d174f6a1b78238c62010debdbbcfd9b`
+- Freshness artifact hash: `be018ea08a8d431fe03c2510c7a2781b8d174f6a1b78238c62010debdbbcfd9b`
+- Freshness source hash: `eac847e2f32dd070c45e8373eb0bd7c59d2d867cd19f48df99cf81b5b1d8c8d5`
+- Source aggregate hash (module path + module sha256): `1ba84b5132c86b0f81307bd1e073094e0d2562e2e4202aff2716ca7402b00ec5`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `127`
+- Module count: `128`
 
 ## Module Summary
 
@@ -106,6 +106,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_scaffold_core_v1.gc` | 244 | 9288 | 29 | `b7e0c663f8cf61d4` |
 | `selfhost/pkg_scaffold_render_v1.gc` | 152 | 11388 | 11 | `d0c0b27ea1ab48ec` |
 | `selfhost/pkg_scaffold_authority_v1.gc` | 192 | 10266 | 9 | `c4b63fb072ce0828` |
+| `selfhost/pkg_workspace_new_authority_v1.gc` | 357 | 16460 | 26 | `9a172d1208e7c0cc` |
 | `selfhost/pkg_semver_select_authority_v1.gc` | 176 | 7400 | 11 | `9b3fc573e02fb224` |
 | `selfhost/pkg_bridge_authority_v1.gc` | 307 | 13318 | 19 | `d5cf252ae3922650` |
 | `selfhost/pkg_snapshot_authority_v1.gc` | 174 | 6623 | 12 | `db2d90994b97fdd7` |
@@ -236,6 +237,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_scaffold_core_v1.gc`: `selfhost/pkg-scaffold::append`, `selfhost/pkg-scaffold::str?`, `selfhost/pkg-scaffold::vec?`, `selfhost/pkg-scaffold::map?`, `selfhost/pkg-scaffold::nonempty-str?`, `selfhost/pkg-scaffold::optional-str?`, `selfhost/pkg-scaffold::bounded-str?`, `selfhost/pkg-scaffold::optional-bounded-str?`
 - `selfhost/pkg_scaffold_render_v1.gc`: `selfhost/pkg-scaffold::cat3`, `selfhost/pkg-scaffold::workspace-body`, `selfhost/pkg-scaffold::lock-body`, `selfhost/pkg-scaffold::package-body`, `selfhost/pkg-scaffold::module-body`, `::meta\n`, `"`, `selfhost/pkg-scaffold::deploy-body`
 - `selfhost/pkg_scaffold_authority_v1.gc`: `selfhost/pkg-scaffold::request-kind`, `selfhost/pkg-scaffold::result-kind`, `selfhost/pkg-scaffold::envelope`, `selfhost/pkg-scaffold::reject`, `selfhost/pkg-scaffold::accept`, `selfhost/pkg-scaffold::request?`, `selfhost/pkg-scaffold::static-files?`, `selfhost/pkg-scaffold::build`
+- `selfhost/pkg_workspace_new_authority_v1.gc`: `selfhost/pkg-workspace-new::request-kind`, `selfhost/pkg-workspace-new::result-kind`, `selfhost/pkg-workspace-new::find-byte`, `selfhost/pkg-workspace-new::last-slash`, `selfhost/pkg-workspace-new::trim`, `selfhost/pkg-workspace-new::toml-control-fragment`, `selfhost/pkg-workspace-new::c1-control?`, `selfhost/pkg-workspace-new::toml-step`
 - `selfhost/pkg_semver_select_authority_v1.gc`: `selfhost/pkg-semver-select::vec?`, `selfhost/pkg-semver-select::int?`, `selfhost/pkg-semver-select::candidate?`, `selfhost/pkg-semver-select::candidates-valid?`, `selfhost/pkg-semver-select::bytes-lex-lt?`, `selfhost/pkg-semver-select::str-lex-lt?`, `selfhost/pkg-semver-select::better?`, `selfhost/pkg-semver-select::select-loop`
 - `selfhost/pkg_bridge_authority_v1.gc`: `selfhost/pkg-bridge::tag`, `selfhost/pkg-bridge::bytes?`, `selfhost/pkg-bridge::bool?`, `selfhost/pkg-bridge::result`, `selfhost/pkg-bridge::reject`, `selfhost/pkg-bridge::accept`, `selfhost/pkg-bridge::vec1`, `selfhost/pkg-bridge::vec2`
 - `selfhost/pkg_snapshot_authority_v1.gc`: `selfhost/pkg-snapshot::bytes?`, `selfhost/pkg-snapshot::module-valid?`, `selfhost/pkg-snapshot::modules-valid-loop?`, `selfhost/pkg-snapshot::modules-valid?`, `selfhost/pkg-snapshot::facts-valid?`, `selfhost/pkg-snapshot::object`, `selfhost/pkg-snapshot::build-modules-loop`, `selfhost/pkg-snapshot::build`

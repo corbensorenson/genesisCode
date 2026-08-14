@@ -205,8 +205,7 @@ mod tests {
         {
             PkgSnapshotDecision::Accept(plan) => plan,
             PkgSnapshotDecision::Error { code, message } => {
-                assert!(false, "unexpected authority rejection {code}: {message}");
-                return;
+                panic!("unexpected authority rejection {code}: {message}");
             }
         };
         assert_eq!(plan.artifacts.len(), 2);

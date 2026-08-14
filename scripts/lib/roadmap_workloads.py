@@ -179,6 +179,18 @@ EXPECTED_SIZES = {
     "PB-10": [("rebuilds-per-host", "rebuilds", 2), ("tier1-host-count", "hosts", 2)],
 }
 
+EXPECTED_FROZEN_INPUT_PATHS = {
+    "PB-7": [
+        "benchmarks/roadmap/v0.1/pb7_parse.gc",
+        "benchmarks/roadmap/v0.1/pb7_prelude.gc",
+    ],
+    "PB-10": [
+        "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
+        "benchmarks/roadmap/v0.1/pb10_toolchain.gc",
+        "benchmarks/roadmap/v0.1/pb10_toolchain_manifest.gc",
+    ],
+}
+
 EXPECTED_MEASUREMENT_TEXT = {
     "PB-1": ("fresh-eval-context-warm-prelude-and-compiled-module", "process-local-evaluation", "process-local-evaluation"),
     "PB-2": ("fresh-vm-context-warm-prelude-and-verified-bytecode", "process-local-evaluation", "process-local-evaluation"),
@@ -303,9 +315,9 @@ def validate_pb10(inputs: Sequence[Mapping[str, Any]]) -> None:
     protocol = load_json(ROOT / "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json")
     row = require_object(protocol, {"artifactSeed", "kind", "manifest", "stageCommands", "version"}, "PB-10 protocol")
     expected = {
-        "artifactSeed": "selfhost/toolchain.gc",
+        "artifactSeed": "benchmarks/roadmap/v0.1/pb10_toolchain.gc",
         "kind": "genesis/pb10-bootstrap-inputs-v0.1",
-        "manifest": "selfhost/toolchain_manifest.gc",
+        "manifest": "benchmarks/roadmap/v0.1/pb10_toolchain_manifest.gc",
         "stageCommands": [
             "genesis selfhost-artifact --out <stage2>",
             "genesis --selfhost-artifact <stage2> selfhost-artifact --out <stage3>",
@@ -375,9 +387,15 @@ def validate_policy(document: Any, verify_files: bool = True) -> Mapping[str, An
         paths = [input_row["path"] for input_row in input_rows]
         if paths != sorted(paths) or len(paths) != len(set(paths)):
             raise WorkloadError(f"{workload_id} inputs must be path-sorted and unique")
-        if workload_id == "PB-9":
+        if (
+            verify_files
+            and workload_id in EXPECTED_FROZEN_INPUT_PATHS
+            and paths != EXPECTED_FROZEN_INPUT_PATHS[workload_id]
+        ):
+            raise WorkloadError(f"{workload_id} must use its immutable normalized fixtures")
+        if verify_files and workload_id == "PB-9":
             validate_pb9(input_rows)
-        if workload_id == "PB-10":
+        if verify_files and workload_id == "PB-10":
             validate_pb10(input_rows)
 
     first_three = workloads[:3]
@@ -411,6 +429,8 @@ def self_test(policy: Mapping[str, Any]) -> int:
     candidate = copy.deepcopy(policy); candidate["protocols"][2]["outlierPolicy"] = "drop-slowest"; mutations.append(("outlier-policy", candidate))
     candidate = copy.deepcopy(policy); candidate["workloads"][8]["inputs"].pop(); mutations.append(("transitive-corpus", candidate))
     candidate = copy.deepcopy(policy); candidate["workloads"][9]["target"]["value"] = 99; mutations.append(("fixpoint-target", candidate))
+    candidate = copy.deepcopy(policy); candidate["workloads"][6]["inputs"][1]["path"] = "prelude/prelude.gc"; mutations.append(("pb7-live-corpus", candidate))
+    candidate = copy.deepcopy(policy); candidate["workloads"][9]["inputs"][1]["path"] = "selfhost/toolchain.gc"; mutations.append(("pb10-live-seed", candidate))
     candidate = copy.deepcopy(policy); candidate["workloads"][3], candidate["workloads"][4] = candidate["workloads"][4], candidate["workloads"][3]; mutations.append(("workload-order", candidate))
     for name, candidate in mutations:
         expect_reject(name, candidate)

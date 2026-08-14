@@ -4,6 +4,7 @@ use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin_cmd;
 use gc_coreform::{Term, TermOrdKey};
+use gc_pkg::{GenesisLock, WorkspaceConfig};
 
 #[path = "support/pkg_workspace_test_support.rs"]
 mod pkg_workspace_test_support;
@@ -60,6 +61,184 @@ fn gcpm_new_creates_workspace_descriptor_and_lock() {
     assert!(ws_src.contains("[[members]]"));
     assert!(ws_src.contains("[profiles.\"dev\"]"));
     assert!(ws_src.contains("runtime_backend ="));
+    let report = parse_coreform_value_map(&out);
+    assert_eq!(
+        map_string(&report, ":workspace-h"),
+        blake3::hash(ws_src.as_bytes()).to_hex().to_string()
+    );
+    let lock_src = fs::read_to_string(dir.join("genesis.lock")).unwrap();
+    assert_eq!(
+        map_string(&report, ":lock-h"),
+        blake3::hash(lock_src.as_bytes()).to_hex().to_string()
+    );
+}
+
+#[test]
+fn gcpm_new_preserves_member_order_and_closed_profiles() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ordered",
+            "--policy",
+            "policy:ordered-v0.1",
+            "--registry-default",
+            "gen://ordered",
+            "--member",
+            " \u{2003}alpha\u{2003} = \u{3000}packages/a\u{00a0}",
+            "--member",
+            "nested/packages/beta",
+        ])
+        .assert()
+        .success();
+
+    let workspace = WorkspaceConfig::load(&dir.join("genesis.workspace.toml")).unwrap();
+    assert_eq!(workspace.workspace, "ordered");
+    assert_eq!(workspace.members.len(), 2);
+    assert_eq!(workspace.members[0].name, "alpha");
+    assert_eq!(workspace.members[0].path, "packages/a");
+    assert_eq!(workspace.members[0].role.as_deref(), Some("package"));
+    assert_eq!(workspace.members[1].name, "beta");
+    assert_eq!(workspace.members[1].path, "nested/packages/beta");
+    assert_eq!(workspace.members[1].role.as_deref(), Some("package"));
+    assert_eq!(
+        workspace
+            .profiles
+            .keys()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        vec!["ci", "dev", "release"]
+    );
+    assert!(workspace.tasks.is_empty());
+    let lock = GenesisLock::load(&dir.join("genesis.lock")).unwrap();
+    assert_eq!(lock.version, 2);
+    assert!(lock.requirements.is_empty());
+    assert!(lock.locked.is_empty());
+    assert!(lock.artifacts.is_empty());
+}
+
+#[test]
+fn gcpm_new_toml_escapes_dynamic_values_losslessly() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let workspace_name = "ws\"\\\nname\u{0008}\u{000c}\u{001f}\u{008e}";
+    let policy = "policy:\"quoted\\\n-v0.1";
+    let registry = "gen://registry/\"quoted\\\n";
+    let named_member = "member\"\\=packages/line\npath";
+    let path_member = "nested/so\"lo\\dir";
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["new", "--workspace", workspace_name, "--policy", policy])
+        .args(["--registry-default", registry])
+        .args(["--member", named_member, "--member", path_member])
+        .assert()
+        .success();
+
+    let workspace = WorkspaceConfig::load(&dir.join("genesis.workspace.toml")).unwrap();
+    let workspace_src = fs::read_to_string(dir.join("genesis.workspace.toml")).unwrap();
+    assert!(
+        workspace_src.contains("workspace = \"ws\\\"\\\\\\nname\\u0008\\u000C\\u001F\\u008E\"")
+    );
+    assert_eq!(workspace.workspace, workspace_name);
+    assert_eq!(workspace.defaults.policy.as_deref(), Some(policy));
+    assert_eq!(workspace.defaults.registry.as_deref(), Some(registry));
+    assert_eq!(workspace.members[0].name, "member\"\\");
+    assert_eq!(workspace.members[0].path, "packages/line\npath");
+    assert_eq!(workspace.members[1].name, "so\"lo\\dir");
+    assert_eq!(workspace.members[1].path, path_member);
+    let lock = GenesisLock::load(&dir.join("genesis.lock")).unwrap();
+    assert_eq!(lock.workspace, workspace_name);
+    assert_eq!(lock.policy, policy);
+    assert_eq!(
+        lock.registries.get("default").map(String::as_str),
+        Some(registry)
+    );
+}
+
+#[test]
+fn gcpm_new_rejects_malformed_member_without_writes() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["new", "--workspace", "ws", "--member", "="])
+        .assert()
+        .failure();
+
+    assert!(!dir.join("genesis.lock").exists());
+    assert!(!dir.join("genesis.workspace.toml").exists());
+}
+
+#[test]
+fn gcpm_new_rejects_identical_destinations_without_writes() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--lock",
+            "state.toml",
+            "--workspace-file",
+            "state.toml",
+        ])
+        .assert()
+        .failure();
+
+    assert!(!dir.join("state.toml").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn gcpm_new_preflights_workspace_symlink_before_lock_write() {
+    use std::os::unix::fs::symlink;
+
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("workspace-target.toml"), "sentinel\n").unwrap();
+    symlink("workspace-target.toml", dir.join("workspace-link.toml")).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--workspace-file",
+            "workspace-link.toml",
+        ])
+        .assert()
+        .failure();
+
+    assert!(!dir.join("genesis.lock").exists());
+    assert_eq!(
+        fs::read_to_string(dir.join("workspace-target.toml")).unwrap(),
+        "sentinel\n"
+    );
 }
 
 #[test]

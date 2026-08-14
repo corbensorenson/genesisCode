@@ -191,6 +191,10 @@ pub(super) fn execute_workflow(
     })
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "workflow finalization keeps authority, mechanism observations, persistence, and sealed-error boundaries explicit"
+)]
 pub(super) fn finalize_workflow(
     mut authority: Option<&mut PkgResolutionIdentityAuthority>,
     workflow: PkgResolutionWorkflow,
@@ -246,7 +250,7 @@ pub(super) fn finalize_workflow(
 
     if strict {
         validate_locked_entries_strict(
-            authority.as_deref_mut(),
+            authority,
             store,
             &model.requirements,
             &finalized.locked,

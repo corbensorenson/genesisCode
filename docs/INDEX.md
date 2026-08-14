@@ -48,6 +48,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/TECH_HANDOFF.md#45-reference-and-optimized-execution-tiers` - normative reference/shared/bridge/optimized kernel source partition and observable-equivalence contract, enforced by the TCB gate and default differential matrix.
 - `docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json` - closed raw-sample, failure-preserving E0 baseline statement schema.
 - `docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json` - closed DSSE wrapper schema whose fixture-integrity signature grants no authority.
+- `docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json` - immutable original workload policy retained so the signed baseline remains verifiable after current-policy evolution.
 - `docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json` - signed, independently verified E0 baseline preserving 120 raw samples and current failures.
 - `scripts/check_roadmap_baseline.sh` - read-only baseline/schema/statistics/signature/adversarial gate; `scripts/update_roadmap_baseline.sh` is the sole append-only capture producer.
 - `docs/spec/RELEASE_NOTES_POLICY_v0.1.schema.json` - closed policy schema for canonical release-note authorities, outputs, lockfiles, and security gates.
@@ -260,6 +261,10 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package scaffold profile.
 - `policies/selfhost_pkg_scaffold_authority_v0.1.json` - content-addressed scaffold decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_scaffold_authority.py` - independent scaffold source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md` - normative partial R4.2.e workspace-new member parsing, exact document rendering, identity, preflight, and report authority boundary.
+- `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package workspace-new profile.
+- `policies/selfhost_pkg_workspace_new_authority_v0.1.json` - content-addressed workspace-new decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
+- `scripts/lib/selfhost_pkg_workspace_new_authority.py` - independent workspace-new source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
 - `policies/selfhost_pkg_resolution_workflow_authority_v0.1.json` - content-addressed workflow decision inventory, residual host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_resolution_workflow_authority.py` - independent workflow source/artifact/route/oracle/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md` - normative partial R4.2.e semver policy-extremum, lexical tie-break, and empty-candidate authority boundary.

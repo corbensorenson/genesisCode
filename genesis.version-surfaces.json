@@ -24,7 +24,7 @@
       "discriminator": "top-level schema",
       "current_writer": "1",
       "accepted_readers": ["pre-schema", "1"],
-      "authorities": ["crates/gc_pkg/src/manifest.rs", "crates/gc_cli_driver/src/pkg_scaffold.rs"],
+      "authorities": ["crates/gc_pkg/src/manifest.rs", "selfhost/pkg_scaffold_render_v1.gc", "selfhost/pkg_scaffold_authority_v1.gc", "crates/gc_cli_driver/src/pkg_scaffold.rs"],
       "specs": ["docs/spec/PACKAGE_TOML.md"],
       "migrations": ["M-PACKAGE-PRESCHEMA-TO-1"]
     },

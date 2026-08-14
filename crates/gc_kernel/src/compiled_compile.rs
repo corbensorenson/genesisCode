@@ -22,7 +22,6 @@ pub(super) fn compile_module_with_site_namespace_impl(
     }
 
     let mut session = CompileSession {
-        interner: SymbolInterner::default(),
         module_slots,
         site_namespace,
         statement_sites: Vec::new(),
@@ -80,7 +79,6 @@ pub(super) fn compile_module_with_site_namespace_impl(
 }
 
 struct CompileSession<'a> {
-    interner: SymbolInterner,
     module_slots: BTreeMap<String, u32>,
     site_namespace: &'a str,
     statement_sites: Vec<String>,
@@ -208,7 +206,6 @@ fn with_child_path<T>(
 pub(super) fn compile_term(t: &Term) -> Result<CompiledExprBundle, KernelError> {
     let mut path = vec![0];
     let mut session = CompileSession {
-        interner: SymbolInterner::default(),
         module_slots: BTreeMap::new(),
         site_namespace: "",
         statement_sites: Vec::new(),
@@ -286,7 +283,6 @@ fn compile_symbol(
     session: &mut CompileSession<'_>,
     scopes: &LexicalScopes,
 ) -> Result<CExpr, KernelError> {
-    let sym = session.interner.intern(name)?;
     let resolution = if let Some((depth, slot)) = scopes.resolve(name)? {
         VarResolution::Local { depth, slot }
     } else if let Some(slot) = session.module_slots.get(name).copied() {
@@ -296,7 +292,6 @@ fn compile_symbol(
     };
     Ok(CExpr::Var {
         name: name.to_string(),
-        sym,
         resolution,
         statement_site: session.statement_site_index(path)?,
     })

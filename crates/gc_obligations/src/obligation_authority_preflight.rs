@@ -2,7 +2,7 @@
 pub(super) enum PreflightAuthorityOutcome {
     Passed {
         modules: Vec<LoadedModule>,
-        caps: CapsPolicy,
+        caps: Box<CapsPolicy>,
         caps_policy_hash: Option<String>,
     },
     Failed(ObligationResult),
@@ -286,7 +286,7 @@ pub(super) fn evaluate_preflight_with_authority(
         Some(failure) => Ok(PreflightAuthorityOutcome::Failed(failure)),
         None => Ok(PreflightAuthorityOutcome::Passed {
             modules,
-            caps,
+            caps: Box::new(caps),
             caps_policy_hash,
         }),
     }

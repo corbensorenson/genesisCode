@@ -183,10 +183,10 @@ fn observations_term(observations: &[PkgInstallObservation]) -> Term {
     )
 }
 
-fn decode_envelope<'a>(
-    term: &'a Term,
+fn decode_envelope(
+    term: &Term,
     request_hash: [u8; 32],
-) -> Result<Result<&'a Term, (String, String)>, EffectsError> {
+) -> Result<Result<&Term, (String, String)>, EffectsError> {
     let fields = exact_map(
         term,
         &[
@@ -221,10 +221,6 @@ fn decode_envelope<'a>(
     }
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "request facts remain explicit during contradiction checks"
-)]
 fn decode_plan_result(
     term: Term,
     request_hash: [u8; 32],

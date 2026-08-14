@@ -100,7 +100,7 @@ fn translation_stage2_term(observation: &TranslationStage2Observation) -> Term {
                 observation
                     .value_kind
                     .as_ref()
-                    .map(|value| Term::symbol(value))
+                    .map(Term::symbol)
                     .unwrap_or(Term::Nil),
             ),
             (

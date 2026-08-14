@@ -64,9 +64,7 @@ pub(super) fn input(table: Option<&toml::value::Table>) -> Term {
     ])
 }
 
-fn selected_runtime<'a>(
-    table: Option<&'a BTreeMap<String, toml::Value>>,
-) -> Option<&'a toml::Value> {
+fn selected_runtime(table: Option<&BTreeMap<String, toml::Value>>) -> Option<&toml::Value> {
     table.and_then(|table| {
         table
             .get(RUNTIME_PROFILE)

@@ -21,13 +21,13 @@ pub(super) fn handle_pkg_install(
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
-    mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
+    identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
-    let Some(authority) = identity_authority.as_deref_mut() else {
+    let Some(authority) = identity_authority else {
         #[cfg(any(test, feature = "parity-oracle"))]
         {
             return handle_pkg_install_parity(

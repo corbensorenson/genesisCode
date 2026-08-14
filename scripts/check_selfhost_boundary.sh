@@ -283,6 +283,14 @@ python3 scripts/lib/selfhost_pkg_scaffold_authority.py \
   --schema docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e workspace-new authority is partial: GenesisCode owns member,
+# document, identity, and report semantics; bounded host persistence remains H0.
+python3 scripts/lib/selfhost_pkg_workspace_new_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_workspace_new_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.e semver selection is partial: GenesisCode owns policy extrema and
 # lexical tie-breaking; semver parsing, ranking, refs, and transport remain H0.
 python3 scripts/lib/selfhost_pkg_semver_select_authority.py \

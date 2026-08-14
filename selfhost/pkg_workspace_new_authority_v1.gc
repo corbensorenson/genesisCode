@@ -1,0 +1,357 @@
+; Closed semantic authority for gcpm new workspace and lock construction.
+
+(def selfhost/pkg-workspace-new::request-kind "genesis/pkg-workspace-new-authority-request-v0.1")
+(def selfhost/pkg-workspace-new::result-kind "genesis/pkg-workspace-new-authority-result-v0.1")
+
+(def selfhost/pkg-workspace-new::find-byte
+  (fn (bytes)
+    (fn (wanted)
+      (fn (index)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          -1
+          (if ((core/int::eq? ((core/bytes::get bytes) index)) wanted)
+            index
+            (((selfhost/pkg-workspace-new::find-byte bytes) wanted) ((core/int::add index) 1))))))))
+
+(def selfhost/pkg-workspace-new::last-slash
+  (fn (bytes)
+    (fn (index)
+      (fn (last)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          last
+          (((selfhost/pkg-workspace-new::last-slash bytes) ((core/int::add index) 1))
+            (if ((core/int::eq? ((core/bytes::get bytes) index)) 47) index last)))))))
+
+(def selfhost/pkg-workspace-new::trim (fn (value) (selfhost/policy::trim value)))
+
+(def selfhost/pkg-workspace-new::toml-control-fragment
+  (fn (byte)
+    (let
+      ((digits b"0123456789ABCDEF")
+        (high (((core/bytes::slice digits) ((core/int::div byte) 16)) 1))
+        (low (((core/bytes::slice digits) ((core/int::mod byte) 16)) 1)))
+      ((core/bytes::concat ((core/bytes::concat b"\\u00") high)) low))))
+
+(def selfhost/pkg-workspace-new::c1-control?
+  (fn (bytes)
+    (fn (index)
+      (if ((core/int::eq? ((core/bytes::get bytes) index)) 194)
+        (if ((core/int::lt? ((core/int::add index) 1)) (core/bytes::len bytes))
+          (let ((next ((core/bytes::get bytes) ((core/int::add index) 1))))
+            (if ((core/int::lt? 127) next) ((core/int::lt? next) 160) false))
+          false)
+        false))))
+
+(def selfhost/pkg-workspace-new::toml-step
+  (fn (bytes)
+    (fn (index)
+      (let
+        ((byte ((core/bytes::get bytes) index)) (next ((core/int::add index) 1)))
+        (if ((core/int::eq? byte) 34)
+          {:fragment b"\\\"" :next next}
+          (if ((core/int::eq? byte) 92)
+            {:fragment b"\\\\" :next next}
+            (if ((core/int::eq? byte) 10)
+              {:fragment b"\\n" :next next}
+              (if ((core/int::eq? byte) 13)
+                {:fragment b"\\r" :next next}
+                (if ((core/int::eq? byte) 9)
+                  {:fragment b"\\t" :next next}
+                  (if
+                    (if ((core/int::lt? byte) 32) true ((core/int::eq? byte) 127))
+                    {:fragment (selfhost/pkg-workspace-new::toml-control-fragment byte) :next next}
+                    (if ((selfhost/pkg-workspace-new::c1-control? bytes) index)
+                      {
+                        :fragment
+                          (selfhost/pkg-workspace-new::toml-control-fragment
+                            ((core/bytes::get bytes) next))
+                        :next ((core/int::add index) 2)}
+                      {:fragment (((core/bytes::slice bytes) index) 1) :next next})))))))))))
+
+(def selfhost/pkg-workspace-new::toml-escape-loop
+  (fn (bytes)
+    (fn (index)
+      (fn (parts)
+        (if ((core/int::eq? index) (core/bytes::len bytes))
+          (core/str::from-utf8 (core/bytes::join parts))
+          (let ((step ((selfhost/pkg-workspace-new::toml-step bytes) index)))
+            (((selfhost/pkg-workspace-new::toml-escape-loop bytes)
+                ((core/map::get step) (quote :next)))
+              ((core/vec::push parts) ((core/map::get step) (quote :fragment))))))))))
+
+(def selfhost/pkg-workspace-new::toml-quoted
+  (fn (value)
+    (let
+      ((escaped
+        (((selfhost/pkg-workspace-new::toml-escape-loop (core/str::to-utf8 value)) 0) [])))
+      ((core/str::concat "\"") ((core/str::concat escaped) "\"")))))
+
+(def selfhost/pkg-workspace-new::path-member
+  (fn (raw)
+    (let ((path (selfhost/pkg-workspace-new::trim raw)))
+      (if ((core/int::eq? (core/str::len path)) 0)
+        nil
+        (let
+          ((bytes (core/str::to-utf8 path))
+            (slash (((selfhost/pkg-workspace-new::last-slash (core/str::to-utf8 path)) 0) -1)))
+          (let
+            ((name
+              (if ((core/int::lt? slash) 0)
+                path
+                (if ((core/int::eq? ((core/int::add slash) 1)) (core/bytes::len bytes))
+                  "member"
+                  (core/str::from-utf8
+                    (((core/bytes::slice bytes) ((core/int::add slash) 1))
+                      ((core/int::sub (core/bytes::len bytes)) ((core/int::add slash) 1))))))))
+            {:name name :path path :role "package"}))))))
+
+(def selfhost/pkg-workspace-new::named-member
+  (fn (bytes)
+    (fn (equal)
+      (let
+        ((name
+          (selfhost/pkg-workspace-new::trim
+            (core/str::from-utf8 (((core/bytes::slice bytes) 0) equal))))
+          (path
+            (selfhost/pkg-workspace-new::trim
+              (core/str::from-utf8
+                (((core/bytes::slice bytes) ((core/int::add equal) 1))
+                  ((core/int::sub (core/bytes::len bytes)) ((core/int::add equal) 1)))))))
+        (if (if ((core/int::eq? (core/str::len name)) 0)
+              true
+              ((core/int::eq? (core/str::len path)) 0))
+          nil
+          {:name name :path path :role "package"})))))
+
+(def selfhost/pkg-workspace-new::member
+  (fn (raw)
+    (if (selfhost/pkg-scaffold::str? raw)
+      (let ((bytes (core/str::to-utf8 raw)))
+        (if ((core/int::lt? 4096) (core/bytes::len bytes))
+          nil
+          (let ((equal (((selfhost/pkg-workspace-new::find-byte bytes) 61) 0)))
+            (if ((core/int::lt? equal) 0)
+              (selfhost/pkg-workspace-new::path-member raw)
+              ((selfhost/pkg-workspace-new::named-member bytes) equal)))))
+      nil)))
+
+(def selfhost/pkg-workspace-new::members-loop
+  (fn (raw)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len raw))
+          out
+          (let ((member (selfhost/pkg-workspace-new::member ((core/vec::get raw) index))))
+            (if (core/list::is-nil? member)
+              nil
+              (((selfhost/pkg-workspace-new::members-loop raw) ((core/int::add index) 1))
+                ((core/vec::push out) member)))))))))
+
+(def selfhost/pkg-workspace-new::members
+  (fn (workspace)
+    (fn (raw)
+      (if ((core/int::eq? (core/vec::len raw)) 0)
+        ((core/vec::push []) {:name workspace :path "." :role "root"})
+        (((selfhost/pkg-workspace-new::members-loop raw) 0) [])))))
+
+(def selfhost/pkg-workspace-new::render-members
+  (fn (members)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len members))
+        ""
+        (let ((member ((core/vec::get members) index)))
+          (let
+            ((out0
+              ((selfhost/pkg-scaffold::append "[[members]]\nname = ")
+                (selfhost/pkg-workspace-new::toml-quoted
+                  ((core/map::get member) (quote :name))))))
+            (let ((out1 ((selfhost/pkg-scaffold::append out0) "\npath = ")))
+              (let
+                ((out2
+                  ((selfhost/pkg-scaffold::append out1)
+                    (selfhost/pkg-workspace-new::toml-quoted
+                      ((core/map::get member) (quote :path))))))
+                (let ((out3 ((selfhost/pkg-scaffold::append out2) "\nrole = ")))
+                  (let
+                    ((out4
+                      ((selfhost/pkg-scaffold::append out3)
+                        (selfhost/pkg-workspace-new::toml-quoted
+                          ((core/map::get member) (quote :role))))))
+                    (let ((out5 ((selfhost/pkg-scaffold::append out4) "\n\n")))
+                      ((selfhost/pkg-scaffold::append out5)
+                        ((selfhost/pkg-workspace-new::render-members members)
+                          ((core/int::add index) 1))))))))))))))
+
+(def selfhost/pkg-workspace-new::registry-line
+  (fn (registry)
+    (if (core/list::is-nil? registry)
+      ""
+      ((core/str::concat "registry = ")
+        ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted registry)) "\n")))))
+
+(def selfhost/pkg-workspace-new::profile
+  (fn (name)
+    (fn (caps)
+      (fn (registry)
+        (fn (policy)
+          (fn (backend)
+            (let
+              ((head ((core/str::concat "[profiles.\"") ((core/str::concat name) "\"]\n")))
+                (caps-line
+                  ((core/str::concat "caps_policy = ")
+                    ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted caps)) "\n")))
+                (policy-line
+                  ((core/str::concat "policy = ")
+                    ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted policy)) "\n")))
+                (backend-line
+                  ((core/str::concat "runtime_backend = ")
+                    ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted backend)) "\n\n"))))
+              ((selfhost/pkg-scaffold::append head)
+                ((selfhost/pkg-scaffold::append caps-line)
+                  ((selfhost/pkg-scaffold::append
+                    (selfhost/pkg-workspace-new::registry-line registry))
+                    ((selfhost/pkg-scaffold::append policy-line) backend-line)))))))))))
+
+(def selfhost/pkg-workspace-new::workspace-body
+  (fn (workspace)
+    (fn (members)
+      (fn (registry)
+        (fn (policy)
+          (fn (backend)
+            (let
+              ((head
+                ((core/str::concat "version = 1\nworkspace = ")
+                  ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted workspace)) "\n\n")))
+                (defaults
+                  ((core/str::concat "[defaults]\n")
+                    ((core/str::concat (selfhost/pkg-workspace-new::registry-line registry))
+                      ((core/str::concat "policy = ")
+                        ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted policy))
+                          ((core/str::concat "\nruntime_backend = ")
+                            ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted backend)) "\n\n"))))))))
+              ((core/str::concat
+                ((core/str::concat
+                  ((core/str::concat
+                    ((core/str::concat
+                      ((core/str::concat
+                        ((core/str::concat head)
+                          ((selfhost/pkg-workspace-new::render-members members) 0))) defaults))
+                      (((((selfhost/pkg-workspace-new::profile "ci") "caps.ci.toml") registry) policy)
+                        "headless")))
+                    (((((selfhost/pkg-workspace-new::profile "dev") "caps.toml") registry) policy)
+                      backend)))
+                  (((((selfhost/pkg-workspace-new::profile "release") "caps.release.toml") registry)
+                      policy) backend)))
+                ""))))))))
+
+(def selfhost/pkg-workspace-new::lock-body
+  (fn (workspace)
+    (fn (policy)
+      (fn (registry)
+        ((core/str::concat
+          ((core/str::concat
+            ((core/str::concat "version = 2\nworkspace = ")
+              ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted workspace))
+                ((core/str::concat "\npolicy = ")
+                  ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted policy)) "\n\n")))))
+            (if (core/list::is-nil? registry)
+              ""
+              ((core/str::concat "[registries]\ndefault = ")
+                ((core/str::concat (selfhost/pkg-workspace-new::toml-quoted registry)) "\n\n")))))
+          "[requirements]\n\n[locked]\n\n")))))
+
+(def selfhost/pkg-workspace-new::envelope
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {:kind selfhost/pkg-workspace-new::result-kind :v 1 :request-h request-h
+              :ok ok :code code :message message :value value}))))))
+
+(def selfhost/pkg-workspace-new::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-workspace-new::envelope request-h) false)
+          "core/pkg/bad-workspace-new") message) nil))))
+
+(def selfhost/pkg-workspace-new::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-workspace-new::envelope request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-workspace-new::request?
+  (fn (request)
+    (if ((core/int::eq? (core/map::len request)) 9)
+      (if ((core/eq? ((core/map::get request) (quote :kind))) selfhost/pkg-workspace-new::request-kind)
+        (if ((core/eq? ((core/map::get request) (quote :v))) 1)
+          (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :workspace))) 1024))
+            (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :policy))) 1024))
+              (if (((selfhost/pkg-scaffold::optional-bounded-str? ((core/map::get request) (quote :registry-default))) 4096))
+                (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :lock))) 4096))
+                  (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :workspace-file))) 4096))
+                    (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :active-backend))) 32))
+                      (if (selfhost/pkg-scaffold::vec? ((core/map::get request) (quote :members)))
+                        (if ((core/int::lt? 256) (core/vec::len ((core/map::get request) (quote :members))))
+                          false
+                          true)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-new::backend?
+  (fn (backend)
+    (if ((core/eq? backend) "headless") true
+      (if ((core/eq? backend) "gpu") true
+        (if ((core/eq? backend) "gfx") true ((core/eq? backend) "backend"))))))
+
+(def core/pkg::workspace-new-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-scaffold::map? request)
+        (if (selfhost/pkg-workspace-new::request? request)
+          (let
+            ((workspace ((core/map::get request) (quote :workspace)))
+              (policy ((core/map::get request) (quote :policy)))
+              (registry ((core/map::get request) (quote :registry-default)))
+              (backend ((core/map::get request) (quote :active-backend)))
+              (lock-path ((core/map::get request) (quote :lock)))
+              (workspace-path ((core/map::get request) (quote :workspace-file)))
+              (members
+                ((selfhost/pkg-workspace-new::members workspace)
+                  ((core/map::get request) (quote :members)))))
+            (if (if ((core/int::eq? (core/str::len workspace)) 0)
+                  true
+                  (if ((core/int::eq? (core/str::len policy)) 0)
+                    true
+                    (if (selfhost/pkg-workspace-new::backend? backend)
+                      (core/list::is-nil? members)
+                      true)))
+              ((selfhost/pkg-workspace-new::reject request-h) "workspace-new request is invalid")
+              (let
+                ((workspace-body
+                  (((((selfhost/pkg-workspace-new::workspace-body workspace) members) registry) policy)
+                    backend))
+                  (lock-body (((selfhost/pkg-workspace-new::lock-body workspace) policy) registry)))
+                (let
+                  ((workspace-h (selfhost/pkg-scaffold::hash-body workspace-body))
+                    (lock-h (selfhost/pkg-scaffold::hash-body lock-body))
+                    (lock-file ((selfhost/pkg-scaffold::file lock-path) lock-body))
+                    (workspace-file ((selfhost/pkg-scaffold::file workspace-path) workspace-body)))
+                  (let ((files1 ((core/vec::push []) lock-file)))
+                    (let ((files ((core/vec::push files1) workspace-file)))
+                      ((selfhost/pkg-workspace-new::accept request-h)
+                        {:files files
+                          :report
+                            {:ok true :workspace workspace :workspace-file workspace-path
+                              :workspace-h workspace-h :members (core/vec::len members)
+                              :lock lock-path :lock-h lock-h}})))))))
+          ((selfhost/pkg-workspace-new::reject request-h) "workspace-new request is malformed"))
+        ((selfhost/pkg-workspace-new::reject request-h) "workspace-new request must be map")))))

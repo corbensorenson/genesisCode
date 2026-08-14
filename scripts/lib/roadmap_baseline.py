@@ -23,6 +23,10 @@ import roadmap_workloads
 ROOT = Path(__file__).resolve().parents[2]
 STATEMENT_SCHEMA = ROOT / "docs/spec/ROADMAP_BASELINE_STATEMENT_v0.1.schema.json"
 BUNDLE_SCHEMA = ROOT / "docs/spec/ROADMAP_BASELINE_BUNDLE_v0.1.schema.json"
+HISTORICAL_WORKLOAD_POLICIES = (
+    ROOT
+    / "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json",
+)
 PAYLOAD_TYPE = "application/vnd.genesiscode.roadmap-baseline.v0.1+json"
 ACTIVE_IDS = ("PB-1", "PB-4", "PB-5", "PB-7")
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -341,13 +345,26 @@ def validate_sample(sample: Any, expected_index: int, label: str) -> Mapping[str
     return row
 
 
+def workload_policy_for_identity(identity: str) -> Mapping[str, Any]:
+    current = roadmap_workloads.validate_policy(
+        roadmap_workloads.load_json(roadmap_workloads.POLICY)
+    )
+    if roadmap_workloads.policy_identity(current) == identity:
+        return current
+    for path in HISTORICAL_WORKLOAD_POLICIES:
+        historical = roadmap_workloads.validate_policy(load_json(path), verify_files=False)
+        if roadmap_workloads.policy_identity(historical) == identity:
+            return historical
+    raise BaselineError("baseline workload policy identity has no retained authority")
+
+
 def validate_statement(statement: Any, policy: Optional[Mapping[str, Any]] = None, reference_policy: Optional[Mapping[str, Any]] = None) -> Mapping[str, Any]:
     row = require_object(statement, STATEMENT_FIELDS, "baseline statement")
     if row["kind"] != "genesis/roadmap-baseline-statement-v0.1" or row["version"] != "0.1" or row["evidenceClass"] != "E0" or row["authoritative"] is not False:
         raise BaselineError("baseline statement authority/identity drift")
     if row["baselineIdentitySha256"] != statement_identity(row):
         raise BaselineError("baseline statement identity mismatch")
-    policy = policy or roadmap_workloads.validate_policy(roadmap_workloads.load_json(roadmap_workloads.POLICY))
+    policy = policy or workload_policy_for_identity(row["workloadPolicyIdentitySha256"])
     reference_policy = reference_policy or reference_host_profiles.validate_policy(reference_host_profiles.load_json(reference_host_profiles.POLICY))
     if row["workloadPolicyIdentitySha256"] != roadmap_workloads.policy_identity(policy):
         raise BaselineError("baseline workload policy identity is stale")

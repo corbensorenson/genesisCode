@@ -57,10 +57,6 @@ pub(super) fn verify_crypto_request(
     Ok((request_hash, valid))
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "cryptographic contradiction checks keep every authority-returned field explicit"
-)]
 fn verify_ed25519_mechanism(
     alg: &str,
     allowed: &[String],

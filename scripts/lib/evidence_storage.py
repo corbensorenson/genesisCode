@@ -51,6 +51,9 @@ ROADMAP_BASELINE_RE = re.compile(
 ROADMAP_BASELINE_KEY_RE = re.compile(
     r"^docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-[0-9a-f]{64}\.pub$"
 )
+ROADMAP_WORKLOAD_POLICY_RE = re.compile(
+    r"^docs/program/evidence/roadmap-baselines/roadmap-workloads-v0\.1-sha256-[0-9a-f]{64}\.json$"
+)
 
 
 def fixture_roles() -> Mapping[str, Tuple[str, str]]:
@@ -65,6 +68,8 @@ def fixture_roles() -> Mapping[str, Tuple[str, str]]:
                 roles[relative] = ("signed-e0-baseline", "E0")
             elif ROADMAP_BASELINE_KEY_RE.fullmatch(relative):
                 roles[relative] = ("fixture-public-key", "none")
+            elif ROADMAP_WORKLOAD_POLICY_RE.fullmatch(relative):
+                roles[relative] = ("historical-workload-policy", "none")
     return roles
 
 

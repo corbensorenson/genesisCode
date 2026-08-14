@@ -206,6 +206,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             members,
         } => Some(
             pkg_workspace_ops::handle_new(
+                cli,
                 workspace,
                 lock,
                 workspace_file,

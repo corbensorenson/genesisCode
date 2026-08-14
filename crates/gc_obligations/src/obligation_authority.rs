@@ -548,6 +548,10 @@ fn validate_budget_report(
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "authority decoding independently cross-checks operation, evidence, package, module, test, replay, request, and result facts"
+)]
 fn decode_authority_result(
     operation: ObligationAuthorityOperation,
     store: &EvidenceStore,

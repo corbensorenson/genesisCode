@@ -1,7 +1,7 @@
 {
-  "artifactSeed": "selfhost/toolchain.gc",
+  "artifactSeed": "benchmarks/roadmap/v0.1/pb10_toolchain.gc",
   "kind": "genesis/pb10-bootstrap-inputs-v0.1",
-  "manifest": "selfhost/toolchain_manifest.gc",
+  "manifest": "benchmarks/roadmap/v0.1/pb10_toolchain_manifest.gc",
   "stageCommands": [
     "genesis selfhost-artifact --out <stage2>",
     "genesis --selfhost-artifact <stage2> selfhost-artifact --out <stage3>"

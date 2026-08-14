@@ -278,7 +278,7 @@ pub fn test_package_with_step_limit_and_frontend(
             modules,
             caps,
             caps_policy_hash,
-        } => (modules, caps, caps_policy_hash),
+        } => (modules, *caps, caps_policy_hash),
         PreflightAuthorityOutcome::Failed(ob) => {
             let acceptance = acceptance_term(&manifest, false, std::slice::from_ref(&ob));
             let acceptance_artifact = store.put_term(&acceptance)?;

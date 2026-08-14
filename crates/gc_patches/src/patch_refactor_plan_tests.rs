@@ -207,8 +207,7 @@ fn decoder_rejects_patch_authority_on_conflicted_report() {
     let map = match &mut report {
         Term::Map(map) => map,
         _ => {
-            assert!(false, "test fixture report must be a map");
-            return;
+            panic!("test fixture report must be a map");
         }
     };
     map.insert(

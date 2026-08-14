@@ -1,0 +1,53 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::workspace-new-authority",
+  "contentIdentitySha256": "05d291549ba59e463594661a3d0ed09df6b85e1d61caa2f0222afaf819e1f4fc",
+  "decisionInventory": [
+    "bounded-member-spec-parsing-and-default-root-member",
+    "legacy-exact-toml-string-escaping",
+    "canonical-workspace-default-and-closed-profile-rendering",
+    "canonical-empty-v2-lock-rendering",
+    "closed-active-runtime-backend-observation-admission",
+    "fixed-two-file-order-and-body-identities",
+    "exact-workspace-new-report"
+  ],
+  "hostMechanisms": [
+    "artifact-only-bounded-authority-evaluation",
+    "active-runtime-backend-profile-observation",
+    "strict-request-bound-result-and-cross-document-decoding",
+    "two-destination-ancestor-type-and-symlink-preflight",
+    "exact-byte-temporary-file-persistence-and-atomic-per-file-rename"
+  ],
+  "hostOracle": {
+    "parityOnly": true,
+    "productionRequired": false,
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_workspace_new_authority.py",
+  "kind": "genesis/selfhost-pkg-workspace-new-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "crash-atomic-two-file-commit",
+    "filesystem-or-path-policy-authority",
+    "generic-toml-or-path-authority",
+    "h2-workspace-closure",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-workspace-new-support",
+    "workspace-remove-migrate-environment-task-manifest-or-scaffold-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/pkg-workspace-new-authority-request-v0.1",
+  "resultKind": "genesis/pkg-workspace-new-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_workspace_new_authority_v1.gc"
+  ],
+  "sourceSha256": "0323d152de166ebb77dbaa42de2b08fbc5380b78acd0043e959ed8ba57f46ee1",
+  "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

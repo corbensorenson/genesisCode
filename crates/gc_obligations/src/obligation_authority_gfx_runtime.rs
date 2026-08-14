@@ -548,11 +548,11 @@ fn expected_gfx_plan_report(
     Term::Map(fields)
 }
 
-fn validate_gfx_runtime_outer<'a>(
+fn validate_gfx_runtime_outer(
     operation: ObligationAuthorityOperation,
-    term: &'a Term,
+    term: &Term,
     request_hash: [u8; 32],
-) -> Result<&'a BTreeMap<TermOrdKey, Term>, ObligationError> {
+) -> Result<&BTreeMap<TermOrdKey, Term>, ObligationError> {
     let map = exact_map(
         term,
         "gfx runtime authority result",
