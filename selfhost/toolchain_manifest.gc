@@ -95,6 +95,7 @@
     "selfhost/pkg_workspace_new_authority_v1.gc"
     "selfhost/pkg_workspace_remove_authority_v1.gc"
     "selfhost/pkg_workspace_migrate_authority_v1.gc"
+    "selfhost/pkg_workspace_env_select_authority_v1.gc"
     "selfhost/pkg_semver_select_authority_v1.gc"
     "selfhost/pkg_bridge_authority_v1.gc"
     "selfhost/pkg_snapshot_authority_v1.gc"
@@ -183,6 +184,7 @@
     core/pkg::workspace-new-authority
     core/pkg::workspace-remove-authority
     core/pkg::workspace-migrate-authority
+    core/pkg::workspace-env-select-authority
     core/pkg::semver-select-authority
     core/cli::stage1-transform-module
     core/cli::store-get-program

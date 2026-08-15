@@ -1512,6 +1512,110 @@ fn gcpm_env_runtime_backend_profile_contract_is_machine_readable() {
 }
 
 #[test]
+fn gcpm_env_selection_override_masks_invalid_lower_precedence_values() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[defaults]
+runtime_backend = "invalid-default"
+
+[profiles."dev"]
+caps_policy = "caps.toml"
+runtime_backend = "invalid-profile"
+"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.join("genesis.lock"),
+        "version = 2\nworkspace = \"ws\"\npolicy = \"policy:default-v0.1\"\n\n[requirements]\n\n[locked]\n\n",
+    )
+    .unwrap();
+
+    let out = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "env",
+            "--profile",
+            "dev",
+            "--runtime-backend",
+            "  PROFILE-HEADLESS  ",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let map = parse_coreform_value_map(&out);
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":runtime-backend-profile"))),
+        Some(&Term::Str("headless".to_string()))
+    );
+    assert_eq!(
+        map.get(&TermOrdKey(Term::symbol(":runtime-backend-compatible"))),
+        Some(&Term::Bool(true))
+    );
+}
+
+#[test]
+fn gcpm_env_selection_invalid_selected_backend_rejects_before_materialization() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[profiles."dev"]
+caps_policy = "caps.toml"
+runtime_backend = "invalid-profile"
+"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.join("genesis.lock"),
+        "version = 2\nworkspace = \"ws\"\npolicy = \"policy:default-v0.1\"\n\n[requirements]\n\n[locked]\n\n",
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains(
+            "core/pkg/bad-workspace-env-selection",
+        ));
+
+    assert!(!dir.join(".genesis").join("env").exists());
+    assert!(
+        !dir.join(".genesis")
+            .join("runtime")
+            .join("wasi-http-bridge")
+            .exists()
+    );
+}
+
+#[test]
 fn gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

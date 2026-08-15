@@ -209,7 +209,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     require_markers(joined, [
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
-        "Workspace environment, task-resolution, and manifest decisions remain host-authoritative",
+        "Workspace environment descriptor, projection, hashing, and materialization, general task-resolution, and manifest decisions remain host-authoritative",
     ], "workspace ownership ledger")
 
 

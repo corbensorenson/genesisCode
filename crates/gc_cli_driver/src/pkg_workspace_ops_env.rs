@@ -1,27 +1,31 @@
 use super::*;
 
 pub(crate) fn handle_env(
+    cli: &crate::Cli,
     profile: &str,
     runtime_backend_override: Option<&str>,
     lock: &Path,
     workspace_file: &Path,
     out_dir: &Path,
 ) -> Result<LocalPkgResult, String> {
-    let ws = WorkspaceConfig::load(workspace_file).map_err(|e| e.to_string())?;
+    let env_workspace = super::pkg_workspace_env_select::load_workspace(workspace_file, profile)?;
+    let ws = env_workspace.config;
     let l = gc_pkg::GenesisLock::load(lock).map_err(|e| e.to_string())?;
     let prof = ws
         .profiles
         .get(profile)
         .ok_or_else(|| format!("workspace profile `{profile}` not found"))?;
     let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
-    let selected_runtime_backend = resolve_env_runtime_backend_profile(
+    let selection = super::pkg_workspace_env_select::select_runtime_backend(
+        cli,
         profile,
         runtime_backend_override,
-        prof.runtime_backend.as_deref(),
-        ws.defaults.runtime_backend.as_deref(),
+        env_workspace.profile_runtime_backend.as_deref(),
+        env_workspace.default_runtime_backend.as_deref(),
+        &active_runtime_backend,
     )?;
-    let runtime_backend_compatible =
-        runtime_backend_profile_is_compatible(&selected_runtime_backend, &active_runtime_backend);
+    let selected_runtime_backend = selection.selected;
+    let runtime_backend_compatible = selection.compatible;
     if !runtime_backend_compatible {
         return Err(format!(
             "profile `{profile}` runtime_backend `{selected_runtime_backend}` is incompatible with active runtime backend profile `{active_runtime_backend}`"

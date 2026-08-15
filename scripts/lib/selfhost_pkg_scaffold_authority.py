@@ -308,8 +308,8 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", "genesis/selfhost-pkg-scaffold-authority-v0.1", "native-scaffold", "ledger")
     source_mutation(
         "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-        "Workspace environment",
-        "Workspace retained",
+        "Workspace environment descriptor, projection, hashing, and materialization, general task-resolution, and manifest decisions remain host-authoritative",
+        "Workspace residual authority removed",
         "residual ledger",
     )
 

@@ -1,0 +1,176 @@
+; Closed runtime-backend selection authority for gcpm env.
+
+(def selfhost/pkg-workspace-env-select::request-kind
+  "genesis/pkg-workspace-env-select-authority-request-v0.1")
+(def selfhost/pkg-workspace-env-select::result-kind
+  "genesis/pkg-workspace-env-select-authority-result-v0.1")
+
+(def selfhost/pkg-workspace-env-select::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind selfhost/pkg-workspace-env-select::result-kind
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-workspace-env-select::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-workspace-env-select::result request-h) false)
+          "core/pkg/bad-workspace-env-selection")
+        message)
+      nil))))
+
+(def selfhost/pkg-workspace-env-select::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-workspace-env-select::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-workspace-env-select::normalize
+  (fn (value)
+    (if (selfhost/pkg-lock-read::str? value)
+      (if (((selfhost/pkg-scaffold::bounded-str? value) 64))
+        (let
+          ((normalized
+            (selfhost/effect-crypto::ascii-lower (selfhost/policy::trim value))))
+          (if ((core/eq? normalized) "headless")
+            "headless"
+            (if ((core/eq? normalized) "profile-headless")
+              "headless"
+              (if ((core/eq? normalized) "gpu")
+                "gpu"
+                (if ((core/eq? normalized) "profile-gpu")
+                  "gpu"
+                  (if ((core/eq? normalized) "gfx")
+                    "gfx"
+                    (if ((core/eq? normalized) "profile-gfx")
+                      "gfx"
+                      (if ((core/eq? normalized) "backend")
+                        "backend"
+                        (if ((core/eq? normalized) "profile-backend")
+                          "backend"
+                          nil)))))))))
+        nil)
+      nil)))
+
+(def selfhost/pkg-workspace-env-select::optional-string?
+  (fn (value)
+    (if (core/list::is-nil? value)
+      true
+      (if (selfhost/pkg-lock-read::str? value)
+        (((selfhost/pkg-scaffold::bounded-str? value) 64))
+        false))))
+
+(def selfhost/pkg-workspace-env-select::compatible?
+  (fn (selected)
+    (fn (active)
+      (if ((core/eq? selected) "headless")
+        true
+        (if ((core/eq? selected) "gpu")
+          (if ((core/eq? active) "gpu") true ((core/eq? active) "backend"))
+          (if ((core/eq? selected) "gfx")
+            (if ((core/eq? active) "gfx") true ((core/eq? active) "backend"))
+            (if ((core/eq? selected) "backend")
+              ((core/eq? active) "backend")
+              false)))))))
+
+(def selfhost/pkg-workspace-env-select::choice
+  (fn (override)
+    (fn (profile-backend)
+      (fn (default-backend)
+        (if (core/list::is-nil? override)
+          (if (core/list::is-nil? profile-backend)
+            (if (core/list::is-nil? default-backend)
+              {:raw "headless" :source (quote :builtin)}
+              {:raw default-backend :source (quote :default)})
+            {:raw profile-backend :source (quote :profile)})
+          {:raw override :source (quote :override)})))))
+
+(def selfhost/pkg-workspace-env-select::finish
+  (fn (request-h)
+    (fn (request)
+      (let
+        ((active
+          (selfhost/pkg-workspace-env-select::normalize
+            ((core/map::get request) (quote :active))))
+          (choice
+            (((selfhost/pkg-workspace-env-select::choice
+                ((core/map::get request) (quote :override)))
+              ((core/map::get request) (quote :profile-backend)))
+              ((core/map::get request) (quote :default)))))
+        (let
+          ((selected
+            (selfhost/pkg-workspace-env-select::normalize
+              ((core/map::get choice) (quote :raw)))))
+          (if (core/list::is-nil? selected)
+            ((selfhost/pkg-workspace-env-select::reject request-h)
+              "selected runtime backend is invalid")
+            ((selfhost/pkg-workspace-env-select::accept request-h)
+              {
+                :active active
+                :compatible
+                  ((selfhost/pkg-workspace-env-select::compatible? selected) active)
+                :selected selected
+                :source ((core/map::get choice) (quote :source))})))))))
+
+(def selfhost/pkg-workspace-env-select::request-values-valid?
+  (fn (request)
+    (let
+      ((profile ((core/map::get request) (quote :profile)))
+        (active ((core/map::get request) (quote :active)))
+        (override ((core/map::get request) (quote :override)))
+        (profile-backend ((core/map::get request) (quote :profile-backend)))
+        (default-backend ((core/map::get request) (quote :default))))
+      (if (selfhost/pkg-scaffold::nonempty-str? profile)
+        (if (((selfhost/pkg-scaffold::bounded-str? profile) 256))
+          (if
+            (core/list::is-nil?
+              (selfhost/pkg-workspace-env-select::normalize active))
+            false
+            (if (selfhost/pkg-workspace-env-select::optional-string? override)
+              (if
+                (selfhost/pkg-workspace-env-select::optional-string? profile-backend)
+                (selfhost/pkg-workspace-env-select::optional-string? default-backend)
+                false)
+              false))
+          false)
+        false))))
+
+(def core/pkg::workspace-env-select-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-scaffold::map? request)
+        (if
+          ((selfhost/pkg-lock-read::exact-map? request)
+            [:active :default :kind :override :profile :profile-backend :v])
+          (if
+            (if
+              (if
+                (selfhost/pkg-lock-read::str?
+                  ((core/map::get request) (quote :kind)))
+                ((core/eq? ((core/map::get request) (quote :kind)))
+                  selfhost/pkg-workspace-env-select::request-kind)
+                false)
+              (if
+                (selfhost/pkg-lock-read::int?
+                  ((core/map::get request) (quote :v)))
+                ((core/int::eq? ((core/map::get request) (quote :v))) 1)
+                false)
+              false)
+            (if (selfhost/pkg-workspace-env-select::request-values-valid? request)
+              ((selfhost/pkg-workspace-env-select::finish request-h) request)
+              ((selfhost/pkg-workspace-env-select::reject request-h)
+                "workspace environment selection values are invalid"))
+            ((selfhost/pkg-workspace-env-select::reject request-h)
+              "workspace environment selection kind or version mismatch"))
+          ((selfhost/pkg-workspace-env-select::reject request-h)
+            "workspace environment selection fields mismatch"))
+        ((selfhost/pkg-workspace-env-select::reject request-h)
+          "workspace environment selection request must be map")))))

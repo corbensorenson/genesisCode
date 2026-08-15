@@ -10,6 +10,8 @@ use gc_pkg::{
     normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
 };
 
+#[path = "pkg_workspace_env_select.rs"]
+mod pkg_workspace_env_select;
 #[path = "pkg_workspace_migrate.rs"]
 mod pkg_workspace_migrate;
 #[path = "pkg_workspace_new.rs"]
@@ -330,6 +332,7 @@ pub(crate) fn handle_build(
 }
 
 pub(crate) fn handle_env(
+    cli: &crate::Cli,
     profile: &str,
     runtime_backend_override: Option<&str>,
     lock: &Path,
@@ -337,6 +340,7 @@ pub(crate) fn handle_env(
     out_dir: &Path,
 ) -> Result<LocalPkgResult, String> {
     pkg_workspace_ops_env::handle_env(
+        cli,
         profile,
         runtime_backend_override,
         lock,

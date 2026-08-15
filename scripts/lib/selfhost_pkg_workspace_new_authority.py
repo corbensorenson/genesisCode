@@ -231,7 +231,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
         "crates/gc_cli_driver/src/pkg_workspace_new.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
-        "Workspace environment, task-resolution, and manifest decisions remain host-authoritative",
+        "Workspace environment descriptor, projection, hashing, and materialization, general task-resolution, and manifest decisions remain host-authoritative",
     ], "workspace ownership ledger")
 
 

@@ -1,7 +1,8 @@
 # Self-hosted package workspace authorities v0.1
 
 Status: normative partial authority contract for `R4.2.e`. The filename is retained for stable
-references; this document governs workspace-new, workspace-remove, and workspace-migrate profiles.
+references; this document governs workspace-new, workspace-remove, workspace-migrate, and
+workspace-environment-selection profiles.
 
 ## Workspace-new scope
 
@@ -139,9 +140,50 @@ document/report contradictions, identical paths, symlink boundaries, and non-fil
 Preflight guarantees these known destination conflicts cause no file mutation; this profile does
 not claim pairwise crash atomicity after the first individually atomic rename.
 
+## Workspace environment selection contract
+
+Production `gcpm env` loads `core/pkg::workspace-env-select-authority` from the exact self-host
+artifact before creating an environment directory or materializing a runtime bridge. Rust supplies
+only the requested profile, optional command override, raw optional selected-profile and default
+workspace observations, and the active compiled runtime-backend profile in the closed request
+`[:active :default :kind :override :profile :profile-backend :v]`. Profile names are non-empty and
+at most 256 UTF-8 bytes. Backend observations are nil or strings of at most 64 UTF-8 bytes. The
+active value must normalize to the closed backend inventory.
+
+GenesisCode exclusively owns precedence (`override` then selected profile then workspace default
+then built-in `headless`), Unicode whitespace trimming, ASCII case folding, `profile-` alias
+normalization, selected-source attribution, and compatibility with the active backend. Canonical
+backends are exactly `headless`, `gpu`, `gfx`, and `backend`. `headless` is universally compatible;
+`gpu` and `gfx` require their matching active backend or `backend`; and selected `backend` requires
+active `backend`. Bounded but semantically invalid lower-precedence strings are intentionally
+masked by a present valid higher-precedence value. An invalid selected value rejects the complete
+request.
+
+Every result uses the closed request-hash-bound envelope
+`[:code :kind :message :ok :request-h :v :value]` and kind
+`genesis/pkg-workspace-env-select-authority-result-v0.1`. Success has nil code/message and a value
+containing exactly `[:active :compatible :selected :source]`; source is one of `:override`,
+`:profile`, `:default`, or `:builtin`. Rejection uses only
+`core/pkg/bad-workspace-env-selection` and nil value.
+
+Rust performs bounded TOML and active-backend observation, preserves raw backend strings while the
+shared host parser admits every non-backend workspace structure, evaluates the artifact, and
+strictly decodes the complete response and request identity. It may reject non-string TOML values
+as transport-shape violations, but MUST NOT normalize, validate, select, default, or determine
+compatibility for `gcpm env`. The production `handle_env` route cannot call the retained native
+selector. That selector remains temporarily reachable only from the separately open `gcpm run`
+task-resolution path and is neither a fallback nor an oracle for `gcpm env`.
+
+Authority rejection, missing artifact/binding, nonclosed request or result, request-hash mismatch,
+invalid selected/source/active result, malformed workspace structure, incompatible selection, or
+missing required profile/capability input fails before environment materialization. The adapter
+independently checks the closed selected and active inventory but does not recompute precedence,
+normalization, source, or compatibility.
+
 ## Nonclaims
 
-These profiles do not claim generic TOML or path semantics; workspace environment, general task
-resolution, manifest, or scaffold authority; filesystem policy; pairwise crash-atomic two-file
-commit or recovery; WASI support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap
-fixpoint; or release qualification.
+These profiles do not claim generic TOML or path semantics; workspace environment descriptor,
+projection, hashing, or materialization authority; general task resolution; manifest or remaining
+scaffold authority; filesystem policy; pairwise crash-atomic two-file commit or recovery; WASI
+support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint; or release
+qualification.
