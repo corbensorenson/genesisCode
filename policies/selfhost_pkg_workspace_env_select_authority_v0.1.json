@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-14",
   "binding": "core/pkg::workspace-env-select-authority",
-  "contentIdentitySha256": "1d0dea78ca92be42d279e48764603a9d0fb385caf2533ceece12e790271cc963",
+  "contentIdentitySha256": "3f5a0a91a46cdce54e0ed3f8265cbe3c4a3e68d968b2006da50db1fa77787224",
   "decisionInventory": [
     "closed-runtime-backend-precedence",
     "unicode-trim-and-ascii-case-normalization",
@@ -16,12 +16,12 @@
     "non-backend-structural-workspace-admission",
     "artifact-only-bounded-authority-evaluation",
     "strict-request-bound-result-decoding",
-    "environment-projection-and-materialization"
+    "environment-projection-and-materialization",
+    "post-selection-task-resolution-and-dispatch"
   ],
   "hostOracle": {
-    "parityOnlyForSelectedRoute": true,
-    "productionRequiredForSelectedRoute": false,
-    "retainedNativeConsumer": "gcpm-run-task-resolution",
+    "productionRequired": false,
+    "reachability": "none-proven",
     "removalTask": "R4.2.e"
   },
   "independentVerifier": "scripts/lib/selfhost_pkg_workspace_env_select_authority.py",

@@ -11,12 +11,11 @@
     "hostOracle": {
       "additionalProperties": false,
       "properties": {
-        "parityOnlyForSelectedRoute": { "const": true },
-        "productionRequiredForSelectedRoute": { "const": false },
-        "retainedNativeConsumer": { "const": "gcpm-run-task-resolution" },
+        "productionRequired": { "const": false },
+        "reachability": { "const": "none-proven" },
         "removalTask": { "const": "R4.2.e" }
       },
-      "required": ["parityOnlyForSelectedRoute", "productionRequiredForSelectedRoute", "retainedNativeConsumer", "removalTask"],
+      "required": ["productionRequired", "reachability", "removalTask"],
       "type": "object"
     },
     "independentVerifier": { "const": "scripts/lib/selfhost_pkg_workspace_env_select_authority.py" },

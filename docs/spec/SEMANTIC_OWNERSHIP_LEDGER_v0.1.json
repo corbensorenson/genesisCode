@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "776aff6dfd79179d6913245b8d580a56ae76e736ff8f51acc03a81881d794818",
+  "contentIdentitySha256": "58967e2b172b3399389c997481215494e5fa1d3994f217f290470df1e613c2ef",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1967,7 +1967,7 @@
         "Artifact-loaded GenesisCode exclusively owns gcpm new member parsing, default-root construction, legacy-exact TOML escaping, workspace/default/profile and empty-lock rendering, fixed file order, body identities, and exact report under genesis/selfhost-pkg-workspace-new-authority-v0.1; Rust retains the active-backend observation, strict result and cross-document decoding, two-destination path preflight, and exact-byte persistence mechanisms",
         "Artifact-loaded GenesisCode exclusively owns gcpm remove exact requirement/locked key deletion, non-target lock-model preservation, absent-name disposition, and the exact updated model under genesis/selfhost-pkg-workspace-remove-authority-v0.1; the independently governed GenesisCode lock writer owns canonical bytes and lock identity, while Rust retains bounded lock read/model transport, strict request-bound decoding and cross-document validation, stable report projection from accepted authority facts, destination preflight, and exact-byte persistence mechanisms",
         "Artifact-loaded GenesisCode exclusively owns gcpm migrate workspace-name defaulting, dependency snapshot eligibility, canonical lock model, one-member workspace/default/task rendering, workspace body identity, dependency count, and request-bound report facts under genesis/selfhost-pkg-workspace-migrate-authority-v0.1; the independently governed GenesisCode lock writer owns canonical lock bytes and identity, while Rust retains bounded manifest parsing and path observation, strict result and cross-document decoding, two-destination preflight, and exact-byte persistence mechanisms",
-        "Artifact-loaded GenesisCode exclusively owns gcpm env runtime-backend precedence, Unicode trim and ASCII case/profile-alias normalization, selected-source attribution, and active-profile compatibility under genesis/selfhost-pkg-workspace-env-select-authority-v0.1; Rust retains bounded TOML/profile and active-backend observations, non-backend structural admission, strict request-bound decoding, and environment projection and materialization mechanisms",
+        "Artifact-loaded GenesisCode exclusively owns gcpm env and gcpm run backend-admission precedence, Unicode trim and ASCII case/profile-alias normalization, selected-source attribution, and active-profile compatibility under genesis/selfhost-pkg-workspace-env-select-authority-v0.1; Rust retains bounded TOML/profile and active-backend observations, non-backend structural admission, strict request-bound decoding, environment projection and materialization, and post-selection task resolution and dispatch mechanisms",
         "Workspace environment descriptor, projection, hashing, and materialization, general task-resolution, and manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, crash-atomic multi-file commit and recovery, and WASI workspace support remain unproven, so SD-PACKAGE-WORKSPACE remains H0"
       ],
       "migrationTasks": [
@@ -1988,6 +1988,8 @@
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
         "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
+        "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
+        "crates/gc_cli_driver/src/pkg_task_runner.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
       ],
@@ -2004,6 +2006,8 @@
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
         "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
+        "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
+        "crates/gc_cli_driver/src/pkg_task_runner.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
       ],

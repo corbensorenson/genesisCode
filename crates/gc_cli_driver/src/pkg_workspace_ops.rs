@@ -4,11 +4,8 @@ use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
 use gc_kernel::{MemLimits, StepLimit};
 #[cfg(any(test, feature = "parity-harness"))]
-use gc_pkg::WorkspaceTask;
-use gc_pkg::{
-    PackageManifest, RUNTIME_BACKEND_HEADLESS, UpdatePolicy, WorkspaceConfig, WorkspaceMember,
-    normalize_runtime_backend_profile, runtime_backend_profile_is_compatible,
-};
+use gc_pkg::{RUNTIME_BACKEND_HEADLESS, WorkspaceTask};
+use gc_pkg::{PackageManifest, UpdatePolicy, WorkspaceConfig, WorkspaceMember};
 
 #[path = "pkg_workspace_env_select.rs"]
 mod pkg_workspace_env_select;
@@ -425,43 +422,27 @@ pub(crate) fn collect_missing_locked_hashes(
     Ok(missing)
 }
 
-pub(crate) fn validate_workspace_runtime_backend_for_run(
+pub(crate) fn prepare_workspace_for_run(
+    cli: &crate::Cli,
     workspace_file: &Path,
-) -> Result<String, String> {
-    let ws = WorkspaceConfig::load(workspace_file).map_err(|e| e.to_string())?;
-    let dev_profile_runtime_backend = ws
-        .profiles
-        .get("dev")
-        .and_then(|p| p.runtime_backend.as_deref());
-    let selected_runtime_backend = resolve_env_runtime_backend_profile(
+) -> Result<WorkspaceConfig, String> {
+    let workspace = pkg_workspace_env_select::load_workspace(workspace_file, "dev")?;
+    let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
+    let selection = pkg_workspace_env_select::select_runtime_backend(
+        cli,
         "dev",
         None,
-        dev_profile_runtime_backend,
-        ws.defaults.runtime_backend.as_deref(),
+        workspace.profile_runtime_backend.as_deref(),
+        workspace.default_runtime_backend.as_deref(),
+        &active_runtime_backend,
     )?;
-    let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
-    let compatible =
-        runtime_backend_profile_is_compatible(&selected_runtime_backend, &active_runtime_backend);
-    if !compatible {
+    if !selection.compatible {
         return Err(format!(
-            "workspace runtime_backend `{selected_runtime_backend}` (resolved from profile `dev`/defaults) is incompatible with active runtime backend profile `{active_runtime_backend}`"
+            "workspace runtime_backend `{}` (resolved from profile `dev`/defaults) is incompatible with active runtime backend profile `{active_runtime_backend}`",
+            selection.selected,
         ));
     }
-    Ok(selected_runtime_backend)
-}
-
-pub(crate) fn resolve_env_runtime_backend_profile(
-    profile_name: &str,
-    runtime_backend_override: Option<&str>,
-    profile_runtime_backend: Option<&str>,
-    default_runtime_backend: Option<&str>,
-) -> Result<String, String> {
-    pkg_workspace_ops_env::resolve_env_runtime_backend_profile(
-        profile_name,
-        runtime_backend_override,
-        profile_runtime_backend,
-        default_runtime_backend,
-    )
+    Ok(workspace.config)
 }
 
 fn workspace_store_dir(workspace_file: &Path) -> PathBuf {

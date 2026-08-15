@@ -23,6 +23,11 @@ fn write_workspace(path: &Path, body: &str) {
     fs::write(path, body).unwrap();
 }
 
+fn resolve_task(workspace_file: &Path, task_name: &str) -> Result<WorkspaceTaskAction, String> {
+    let workspace = gc_pkg::WorkspaceConfig::load(workspace_file).map_err(|e| e.to_string())?;
+    resolve_workspace_task(workspace_file, &workspace, task_name)
+}
+
 #[test]
 fn resolves_alias_tasks_build_and_lint() {
     let dir = unique_tmp_dir();
@@ -48,11 +53,11 @@ pkg = "package.toml"
 "#,
     );
 
-    match resolve_workspace_task(&workspace, "build-local").unwrap() {
+    match resolve_task(&workspace, "build-local").unwrap() {
         WorkspaceTaskAction::Pack { pkg } => assert!(pkg.ends_with("package.toml")),
         _ => panic!("build alias must resolve to pack"),
     }
-    match resolve_workspace_task(&workspace, "lint-local").unwrap() {
+    match resolve_task(&workspace, "lint-local").unwrap() {
         WorkspaceTaskAction::Typecheck { pkg } => assert!(pkg.ends_with("package.toml")),
         _ => panic!("lint alias must resolve to typecheck"),
     }
@@ -95,7 +100,7 @@ args = ["--out", "opt.gc", "--emit-wasm", "opt.wasm", "--stage1-gate"]
 "#,
     );
 
-    match resolve_workspace_task(&workspace, "run-local").unwrap() {
+    match resolve_task(&workspace, "run-local").unwrap() {
         WorkspaceTaskAction::Run {
             file,
             caps,
@@ -110,7 +115,7 @@ args = ["--out", "opt.gc", "--emit-wasm", "opt.wasm", "--stage1-gate"]
         _ => panic!("run task must resolve to run action"),
     }
 
-    match resolve_workspace_task(&workspace, "eval-local").unwrap() {
+    match resolve_task(&workspace, "eval-local").unwrap() {
         WorkspaceTaskAction::Eval {
             stage1_pipeline,
             stage2_gate,
@@ -122,7 +127,7 @@ args = ["--out", "opt.gc", "--emit-wasm", "opt.wasm", "--stage1-gate"]
         _ => panic!("eval task must resolve to eval action"),
     }
 
-    match resolve_workspace_task(&workspace, "fmt-local").unwrap() {
+    match resolve_task(&workspace, "fmt-local").unwrap() {
         WorkspaceTaskAction::Fmt { check, engine, .. } => {
             assert!(check);
             assert_eq!(engine.as_deref(), Some("selfhost"));
@@ -130,7 +135,7 @@ args = ["--out", "opt.gc", "--emit-wasm", "opt.wasm", "--stage1-gate"]
         _ => panic!("fmt task must resolve to fmt action"),
     }
 
-    match resolve_workspace_task(&workspace, "opt-local").unwrap() {
+    match resolve_task(&workspace, "opt-local").unwrap() {
         WorkspaceTaskAction::Optimize {
             out,
             emit_wasm,
@@ -179,7 +184,7 @@ args = ["--contract-h", "{contract_h}", "--caps", "caps.toml", "--log", ".genesi
         ),
     );
 
-    match resolve_workspace_task(&workspace, "contract-local").unwrap() {
+    match resolve_task(&workspace, "contract-local").unwrap() {
         WorkspaceTaskAction::Contract {
             file,
             caps,
@@ -227,7 +232,7 @@ file = "contract_task.gc"
 args = ["--caps", "caps.toml"]
 "#,
     );
-    let err = match resolve_workspace_task(&workspace, "contract-missing-hash") {
+    let err = match resolve_task(&workspace, "contract-missing-hash") {
         Ok(_) => panic!("expected missing-hash contract task to fail"),
         Err(e) => e,
     };
@@ -250,7 +255,7 @@ file = "contract_task.gc"
 args = ["--contract-h", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
 "#,
     );
-    let action = resolve_workspace_task(&workspace, "contract-bad-hash").unwrap();
+    let action = resolve_task(&workspace, "contract-bad-hash").unwrap();
     let WorkspaceTaskAction::Contract {
         file,
         contract_hash_hex,

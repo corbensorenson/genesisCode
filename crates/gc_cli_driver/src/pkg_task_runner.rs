@@ -50,10 +50,10 @@ pub(crate) enum WorkspaceTaskAction {
 
 pub(crate) fn resolve_workspace_task(
     workspace_file: &Path,
+    workspace: &WorkspaceConfig,
     task_name: &str,
 ) -> Result<WorkspaceTaskAction, String> {
-    let ws = WorkspaceConfig::load(workspace_file).map_err(|e| e.to_string())?;
-    let task = ws.tasks.get(task_name).ok_or_else(|| {
+    let task = workspace.tasks.get(task_name).ok_or_else(|| {
         format!(
             "task `{task_name}` not found in {}",
             workspace_file.display()

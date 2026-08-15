@@ -142,13 +142,15 @@ not claim pairwise crash atomicity after the first individually atomic rename.
 
 ## Workspace environment selection contract
 
-Production `gcpm env` loads `core/pkg::workspace-env-select-authority` from the exact self-host
-artifact before creating an environment directory or materializing a runtime bridge. Rust supplies
-only the requested profile, optional command override, raw optional selected-profile and default
-workspace observations, and the active compiled runtime-backend profile in the closed request
+Production `gcpm env` and `gcpm run` backend admission load
+`core/pkg::workspace-env-select-authority` from the exact self-host artifact before creating an
+environment directory, materializing a runtime bridge, or resolving a workspace task. Rust
+supplies only the requested profile, optional command override, raw optional selected-profile and
+default workspace observations, and the active compiled runtime-backend profile in the closed request
 `[:active :default :kind :override :profile :profile-backend :v]`. Profile names are non-empty and
 at most 256 UTF-8 bytes. Backend observations are nil or strings of at most 64 UTF-8 bytes. The
-active value must normalize to the closed backend inventory.
+active value must normalize to the closed backend inventory. `gcpm run` selects the fixed `dev`
+profile with no command override; `gcpm env` uses its requested profile and optional override.
 
 GenesisCode exclusively owns precedence (`override` then selected profile then workspace default
 then built-in `headless`), Unicode whitespace trimming, ASCII case folding, `profile-` alias
@@ -170,13 +172,14 @@ Rust performs bounded TOML and active-backend observation, preserves raw backend
 shared host parser admits every non-backend workspace structure, evaluates the artifact, and
 strictly decodes the complete response and request identity. It may reject non-string TOML values
 as transport-shape violations, but MUST NOT normalize, validate, select, default, or determine
-compatibility for `gcpm env`. The production `handle_env` route cannot call the retained native
-selector. That selector remains temporarily reachable only from the separately open `gcpm run`
-task-resolution path and is neither a fallback nor an oracle for `gcpm env`.
+compatibility for either route. The admitted workspace is passed directly into post-selection task
+resolution, so `gcpm run` cannot reload it through a native backend validator. No native selector
+is reachable from either production route.
 
 Authority rejection, missing artifact/binding, nonclosed request or result, request-hash mismatch,
 invalid selected/source/active result, malformed workspace structure, incompatible selection, or
-missing required profile/capability input fails before environment materialization. The adapter
+missing required profile/capability input fails before environment materialization or task
+resolution. The adapter
 independently checks the closed selected and active inventory but does not recompute precedence,
 normalization, source, or compatibility.
 

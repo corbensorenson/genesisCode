@@ -16,9 +16,9 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             task,
             workspace_file,
         } => {
-            pkg_workspace_ops::validate_workspace_runtime_backend_for_run(workspace_file)
+            let workspace = pkg_workspace_ops::prepare_workspace_for_run(cli, workspace_file)
                 .map_err(|e| cli_err(EX_PARSE, "pkg/run", e))?;
-            let action = pkg_task_runner::resolve_workspace_task(workspace_file, task)
+            let action = pkg_task_runner::resolve_workspace_task(workspace_file, &workspace, task)
                 .map_err(|e| cli_err(EX_PARSE, "pkg/run", e))?;
             let out = match action {
                 pkg_task_runner::WorkspaceTaskAction::Test { pkg, caps: tcaps } => {

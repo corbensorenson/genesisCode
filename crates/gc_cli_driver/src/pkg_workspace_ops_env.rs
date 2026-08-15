@@ -577,23 +577,6 @@ fn materialize_wasi_http_bridge_plan(
     Ok(())
 }
 
-pub(super) fn resolve_env_runtime_backend_profile(
-    profile_name: &str,
-    runtime_backend_override: Option<&str>,
-    profile_runtime_backend: Option<&str>,
-    default_runtime_backend: Option<&str>,
-) -> Result<String, String> {
-    let raw = runtime_backend_override
-        .or(profile_runtime_backend)
-        .or(default_runtime_backend)
-        .unwrap_or(RUNTIME_BACKEND_HEADLESS);
-    normalize_runtime_backend_profile(raw).ok_or_else(|| {
-        format!(
-            "profile `{profile_name}` has invalid runtime_backend `{raw}`; expected one of headless|gpu|gfx|backend (or profile-* aliases)"
-        )
-    })
-}
-
 pub(super) fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if path.is_file() {
         let old = std::fs::read(path)?;

@@ -1236,6 +1236,87 @@ file = "module.gc"
 }
 
 #[test]
+fn gcpm_run_selection_masks_invalid_lower_precedence_backend() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("module.gc"), "(def m::x 1)\nm::x\n").unwrap();
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[defaults]
+runtime_backend = "invalid-default"
+
+[profiles."dev"]
+caps_policy = "caps.toml"
+runtime_backend = "  PROFILE-HEADLESS  "
+
+[tasks."eval-local"]
+cmd = "eval"
+file = "module.gc"
+"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "eval-local"])
+        .assert()
+        .success();
+}
+
+#[test]
+fn gcpm_run_invalid_selected_backend_rejects_before_task_resolution() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[profiles."dev"]
+caps_policy = "caps.toml"
+runtime_backend = "invalid-profile"
+
+[tasks."must-not-resolve"]
+cmd = "unsupported-if-reached"
+"#,
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "must-not-resolve"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    assert!(output.contains("core/pkg/bad-workspace-env-selection"));
+    assert!(!output.contains("unsupported task cmd"));
+}
+
+#[test]
 fn gcpm_env_materializes_deterministic_profile_record() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
