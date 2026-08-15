@@ -1,8 +1,8 @@
 # Self-hosted package workspace authorities v0.1
 
 Status: normative partial authority contract for `R4.2.e`. The filename is retained for stable
-references; this document governs workspace-new, workspace-remove, workspace-migrate, and
-workspace-environment-selection profiles.
+references; this document governs workspace-new, workspace-remove, workspace-migrate,
+workspace-environment-selection, and workspace-task profiles.
 
 ## Workspace-new scope
 
@@ -142,11 +142,13 @@ not claim pairwise crash atomicity after the first individually atomic rename.
 
 ## Workspace environment selection contract
 
-Production `gcpm env` and `gcpm run` backend admission load
-`core/pkg::workspace-env-select-authority` from the exact self-host artifact before creating an
-environment directory, materializing a runtime bridge, or resolving a workspace task. Rust
-supplies only the requested profile, optional command override, raw optional selected-profile and
-default workspace observations, and the active compiled runtime-backend profile in the closed request
+Production `gcpm env` loads `core/pkg::workspace-env-select-authority` directly. Production
+`gcpm run` loads `core/pkg::workspace-task-authority`, which invokes the same backend authority
+inside the exact self-host artifact before task interpretation. Both routes complete backend
+admission before creating an environment directory, materializing a runtime bridge, joining a task
+path, reading a task file, or dispatching a task. Rust supplies only the requested profile, optional
+command override where applicable, raw optional selected-profile and default workspace
+observations, and the active compiled runtime-backend profile in the closed request
 `[:active :default :kind :override :profile :profile-backend :v]`. Profile names are non-empty and
 at most 256 UTF-8 bytes. Backend observations are nil or strings of at most 64 UTF-8 bytes. The
 active value must normalize to the closed backend inventory. `gcpm run` selects the fixed `dev`
@@ -172,9 +174,10 @@ Rust performs bounded TOML and active-backend observation, preserves raw backend
 shared host parser admits every non-backend workspace structure, evaluates the artifact, and
 strictly decodes the complete response and request identity. It may reject non-string TOML values
 as transport-shape violations, but MUST NOT normalize, validate, select, default, or determine
-compatibility for either route. The admitted workspace is passed directly into post-selection task
-resolution, so `gcpm run` cannot reload it through a native backend validator. No native selector
-is reachable from either production route.
+compatibility for either route. The structurally admitted workspace is passed directly into the
+composed GenesisCode task authority, so `gcpm run` cannot reload it through a native backend
+validator or native task parser. No native backend selector is reachable from either production
+route.
 
 Authority rejection, missing artifact/binding, nonclosed request or result, request-hash mismatch,
 invalid selected/source/active result, malformed workspace structure, incompatible selection, or
@@ -183,10 +186,60 @@ resolution. The adapter
 independently checks the closed selected and active inventory but does not recompute precedence,
 normalization, source, or compatibility.
 
+## Workspace task authority contract
+
+Production `genesis gcpm run <task>` evaluates `core/pkg::workspace-task-authority` from the exact
+admitted self-host toolchain artifact. The authority composes
+`core/pkg::workspace-env-select-authority` before task interpretation, so an invalid or
+incompatible `dev` runtime backend fails before task lookup, command normalization, argument
+interpretation, path joining, file access, or command dispatch.
+
+The closed request kind is `genesis/pkg-workspace-task-authority-request-v0.1` with exactly these
+fields:
+
+- `:active`: the bounded active executable backend observation.
+- `:default`: nil or the bounded raw workspace default backend observation.
+- `:engines`: the bounded closed inventory of engines compiled into the active executable.
+- `:kind`: the exact request kind.
+- `:profile`: exactly `dev`.
+- `:profile-backend`: nil or the bounded raw `dev` backend observation.
+- `:task`: the bounded exact requested task name.
+- `:tasks`: at most 256 uniquely named closed task observations with exact `:args`, `:cmd`,
+  `:file`, `:name`, and `:pkg` fields; each task has at most 64 bounded string arguments.
+- `:v`: integer `1`.
+
+The request hash is the canonical GenesisCode term hash of the complete request. The result kind
+is `genesis/pkg-workspace-task-authority-result-v0.1`; every envelope is closed and binds that
+request hash. Backend failures retain `core/pkg/bad-workspace-env-selection`. Lookup, command,
+field, argument, engine, and task-shape failures use `core/pkg/bad-workspace-task`.
+
+GenesisCode exclusively owns exact task-name lookup; duplicate and bounded task admission; Unicode
+trim plus ASCII-lower command normalization; `build -> pack`, `lint -> typecheck`, and
+`bench -> run` aliases; package/file precedence and the `package.toml` default; the complete
+action-specific option grammar; engine normalization and membership in the observed executable
+inventory; contract-hash normalization and 64-character ASCII-hex validation; required fields;
+and construction of the closed canonical action.
+
+The canonical action has exactly `:action`, `:caps`, `:check`, `:contract-h`, `:emit-wasm`,
+`:engine`, `:file`, `:log`, `:out`, `:pkg`, `:stage1-gate`, `:stage1-pipeline`, `:stage2-gate`, and
+`:task`. Unused optional fields are nil and unused flags are false. Ignored arguments are
+forbidden: every argument must be consumed by the selected action grammar.
+
+Rust may parse bounded TOML into structural observations, report the compiled backend and engine
+inventory, load and evaluate the exact artifact, strictly decode the complete request-bound
+result, join authority-selected strings to the workspace directory, verify the selected contract
+file's BLAKE3 bytes against the authority-normalized hash, and dispatch the decoded typed action.
+The decoder may reject malformed, contradictory, unavailable, open, or request-divergent artifact
+output, but it MUST NOT look up tasks, normalize commands or engines, choose aliases or paths,
+interpret arguments, default fields, or provide a production fallback.
+
+The former Rust grammar is compiled only for unit tests or the explicit `parity-harness` feature.
+It is not a production fallback, verifier, or promotion authority.
+
 ## Nonclaims
 
 These profiles do not claim generic TOML or path semantics; workspace environment descriptor,
-projection, hashing, or materialization authority; general task resolution; manifest or remaining
-scaffold authority; filesystem policy; pairwise crash-atomic two-file commit or recovery; WASI
-support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint; or release
-qualification.
+projection, hashing, or materialization authority; package task-command implementation authority;
+manifest or remaining scaffold authority; filesystem policy; pairwise crash-atomic two-file commit
+or recovery; WASI support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint; or
+release qualification.

@@ -1,5 +1,9 @@
+// The retired native grammar is intentionally unreachable in non-test parity builds.
+#![cfg_attr(all(feature = "parity-harness", not(test)), allow(dead_code))]
+
 use std::path::{Path, PathBuf};
 
+#[cfg(any(test, feature = "parity-harness"))]
 use gc_pkg::WorkspaceConfig;
 
 pub(crate) enum WorkspaceTaskAction {
@@ -48,7 +52,8 @@ pub(crate) enum WorkspaceTaskAction {
     },
 }
 
-pub(crate) fn resolve_workspace_task(
+#[cfg(any(test, feature = "parity-harness"))]
+pub(crate) fn resolve_workspace_task_parity(
     workspace_file: &Path,
     workspace: &WorkspaceConfig,
     task_name: &str,
@@ -127,6 +132,7 @@ test|pack|build|typecheck|lint|run|bench|contract|eval|fmt|optimize"
     }
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn resolve_pkg_path(workspace_file: &Path, task: &gc_pkg::WorkspaceTask) -> PathBuf {
     let raw = task
         .pkg
@@ -143,6 +149,7 @@ fn resolve_pkg_path(workspace_file: &Path, task: &gc_pkg::WorkspaceTask) -> Path
         .join(candidate)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn resolve_file_path(
     workspace_file: &Path,
     task_name: &str,
@@ -158,6 +165,7 @@ fn resolve_file_path(
     Ok(resolve_workspace_relative_path(workspace_file, raw))
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn resolve_workspace_relative_path(workspace_file: &Path, raw: &str) -> PathBuf {
     let candidate = PathBuf::from(raw);
     if candidate.is_absolute() {
@@ -169,6 +177,7 @@ fn resolve_workspace_relative_path(workspace_file: &Path, raw: &str) -> PathBuf 
         .join(candidate)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_task_caps(
     workspace_file: &Path,
     task_name: &str,
@@ -195,6 +204,7 @@ fn parse_task_caps(
     Ok(caps)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_run_like_args(
     workspace_file: &Path,
     task_name: &str,
@@ -238,6 +248,7 @@ supported: --caps <path>, --log <path>, --engine <selfhost|rust>"
     Ok(RunLikeTaskArgs { caps, log, engine })
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 #[derive(Default)]
 struct RunLikeTaskArgs {
     caps: Option<PathBuf>,
@@ -245,6 +256,7 @@ struct RunLikeTaskArgs {
     engine: Option<String>,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 #[derive(Default)]
 struct ContractTaskArgs {
     caps: Option<PathBuf>,
@@ -253,6 +265,7 @@ struct ContractTaskArgs {
     contract_hash_hex: String,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_contract_task_args(
     workspace_file: &Path,
     task_name: &str,
@@ -306,6 +319,7 @@ fn parse_contract_task_args(
     Ok(out)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_contract_hash_hex(task_name: &str, raw: &str) -> Result<String, String> {
     let h = raw.trim().to_ascii_lowercase();
     if h.len() != 64 || !h.chars().all(|c| c.is_ascii_hexdigit()) {
@@ -334,6 +348,7 @@ pub(crate) fn verify_contract_task_file_hash(
     Ok(actual)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 #[derive(Default)]
 struct EvalTaskArgs {
     engine: Option<String>,
@@ -342,6 +357,7 @@ struct EvalTaskArgs {
     stage2_gate: bool,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_eval_args(task_name: &str, args: &[String]) -> Result<EvalTaskArgs, String> {
     let mut out = EvalTaskArgs::default();
     let mut i = 0_usize;
@@ -377,12 +393,14 @@ fn parse_eval_args(task_name: &str, args: &[String]) -> Result<EvalTaskArgs, Str
     Ok(out)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 #[derive(Default)]
 struct FmtTaskArgs {
     check: bool,
     engine: Option<String>,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_fmt_args(task_name: &str, args: &[String]) -> Result<FmtTaskArgs, String> {
     let mut out = FmtTaskArgs::default();
     let mut i = 0_usize;
@@ -410,6 +428,7 @@ fn parse_fmt_args(task_name: &str, args: &[String]) -> Result<FmtTaskArgs, Strin
     Ok(out)
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 #[derive(Default)]
 struct OptimizeTaskArgs {
     out: Option<PathBuf>,
@@ -419,6 +438,7 @@ struct OptimizeTaskArgs {
     stage2_gate: bool,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn parse_optimize_args(
     workspace_file: &Path,
     task_name: &str,

@@ -1,0 +1,148 @@
+; Composed runtime-backend admission and workspace-task authority for gcpm run.
+
+(def selfhost/pkg-workspace-task-authority::request-kind
+  "genesis/pkg-workspace-task-authority-request-v0.1")
+(def selfhost/pkg-workspace-task-authority::result-kind
+  "genesis/pkg-workspace-task-authority-result-v0.1")
+
+(def selfhost/pkg-workspace-task-authority::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind selfhost/pkg-workspace-task-authority::result-kind
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-workspace-task-authority::reject-code
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((selfhost/pkg-workspace-task-authority::result request-h) false) code)
+          message)
+        nil)))))
+
+(def selfhost/pkg-workspace-task-authority::reject
+  (fn (request-h)
+    (fn (message)
+      (((selfhost/pkg-workspace-task-authority::reject-code request-h)
+          "core/pkg/bad-workspace-task") message))))
+
+(def selfhost/pkg-workspace-task-authority::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-workspace-task-authority::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-workspace-task-authority::selection-request
+  (fn (request)
+    {
+      :active ((core/map::get request) (quote :active))
+      :default ((core/map::get request) (quote :default))
+      :kind selfhost/pkg-workspace-env-select::request-kind
+      :override nil
+      :profile ((core/map::get request) (quote :profile))
+      :profile-backend ((core/map::get request) (quote :profile-backend))
+      :v 1}))
+
+(def selfhost/pkg-workspace-task-authority::finish
+  (fn (request-h)
+    (fn (request)
+      (let
+        ((selection
+          (core/pkg::workspace-env-select-authority
+            (selfhost/pkg-workspace-task-authority::selection-request request))))
+        (if ((core/map::get selection) (quote :ok))
+          (let ((selected ((core/map::get selection) (quote :value))))
+            (if ((core/map::get selected) (quote :compatible))
+              (let
+                ((resolved
+                  (((selfhost/pkg-workspace-task::resolve
+                      ((core/map::get request) (quote :tasks)))
+                    ((core/map::get request) (quote :task)))
+                    ((core/map::get request) (quote :engines)))))
+                (if ((core/map::get resolved) (quote :ok))
+                  ((selfhost/pkg-workspace-task-authority::accept request-h)
+                    {
+                      :action ((core/map::get resolved) (quote :value))
+                      :active ((core/map::get selected) (quote :active))
+                      :compatible true
+                      :selected ((core/map::get selected) (quote :selected))
+                      :source ((core/map::get selected) (quote :source))})
+                  ((selfhost/pkg-workspace-task-authority::reject request-h)
+                    ((core/map::get resolved) (quote :message)))))
+              (((selfhost/pkg-workspace-task-authority::reject-code request-h)
+                  "core/pkg/bad-workspace-env-selection")
+                "workspace runtime backend is incompatible with active runtime backend profile")))
+          (((selfhost/pkg-workspace-task-authority::reject-code request-h)
+              "core/pkg/bad-workspace-env-selection")
+            ((core/map::get selection) (quote :message))))))))
+
+(def selfhost/pkg-workspace-task-authority::request-values-valid?
+  (fn (request)
+    (if
+      (if
+        (((selfhost/pkg-scaffold::bounded-str?
+            ((core/map::get request) (quote :profile))) 256))
+        ((core/eq? ((core/map::get request) (quote :profile))) "dev")
+        false)
+      (if
+        (((selfhost/pkg-scaffold::bounded-str?
+            ((core/map::get request) (quote :task))) 256))
+        (if
+          (((selfhost/pkg-scaffold::bounded-str?
+              ((core/map::get request) (quote :active))) 64))
+          (if
+            ((selfhost/pkg-workspace-task::optional-bounded-str?
+                ((core/map::get request) (quote :default))) 64)
+            (if
+              ((selfhost/pkg-workspace-task::optional-bounded-str?
+                  ((core/map::get request) (quote :profile-backend))) 64)
+              (if
+                (selfhost/pkg-workspace-task::tasks?
+                  ((core/map::get request) (quote :tasks)))
+                (selfhost/pkg-workspace-task::engine-inventory?
+                  ((core/map::get request) (quote :engines)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def core/pkg::workspace-task-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if
+          ((selfhost/pkg-lock-read::exact-map? request)
+            [:active :default :engines :kind :profile :profile-backend :task :tasks :v])
+          (if
+            (if
+              (if
+                (selfhost/pkg-lock-read::str?
+                  ((core/map::get request) (quote :kind)))
+                ((core/eq? ((core/map::get request) (quote :kind)))
+                  selfhost/pkg-workspace-task-authority::request-kind)
+                false)
+              (if
+                (selfhost/pkg-lock-read::int?
+                  ((core/map::get request) (quote :v)))
+                ((core/int::eq? ((core/map::get request) (quote :v))) 1)
+                false)
+              false)
+            (if (selfhost/pkg-workspace-task-authority::request-values-valid? request)
+              ((selfhost/pkg-workspace-task-authority::finish request-h) request)
+              ((selfhost/pkg-workspace-task-authority::reject request-h)
+                "workspace task request values are invalid"))
+            ((selfhost/pkg-workspace-task-authority::reject request-h)
+              "workspace task request kind or version mismatch"))
+          ((selfhost/pkg-workspace-task-authority::reject request-h)
+            "workspace task request fields mismatch"))
+        ((selfhost/pkg-workspace-task-authority::reject request-h)
+          "workspace task request must be map")))))

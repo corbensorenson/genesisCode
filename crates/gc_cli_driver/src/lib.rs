@@ -91,6 +91,7 @@ mod pkg_self_opt;
 mod pkg_task_runner;
 mod pkg_telemetry;
 mod pkg_workspace_ops;
+mod pkg_workspace_task;
 mod policy_config;
 mod program_builders;
 mod refs_contract;

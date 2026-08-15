@@ -1,0 +1,58 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-14",
+  "binding": "core/pkg::workspace-task-authority",
+  "contentIdentitySha256": "310212a1bb8efd180e3ed01d0ba724d5151b2c48b5f7727ab4f5d34aa8b6e89b",
+  "decisionInventory": [
+    "backend-admission-before-task-interpretation",
+    "exact-requested-task-lookup",
+    "closed-command-normalization-and-aliases",
+    "primary-input-selection-and-package-default",
+    "action-specific-option-grammar",
+    "active-executable-engine-membership",
+    "contract-hash-normalization-and-validation",
+    "request-bound-closed-canonical-action"
+  ],
+  "hostMechanisms": [
+    "bounded-workspace-toml-and-build-profile-observation",
+    "non-backend-structural-workspace-admission",
+    "artifact-only-bounded-authority-evaluation",
+    "strict-request-bound-action-decoding",
+    "workspace-relative-path-joining",
+    "contract-file-read-and-hash-verification",
+    "typed-action-dispatch"
+  ],
+  "hostOracle": {
+    "productionRequired": false,
+    "reachability": "test-or-parity-only",
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_workspace_task_authority.py",
+  "kind": "genesis/selfhost-pkg-workspace-task-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "environment-descriptor-projection-hash-or-materialization-authority",
+    "filesystem-or-path-policy-authority",
+    "generic-toml-or-path-authority",
+    "h2-workspace-closure",
+    "manifest-authority",
+    "package-command-implementation-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-workspace-task-support"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/pkg-workspace-task-authority-request-v0.1",
+  "resultKind": "genesis/pkg-workspace-task-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_TASK_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_workspace_task_core_v1.gc",
+    "selfhost/pkg_workspace_task_authority_v1.gc"
+  ],
+  "sourceSha256": "9007e9d3b68ded467545eeabafb8faddfaeb062191481289db51fd7ead139f27",
+  "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

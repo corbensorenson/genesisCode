@@ -1317,6 +1317,122 @@ cmd = "unsupported-if-reached"
 }
 
 #[test]
+fn gcpm_run_selfhost_authority_rejects_unsupported_task_command() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[tasks."unsupported"]
+cmd = "  HOST-SHELL  "
+file = "must-not-run.gc"
+"#,
+    )
+    .unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "unsupported"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("core/pkg/bad-workspace-task"))
+        .stdout(predicates::str::contains(
+            "unsupported workspace task command",
+        ));
+}
+
+#[test]
+fn gcpm_run_selfhost_authority_rejects_ignored_package_arguments() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[tasks."must-not-pack"]
+cmd = "build"
+pkg = "missing-package.toml"
+args = ["--caps", "must-not-be-ignored.toml"]
+"#,
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "must-not-pack"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    assert!(output.contains("core/pkg/bad-workspace-task"));
+    assert!(output.contains("--caps is unsupported for this task action"));
+    assert!(!output.contains("package io error"));
+}
+
+#[test]
+fn gcpm_run_selfhost_authority_rejects_unavailable_engine_before_file_access() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"
+version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+role = "root"
+
+[tasks."must-not-eval"]
+cmd = "eval"
+file = "missing.gc"
+args = ["--engine", "  RUST  "]
+"#,
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "must-not-eval"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    assert!(output.contains("core/pkg/bad-workspace-task"));
+    assert!(output.contains("--engine is unavailable in the active executable"));
+    assert!(!output.contains("missing.gc"));
+}
+
+#[test]
 fn gcpm_env_materializes_deterministic_profile_record() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

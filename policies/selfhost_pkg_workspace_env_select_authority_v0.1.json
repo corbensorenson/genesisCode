@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-14",
   "binding": "core/pkg::workspace-env-select-authority",
-  "contentIdentitySha256": "3f5a0a91a46cdce54e0ed3f8265cbe3c4a3e68d968b2006da50db1fa77787224",
+  "contentIdentitySha256": "e1f1e12c250290a41a78818963fef72464a42ef788281da3b3375faab4803854",
   "decisionInventory": [
     "closed-runtime-backend-precedence",
     "unicode-trim-and-ascii-case-normalization",
@@ -17,7 +17,7 @@
     "artifact-only-bounded-authority-evaluation",
     "strict-request-bound-result-decoding",
     "environment-projection-and-materialization",
-    "post-selection-task-resolution-and-dispatch"
+    "composed-workspace-task-authority-and-host-dispatch"
   ],
   "hostOracle": {
     "productionRequired": false,

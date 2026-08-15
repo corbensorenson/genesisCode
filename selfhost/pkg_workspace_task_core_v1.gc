@@ -1,0 +1,409 @@
+; Closed workspace-task grammar and action construction.
+
+(def selfhost/pkg-workspace-task::optional-bounded-str?
+  (fn (value)
+    (fn (limit)
+      (if (core/list::is-nil? value)
+        true
+        (((selfhost/pkg-scaffold::bounded-str? value) limit))))))
+
+(def selfhost/pkg-workspace-task::string-vector-loop?
+  (fn (values)
+    (fn (index)
+      (fn (limit)
+        (if ((core/int::eq? index) (core/vec::len values))
+          true
+          (if
+            (((selfhost/pkg-scaffold::bounded-str?
+                ((core/vec::get values) index)) limit))
+            (((selfhost/pkg-workspace-task::string-vector-loop? values)
+                ((core/int::add index) 1)) limit)
+            false))))))
+
+(def selfhost/pkg-workspace-task::string-vector?
+  (fn (value)
+    (fn (count-limit)
+      (fn (string-limit)
+        (if (selfhost/pkg-lock-read::vec? value)
+          (if ((core/int::lt? count-limit) (core/vec::len value))
+            false
+            (((selfhost/pkg-workspace-task::string-vector-loop? value) 0)
+              string-limit))
+          false)))))
+
+(def selfhost/pkg-workspace-task::task?
+  (fn (task)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? task) [:args :cmd :file :name :pkg])
+      (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get task) (quote :name))) 256))
+        (if (((selfhost/pkg-scaffold::bounded-str? ((core/map::get task) (quote :cmd))) 64))
+          (if
+            ((selfhost/pkg-workspace-task::optional-bounded-str?
+                ((core/map::get task) (quote :file))) 4096)
+            (if
+              ((selfhost/pkg-workspace-task::optional-bounded-str?
+                  ((core/map::get task) (quote :pkg))) 4096)
+              (((selfhost/pkg-workspace-task::string-vector?
+                  ((core/map::get task) (quote :args))) 64) 4096)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-task::tasks-loop?
+  (fn (tasks)
+    (fn (index)
+      (fn (seen)
+        (if ((core/int::eq? index) (core/vec::len tasks))
+          true
+          (let ((task ((core/vec::get tasks) index)))
+            (if (selfhost/pkg-workspace-task::task? task)
+              (let ((name ((core/map::get task) (quote :name))))
+                (if (core/list::is-nil? ((core/map::get seen) name))
+                  (((selfhost/pkg-workspace-task::tasks-loop? tasks)
+                      ((core/int::add index) 1))
+                    (((core/map::put seen) name) true))
+                  false))
+              false)))))))
+
+(def selfhost/pkg-workspace-task::tasks?
+  (fn (tasks)
+    (if (selfhost/pkg-lock-read::vec? tasks)
+      (if ((core/int::lt? 256) (core/vec::len tasks))
+        false
+        (((selfhost/pkg-workspace-task::tasks-loop? tasks) 0) {}))
+      false)))
+
+(def selfhost/pkg-workspace-task::engine-inventory?
+  (fn (engines)
+    (if (((selfhost/pkg-workspace-task::string-vector? engines) 2) 16)
+      (if ((core/int::lt? 0) (core/vec::len engines))
+        true
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-task::member-loop?
+  (fn (values)
+    (fn (value)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          false
+          (if ((core/eq? ((core/vec::get values) index)) value)
+            true
+            (((selfhost/pkg-workspace-task::member-loop? values) value)
+              ((core/int::add index) 1))))))))
+
+(def selfhost/pkg-workspace-task::member?
+  (fn (values)
+    (fn (value)
+      (((selfhost/pkg-workspace-task::member-loop? values) value) 0))))
+
+(def selfhost/pkg-workspace-task::find-loop
+  (fn (tasks)
+    (fn (name)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len tasks))
+          nil
+          (let ((task ((core/vec::get tasks) index)))
+            (if ((core/eq? ((core/map::get task) (quote :name))) name)
+              task
+              (((selfhost/pkg-workspace-task::find-loop tasks) name)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/pkg-workspace-task::find
+  (fn (tasks)
+    (fn (name)
+      (((selfhost/pkg-workspace-task::find-loop tasks) name) 0))))
+
+(def selfhost/pkg-workspace-task::normalize-action
+  (fn (raw)
+    (let
+      ((cmd
+        (selfhost/effect-crypto::ascii-lower (selfhost/policy::trim raw))))
+      (if ((core/eq? cmd) "test")
+        "test"
+        (if ((core/eq? cmd) "pack")
+          "pack"
+          (if ((core/eq? cmd) "build")
+            "pack"
+            (if ((core/eq? cmd) "typecheck")
+              "typecheck"
+              (if ((core/eq? cmd) "lint")
+                "typecheck"
+                (if ((core/eq? cmd) "run")
+                  "run"
+                  (if ((core/eq? cmd) "bench")
+                    "run"
+                    (if ((core/eq? cmd) "contract")
+                      "contract"
+                      (if ((core/eq? cmd) "eval")
+                        "eval"
+                        (if ((core/eq? cmd) "fmt")
+                          "fmt"
+                          (if ((core/eq? cmd) "optimize") "optimize" nil))))))))))))))
+
+(def selfhost/pkg-workspace-task::empty-action
+  (fn (action)
+    (fn (task)
+      {
+        :action action
+        :caps nil
+        :check false
+        :contract-h nil
+        :emit-wasm nil
+        :engine nil
+        :file nil
+        :log nil
+        :out nil
+        :pkg nil
+        :stage1-gate false
+        :stage1-pipeline false
+        :stage2-gate false
+        :task task})))
+
+(def selfhost/pkg-workspace-task::put
+  (fn (state)
+    (fn (key)
+      (fn (value) (((core/map::put state) key) value)))))
+
+(def selfhost/pkg-workspace-task::reject
+  (fn (message) {:message message :ok false :value nil}))
+
+(def selfhost/pkg-workspace-task::accept
+  (fn (value) {:message nil :ok true :value value}))
+
+(def selfhost/pkg-workspace-task::action-allows-caps?
+  (fn (action)
+    (if ((core/eq? action) "test")
+      true
+      (if ((core/eq? action) "run") true ((core/eq? action) "contract")))))
+
+(def selfhost/pkg-workspace-task::action-allows-engine?
+  (fn (action)
+    (if ((core/eq? action) "run")
+      true
+      (if ((core/eq? action) "contract")
+        true
+        (if ((core/eq? action) "eval")
+          true
+          (if ((core/eq? action) "fmt") true ((core/eq? action) "optimize")))))))
+
+(def selfhost/pkg-workspace-task::has-value?
+  (fn (args)
+    (fn (index) ((core/int::lt? ((core/int::add index) 1)) (core/vec::len args)))))
+
+(def selfhost/pkg-workspace-task::path-value?
+  (fn (value) (selfhost/pkg-scaffold::nonempty-str? value)))
+
+(def selfhost/pkg-workspace-task::normalize-engine
+  (fn (raw)
+    (fn (engines)
+      (let
+        ((engine
+          (selfhost/effect-crypto::ascii-lower (selfhost/policy::trim raw))))
+        (if ((selfhost/pkg-workspace-task::member? engines) engine) engine nil)))))
+
+(def selfhost/pkg-workspace-task::finish-args
+  (fn (action)
+    (fn (state)
+      (if ((core/eq? action) "contract")
+        (if (core/list::is-nil? ((core/map::get state) (quote :contract-h)))
+          (selfhost/pkg-workspace-task::reject
+            "contract task requires --contract-h <hex64>")
+          (selfhost/pkg-workspace-task::accept state))
+        (selfhost/pkg-workspace-task::accept state)))))
+
+(def selfhost/pkg-workspace-task::parse-args
+  (fn (action)
+    (fn (args)
+      (fn (engines)
+        (fn (index)
+          (fn (state)
+            (if ((core/int::eq? index) (core/vec::len args))
+              ((selfhost/pkg-workspace-task::finish-args action) state)
+              (let ((arg ((core/vec::get args) index)))
+                (if ((core/eq? arg) "--caps")
+                  (if (selfhost/pkg-workspace-task::action-allows-caps? action)
+                    (if ((selfhost/pkg-workspace-task::has-value? args) index)
+                      (let ((value ((core/vec::get args) ((core/int::add index) 1))))
+                        (if (selfhost/pkg-workspace-task::path-value? value)
+                          (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                              ((core/int::add index) 2))
+                            (((selfhost/pkg-workspace-task::put state) (quote :caps)) value))
+                          (selfhost/pkg-workspace-task::reject "--caps requires a non-empty path")))
+                      (selfhost/pkg-workspace-task::reject "--caps requires a value"))
+                    (selfhost/pkg-workspace-task::reject "--caps is unsupported for this task action"))
+                  (if ((core/eq? arg) "--log")
+                    (if
+                      (if ((core/eq? action) "run") true ((core/eq? action) "contract"))
+                      (if ((selfhost/pkg-workspace-task::has-value? args) index)
+                        (let ((value ((core/vec::get args) ((core/int::add index) 1))))
+                          (if (selfhost/pkg-workspace-task::path-value? value)
+                            (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                ((core/int::add index) 2))
+                              (((selfhost/pkg-workspace-task::put state) (quote :log)) value))
+                            (selfhost/pkg-workspace-task::reject "--log requires a non-empty path")))
+                        (selfhost/pkg-workspace-task::reject "--log requires a value"))
+                      (selfhost/pkg-workspace-task::reject "--log is unsupported for this task action"))
+                    (if ((core/eq? arg) "--engine")
+                      (if (selfhost/pkg-workspace-task::action-allows-engine? action)
+                        (if ((selfhost/pkg-workspace-task::has-value? args) index)
+                          (let
+                            ((engine
+                              ((selfhost/pkg-workspace-task::normalize-engine
+                                  ((core/vec::get args) ((core/int::add index) 1))) engines)))
+                            (if (core/list::is-nil? engine)
+                              (selfhost/pkg-workspace-task::reject
+                                "--engine is unavailable in the active executable")
+                              (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                  ((core/int::add index) 2))
+                                (((selfhost/pkg-workspace-task::put state) (quote :engine)) engine))))
+                          (selfhost/pkg-workspace-task::reject "--engine requires a value"))
+                        (selfhost/pkg-workspace-task::reject "--engine is unsupported for this task action"))
+                      (if
+                        (if ((core/eq? arg) "--contract-h")
+                          true
+                          ((core/eq? arg) "--contract-hash"))
+                        (if ((core/eq? action) "contract")
+                          (if ((selfhost/pkg-workspace-task::has-value? args) index)
+                            (let
+                              ((hash
+                                (selfhost/effect-crypto::ascii-lower
+                                  (selfhost/policy::trim
+                                    ((core/vec::get args) ((core/int::add index) 1))))))
+                              (if (selfhost/pkg-resolution-plan::hash64? hash)
+                                (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                    ((core/int::add index) 2))
+                                  (((selfhost/pkg-workspace-task::put state) (quote :contract-h)) hash))
+                                (selfhost/pkg-workspace-task::reject
+                                  "--contract-h requires exactly 64 ASCII hexadecimal characters")))
+                            (selfhost/pkg-workspace-task::reject "--contract-h requires a value"))
+                          (selfhost/pkg-workspace-task::reject
+                            "--contract-h is unsupported for this task action"))
+                        (if ((core/eq? arg) "--stage1-pipeline")
+                          (if ((core/eq? action) "eval")
+                            (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                ((core/int::add index) 1))
+                              (((selfhost/pkg-workspace-task::put state)
+                                  (quote :stage1-pipeline)) true))
+                            (selfhost/pkg-workspace-task::reject
+                              "--stage1-pipeline is unsupported for this task action"))
+                          (if ((core/eq? arg) "--stage1-gate")
+                            (if
+                              (if ((core/eq? action) "eval")
+                                true
+                                ((core/eq? action) "optimize"))
+                              (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                  ((core/int::add index) 1))
+                                (((selfhost/pkg-workspace-task::put state)
+                                    (quote :stage1-gate)) true))
+                              (selfhost/pkg-workspace-task::reject
+                                "--stage1-gate is unsupported for this task action"))
+                            (if ((core/eq? arg) "--stage2-gate")
+                              (if
+                                (if ((core/eq? action) "eval")
+                                  true
+                                  ((core/eq? action) "optimize"))
+                                (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                    ((core/int::add index) 1))
+                                  (((selfhost/pkg-workspace-task::put state)
+                                      (quote :stage2-gate)) true))
+                                (selfhost/pkg-workspace-task::reject
+                                  "--stage2-gate is unsupported for this task action"))
+                              (if ((core/eq? arg) "--check")
+                                (if ((core/eq? action) "fmt")
+                                  (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                      ((core/int::add index) 1))
+                                    (((selfhost/pkg-workspace-task::put state) (quote :check)) true))
+                                  (selfhost/pkg-workspace-task::reject
+                                    "--check is unsupported for this task action"))
+                                (if ((core/eq? arg) "--out")
+                                  (if ((core/eq? action) "optimize")
+                                    (if ((selfhost/pkg-workspace-task::has-value? args) index)
+                                      (let ((value ((core/vec::get args) ((core/int::add index) 1))))
+                                        (if (selfhost/pkg-workspace-task::path-value? value)
+                                          (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                              ((core/int::add index) 2))
+                                            (((selfhost/pkg-workspace-task::put state) (quote :out)) value))
+                                          (selfhost/pkg-workspace-task::reject
+                                            "--out requires a non-empty path")))
+                                      (selfhost/pkg-workspace-task::reject "--out requires a value"))
+                                    (selfhost/pkg-workspace-task::reject
+                                      "--out is unsupported for this task action"))
+                                  (if ((core/eq? arg) "--emit-wasm")
+                                    (if ((core/eq? action) "optimize")
+                                      (if ((selfhost/pkg-workspace-task::has-value? args) index)
+                                        (let ((value ((core/vec::get args) ((core/int::add index) 1))))
+                                          (if (selfhost/pkg-workspace-task::path-value? value)
+                                            (((((selfhost/pkg-workspace-task::parse-args action) args) engines)
+                                                ((core/int::add index) 2))
+                                              (((selfhost/pkg-workspace-task::put state)
+                                                  (quote :emit-wasm)) value))
+                                            (selfhost/pkg-workspace-task::reject
+                                              "--emit-wasm requires a non-empty path")))
+                                        (selfhost/pkg-workspace-task::reject
+                                          "--emit-wasm requires a value"))
+                                      (selfhost/pkg-workspace-task::reject
+                                        "--emit-wasm is unsupported for this task action"))
+                                    (selfhost/pkg-workspace-task::reject
+                                      ((core/str::concat "unsupported workspace task argument: ") arg))))))))))))))))))))
+
+(def selfhost/pkg-workspace-task::selected-path
+  (fn (primary)
+    (fn (fallback)
+      (fn (default)
+        (if (core/list::is-nil? primary)
+          (if (core/list::is-nil? fallback) default fallback)
+          primary)))))
+
+(def selfhost/pkg-workspace-task::resolve-task
+  (fn (task)
+    (fn (engines)
+      (let
+        ((action
+          (selfhost/pkg-workspace-task::normalize-action
+            ((core/map::get task) (quote :cmd))))
+          (task-name ((core/map::get task) (quote :name))))
+        (if (core/list::is-nil? action)
+          (selfhost/pkg-workspace-task::reject "unsupported workspace task command")
+          (let ((state ((selfhost/pkg-workspace-task::empty-action action) task-name)))
+            (if
+              (if ((core/eq? action) "test")
+                true
+                (if ((core/eq? action) "pack") true ((core/eq? action) "typecheck")))
+              (let
+                ((path
+                  (((selfhost/pkg-workspace-task::selected-path
+                      ((core/map::get task) (quote :pkg)))
+                    ((core/map::get task) (quote :file))) "package.toml")))
+                (if (selfhost/pkg-workspace-task::path-value? path)
+                  (((((selfhost/pkg-workspace-task::parse-args action)
+                        ((core/map::get task) (quote :args))) engines) 0)
+                    (((selfhost/pkg-workspace-task::put state) (quote :pkg)) path))
+                  (selfhost/pkg-workspace-task::reject
+                    "workspace package task requires a non-empty package path")))
+              (let
+                ((path
+                  (((selfhost/pkg-workspace-task::selected-path
+                      ((core/map::get task) (quote :file)))
+                    ((core/map::get task) (quote :pkg))) nil)))
+                (if (selfhost/pkg-workspace-task::path-value? path)
+                  (((((selfhost/pkg-workspace-task::parse-args action)
+                        ((core/map::get task) (quote :args))) engines) 0)
+                    (((selfhost/pkg-workspace-task::put state) (quote :file)) path))
+                  (selfhost/pkg-workspace-task::reject
+                    "workspace execution task requires a non-empty file path"))))))))))
+
+(def selfhost/pkg-workspace-task::resolve
+  (fn (tasks)
+    (fn (task-name)
+      (fn (engines)
+        (if (selfhost/pkg-workspace-task::tasks? tasks)
+          (if (selfhost/pkg-workspace-task::engine-inventory? engines)
+            (let ((task ((selfhost/pkg-workspace-task::find tasks) task-name)))
+              (if (core/list::is-nil? task)
+                (selfhost/pkg-workspace-task::reject "workspace task was not found")
+                ((selfhost/pkg-workspace-task::resolve-task task) engines)))
+            (selfhost/pkg-workspace-task::reject "engine inventory is invalid"))
+          (selfhost/pkg-workspace-task::reject "workspace task inventory is invalid"))))))

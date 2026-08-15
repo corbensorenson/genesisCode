@@ -3,9 +3,9 @@ use std::path::{Path, PathBuf};
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
 use gc_kernel::{MemLimits, StepLimit};
+use gc_pkg::{PackageManifest, UpdatePolicy, WorkspaceConfig, WorkspaceMember};
 #[cfg(any(test, feature = "parity-harness"))]
 use gc_pkg::{RUNTIME_BACKEND_HEADLESS, WorkspaceTask};
-use gc_pkg::{PackageManifest, UpdatePolicy, WorkspaceConfig, WorkspaceMember};
 
 #[path = "pkg_workspace_env_select.rs"]
 mod pkg_workspace_env_select;
@@ -422,27 +422,22 @@ pub(crate) fn collect_missing_locked_hashes(
     Ok(missing)
 }
 
-pub(crate) fn prepare_workspace_for_run(
+pub(crate) fn resolve_workspace_task_for_run(
     cli: &crate::Cli,
     workspace_file: &Path,
-) -> Result<WorkspaceConfig, String> {
+    task_name: &str,
+) -> Result<crate::pkg_task_runner::WorkspaceTaskAction, String> {
     let workspace = pkg_workspace_env_select::load_workspace(workspace_file, "dev")?;
     let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
-    let selection = pkg_workspace_env_select::select_runtime_backend(
+    crate::pkg_workspace_task::resolve(
         cli,
-        "dev",
-        None,
-        workspace.profile_runtime_backend.as_deref(),
+        workspace_file,
+        &workspace.config,
         workspace.default_runtime_backend.as_deref(),
+        workspace.profile_runtime_backend.as_deref(),
         &active_runtime_backend,
-    )?;
-    if !selection.compatible {
-        return Err(format!(
-            "workspace runtime_backend `{}` (resolved from profile `dev`/defaults) is incompatible with active runtime backend profile `{active_runtime_backend}`",
-            selection.selected,
-        ));
-    }
-    Ok(workspace.config)
+        task_name,
+    )
 }
 
 fn workspace_store_dir(workspace_file: &Path) -> PathBuf {

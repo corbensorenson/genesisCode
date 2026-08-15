@@ -1,4 +1,4 @@
-use super::{WorkspaceTaskAction, resolve_workspace_task, verify_contract_task_file_hash};
+use super::{WorkspaceTaskAction, resolve_workspace_task_parity, verify_contract_task_file_hash};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -25,7 +25,7 @@ fn write_workspace(path: &Path, body: &str) {
 
 fn resolve_task(workspace_file: &Path, task_name: &str) -> Result<WorkspaceTaskAction, String> {
     let workspace = gc_pkg::WorkspaceConfig::load(workspace_file).map_err(|e| e.to_string())?;
-    resolve_workspace_task(workspace_file, &workspace, task_name)
+    resolve_workspace_task_parity(workspace_file, &workspace, task_name)
 }
 
 #[test]

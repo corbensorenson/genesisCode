@@ -261,7 +261,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_SCAFFOLD_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package scaffold profile.
 - `policies/selfhost_pkg_scaffold_authority_v0.1.json` - content-addressed scaffold decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_scaffold_authority.py` - independent scaffold source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
-- `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md` - shared normative partial R4.2.e workspace-new, workspace-remove, workspace-migrate, and workspace-environment-selection parsing, mutation, selection, canonical writer, identity, preflight, and write authority boundary; the stable filename predates the later profiles.
+- `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md` - shared normative partial R4.2.e workspace-new, workspace-remove, workspace-migrate, workspace-environment-selection, and workspace-task parsing, mutation, selection, canonical writer, identity, preflight, and write authority boundary; the stable filename predates the later profiles.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package workspace-new profile.
 - `policies/selfhost_pkg_workspace_new_authority_v0.1.json` - content-addressed workspace-new decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_workspace_new_authority.py` - independent workspace-new source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
@@ -272,8 +272,11 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `policies/selfhost_pkg_workspace_migrate_authority_v0.1.json` - content-addressed workspace-migrate decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_workspace_migrate_authority.py` - independent workspace-migrate source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_ENV_SELECT_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked workspace-environment backend-selection profile.
-- `policies/selfhost_pkg_workspace_env_select_authority_v0.1.json` - content-addressed backend precedence, normalization, compatibility, bounded host mechanisms, retained task-path consumer, and explicit nonclaims.
+- `policies/selfhost_pkg_workspace_env_select_authority_v0.1.json` - content-addressed backend precedence, normalization, compatibility, composed task-authority handoff, bounded host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_workspace_env_select_authority.py` - independent environment-selection source/artifact/loader/route/no-fallback/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_WORKSPACE_TASK_AUTHORITY_v0.1.schema.json` - closed schema for the composed backend-admission and workspace-task grammar/action authority profile.
+- `policies/selfhost_pkg_workspace_task_authority_v0.1.json` - content-addressed task lookup, command/alias, option, engine, contract-hash, and canonical-action ownership profile.
+- `scripts/lib/selfhost_pkg_workspace_task_authority.py` - independent task source/artifact/adapter/route/parity/ledger custody and mutation verifier.
 - `policies/selfhost_pkg_resolution_workflow_authority_v0.1.json` - content-addressed workflow decision inventory, residual host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_resolution_workflow_authority.py` - independent workflow source/artifact/route/oracle/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_SEMVER_SELECT_AUTHORITY_v0.1.md` - normative partial R4.2.e semver policy-extremum, lexical tie-break, and empty-candidate authority boundary.

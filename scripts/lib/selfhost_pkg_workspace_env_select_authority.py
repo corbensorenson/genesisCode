@@ -70,7 +70,7 @@ CONSTANTS = {
         "artifact-only-bounded-authority-evaluation",
         "strict-request-bound-result-decoding",
         "environment-projection-and-materialization",
-        "post-selection-task-resolution-and-dispatch",
+        "composed-workspace-task-authority-and-host-dispatch",
     ],
     "hostOracle": {
         "productionRequired": False,
@@ -168,6 +168,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     adapter = text(root, "crates/gc_cli_driver/src/pkg_workspace_env_select.rs", overrides)
     environment = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs", overrides)
     workspace_ops = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops.rs", overrides)
+    task_adapter = text(root, "crates/gc_cli_driver/src/pkg_workspace_task.rs", overrides)
+    task_authority = text(root, "selfhost/pkg_workspace_task_authority_v1.gc", overrides)
     task_runner = text(root, "crates/gc_cli_driver/src/pkg_task_runner.rs", overrides)
     route = text(root, "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs", overrides)
     tests = text(root, "crates/gc_cli/tests/cli_pkg_workspace.rs", overrides)
@@ -229,16 +231,14 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"native workspace-env semantic fallback reachable: {forbidden}")
 
     require_markers(workspace_ops, [
-        "pub(crate) fn prepare_workspace_for_run(",
+        "pub(crate) fn resolve_workspace_task_for_run(",
         'pkg_workspace_env_select::load_workspace(workspace_file, "dev")',
-        "pkg_workspace_env_select::select_runtime_backend(",
-        "workspace.profile_runtime_backend.as_deref()",
+        "crate::pkg_workspace_task::resolve(",
         "workspace.default_runtime_backend.as_deref()",
-        "if !selection.compatible",
-        "Ok(workspace.config)",
+        "workspace.profile_runtime_backend.as_deref()",
     ], "gcpm run backend-admission route")
     run_admission = workspace_ops[
-        workspace_ops.index("pub(crate) fn prepare_workspace_for_run("):
+        workspace_ops.index("pub(crate) fn resolve_workspace_task_for_run("):
         workspace_ops.index("fn workspace_store_dir(")
     ]
     for forbidden in ("resolve_env_runtime_backend_profile(", "normalize_runtime_backend_profile(",
@@ -246,22 +246,27 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         if forbidden in run_admission:
             fail(f"native gcpm-run backend semantic fallback reachable: {forbidden}")
 
+    require_markers(task_adapter, [
+        'const AUTHORITY_BINDING: &str = "core/pkg::workspace-task-authority"',
+        'Term::Str("dev".to_string())', "default_runtime_backend",
+        "profile_runtime_backend", "active_runtime_backend",
+        "crate::load_selfhost_toolchain", ".get(AUTHORITY_BINDING)",
+        "decode_authorized(", 'require_bool(result, ":compatible", true)',
+    ], "composed gcpm run authority adapter")
+    require_markers(task_authority, [
+        "core/pkg::workspace-env-select-authority",
+        "selfhost/pkg-workspace-task-authority::selection-request",
+        '"core/pkg/bad-workspace-env-selection"',
+        "selfhost/pkg-workspace-task::resolve",
+    ], "GenesisCode composed backend admission")
     require_markers(task_runner, [
-        "pub(crate) fn resolve_workspace_task(",
-        "workspace: &WorkspaceConfig",
-        "let task = workspace.tasks.get(task_name)",
-    ], "post-selection workspace task mechanism")
-    task_resolution = task_runner[
-        task_runner.index("pub(crate) fn resolve_workspace_task("):
-        task_runner.index("fn resolve_pkg_path(")
-    ]
-    if "WorkspaceConfig::load(" in task_resolution:
-        fail("post-selection task resolution reloads workspace through native admission")
+        "#[cfg(any(test, feature = \"parity-harness\"))]",
+        "pub(crate) fn resolve_workspace_task_parity(",
+    ], "retired native workspace task oracle")
 
     require_markers(route, [
         "pkg_workspace_ops::handle_env(\n                cli,", "runtime_backend.as_deref()",
-        "pkg_workspace_ops::prepare_workspace_for_run(cli, workspace_file)",
-        "pkg_task_runner::resolve_workspace_task(workspace_file, &workspace, task)",
+        "pkg_workspace_ops::resolve_workspace_task_for_run(cli, workspace_file, task)",
     ], "workspace-env CLI route")
     require_markers(tests, [
         "gcpm_env_runtime_backend_profile_contract_is_machine_readable",
@@ -284,10 +289,11 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_task.rs",
         "crates/gc_cli_driver/src/pkg_task_runner.rs",
         "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
         "Artifact-loaded GenesisCode exclusively owns gcpm env and gcpm run backend-admission",
-        "Workspace environment descriptor, projection, hashing, and materialization, general task-resolution, and manifest decisions remain host-authoritative",
+        "Workspace environment descriptor, projection, hashing, and materialization and manifest decisions remain host-authoritative",
     ], "workspace ownership ledger")
 
 
@@ -305,7 +311,9 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_task.rs",
         "crates/gc_cli_driver/src/pkg_task_runner.rs",
+        "selfhost/pkg_workspace_task_authority_v1.gc",
         "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
         "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
@@ -351,13 +359,14 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(environment, "pkg_workspace_env_select::select_runtime_backend(", "resolve_env_runtime_backend_profile(", "production selector")
     source_mutation(environment, "let runtime_backend_compatible = selection.compatible", "let runtime_backend_compatible = true", "compatibility transport")
     workspace_ops = "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
-    source_mutation(workspace_ops, "pkg_workspace_env_select::select_runtime_backend(", "resolve_env_runtime_backend_profile(", "run production selector")
+    source_mutation(workspace_ops, "crate::pkg_workspace_task::resolve(", "resolve_env_runtime_backend_profile(", "run production selector")
+    task_adapter = "crates/gc_cli_driver/src/pkg_workspace_task.rs"
+    source_mutation(task_adapter, 'Term::Str("dev".to_string())', 'Term::Str("release".to_string())', "run profile custody")
     task_runner = "crates/gc_cli_driver/src/pkg_task_runner.rs"
-    source_mutation(task_runner, "let task = workspace.tasks.get(task_name)", "let workspace = WorkspaceConfig::load(workspace_file).unwrap();\n    let task = workspace.tasks.get(task_name)", "workspace reload")
+    source_mutation(task_runner, "pub(crate) fn resolve_workspace_task_parity(", "pub(crate) fn resolve_workspace_task(", "native oracle reachability")
     route = "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs"
     source_mutation(route, "pkg_workspace_ops::handle_env(\n                cli,", "pkg_workspace_ops::handle_env(\n                &Cli::default(),", "CLI custody")
-    source_mutation(route, "pkg_workspace_ops::prepare_workspace_for_run(cli, workspace_file)", "pkg_workspace_ops::validate_workspace_runtime_backend_for_run(workspace_file)", "run authority custody")
-    source_mutation(route, "pkg_task_runner::resolve_workspace_task(workspace_file, &workspace, task)", "pkg_task_runner::resolve_workspace_task(workspace_file, task)", "admitted workspace transport")
+    source_mutation(route, "pkg_workspace_ops::resolve_workspace_task_for_run(cli, workspace_file, task)", "pkg_task_runner::resolve_workspace_task(workspace_file, task)", "run authority custody")
     tests = "crates/gc_cli/tests/cli_pkg_workspace.rs"
     source_mutation(tests, "gcpm_env_selection_override_masks_invalid_lower_precedence_values", "legacy_mask_test", "masking control")
     source_mutation(tests, "gcpm_env_selection_invalid_selected_backend_rejects_before_materialization", "legacy_reject_test", "rejection control")
@@ -365,7 +374,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(tests, "gcpm_run_invalid_selected_backend_rejects_before_task_resolution", "legacy_run_reject_test", "run ordering control")
     ledger = "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json"
     source_mutation(ledger, profile["kind"], "native-workspace-env-select", "ledger authority")
-    source_mutation(ledger, "Workspace environment descriptor, projection, hashing, and materialization", "Workspace environment", "ledger residual")
+    source_mutation(ledger, "Workspace environment descriptor, projection, hashing, and materialization and manifest decisions", "Workspace environment and manifest decisions", "ledger residual")
 
     controls = 0
     for changed_profile, overrides, name in mutations:
