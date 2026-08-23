@@ -23,6 +23,7 @@ pub(crate) use snapshot::PkgSnapshotDecision;
 mod publish;
 pub(crate) use publish::{
     PkgPublishDecision, PkgPublishInspection, PkgPublishObject, PkgPublishPreparation,
+    mechanical_signing_hash, verify_crypto_request,
 };
 #[cfg(test)]
 #[path = "pkg_publish_authority_finalize_tests.rs"]

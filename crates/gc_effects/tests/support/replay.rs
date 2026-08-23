@@ -5,7 +5,12 @@ use gc_kernel::{EvalCtx, Value};
 use gc_prelude::SelfhostBootstrapMode;
 
 fn artifact() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/toolchain.gc")
+    std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+        .or_else(|| std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT"))
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/toolchain.gc")
+        })
 }
 
 pub(crate) fn replay(

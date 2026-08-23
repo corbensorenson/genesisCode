@@ -182,6 +182,7 @@
     core/cli::refs-list-program
     core/cli::refs-set-program
     core/refs::authority
+    core/refs::policy-authority
     core/gc::authority
     core/pkg::publish-authority
     core/pkg::lock-read-authority

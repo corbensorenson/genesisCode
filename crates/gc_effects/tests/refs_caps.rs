@@ -3,6 +3,22 @@ use gc_effects::{ArtifactStore, CapsPolicy, run};
 use gc_kernel::{EvalCtx, Value, eval_module};
 use gc_prelude::build_prelude;
 
+fn load_policy(path: &std::path::Path) -> CapsPolicy {
+    let artifact = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../..")
+                .join("selfhost/toolchain.gc")
+        });
+    CapsPolicy::load_with_selfhost_authority(
+        path,
+        gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .expect("load selfhost-authorized refs policy")
+}
+
 fn eval_prog(forms: &[Term]) -> (EvalCtx, Value) {
     let mut ctx = EvalCtx::new();
     let prelude = build_prelude(&mut ctx);
@@ -47,7 +63,7 @@ path = "./.genesis/refs.gc"
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     // Seed the artifact store with a policy artifact, evidence, and commit.
     let store_dir = td.path().join(".genesis").join("store");
@@ -179,7 +195,7 @@ path = "./.genesis/refs.gc"
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let store_dir = td.path().join(".genesis").join("store");
     let store = ArtifactStore::open(&store_dir).unwrap();
@@ -341,7 +357,7 @@ path = "./.genesis/refs.gc"
 "#,
     )
     .unwrap();
-    let pol = CapsPolicy::load(&caps_path).unwrap();
+    let pol = load_policy(&caps_path);
 
     let store_dir = td.path().join(".genesis").join("store");
     let store = ArtifactStore::open(&store_dir).unwrap();

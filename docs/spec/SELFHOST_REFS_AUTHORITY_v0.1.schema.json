@@ -6,8 +6,9 @@
   "required": [
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
     "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
-    "productionEntrypoints", "requestKind", "resultKind", "schema", "sourceModule",
-    "sourceSha256", "spec", "version"
+    "policyBinding", "policyRequestKind", "policyResultKind", "policySourceModule",
+    "policySourceSha256", "productionEntrypoints", "requestKind", "resultKind", "schema",
+    "sourceModule", "sourceSha256", "spec", "version"
   ],
   "properties": {
     "artifact": {"const": "selfhost/toolchain.gc"},
@@ -20,12 +21,18 @@
       "direct-ref-response-construction", "bulk-ref-mode-and-input-admission",
       "bulk-ref-canonical-order-and-uniqueness", "bulk-ref-first-conflict-verdict",
       "bulk-ref-atomic-transition", "internal-consumer-ref-read-routing",
+      "local-ref-policy-and-class-admission",
+      "local-ref-obligation-evidence-and-assurance-admission",
+      "local-ref-signature-threshold-role-and-independence-admission",
+      "local-ref-policy-request-bound-verdict",
       "request-bound-result-verdict"
     ]},
     "hostMechanisms": {"const": [
       "artifact-only-authority-bootstrap-and-bounded-evaluation",
+      "bounded-artifact-observation-and-hash-verification",
+      "ed25519-signature-verification-mechanism",
       "refs-db-locking-and-atomic-persistence", "optimistic-snapshot-retry",
-      "policy-evidence-signature-admission", "result-contradiction-checking",
+      "result-contradiction-checking",
       "effect-log-and-diagnostic-rendering"
     ]},
     "hostOracle": {
@@ -39,6 +46,11 @@
     "independentVerifier": {"const": "scripts/lib/selfhost_refs_authority.py"},
     "kind": {"const": "genesis/selfhost-refs-authority-v0.1"},
     "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "policyBinding": {"const": "core/refs::policy-authority"},
+    "policyRequestKind": {"const": "genesis/refs-policy-authority-request-v0.1"},
+    "policyResultKind": {"const": "genesis/refs-policy-authority-result-v0.1"},
+    "policySourceModule": {"const": "selfhost/pkg_publish_authority_v1.gc"},
+    "policySourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
     "requestKind": {"const": "genesis/refs-authority-request-v0.1"},
     "resultKind": {"const": "genesis/refs-authority-result-v0.1"},

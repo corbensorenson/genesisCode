@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/refs::authority",
-  "contentIdentitySha256": "d51b9c135ebfd0453f8d2f0738d6e54fdac8e9d8bc44baf3201b67065d17671b",
+  "contentIdentitySha256": "dde538625da0041f4f8fa9d5e2ef9517242b7364574f6a95e06b4e20c0faa445",
   "decisionInventory": [
     "direct-ref-lookup",
     "direct-ref-prefix-filter-and-order",
@@ -14,13 +14,18 @@
     "bulk-ref-first-conflict-verdict",
     "bulk-ref-atomic-transition",
     "internal-consumer-ref-read-routing",
+    "local-ref-policy-and-class-admission",
+    "local-ref-obligation-evidence-and-assurance-admission",
+    "local-ref-signature-threshold-role-and-independence-admission",
+    "local-ref-policy-request-bound-verdict",
     "request-bound-result-verdict"
   ],
   "hostMechanisms": [
     "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "bounded-artifact-observation-and-hash-verification",
+    "ed25519-signature-verification-mechanism",
     "refs-db-locking-and-atomic-persistence",
     "optimistic-snapshot-retry",
-    "policy-evidence-signature-admission",
     "result-contradiction-checking",
     "effect-log-and-diagnostic-rendering"
   ],
@@ -36,7 +41,6 @@
     "all-internal-ref-consumer-authority",
     "h2-sd-refs",
     "gpk-sync-policy-and-transport-authority",
-    "policy-evidence-signature-gate-authority",
     "r4-2-e-closure",
     "registry-ref-authority",
     "release-qualification",
@@ -46,6 +50,11 @@
     "genesis",
     "genesis_wasi"
   ],
+  "policyBinding": "core/refs::policy-authority",
+  "policyRequestKind": "genesis/refs-policy-authority-request-v0.1",
+  "policyResultKind": "genesis/refs-policy-authority-result-v0.1",
+  "policySourceModule": "selfhost/pkg_publish_authority_v1.gc",
+  "policySourceSha256": "84e5c704eb8a3ab7156c1acc94745144b1b2945ffe44d199af8eb4f0c103d21a",
   "requestKind": "genesis/refs-authority-request-v0.1",
   "resultKind": "genesis/refs-authority-result-v0.1",
   "schema": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.schema.json",

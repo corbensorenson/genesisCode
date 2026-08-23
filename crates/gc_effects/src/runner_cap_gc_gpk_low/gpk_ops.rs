@@ -519,6 +519,7 @@ pub(super) fn handle_gpk_import(
         let mut ops: Vec<BulkSetInput> = Vec::with_capacity(sorted.len());
         for sr in &sorted {
             if let Err(v) = local_refs_validate_policy_gate(
+                refs_authority,
                 store,
                 &sr.name,
                 sr.hash.as_deref(),

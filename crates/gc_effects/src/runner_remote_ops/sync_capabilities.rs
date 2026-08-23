@@ -181,18 +181,12 @@ pub(super) fn capability_sync_pull(
                 Some(op),
                 Term::Map(
                     [
-                        (
-                            TermOrdKey(Term::symbol(":refs/name")),
-                            Term::Str(name),
-                        ),
+                        (TermOrdKey(Term::symbol(":refs/name")), Term::Str(name)),
                         (
                             TermOrdKey(Term::symbol(":refs/current")),
                             current.map(Term::Str).unwrap_or(Term::Nil),
                         ),
-                        (
-                            TermOrdKey(Term::symbol(":refs/remote")),
-                            Term::Str(remote),
-                        ),
+                        (TermOrdKey(Term::symbol(":refs/remote")), Term::Str(remote)),
                     ]
                     .into_iter()
                     .collect(),
@@ -222,6 +216,7 @@ pub(super) fn capability_sync_push(
     payload: &Term,
     pol: Option<&OpPolicy>,
     store: Option<&ArtifactStore>,
+    refs_authority: Option<&mut RefsAuthority>,
     error_tok: SealId,
     op: &str,
     timeout_ms: Option<u64>,
@@ -257,16 +252,25 @@ pub(super) fn capability_sync_push(
             return Ok(mk_error(error_tok, "core/sync/bad-payload", e, Some(op)));
         }
     };
-    for sr in &set_refs {
-        if let Err(v) = local_refs_validate_policy_gate(
-            store,
-            &sr.name,
-            Some(&sr.hash),
-            &sr.policy,
-            error_tok,
-            op,
-        ) {
-            return Ok(v);
+    if !set_refs.is_empty() {
+        let refs_authority = refs_authority.ok_or_else(|| {
+            EffectsError::Log(
+                "core/sync::push set-refs requires the artifact-loaded GenesisCode refs authority"
+                    .to_string(),
+            )
+        })?;
+        for sr in &set_refs {
+            if let Err(v) = local_refs_validate_policy_gate(
+                refs_authority,
+                store,
+                &sr.name,
+                Some(&sr.hash),
+                &sr.policy,
+                error_tok,
+                op,
+            ) {
+                return Ok(v);
+            }
         }
     }
 

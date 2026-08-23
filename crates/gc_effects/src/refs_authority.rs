@@ -11,6 +11,9 @@ use crate::refs::{RefEntry, RefsDb, SetResult};
 #[path = "refs_authority_bulk.rs"]
 mod bulk;
 pub(crate) use bulk::{BulkSetInput, BulkSetMode, BulkSetResult};
+#[path = "refs_policy_authority.rs"]
+mod policy_gate;
+pub(crate) use policy_gate::RefsPolicyDecision;
 
 const BINDING: &str = "core/refs::authority";
 const REQUEST_KIND: &str = "genesis/refs-authority-request-v0.1";
@@ -22,6 +25,7 @@ const MAX_RETRIES: usize = 16;
 pub(crate) struct RefsAuthority {
     context: EvalCtx,
     authority: Value,
+    policy_authority: Value,
 }
 
 impl RefsAuthority {
@@ -33,6 +37,7 @@ impl RefsAuthority {
                 | "core/refs::set"
                 | "core/refs::delete"
                 | "core/sync::pull"
+                | "core/sync::push"
                 | "core/gpk-low::export"
                 | "core/gpk-low::import"
                 | "core/pkg-low::publish"
@@ -67,9 +72,18 @@ impl RefsAuthority {
         let authority = environment
             .get(BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
+        let policy_authority = environment
+            .get(policy_gate::POLICY_BINDING)
+            .ok_or_else(|| {
+                authority_error(format!("missing binding {}", policy_gate::POLICY_BINDING))
+            })?;
         context.reset_counters();
         context.step_limit = Some(STEP_LIMIT);
-        Ok(Self { context, authority })
+        Ok(Self {
+            context,
+            authority,
+            policy_authority,
+        })
     }
 
     pub(crate) fn get(
@@ -586,7 +600,7 @@ mod tests {
         ] {
             assert!(RefsAuthority::required_for_request(op), "missing {op}");
         }
-        assert!(!RefsAuthority::required_for_request("core/sync::push"));
+        assert!(RefsAuthority::required_for_request("core/sync::push"));
     }
 
     #[test]

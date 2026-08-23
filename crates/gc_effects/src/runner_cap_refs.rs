@@ -79,16 +79,22 @@ pub(super) fn cap_refs_set(
     let new_hash = payload_refs_hash(payload)?;
     let expected_old = payload_refs_expected_old(payload)?;
     let policy_h = payload_refs_policy_hash(payload)?;
-    if let Err(value) =
-        local_refs_validate_policy_gate(store, &name, new_hash.as_deref(), &policy_h, error_tok, op)
-    {
-        return Ok(value);
-    }
     let authority = authority.ok_or_else(|| {
         EffectsError::Log(
             "core/refs::set requires the artifact-loaded GenesisCode refs authority".to_string(),
         )
     })?;
+    if let Err(value) = local_refs_validate_policy_gate(
+        authority,
+        store,
+        &name,
+        new_hash.as_deref(),
+        &policy_h,
+        error_tok,
+        op,
+    ) {
+        return Ok(value);
+    }
     let result = authority.set(
         refs,
         &name,
@@ -146,16 +152,16 @@ pub(super) fn cap_refs_delete(
     let name = payload_refs_name(payload)?;
     let expected_old = payload_refs_expected_old(payload)?;
     let policy_h = payload_refs_policy_hash(payload)?;
-    if let Err(value) =
-        local_refs_validate_policy_gate(store, &name, None, &policy_h, error_tok, op)
-    {
-        return Ok(value);
-    }
     let authority = authority.ok_or_else(|| {
         EffectsError::Log(
             "core/refs::delete requires the artifact-loaded GenesisCode refs authority".to_string(),
         )
     })?;
+    if let Err(value) =
+        local_refs_validate_policy_gate(authority, store, &name, None, &policy_h, error_tok, op)
+    {
+        return Ok(value);
+    }
     let result = authority.set(
         refs,
         &name,

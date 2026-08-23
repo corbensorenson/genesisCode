@@ -381,7 +381,15 @@ pub(super) fn call_capability_with_runtime(
             timeout_ms,
         ),
 
-        "core/sync::push" => capability_sync_push(payload, pol, store, error_tok, op, timeout_ms),
+        "core/sync::push" => capability_sync_push(
+            payload,
+            pol,
+            store,
+            refs_authority,
+            error_tok,
+            op,
+            timeout_ms,
+        ),
 
         s if s.starts_with("core/pkg-low::") => capability_pkg_low(
             s,

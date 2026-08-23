@@ -3,7 +3,7 @@ use ed25519_dalek::{Signature, VerifyingKey};
 
 use super::*;
 
-pub(super) fn verify_crypto_request(
+pub(crate) fn verify_crypto_request(
     request: &Term,
     expected_signing_hash: &[u8; 32],
 ) -> Result<(String, bool), EffectsError> {
@@ -104,7 +104,7 @@ fn verify_ed25519_mechanism(
             .is_ok()
 }
 
-pub(super) fn mechanical_signing_hash(commit: &Term) -> Result<[u8; 32], EffectsError> {
+pub(crate) fn mechanical_signing_hash(commit: &Term) -> Result<[u8; 32], EffectsError> {
     let Term::Map(fields) = commit else {
         return Err(publish_error("bound commit must be a map for signing"));
     };

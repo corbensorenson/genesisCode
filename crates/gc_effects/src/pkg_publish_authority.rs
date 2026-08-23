@@ -2,7 +2,7 @@ use super::*;
 
 #[path = "pkg_publish_authority_crypto.rs"]
 mod crypto;
-use crypto::{mechanical_signing_hash, verify_crypto_request};
+pub(crate) use crypto::{mechanical_signing_hash, verify_crypto_request};
 #[cfg(test)]
 #[path = "pkg_publish_authority_adapter_tests.rs"]
 mod adapter_tests;

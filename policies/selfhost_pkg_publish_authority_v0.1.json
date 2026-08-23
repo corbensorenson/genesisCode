@@ -1,8 +1,8 @@
 {
   "artifact": "selfhost/toolchain.gc",
-  "auditDate": "2026-08-13",
+  "auditDate": "2026-08-23",
   "binding": "core/pkg::publish-authority",
-  "contentIdentitySha256": "610133d24c4442e1bab1aaac16109cf14360e4c831a4d7b0030fa5409c919211",
+  "contentIdentitySha256": "d12d78c8c4ff9ad8055d1bae8c2765160dd883185ec74d0af304a828a2343059",
   "decisionInventory": [
     "policy-commit-evidence-and-assurance-admission",
     "ordered-object-and-cryptographic-request-construction",
@@ -57,7 +57,7 @@
     "selfhost/pkg_publish_authority_finalize_v1.gc",
     "selfhost/pkg_publish_authority_v1.gc"
   ],
-  "sourceSha256": "4a08907b982d370df4aab7b367e4b57e939f9fd6c5ee248e79392d490e7f225e",
+  "sourceSha256": "19f272e1d43fe0890b40f5d3d8c9190764ef86798e853fa6991dcfb78bd01eb3",
   "spec": "docs/spec/SELFHOST_PKG_PUBLISH_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

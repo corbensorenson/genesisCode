@@ -42,8 +42,9 @@ def load_json(path: Path):
 FIELDS = {
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
     "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
-    "productionEntrypoints", "requestKind", "resultKind", "schema", "sourceModule",
-    "sourceSha256", "spec", "version",
+    "policyBinding", "policyRequestKind", "policyResultKind", "policySourceModule",
+    "policySourceSha256", "productionEntrypoints", "requestKind", "resultKind", "schema",
+    "sourceModule", "sourceSha256", "spec", "version",
 }
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
@@ -54,17 +55,27 @@ CONSTANTS = {
         "direct-ref-response-construction", "bulk-ref-mode-and-input-admission",
         "bulk-ref-canonical-order-and-uniqueness", "bulk-ref-first-conflict-verdict",
         "bulk-ref-atomic-transition", "internal-consumer-ref-read-routing",
+        "local-ref-policy-and-class-admission",
+        "local-ref-obligation-evidence-and-assurance-admission",
+        "local-ref-signature-threshold-role-and-independence-admission",
+        "local-ref-policy-request-bound-verdict",
         "request-bound-result-verdict",
     ],
     "hostMechanisms": [
         "artifact-only-authority-bootstrap-and-bounded-evaluation",
+        "bounded-artifact-observation-and-hash-verification",
+        "ed25519-signature-verification-mechanism",
         "refs-db-locking-and-atomic-persistence", "optimistic-snapshot-retry",
-        "policy-evidence-signature-admission", "result-contradiction-checking",
+        "result-contradiction-checking",
         "effect-log-and-diagnostic-rendering",
     ],
     "hostOracle": {"parityOnly": True, "productionRequired": False, "removalTask": "R4.2.e"},
     "independentVerifier": "scripts/lib/selfhost_refs_authority.py",
     "kind": "genesis/selfhost-refs-authority-v0.1",
+    "policyBinding": "core/refs::policy-authority",
+    "policyRequestKind": "genesis/refs-policy-authority-request-v0.1",
+    "policyResultKind": "genesis/refs-policy-authority-result-v0.1",
+    "policySourceModule": "selfhost/pkg_publish_authority_v1.gc",
     "productionEntrypoints": ["genesis", "genesis_wasi"],
     "requestKind": "genesis/refs-authority-request-v0.1",
     "resultKind": "genesis/refs-authority-result-v0.1",
@@ -76,8 +87,7 @@ CONSTANTS = {
 NONCLAIMS = {
     "all-internal-ref-consumer-authority", "bootstrap-fixpoint",
     "gpk-sync-policy-and-transport-authority", "h2-sd-refs",
-    "policy-evidence-signature-gate-authority", "r4-2-e-closure",
-    "registry-ref-authority", "release-qualification", "sh-c-closure",
+    "r4-2-e-closure", "registry-ref-authority", "release-qualification", "sh-c-closure",
 }
 
 
@@ -112,7 +122,7 @@ def validate_profile(profile, schema, check_identity: bool = True) -> None:
         fail("profile nonclaim inventory drift")
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(profile.get("auditDate", ""))):
         fail("profile auditDate invalid")
-    for name in ("contentIdentitySha256", "sourceSha256"):
+    for name in ("contentIdentitySha256", "policySourceSha256", "sourceSha256"):
         if not re.fullmatch(r"[0-9a-f]{64}", str(profile.get(name, ""))):
             fail(f"profile {name} invalid")
     if check_identity and canonical_identity(profile) != profile["contentIdentitySha256"]:
@@ -131,8 +141,16 @@ def source_text(root: Path, relative: str, overrides) -> str:
 def validate_sources(root: Path, profile, overrides=None) -> None:
     overrides = overrides or {}
     module = source_text(root, profile["sourceModule"], overrides)
+    policy_module = source_text(root, profile["policySourceModule"], overrides)
     manifest = source_text(root, "selfhost/toolchain_manifest.gc", overrides)
     authority = source_text(root, "crates/gc_effects/src/refs_authority.rs", overrides)
+    policy_adapter = source_text(
+        root, "crates/gc_effects/src/refs_policy_authority.rs", overrides
+    )
+    policy_adapter_tests = source_text(
+        root, "crates/gc_effects/src/refs_policy_authority_tests.rs", overrides
+    )
+    refs_ops = source_text(root, "crates/gc_effects/src/runner_refs_ops.rs", overrides)
     bulk = source_text(root, "crates/gc_effects/src/refs_authority_bulk.rs", overrides)
     refs_db = source_text(root, "crates/gc_effects/src/refs.rs", overrides)
     cap_refs = source_text(root, "crates/gc_effects/src/runner_cap_refs.rs", overrides)
@@ -159,6 +177,9 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     sync = source_text(
         root, "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs", overrides
     )
+    dispatch = source_text(
+        root, "crates/gc_effects/src/runner_capability_dispatch.rs", overrides
+    )
     sync_tests = source_text(
         root, "crates/gc_effects/tests/sync_registry/cases_b.rs", overrides
     )
@@ -174,8 +195,22 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for marker in required_module:
         if marker not in module:
             fail(f"GenesisCode refs authority missing marker: {marker}")
-    if f'    "{profile["sourceModule"]}"' not in manifest or profile["binding"] not in manifest:
-        fail("toolchain manifest does not custody refs authority module and binding")
+    required_policy_module = [
+        f"(def {profile['policyBinding']}", profile["policyRequestKind"],
+        profile["policyResultKind"], "selfhost/refs-policy::selection-code",
+        "selfhost/refs-policy::delete-facts?", "core/pkg::publish-authority",
+        "(quote :inspect)", "(quote :prepare)", "(quote :finalize)",
+        "selfhost/hash::hash-term request",
+    ]
+    for marker in required_policy_module:
+        if marker not in policy_module:
+            fail(f"GenesisCode refs policy authority missing marker: {marker}")
+    for path in (profile["sourceModule"], profile["policySourceModule"]):
+        if f'    "{path}"' not in manifest:
+            fail(f"toolchain manifest does not custody refs authority module: {path}")
+    for binding in (profile["binding"], profile["policyBinding"]):
+        if binding not in manifest:
+            fail(f"toolchain manifest does not custody refs authority binding: {binding}")
     for marker in (
         "pub(crate) struct RefsAuthority", "const MAX_RETRIES: usize = 16",
         "decode_get", "decode_list", "decode_set", "request-h",
@@ -189,6 +224,30 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"Rust refs authority adapter missing marker: {marker}")
     if '#[cfg(any(test, feature = "parity-oracle"))]' in authority:
         fail("consumer ref fallback is reachable from generic test builds")
+    for marker in (
+        "pub(crate) fn validate_policy_gate(", "POLICY_STEP_LIMIT: u64 = 50_000_000",
+        "MAX_OBJECT_BYTES: usize = 4 * 1024 * 1024",
+        "MAX_TOTAL_BYTES: usize = 64 * 1024 * 1024", "MAX_OBJECTS: usize = 4096",
+        "observe_bytes_limited", "mechanical_signing_hash", "verify_crypto_request",
+        "decode_phase_result", "decode_inspection", "decode_preparation",
+        "decode_admission", "require_embedded_hash",
+    ):
+        if marker not in policy_adapter:
+            fail(f"Rust refs policy adapter missing marker: {marker}")
+    for marker in (
+        "artifact_loader_rejects_content_hash_substitution",
+        "result_decoder_rejects_request_substitution_and_open_fields",
+        "admission_decoder_rejects_identity_substitution_and_open_fields",
+        "hash_inventory_decoder_enforces_shape_and_object_bound",
+    ):
+        if marker not in policy_adapter_tests:
+            fail(f"Rust refs policy adapter tests missing marker: {marker}")
+    for forbidden in (
+        "gc_vcs::Policy", "gc_vcs::Commit", "gc_vcs::Evidence", "gc_vcs::Attestation",
+        "gc_vcs::commit_signing_hash", "gc_vcs::verify_commit_attestation",
+    ):
+        if forbidden in refs_ops:
+            fail(f"production refs gate retains native semantic authority: {forbidden}")
     for marker in (
         "const MAX_BULK_OPS: usize = 4096", "pub(crate) fn set_many(",
         'self.evaluate(":set-many", payload)', "decode_bulk_set",
@@ -208,10 +267,16 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for marker in ("authority.get(refs, &name)", "authority.list(refs, prefix.as_deref())", "authority.set("):
         if marker not in cap_refs:
             fail(f"production refs route missing authority call: {marker}")
+    if len(re.findall(
+        r"local_refs_validate_policy_gate\(\s*authority,\s*store,",
+        cap_refs,
+    )) != 2:
+        fail("direct refs mutation routes do not pass the GenesisCode policy authority")
     for forbidden in ("let h = refs.get(&name)?", "let xs = refs.list(prefix.as_deref())?"):
         if forbidden in cap_refs:
             fail(f"production refs route retains direct semantic fallback: {forbidden}")
     for marker in (
+        "local_refs_validate_policy_gate(\n                refs_authority,",
         "refs_authority.set_many(refs_db, &ops, BulkSetMode::CompareAndSet)",
         "BulkSetResult::Conflict { name, current }",
     ):
@@ -222,6 +287,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for marker in (
         "pending_refs.sort_by", "BulkSetMode::SameOrAbsent",
         "BulkSetMode::Unconditional", "authority.set_many(refs, &pending_refs, mode)",
+        "core/sync::push set-refs requires the artifact-loaded GenesisCode refs authority",
+        "local_refs_validate_policy_gate(\n                refs_authority,",
     ):
         if marker not in sync:
             fail(f"sync bulk ref route missing authority marker: {marker}")
@@ -230,10 +297,16 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"sync production route retains per-ref mutation decision: {forbidden}")
     if "sync_pull_ref_conflict_leaves_the_entire_batch_unchanged" not in sync_tests:
         fail("sync atomic negative control missing")
+    if not re.search(
+        r'"core/sync::push"\s*=>\s*capability_sync_push\(.*?refs_authority,',
+        dispatch,
+        re.DOTALL,
+    ):
+        fail("sync push dispatch does not forward the GenesisCode refs authority")
     consumer_routes = {
         "GPK root": (gpk_root, "RefsAuthority::consumer_get(refs_authority, refs, &root)"),
         "GPK embedded refs": (gpk, "RefsAuthority::consumer_get(ctx.refs_authority.as_deref_mut(), refs, name)"),
-        "package publish": (publish, "RefsAuthority::consumer_get(refs_authority, refs, &refname)"),
+        "package publish": (publish, "RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &refname)"),
         "package ref resolution": (resolution, "RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &rn)"),
         "package semver resolution": (resolution, "RefsAuthority::consumer_list("),
         "VCS root": (vcs_meta, "RefsAuthority::consumer_get("),
@@ -254,9 +327,11 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"{label} retains a direct local refs read")
     if "gpk_ref_export_fails_closed_without_authority_and_succeeds_with_it" not in sync_tests:
         fail("GPK internal-consumer authority control missing")
+    if "refs_authority.as_deref_mut(),\n        None," not in publish:
+        fail("package publish recursive sync push omits the GenesisCode refs authority")
     required_ops = (
         "core/refs::get", "core/refs::list", "core/refs::set", "core/refs::delete",
-        "core/sync::pull", "core/gpk-low::export", "core/gpk-low::import",
+        "core/sync::pull", "core/sync::push", "core/gpk-low::export", "core/gpk-low::import",
         "core/pkg-low::publish", "core/pkg-low::lock", "core/pkg-low::update",
         "core/pkg-low::install", "core/vcs-low::log", "core/vcs-low::blame",
         "core/vcs-low::why",
@@ -281,6 +356,9 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     source_bytes = module.encode()
     if source_identity(profile["sourceModule"], source_bytes) != profile["sourceSha256"]:
         fail("refs authority source identity mismatch")
+    policy_source_bytes = policy_module.encode()
+    if source_identity(profile["policySourceModule"], policy_source_bytes) != profile["policySourceSha256"]:
+        fail("refs policy authority source identity mismatch")
 
 
 def validate_all(root: Path, profile, schema, overrides=None, check_identity=True) -> None:
@@ -290,8 +368,11 @@ def validate_all(root: Path, profile, schema, overrides=None, check_identity=Tru
 
 def self_test(root: Path, profile, schema) -> int:
     module = (root / profile["sourceModule"]).read_text()
+    policy_module = (root / profile["policySourceModule"]).read_text()
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     authority = (root / "crates/gc_effects/src/refs_authority.rs").read_text()
+    policy_adapter = (root / "crates/gc_effects/src/refs_policy_authority.rs").read_text()
+    refs_ops = (root / "crates/gc_effects/src/runner_refs_ops.rs").read_text()
     cap_refs = (root / "crates/gc_effects/src/runner_cap_refs.rs").read_text()
     bulk = (root / "crates/gc_effects/src/refs_authority_bulk.rs").read_text()
     refs_db = (root / "crates/gc_effects/src/refs.rs").read_text()
@@ -302,6 +383,7 @@ def self_test(root: Path, profile, schema) -> int:
     vcs_meta = (root / "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs").read_text()
     vcs_history = (root / "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs").read_text()
     sync = (root / "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs").read_text()
+    dispatch = (root / "crates/gc_effects/src/runner_capability_dispatch.rs").read_text()
     sync_tests = (root / "crates/gc_effects/tests/sync_registry/cases_b.rs").read_text()
     runner = (root / "crates/gc_effects/src/runner.rs").read_text()
     mutations = []
@@ -313,6 +395,11 @@ def self_test(root: Path, profile, schema) -> int:
         mutations.append((changed, {}, name))
 
     profile_mutation("binding", "core/refs::legacy")
+    profile_mutation("policyBinding", "core/refs::legacy-policy")
+    profile_mutation("policyRequestKind", "genesis/refs-policy-authority-request-v0.0")
+    profile_mutation("policyResultKind", "genesis/refs-policy-authority-result-v0.0")
+    profile_mutation("policySourceModule", "selfhost/refs_policy_legacy.gc")
+    profile_mutation("policySourceSha256", "e" * 64)
     profile_mutation("decisionInventory", profile["decisionInventory"][:-1])
     profile_mutation("hostMechanisms", profile["hostMechanisms"][:-1])
     profile_mutation("productionEntrypoints", ["genesis"])
@@ -323,16 +410,24 @@ def self_test(root: Path, profile, schema) -> int:
     mutations.append((open_profile, {}, "profile closure"))
     mutations.extend([
         (profile, {profile["sourceModule"]: module.replace("(def core/refs::authority", "(def core/refs::legacy", 1)}, "source binding"),
+        (profile, {profile["policySourceModule"]: policy_module.replace("(def core/refs::policy-authority", "(def core/refs::legacy-policy-authority", 1)}, "policy source binding"),
+        (profile, {profile["policySourceModule"]: policy_module.replace("(core/pkg::publish-authority (selfhost/refs-policy::package-request request))", "(core/pkg::legacy-publish-authority (selfhost/refs-policy::package-request request))", 1)}, "shared policy delegation"),
         (profile, {profile["sourceModule"]: module.replace("(def selfhost/refs::set-many", "(def selfhost/refs::legacy-set-many", 1)}, "bulk source"),
         (profile, {"selfhost/toolchain_manifest.gc": manifest.replace(f'    "{profile["sourceModule"]}"\n', "", 1)}, "module custody"),
         (profile, {"selfhost/toolchain_manifest.gc": manifest.replace(f"    {profile['binding']}\n", "", 1)}, "binding custody"),
+        (profile, {"selfhost/toolchain_manifest.gc": manifest.replace(f"    {profile['policyBinding']}\n", "", 1)}, "policy binding custody"),
+        (profile, {"crates/gc_effects/src/refs_policy_authority.rs": policy_adapter.replace("pub(crate) fn validate_policy_gate(", "pub(crate) fn legacy_validate_policy_gate(", 1)}, "policy adapter"),
+        (profile, {"crates/gc_effects/src/runner_refs_ops.rs": refs_ops + "\n// gc_vcs::Policy\n"}, "native policy authority"),
         (profile, {"crates/gc_effects/src/runner_cap_refs.rs": cap_refs.replace("authority.get(refs, &name)", "refs.get(&name)", 1)}, "lookup route"),
+        (profile, {"crates/gc_effects/src/runner_cap_refs.rs": cap_refs.replace("authority,\n        store,", "store,\n        store,", 1)}, "direct policy route"),
         (profile, {"crates/gc_effects/src/refs_authority_bulk.rs": bulk.replace("pub(crate) fn set_many(", "pub(crate) fn legacy_set_many(", 1)}, "bulk adapter"),
         (profile, {"crates/gc_effects/src/refs_authority_bulk.rs": bulk.replace("bulk conflict attribution contradiction", "bulk conflict accepted", 1)}, "conflict binding"),
         (profile, {"crates/gc_effects/src/refs.rs": refs_db.replace("pub(crate) fn replace_if_unchanged", "pub(crate) fn replace_without_check", 1)}, "atomic adapter"),
         (profile, {"crates/gc_effects/src/refs.rs": refs_db.replace('#[cfg(any(test, feature = "parity-oracle"))]\n    pub fn set_many', "    pub fn set_many", 1)}, "native oracle isolation"),
         (profile, {"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk.replace("refs_authority.set_many(refs_db, &ops, BulkSetMode::CompareAndSet)", "refs_db.set_many(&ops)", 1)}, "GPK authority route"),
+        (profile, {"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk.replace("local_refs_validate_policy_gate(\n                refs_authority,", "local_refs_validate_policy_gate(\n                store,", 1)}, "GPK policy route"),
         (profile, {"crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs": sync.replace("authority.set_many(refs, &pending_refs, mode)", "refs.set(rname, Some(&h), None)", 1)}, "sync authority route"),
+        (profile, {"crates/gc_effects/src/runner_capability_dispatch.rs": dispatch.replace('"core/sync::push" => capability_sync_push(', '"core/sync::push" => capability_sync_push_without_authority(', 1)}, "sync push policy dispatch"),
         (profile, {"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests.replace("sync_pull_ref_conflict_leaves_the_entire_batch_unchanged", "sync_pull_partial_update_allowed", 1)}, "sync atomic control"),
         (profile, {"crates/gc_effects/src/runner.rs": runner.replace(".map(RefsAuthority::load)", ".map(StoreAuthority::load)", 1)}, "runner load"),
         (profile, {"crates/gc_effects/src/refs_authority.rs": authority.replace('"core/vcs-low::why"', '"core/vcs-low::legacy-why"', 1)}, "lazy-load inventory"),
@@ -340,7 +435,8 @@ def self_test(root: Path, profile, schema) -> int:
         (profile, {"crates/gc_effects/src/refs_authority.rs": authority.replace('#[cfg(feature = "parity-oracle")]', '#[cfg(any(test, feature = "parity-oracle"))]', 1)}, "generic test fallback"),
         (profile, {"crates/gc_effects/src/runner_remote_ops/gpk.rs": gpk_root.replace("RefsAuthority::consumer_get(refs_authority, refs, &root)", "refs.get(&root)", 1)}, "GPK root read"),
         (profile, {"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk.replace("RefsAuthority::consumer_get(ctx.refs_authority.as_deref_mut(), refs, name)", "refs.get(name)", 1)}, "GPK embedded read"),
-        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("RefsAuthority::consumer_get(refs_authority, refs, &refname)", "refs.get(&refname)", 1)}, "publish read"),
+        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &refname)", "refs.get(&refname)", 1)}, "publish read"),
+        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("refs_authority.as_deref_mut(),\n        None,", "None,\n        None,", 1)}, "publish recursive policy route"),
         (profile, {"crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs": resolution.replace("RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &rn)", "refs.get(&rn)", 1)}, "package read"),
         (profile, {"crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs": vcs_meta.replace("RefsAuthority::consumer_get(", "RefsAuthority::legacy_consumer_get(", 1)}, "VCS root read"),
         (profile, {"crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs": vcs_history.replace("RefsAuthority::consumer_list(refs_authority, refs, None)", "refs.list(None)", 1)}, "VCS history read"),
@@ -354,14 +450,18 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"mutation survived: {label}")
-    if controls != 30:
+    if controls != 44:
         fail(f"negative control inventory drift: {controls}")
     return controls
 
 
 def write_identities(path: Path, profile, root: Path) -> None:
     module_path = root / profile["sourceModule"]
+    policy_module_path = root / profile["policySourceModule"]
     profile["sourceSha256"] = source_identity(profile["sourceModule"], module_path.read_bytes())
+    profile["policySourceSha256"] = source_identity(
+        profile["policySourceModule"], policy_module_path.read_bytes()
+    )
     profile["contentIdentitySha256"] = canonical_identity(profile)
     path.write_text(json.dumps(profile, indent=2) + "\n")
 

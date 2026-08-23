@@ -12,3 +12,201 @@
                 "publish authority phase is unsupported"))))
         (((selfhost/pkg-publish-authority::reject request) "core/pkg/bad-authority-request")
           "publish authority phase is missing or malformed")))))
+
+(def selfhost/refs-policy::field
+  (fn (map)
+    (fn (key) ((selfhost/pkg-publish-authority::field map) key))))
+
+(def selfhost/refs-policy::result
+  (fn (request)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind "genesis/refs-policy-authority-result-v0.1"
+              :message message
+              :ok ok
+              :request-h (selfhost/hash::hash-term request)
+              :v 1
+              :value value}))))))
+
+(def selfhost/refs-policy::accept
+  (fn (request)
+    (fn (value) (((((selfhost/refs-policy::result request) true) nil) nil) value))))
+
+(def selfhost/refs-policy::reject
+  (fn (request)
+    (fn (code)
+      (fn (message) (((((selfhost/refs-policy::result request) false) code) message) nil)))))
+
+(def selfhost/refs-policy::code
+  (fn (code)
+    (if ((core/eq? code) "core/pkg/ref-frozen")
+      "core/refs/frozen"
+      (if ((core/eq? code) "core/pkg/no-policy-class")
+        "core/refs/no-class"
+        (if ((core/eq? code) "core/pkg/bad-policy")
+          "core/refs/bad-policy"
+          (if ((core/eq? code) "core/pkg/bad-commit")
+            "core/refs/bad-commit"
+            (if ((core/eq? code) "core/pkg/missing-obligation")
+              "core/refs/missing-obligation"
+              (if ((core/eq? code) "core/pkg/missing-evidence")
+                "core/refs/missing-evidence"
+                (if ((core/eq? code) "core/pkg/bad-evidence")
+                  "core/refs/bad-evidence"
+                  (if ((core/eq? code) "core/pkg/missing-evidence-kind")
+                    "core/refs/missing-evidence-kind"
+                    (if ((core/eq? code) "core/pkg/invalid-requirements-trace")
+                      "core/refs/invalid-requirements-trace"
+                      (if ((core/eq? code) "core/pkg/invalid-tool-qualification")
+                        "core/refs/invalid-tool-qualification"
+                        (if ((core/eq? code) "core/pkg/bad-attestation")
+                          "core/refs/bad-attestation"
+                          (if ((core/eq? code) "core/pkg/missing-signatures")
+                            "core/refs/insufficient-signatures"
+                            (if ((core/eq? code) "core/pkg/missing-attestation-role")
+                              "core/refs/missing-attestation-role"
+                              (if ((core/eq? code) "core/pkg/missing-attestation-role-signatures")
+                                "core/refs/missing-attestation-role-signatures"
+                                (if ((core/eq? code) "core/pkg/role-independence-violation")
+                                  "core/refs/role-independence-violation"
+                                  "core/refs/bad-authority-request")))))))))))))))))
+
+(def selfhost/refs-policy::selection-code
+  (fn (code)
+    (if (selfhost/pkg-publish-authority::sym? code)
+      (if ((core/sym::eq? code) (quote :ref-frozen))
+        "core/refs/frozen"
+        (if ((core/sym::eq? code) (quote :no-policy-class))
+          "core/refs/no-class"
+          (if ((core/sym::eq? code) (quote :bad-policy))
+            "core/refs/bad-policy"
+            "core/refs/bad-authority-request")))
+      "core/refs/bad-authority-request")))
+
+(def selfhost/refs-policy::rebind
+  (fn (request)
+    (fn (result)
+      (if ((selfhost/refs-policy::field result) (quote :ok))
+        (let ((phase ((selfhost/refs-policy::field request) (quote :phase))))
+          ((selfhost/refs-policy::accept request)
+            (if ((core/sym::eq? phase) (quote :finalize))
+              (let ((facts ((selfhost/refs-policy::field request) (quote :facts))))
+                {
+                  :admit true
+                  :commit-h ((selfhost/refs-policy::field facts) (quote :commit-h))
+                  :policy-h ((selfhost/refs-policy::field facts) (quote :policy-h))
+                  :ref ((selfhost/refs-policy::field facts) (quote :ref))})
+              ((selfhost/refs-policy::field result) (quote :value)))))
+        (((selfhost/refs-policy::reject request)
+            (selfhost/refs-policy::code
+              ((selfhost/refs-policy::field result) (quote :code))))
+          ((selfhost/refs-policy::field result) (quote :message)))))))
+
+(def selfhost/refs-policy::package-request
+  (fn (request)
+    (((core/map::put request) (quote :kind)) "genesis/pkg-publish-authority-request-v0.1")))
+
+(def selfhost/refs-policy::delete-facts?
+  (fn (facts)
+    (if
+      ((selfhost/store-authority::exact-map? facts)
+        [:commit :commit-h :depth :expected-old :policy :policy-h :ref :remote])
+      (if (selfhost/refs::nil? ((selfhost/refs-policy::field facts) (quote :commit)))
+        (if (selfhost/refs::nil? ((selfhost/refs-policy::field facts) (quote :commit-h)))
+          (if
+            (if
+              (selfhost/pkg-publish-authority::int?
+                ((selfhost/refs-policy::field facts) (quote :depth)))
+              ((core/int::eq? ((selfhost/refs-policy::field facts) (quote :depth))) 0)
+              false)
+            (if (selfhost/refs::nil? ((selfhost/refs-policy::field facts) (quote :expected-old)))
+              (if
+                ((core/eq? ((selfhost/refs-policy::field facts) (quote :remote))) "local")
+                (if
+                  (selfhost/pkg-publish-authority::nonempty-str?
+                    ((selfhost/refs-policy::field facts) (quote :ref)))
+                  (if
+                    (selfhost/store-authority::hash?
+                      ((selfhost/refs-policy::field facts) (quote :policy-h)))
+                    ((core/eq?
+                        (selfhost/pkg-publish-authority::artifact-hash
+                          ((selfhost/refs-policy::field facts) (quote :policy))))
+                      ((selfhost/refs-policy::field facts) (quote :policy-h)))
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/refs-policy::delete
+  (fn (request)
+    (let
+      ((facts ((selfhost/refs-policy::field request) (quote :facts)))
+        (mechanism ((selfhost/refs-policy::field request) (quote :mechanism))))
+      (if (selfhost/refs::nil? mechanism)
+        (if (selfhost/refs-policy::delete-facts? facts)
+          (let
+            ((selection
+                ((selfhost/pkg-publish-policy::select
+                    ((selfhost/refs-policy::field facts) (quote :policy)))
+                  ((selfhost/refs-policy::field facts) (quote :ref)))))
+            (if ((selfhost/refs-policy::field selection) (quote :ok))
+              ((selfhost/refs-policy::accept request)
+                {
+                  :admit true
+                  :commit-h nil
+                  :policy-h ((selfhost/refs-policy::field facts) (quote :policy-h))
+                  :ref ((selfhost/refs-policy::field facts) (quote :ref))})
+              (((selfhost/refs-policy::reject request)
+                  (selfhost/refs-policy::selection-code
+                    ((selfhost/refs-policy::field selection) (quote :code))))
+                "local ref deletion is rejected by policy")))
+          (((selfhost/refs-policy::reject request) "core/refs/bad-authority-request")
+            "local ref deletion facts are malformed or unbound"))
+        (((selfhost/refs-policy::reject request) "core/refs/bad-authority-request")
+          "local ref deletion accepts no mechanism observations")))))
+
+(def selfhost/refs-policy::request-shape?
+  (fn (request)
+    (if
+      ((selfhost/store-authority::exact-map? request)
+        [:facts :kind :mechanism :phase :v])
+      (if
+        ((core/eq? ((selfhost/refs-policy::field request) (quote :kind)))
+          "genesis/refs-policy-authority-request-v0.1")
+        (if
+          (if
+            (selfhost/pkg-publish-authority::int?
+              ((selfhost/refs-policy::field request) (quote :v)))
+            ((core/int::eq? ((selfhost/refs-policy::field request) (quote :v))) 1)
+            false)
+          (selfhost/refs::sym? ((selfhost/refs-policy::field request) (quote :phase)))
+          false)
+        false)
+      false)))
+
+(def core/refs::policy-authority
+  (fn (request)
+    (if (selfhost/refs-policy::request-shape? request)
+      (let ((phase ((selfhost/refs-policy::field request) (quote :phase))))
+        (if ((core/sym::eq? phase) (quote :delete))
+          (selfhost/refs-policy::delete request)
+          (if
+            (if ((core/sym::eq? phase) (quote :inspect))
+              true
+              (if ((core/sym::eq? phase) (quote :prepare))
+                true
+                ((core/sym::eq? phase) (quote :finalize))))
+            ((selfhost/refs-policy::rebind request)
+              (core/pkg::publish-authority (selfhost/refs-policy::package-request request)))
+            (((selfhost/refs-policy::reject request) "core/refs/bad-authority-request")
+              "refs policy authority phase is unsupported"))))
+      (((selfhost/refs-policy::reject request) "core/refs/bad-authority-request")
+        "refs policy authority request is malformed"))))
