@@ -384,10 +384,14 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             out_dir,
             hydrate,
         } => Some({
+            let lock_model = crate::pkg_lock_model_authority::load(cli, lock)
+                .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?;
             if *hydrate {
-                let missing =
-                    pkg_workspace_ops::collect_missing_locked_hashes(workspace_file, lock)
-                        .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?;
+                let missing = pkg_workspace_ops::collect_missing_locked_hashes(
+                    workspace_file,
+                    &lock_model.model,
+                )
+                .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?;
                 if !missing.is_empty() {
                     let policy = load_caps_policy(cli, caps)?;
                     let mut ctx = mk_ctx(cli);
@@ -449,6 +453,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
                 lock,
                 workspace_file,
                 out_dir,
+                &lock_model,
             )
             .map_err(|e| cli_err(EX_PARSE, "pkg/env", e))?
         }),

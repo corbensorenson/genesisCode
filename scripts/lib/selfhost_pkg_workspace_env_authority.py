@@ -180,6 +180,9 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         root, "crates/gc_cli_driver/src/pkg_workspace_env_authority/decode.rs", overrides
     )
     route = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs", overrides)
+    lock_adapter = text(root, "crates/gc_cli_driver/src/pkg_lock_model_authority.rs", overrides)
+    workspace_ops = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops.rs", overrides)
+    command_route = text(root, "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs", overrides)
     materializer = text(
         root, "crates/gc_cli_driver/src/pkg_workspace_env_materialize.rs", overrides
     )
@@ -241,11 +244,32 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("workspace-env body-validation call inventory drift")
     require_markers(route, [
         "pkg_workspace_manifest_authority::load(",
+        "lock_model.canonical_bytes.clone()", "lock_observation(workspace_file, &lock_model.model)",
         "pkg_workspace_env_authority::authorize(cli, plan_request, out_dir",
         "plan_backend_env_bundle(workspace_file)",
         "pkg_workspace_env_materialize::commit(&authorized, backend_plan.as_ref())",
         "read_required_file(&caps_path, \"caps policy\")",
     ], "workspace-env production custody")
+    require_markers(lock_adapter, [
+        "pub(crate) struct LoadedLockModel", "pub(crate) fn load(",
+        "read_bounded(path)?", "authorize_bytes(&mut context, &environment, &bytes)",
+        "render_canonical(&mut context, &environment, path, &model)",
+        "canonical_model != model", "pub(crate) fn locked_artifact_hashes(",
+    ], "workspace-env lock-model custody")
+    require_markers(workspace_ops, [
+        "pub(crate) fn collect_missing_locked_hashes(",
+        "pkg_lock_model_authority::locked_artifact_hashes(lock_model)",
+    ], "workspace-env hydration projection")
+    require_markers(command_route, [
+        "crate::pkg_lock_model_authority::load(cli, lock)",
+        "collect_missing_locked_hashes(", "&lock_model.model", "&lock_model,",
+    ], "workspace-env one-load route")
+    hydrate_projection = workspace_ops.split(
+        "pub(crate) fn collect_missing_locked_hashes(", 1
+    )[1].split("pub(crate) fn resolve_workspace_task_for_run(", 1)[0]
+    for subject, label in ((route, "environment"), (hydrate_projection, "hydration")):
+        if "GenesisLock::" in subject:
+            fail(f"native lock parser reachable in gcpm env {label} path")
     for forbidden in (
         "RuntimeBackendContract", "canonical_env_body", "canonical_profile_body",
         "canonical_provenance_body", "render_workspace_toml", "build_wasi_http_bridge_config",
@@ -284,6 +308,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "gcpm_env_identity_binds_capability_policy_bytes",
         "gcpm_env_corrupt_immutable_root_rejects_before_external_write",
         "gcpm_env_symlinked_capability_policy_rejects_before_materialization",
+        "gcpm_env_hydrate_rejects_invalid_lock_before_store_or_environment_write",
         "gcpm_env_selection_invalid_selected_backend_rejects_before_materialization",
         "gcpm_env_backend_profile_materializes_effective_caps_with_bridge_digest",
         "assert_ne!(first_h, second_h)", 'b"sentinel\\n"',
@@ -324,6 +349,9 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_cli_driver/src/pkg_workspace_env_authority.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_authority/decode.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
+        "crates/gc_cli_driver/src/pkg_lock_model_authority.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
+        "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_materialize.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops_backend.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs", profile["spec"],
@@ -373,7 +401,14 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(decoder, "pub(super) fn require_exact_fields(", "pub(super) fn accept_open_fields(", "decoder closure")
     route = "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs"
     source_mutation(route, "pkg_workspace_env_authority::authorize(cli, plan_request, out_dir", "legacy_env_authority(plan_request", "production custody")
+    source_mutation(route, "lock_model.canonical_bytes.clone()", "gc_pkg::GenesisLock::load(lock)", "native lock bytes")
     source_mutation(route, "read_required_file(&caps_path, \"caps policy\")", "std::fs::read(&caps_path)", "regular input")
+    lock_adapter = "crates/gc_cli_driver/src/pkg_lock_model_authority.rs"
+    source_mutation(lock_adapter, "canonical_model != model", "canonical_model == model", "lock canonical cross-check")
+    workspace_ops = "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
+    source_mutation(workspace_ops, "pkg_lock_model_authority::locked_artifact_hashes(lock_model)", "gc_pkg::GenesisLock::load(lock_file)", "hydrate native lock")
+    command_route = "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs"
+    source_mutation(command_route, "crate::pkg_lock_model_authority::load(cli, lock)", "gc_pkg::GenesisLock::load(lock)", "one lock authority load")
     materializer = "crates/gc_cli_driver/src/pkg_workspace_env_materialize.rs"
     source_mutation(materializer, "preflight(authorized, backend)?;", "// preflight removed", "preflight")
     source_mutation(materializer, "immutable environment artifact differs", "overwrite immutable environment artifact", "immutability")
@@ -384,6 +419,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(tests, "gcpm_env_identity_binds_capability_policy_bytes", "legacy_identity_test", "identity control")
     source_mutation(tests, "gcpm_env_corrupt_immutable_root_rejects_before_external_write", "legacy_preflight_test", "preflight control")
     source_mutation(tests, "gcpm_env_symlinked_capability_policy_rejects_before_materialization", "legacy_symlink_test", "symlink control")
+    source_mutation(tests, "gcpm_env_hydrate_rejects_invalid_lock_before_store_or_environment_write", "legacy_lock_test", "lock pre-write control")
     spec = profile["spec"]
     source_mutation(spec, "## Workspace environment authority contract", "## Legacy environment contract", "spec")
     ledger = "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json"

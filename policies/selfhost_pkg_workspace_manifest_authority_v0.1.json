@@ -2,12 +2,12 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/pkg::workspace-manifest-authority",
-  "contentIdentitySha256": "1490ffe99c808479bc1c080ce7b77ab4045b98ceb88e6058faac806876f585e7",
+  "contentIdentitySha256": "d9eb10dd454b77c11689905d9e96903b9ad0f2ca4abdf04c7f8f7aba70101062",
   "decisionInventory": [
     "exact-workspace-version-and-root-admission",
     "member-field-and-duplicate-admission",
     "defaults-profile-and-task-type-normalization",
-    "runtime-backend-normalization-across-defaults-and-profiles",
+    "runtime-backend-shape-and-bound-admission-across-defaults-and-profiles",
     "selected-profile-presence-and-projection",
     "bounded-closed-workspace-config-construction",
     "request-and-source-bound-result-verdict"
@@ -50,7 +50,7 @@
     "selfhost/pkg_workspace_manifest_core_v1.gc",
     "selfhost/pkg_workspace_manifest_authority_v1.gc"
   ],
-  "sourceSha256": "6c559d1c00f1041ddf7f1761523ddf853d6913ad3eadd927afc5ec7b876cfc9c",
+  "sourceSha256": "1fe7920a0c72c0a040d1ba8c31ec65fad926bfb7c54ae9619149bb163081538f",
   "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

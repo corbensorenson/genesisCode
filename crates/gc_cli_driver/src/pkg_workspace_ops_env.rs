@@ -1,7 +1,8 @@
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey};
-use gc_pkg::{GenesisLock, UpdatePolicy, WorkspaceConfig};
+use gc_pkg::WorkspaceConfig;
 
 use super::*;
 
@@ -14,17 +15,17 @@ pub(crate) fn handle_env(
     lock: &Path,
     workspace_file: &Path,
     out_dir: &Path,
+    lock_model: &crate::pkg_lock_model_authority::LoadedLockModel,
 ) -> Result<LocalPkgResult, String> {
     let env_workspace =
         super::pkg_workspace_manifest_authority::load(cli, workspace_file, profile, true)?;
     let workspace = env_workspace.config;
-    let lock_model = GenesisLock::load(lock).map_err(|error| error.to_string())?;
     let selected_profile = env_workspace
         .selected_profile
         .as_ref()
         .ok_or_else(|| "workspace manifest authority omitted required profile".to_string())?;
     let workspace_bytes = workspace.to_toml_canonical().into_bytes();
-    let lock_bytes = lock_model.to_toml_canonical().into_bytes();
+    let lock_bytes = lock_model.canonical_bytes.clone();
     bounded_bytes(&workspace_bytes, "canonical workspace")?;
     bounded_bytes(&lock_bytes, "canonical lock")?;
 
@@ -65,7 +66,10 @@ pub(crate) fn handle_env(
             ":kind",
             Term::Str(super::pkg_workspace_env_authority::PLAN_KIND.to_string()),
         ),
-        (":lock", lock_observation(workspace_file, &lock_model)),
+        (
+            ":lock",
+            lock_observation(workspace_file, &lock_model.model)?,
+        ),
         (":lock-bytes", Term::Bytes(lock_bytes.into())),
         (":members", members_observation(workspace_file, &workspace)?),
         (
@@ -221,71 +225,136 @@ fn members_observation(workspace_file: &Path, workspace: &WorkspaceConfig) -> Re
     Ok(Term::Vector(members))
 }
 
-fn lock_observation(workspace_file: &Path, lock: &GenesisLock) -> Term {
-    let requirements = lock
-        .requirements
+fn lock_observation(workspace_file: &Path, model: &Term) -> Result<Term, String> {
+    let model = model_map(model, "lock model")?;
+    let requirements = model_map(model_field(model, ":requirements")?, "lock requirements")?
         .iter()
         .map(|(name, requirement)| {
-            map([
+            let Term::Str(name) = &name.0 else {
+                return Err("lock requirement name must be string".to_string());
+            };
+            let requirement = model_map(requirement, "lock requirement")?;
+            Ok(map([
                 (":name", Term::Str(name.clone())),
-                (":registry", optional(requirement.registry.as_deref())),
-                (":selector", Term::Str(requirement.selector.clone())),
+                (
+                    ":registry",
+                    optional(model_optional_string(requirement, ":registry")?),
+                ),
+                (
+                    ":selector",
+                    Term::Str(model_string(requirement, ":selector")?.to_string()),
+                ),
                 (
                     ":strategy",
-                    Term::Str(requirement.strategy.as_str().to_string()),
+                    Term::Str(model_symbol_name(requirement, ":strategy")?.to_string()),
                 ),
-                (":tag-policy", optional(requirement.tag_policy.as_deref())),
+                (
+                    ":tag-policy",
+                    optional(model_optional_string(requirement, ":tag-policy")?),
+                ),
                 (
                     ":update-policy",
-                    Term::Str(
-                        match requirement.update_policy {
-                            UpdatePolicy::Manual => "manual",
-                            UpdatePolicy::Auto => "auto",
-                        }
-                        .to_string(),
-                    ),
+                    Term::Str(model_symbol_name(requirement, ":update-policy")?.to_string()),
                 ),
-            ])
+            ]))
         })
-        .collect();
+        .collect::<Result<Vec<_>, String>>()?;
     let store = super::workspace_store_dir(workspace_file);
-    let locked = lock
-        .locked
+    let locked = model_map(model_field(model, ":locked")?, "locked entries")?
         .iter()
         .map(|(name, entry)| {
-            let snapshot_path = store.join(&entry.snapshot);
-            let (commit_path, commit_present) = entry
-                .commit
-                .as_deref()
+            let Term::Str(name) = &name.0 else {
+                return Err("locked entry name must be string".to_string());
+            };
+            let entry = model_map(entry, "locked entry")?;
+            let snapshot = model_string(entry, ":snapshot")?;
+            let commit = model_optional_string(entry, ":commit")?;
+            let snapshot_path = store.join(snapshot);
+            let (commit_path, commit_present) = commit
                 .map(|commit| {
                     let path = store.join(commit);
                     let present = path.is_file();
                     (Term::Str(path.display().to_string()), present)
                 })
                 .unwrap_or((Term::Nil, true));
-            map([
-                (":commit", optional(entry.commit.as_deref())),
+            Ok(map([
+                (":commit", optional(commit)),
                 (":commit-path", commit_path),
                 (":commit-present", Term::Bool(commit_present)),
                 (
                     ":environment-fingerprint",
-                    optional(entry.environment_fingerprint.as_deref()),
+                    optional(model_optional_string(entry, ":environment-fingerprint")?),
                 ),
-                (":exports-h", optional(entry.exports_hash.as_deref())),
+                (
+                    ":exports-h",
+                    optional(model_optional_string(entry, ":exports-hash")?),
+                ),
                 (":name", Term::Str(name.clone())),
-                (":registry", optional(entry.registry.as_deref())),
-                (":resolved-ref", optional(entry.resolved_ref.as_deref())),
-                (":snapshot", Term::Str(entry.snapshot.clone())),
+                (
+                    ":registry",
+                    optional(model_optional_string(entry, ":registry")?),
+                ),
+                (
+                    ":resolved-ref",
+                    optional(model_optional_string(entry, ":resolved-ref")?),
+                ),
+                (":snapshot", Term::Str(snapshot.to_string())),
                 (":snapshot-path", path_term(&snapshot_path)),
                 (":snapshot-present", Term::Bool(snapshot_path.is_file())),
-                (":source-selector", Term::Str(entry.source_selector.clone())),
-            ])
+                (
+                    ":source-selector",
+                    Term::Str(model_string(entry, ":source-selector")?.to_string()),
+                ),
+            ]))
         })
-        .collect();
-    map([
+        .collect::<Result<Vec<_>, String>>()?;
+    Ok(map([
         (":locked", Term::Vector(locked)),
         (":requirements", Term::Vector(requirements)),
-    ])
+    ]))
+}
+
+fn model_map<'a>(term: &'a Term, label: &str) -> Result<&'a BTreeMap<TermOrdKey, Term>, String> {
+    match term {
+        Term::Map(fields) => Ok(fields),
+        _ => Err(format!("{label} must be map")),
+    }
+}
+
+fn model_field<'a>(fields: &'a BTreeMap<TermOrdKey, Term>, name: &str) -> Result<&'a Term, String> {
+    fields
+        .get(&TermOrdKey(Term::symbol(name)))
+        .ok_or_else(|| format!("lock model missing {name}"))
+}
+
+fn model_string<'a>(fields: &'a BTreeMap<TermOrdKey, Term>, name: &str) -> Result<&'a str, String> {
+    match model_field(fields, name)? {
+        Term::Str(value) => Ok(value),
+        _ => Err(format!("lock model {name} must be string")),
+    }
+}
+
+fn model_optional_string<'a>(
+    fields: &'a BTreeMap<TermOrdKey, Term>,
+    name: &str,
+) -> Result<Option<&'a str>, String> {
+    match model_field(fields, name)? {
+        Term::Nil => Ok(None),
+        Term::Str(value) => Ok(Some(value)),
+        _ => Err(format!("lock model {name} must be string or nil")),
+    }
+}
+
+fn model_symbol_name<'a>(
+    fields: &'a BTreeMap<TermOrdKey, Term>,
+    name: &str,
+) -> Result<&'a str, String> {
+    match model_field(fields, name)? {
+        Term::Symbol(value) => value
+            .strip_prefix(':')
+            .ok_or_else(|| format!("lock model {name} must be keyword symbol")),
+        _ => Err(format!("lock model {name} must be symbol")),
+    }
 }
 
 fn file_observation(path: &Path, bytes: Vec<u8>) -> Term {

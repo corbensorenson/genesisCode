@@ -1559,6 +1559,94 @@ fn gcpm_env_materializes_deterministic_profile_record() {
 }
 
 #[test]
+fn gcpm_env_hydrate_rejects_invalid_lock_before_store_or_environment_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("caps.ci.toml"), "allow = []\n").unwrap();
+    fs::write(dir.join("caps.release.toml"), "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--policy",
+            "policy:default-v0.1",
+        ])
+        .assert()
+        .success();
+
+    let invalid_lock = r#"version = 2
+workspace = "ws"
+policy = "policy:default-v0.1"
+
+[requirements]
+dep = { selector = "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", update_policy = 7 }
+
+[locked]
+"#;
+    fs::write(dir.join("genesis.lock"), invalid_lock).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev", "--hydrate"])
+        .assert()
+        .failure();
+
+    assert_eq!(
+        fs::read_to_string(dir.join("genesis.lock")).unwrap(),
+        invalid_lock
+    );
+    assert!(!dir.join(".genesis").join("store").exists());
+    assert!(!dir.join(".genesis").join("env").exists());
+}
+
+#[test]
+fn gcpm_env_rejects_nonregular_lock_before_store_or_environment_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("caps.ci.toml"), "allow = []\n").unwrap();
+    fs::write(dir.join("caps.release.toml"), "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--policy",
+            "policy:default-v0.1",
+        ])
+        .assert()
+        .success();
+
+    fs::remove_file(dir.join("genesis.lock")).unwrap();
+    fs::create_dir(dir.join("genesis.lock")).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev", "--hydrate"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("not a regular file"));
+
+    assert!(dir.join("genesis.lock").is_dir());
+    assert!(!dir.join(".genesis").join("store").exists());
+    assert!(!dir.join(".genesis").join("env").exists());
+}
+
+#[test]
 fn gcpm_env_manifest_authority_rejects_duplicate_members_before_file_access() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();
@@ -1601,6 +1689,37 @@ caps_policy = "must-not-read.toml"
     assert!(output.contains("core/pkg/bad-workspace-manifest"));
     assert!(output.contains("duplicate workspace member name"));
     assert!(!output.contains("must-not-read.toml"));
+    assert!(!dir.join(".genesis").join("env").exists());
+}
+
+#[test]
+fn gcpm_env_manifest_authority_rejects_nonregular_source_before_materialization() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.lock"),
+        GenesisLock::empty("ws").to_toml_canonical(),
+    )
+    .unwrap();
+    fs::create_dir(dir.join("workspace-dir")).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "env",
+            "--profile",
+            "dev",
+            "--workspace-file",
+            "workspace-dir",
+        ])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains("not a regular file"));
+
+    assert!(dir.join("workspace-dir").is_dir());
     assert!(!dir.join(".genesis").join("env").exists());
 }
 
@@ -2274,86 +2393,82 @@ fn gcpm_env_backend_profile_bridge_runs_host_family_smoke_without_manual_bridge_
         .assert()
         .success();
 
-    let smoke_cases = [
-        (
-            "backend_bridge_dns.gc",
-            r#"(def prog (core/effect::perform 'io/net::dns-resolve {:name "localhost"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":addrs",
-        ),
-        (
-            "backend_bridge_db.gc",
-            r#"(def prog (core/effect::perform 'io/db::connect {:target "sqlite://data/backend_smoke.db"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":connection-id",
-        ),
-        (
-            "backend_bridge_process.gc",
-            r#"(def prog (core/effect::perform 'sys/process::exec {:program "echo" :args ["bridge-ok"] :env {}} (fn (x) (core/effect::pure x)))) prog"#,
-            ":stdout",
-        ),
-        (
-            "backend_bridge_crypto.gc",
-            r#"(def prog (core/effect::perform 'core/crypto::hash {:algorithm "sha256" :data "abc"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":digest",
-        ),
-        (
-            "backend_bridge_crypto_sign.gc",
-            r#"(def prog (core/effect::perform 'core/crypto::sign {:algorithm "ed25519" :key-id "mirror-key" :message "abc"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":signature",
-        ),
-        (
-            "backend_bridge_crypto_kdf.gc",
-            r#"(def prog (core/effect::perform 'core/crypto::kdf {:algorithm "hkdf-sha256" :key-id "mirror-key" :info "ctx" :length 32 :salt "s"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":key",
-        ),
-        (
-            "backend_bridge_crypto_aead.gc",
-            r#"(def prog (core/effect::perform 'core/crypto::aead-seal {:algorithm "aes-256-gcm" :key-id "mirror-key" :plaintext "abc" :aad "a" :nonce b"0123456789ab"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":tag",
-        ),
-        (
-            "backend_bridge_plugin.gc",
-            r#"(def prog (core/effect::perform 'host/plugin::command {:plugin "demo" :command "run" :payload {:ok true}} (fn (x) (core/effect::pure x)))) prog"#,
-            ":plugin",
-        ),
-        (
-            "backend_bridge_ffi.gc",
-            r#"(def prog (core/effect::perform 'host/ffi::buffer-pin {:abi-id "genesis/ffi.memory.v1" :bytes "abc"} (fn (x) (core/effect::pure x)))) prog"#,
-            ":handle",
-        ),
-    ];
+    let file_name = "backend_bridge_host_families.gc";
+    let log_name = "backend_bridge_host_families.gclog";
+    fs::write(
+        app_dir.join(file_name),
+        r#"
+(def prog
+  ((core/effect::bind (core/effect::perform 'io/net::dns-resolve {:name "localhost"} (fn (x) (core/effect::pure x))))
+    (fn (dns)
+      ((core/effect::bind (core/effect::perform 'io/db::connect {:target "sqlite://data/backend_smoke.db"} (fn (x) (core/effect::pure x))))
+        (fn (db)
+          ((core/effect::bind (core/effect::perform 'sys/process::exec {:program "echo" :args ["bridge-ok"] :env {}} (fn (x) (core/effect::pure x))))
+            (fn (process)
+              ((core/effect::bind (core/effect::perform 'core/crypto::hash {:algorithm "sha256" :data "abc"} (fn (x) (core/effect::pure x))))
+                (fn (digest)
+                  ((core/effect::bind (core/effect::perform 'core/crypto::sign {:algorithm "ed25519" :key-id "mirror-key" :message "abc"} (fn (x) (core/effect::pure x))))
+                    (fn (signature)
+                      ((core/effect::bind (core/effect::perform 'core/crypto::kdf {:algorithm "hkdf-sha256" :key-id "mirror-key" :info "ctx" :length 32 :salt "s"} (fn (x) (core/effect::pure x))))
+                        (fn (kdf)
+                          ((core/effect::bind (core/effect::perform 'core/crypto::aead-seal {:algorithm "aes-256-gcm" :key-id "mirror-key" :plaintext "abc" :aad "a" :nonce b"0123456789ab"} (fn (x) (core/effect::pure x))))
+                            (fn (aead)
+                              ((core/effect::bind (core/effect::perform 'host/plugin::command {:plugin "demo" :command "run" :payload {:ok true}} (fn (x) (core/effect::pure x))))
+                                (fn (plugin)
+                                  ((core/effect::bind (core/effect::perform 'host/ffi::buffer-pin {:abi-id "genesis/ffi.memory.v1" :bytes "abc"} (fn (x) (core/effect::pure x))))
+                                    (fn (ffi)
+                                      (core/effect::pure
+                                        {:dns dns :db db :process process :digest digest
+                                         :signature signature :kdf kdf :aead aead
+                                         :plugin plugin :ffi ffi}))))))))))))))))))))
+prog
+"#,
+    )
+    .unwrap();
 
-    for (file_name, src, expected_marker) in smoke_cases {
-        fs::write(app_dir.join(file_name), src).unwrap();
-        let log_name = format!("{file_name}.gclog");
-        let run_out = cargo_bin_cmd!("genesis")
-            .current_dir(&app_dir)
-            .args([
-                "run",
-                file_name,
-                "--caps",
-                &effective_caps,
-                "--log",
-                &log_name,
-            ])
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
-        let run_src = String::from_utf8(run_out).unwrap();
-        assert!(
-            run_src.contains(":backend \"first-party-backend-bridge\""),
-            "missing backend marker for {file_name}: {run_src}"
-        );
+    let run_out = cargo_bin_cmd!("genesis")
+        .current_dir(&app_dir)
+        .args([
+            "run",
+            file_name,
+            "--caps",
+            &effective_caps,
+            "--log",
+            log_name,
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let run_src = String::from_utf8(run_out).unwrap();
+    for expected_marker in [
+        ":addrs",
+        ":connection-id",
+        ":stdout",
+        ":digest",
+        ":signature",
+        ":key",
+        ":tag",
+        ":plugin",
+        ":handle",
+    ] {
         assert!(
             run_src.contains(expected_marker),
-            "missing expected marker `{expected_marker}` for {file_name}: {run_src}"
+            "missing expected marker `{expected_marker}`: {run_src}"
         );
-
-        cargo_bin_cmd!("genesis")
-            .current_dir(&app_dir)
-            .args(["replay", file_name, "--log", &log_name])
-            .assert()
-            .success();
     }
+    assert_eq!(
+        run_src
+            .matches(":backend \"first-party-backend-bridge\"")
+            .count(),
+        9,
+        "every host-family response must bind the backend: {run_src}"
+    );
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(&app_dir)
+        .args(["replay", file_name, "--log", log_name])
+        .assert()
+        .success();
 }

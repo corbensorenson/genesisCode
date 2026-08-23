@@ -339,6 +339,7 @@ pub(crate) fn handle_env(
     lock: &Path,
     workspace_file: &Path,
     out_dir: &Path,
+    lock_model: &crate::pkg_lock_model_authority::LoadedLockModel,
 ) -> Result<LocalPkgResult, String> {
     pkg_workspace_ops_env::handle_env(
         cli,
@@ -347,6 +348,7 @@ pub(crate) fn handle_env(
         lock,
         workspace_file,
         out_dir,
+        lock_model,
     )
 }
 
@@ -406,24 +408,15 @@ fn relative_to_cwd_or_literal(p: &Path) -> String {
 
 pub(crate) fn collect_missing_locked_hashes(
     workspace_file: &Path,
-    lock_file: &Path,
+    lock_model: &Term,
 ) -> Result<Vec<String>, String> {
-    let lock = gc_pkg::GenesisLock::load(lock_file).map_err(|e| e.to_string())?;
     let store_dir = workspace_store_dir(workspace_file);
-    let mut missing: Vec<String> = Vec::new();
-    for entry in lock.locked.values() {
-        if !store_dir.join(&entry.snapshot).is_file() {
-            missing.push(entry.snapshot.clone());
-        }
-        if let Some(commit) = &entry.commit
-            && !store_dir.join(commit).is_file()
-        {
-            missing.push(commit.clone());
-        }
-    }
-    missing.sort();
-    missing.dedup();
-    Ok(missing)
+    crate::pkg_lock_model_authority::locked_artifact_hashes(lock_model).map(|hashes| {
+        hashes
+            .into_iter()
+            .filter(|hash| !store_dir.join(hash).is_file())
+            .collect()
+    })
 }
 
 pub(crate) fn resolve_workspace_task_for_run(

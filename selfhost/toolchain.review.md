@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `440db1fd150984e7b00d353b93dba0fd2855b5c76895dd0f3fa5c2c45625202b`
-- Freshness artifact hash: `440db1fd150984e7b00d353b93dba0fd2855b5c76895dd0f3fa5c2c45625202b`
-- Freshness source hash: `329940eff36c586a6f47e942ff428586078dfa511f121b5521a1ec3b3e43163f`
-- Source aggregate hash (module path + module sha256): `a2ba9407801e801648528e913b669afdfb18b34595d168fbc820fa37e219322d`
+- Artifact sha256: `73b7fe99f36072a9872ac4bc4473e18450e67ad5ebdd21c1aa0eb11368c49973`
+- Freshness artifact hash: `73b7fe99f36072a9872ac4bc4473e18450e67ad5ebdd21c1aa0eb11368c49973`
+- Freshness source hash: `bad0da434af663582b0598c778be1af8bf74733f8a48dd350ccdeecf6c491c3f`
+- Source aggregate hash (module path + module sha256): `a3ce180dd8460341a89f21b8475a38227e78b5fddea82ed5c9767fe70b6e4644`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `141`
 
@@ -110,7 +110,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_workspace_remove_authority_v1.gc` | 172 | 6825 | 12 | `ceb198ed6e8afc23` |
 | `selfhost/pkg_workspace_migrate_authority_v1.gc` | 281 | 12305 | 16 | `aaeaf0a9dbceb9ce` |
 | `selfhost/pkg_workspace_env_select_authority_v1.gc` | 176 | 7073 | 12 | `bad43ec9879fcf8f` |
-| `selfhost/pkg_workspace_manifest_core_v1.gc` | 405 | 18704 | 22 | `e0cc1ff21d9b8ad4` |
+| `selfhost/pkg_workspace_manifest_core_v1.gc` | 400 | 18450 | 22 | `be790731d77e19b9` |
 | `selfhost/pkg_workspace_manifest_authority_v1.gc` | 87 | 3403 | 7 | `3f051ddb1fa97ed2` |
 | `selfhost/pkg_package_manifest_core_v1.gc` | 173 | 6979 | 15 | `d7f4f4c6adee8e82` |
 | `selfhost/pkg_package_manifest_config_v1.gc` | 312 | 16022 | 5 | `ae6298a4f3af00f9` |
@@ -254,7 +254,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_workspace_remove_authority_v1.gc`: `selfhost/pkg-workspace-remove::request-kind`, `selfhost/pkg-workspace-remove::result-kind`, `selfhost/pkg-workspace-remove::bytes-equal-loop`, `selfhost/pkg-workspace-remove::string-equal?`, `selfhost/pkg-workspace-remove::remove-loop`, `selfhost/pkg-workspace-remove::remove-name`, `selfhost/pkg-workspace-remove::result`, `selfhost/pkg-workspace-remove::reject`
 - `selfhost/pkg_workspace_migrate_authority_v1.gc`: `selfhost/pkg-workspace-migrate::request-kind`, `selfhost/pkg-workspace-migrate::result-kind`, `selfhost/pkg-workspace-migrate::result`, `selfhost/pkg-workspace-migrate::reject`, `selfhost/pkg-workspace-migrate::accept`, `selfhost/pkg-workspace-migrate::dependency?`, `selfhost/pkg-workspace-migrate::requirement`, `selfhost/pkg-workspace-migrate::requirements-loop`
 - `selfhost/pkg_workspace_env_select_authority_v1.gc`: `selfhost/pkg-workspace-env-select::request-kind`, `selfhost/pkg-workspace-env-select::result-kind`, `selfhost/pkg-workspace-env-select::result`, `selfhost/pkg-workspace-env-select::reject`, `selfhost/pkg-workspace-env-select::accept`, `selfhost/pkg-workspace-env-select::normalize`, `selfhost/pkg-workspace-env-select::optional-string?`, `selfhost/pkg-workspace-env-select::compatible?`
-- `selfhost/pkg_workspace_manifest_core_v1.gc`: `selfhost/pkg-workspace-manifest::ok`, `selfhost/pkg-workspace-manifest::bad`, `selfhost/pkg-workspace-manifest::bool?`, `selfhost/pkg-workspace-manifest::optional-string`, `selfhost/pkg-workspace-manifest::required-string`, `selfhost/pkg-workspace-manifest::bounded-string`, `selfhost/pkg-workspace-manifest::normalize-backend`, `selfhost/pkg-workspace-manifest::member`
+- `selfhost/pkg_workspace_manifest_core_v1.gc`: `selfhost/pkg-workspace-manifest::ok`, `selfhost/pkg-workspace-manifest::bad`, `selfhost/pkg-workspace-manifest::bool?`, `selfhost/pkg-workspace-manifest::optional-string`, `selfhost/pkg-workspace-manifest::required-string`, `selfhost/pkg-workspace-manifest::bounded-string`, `selfhost/pkg-workspace-manifest::observe-backend`, `selfhost/pkg-workspace-manifest::member`
 - `selfhost/pkg_workspace_manifest_authority_v1.gc`: `selfhost/pkg-workspace-manifest::request-kind`, `selfhost/pkg-workspace-manifest::result-kind`, `selfhost/pkg-workspace-manifest::result`, `selfhost/pkg-workspace-manifest::reject`, `selfhost/pkg-workspace-manifest::accept`, `selfhost/pkg-workspace-manifest::request-valid?`, `core/pkg::workspace-manifest-authority`
 - `selfhost/pkg_package_manifest_core_v1.gc`: `selfhost/pkg-package-manifest::ok`, `selfhost/pkg-package-manifest::bad`, `selfhost/pkg-package-manifest::bounded-string`, `selfhost/pkg-package-manifest::optional-string`, `selfhost/pkg-package-manifest::optional-u64`, `selfhost/pkg-package-manifest::portable-path`, `selfhost/pkg-package-manifest::optional-portable-path`, `selfhost/pkg-package-manifest::string-vector-loop`
 - `selfhost/pkg_package_manifest_config_v1.gc`: `selfhost/pkg-package-manifest::limits`, `selfhost/pkg-package-manifest::budgets`, `selfhost/pkg-package-manifest::property`, `selfhost/pkg-package-manifest::gfx`, `selfhost/pkg-package-manifest::normalize`

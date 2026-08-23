@@ -1,8 +1,8 @@
 {
   "artifact": "selfhost/toolchain.gc",
-  "auditDate": "2026-08-13",
+  "auditDate": "2026-08-23",
   "binding": "core/effects::policy-authority",
-  "contentIdentitySha256": "98b3b7fd20c866d6474dcde49d658d7e0d93c5e585bc238243386eedb057ee06",
+  "contentIdentitySha256": "02c84c341c8169165b46eec708e161518267bdf3279d4734b412613755d93dc2",
   "decisionInventory": [
     "baseline-operation-admission",
     "candidate-operation-inventory",
@@ -69,7 +69,7 @@
   ],
   "resultKind": "genesis/effect-policy-authority-result-v0.20",
   "runtimeEvidence": {
-    "allocationLimit": 40000000,
+    "allocationLimit": 625000000,
     "stepLimit": 20000000,
     "timeoutSeconds": 30
   },
@@ -89,5 +89,5 @@
   ],
   "sourceSha256": "17e1c3716980b2ce3bc3a4f0bff23bb3e1f8c2aa9007eb314d28315373b27e32",
   "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-  "version": "0.1.28"
+  "version": "0.1.29"
 }

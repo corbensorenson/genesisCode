@@ -144,7 +144,7 @@ def validate(profile, schema, check_identity=True):
         "resourceResultKind": "genesis/effect-resource-policy-result-v0.5",
         "resultKind": "genesis/effect-policy-authority-result-v0.20",
         "runtimeEvidence": {
-            "allocationLimit": 40_000_000,
+            "allocationLimit": 625_000_000,
             "stepLimit": 20_000_000,
             "timeoutSeconds": 30,
         },
@@ -163,7 +163,7 @@ def validate(profile, schema, check_identity=True):
             "selfhost/effect_policy_authority_v1.gc",
         ],
         "spec": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md",
-        "version": "0.1.28",
+        "version": "0.1.29",
     }
     for key, expected in constants.items():
         if profile.get(key) != expected:
@@ -328,7 +328,7 @@ def static_check(root: Path, profile):
     required_authority = [
         "const MAX_POLICY_OPS: usize = 4_096;",
         "const POLICY_AUTHORITY_STEP_LIMIT: u64 = 20_000_000;",
-        "const POLICY_AUTHORITY_ALLOC_LIMIT: u64 = 40_000_000;",
+        "const POLICY_AUTHORITY_ALLOC_LIMIT: u64 = 625_000_000;",
         profile["requestKind"],
         profile["resultKind"],
         profile["inventoryRequestKind"],

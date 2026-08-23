@@ -69,7 +69,7 @@
       "additionalProperties": false,
       "required": ["allocationLimit", "stepLimit", "timeoutSeconds"],
       "properties": {
-        "allocationLimit": {"const": 40000000},
+        "allocationLimit": {"const": 625000000},
         "stepLimit": {"const": 20000000},
         "timeoutSeconds": {"const": 30}
       }
@@ -79,6 +79,6 @@
     "sourceModules": {"const": ["selfhost/effect_policy_crypto_v1.gc", "selfhost/effect_policy_network_v1.gc", "selfhost/effect_policy_plugin_v1.gc", "selfhost/effect_policy_ffi_v1.gc", "selfhost/effect_policy_bridge_v1.gc", "selfhost/effect_policy_gpu_v1.gc", "selfhost/effect_policy_gfx_v1.gc", "selfhost/effect_policy_xr_v1.gc", "selfhost/effect_policy_resource_authority_v1.gc", "selfhost/effect_policy_authority_v1.gc"]},
     "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "spec": {"const": "docs/spec/SELFHOST_EFFECT_POLICY_COMPOSITION_v0.1.md"},
-    "version": {"const": "0.1.28"}
+    "version": {"const": "0.1.29"}
   }
 }

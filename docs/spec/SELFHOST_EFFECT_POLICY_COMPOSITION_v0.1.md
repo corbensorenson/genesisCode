@@ -478,10 +478,14 @@ remain bounded host mechanisms under `path-and-secret-resolution` and
 `effect-execution-and-hard-cancellation`; this is not a claim that filesystem
 execution moved into the pure kernel. Policy aliases are governed separately by
 the policy-alias authority and are not part of this profile's residual inventory.
-Authority evaluation remains bounded to 20,000,000 steps, 40,000,000 allocation
-units, and 30 seconds. The allocation ceiling was ratcheted from 32,000,000 after
-the governed 120-module artifact reproducibly required 32,129,016 units to load
-an ordinary package policy; exhaustion still fails closed.
+Authority evaluation remains bounded to 20,000,000 steps, 625,000,000 allocation
+units, and 30 seconds. The cumulative allocation session includes artifact bootstrap and policy
+application because the loaded authority environment remains live. The ceiling was ratcheted from
+40,000,000 after one bounded calibration of the governed 141-module artifact plus the complete
+101-operation generated backend policy required 502,657,953 units; the new ceiling preserves
+approximately 24 percent headroom, and exhaustion still fails closed. The structural 4,096-operation
+input bound does not promise admission: the cumulative logical-allocation and step ceilings remain
+independent fail-closed limits.
 Process policy configuration is no longer residual: GenesisCode owns the complete
 `allow_programs` domain, normalization, and error state for both launch operations;
 payload decoding, wildcard matching, process creation, lifecycle control, and

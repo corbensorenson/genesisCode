@@ -50,7 +50,7 @@ PACKAGE_OPERATIONS = [
     "core/pkg-low::install", "core/pkg-low::verify",
 ]
 GC_OPERATIONS = ["core/gc-low::plan", "core/gc-low::run"]
-CLI_OPERATIONS = ["genesis gcpm remove"]
+CLI_OPERATIONS = ["genesis gcpm remove", "genesis gcpm env"]
 OPERATIONS = PACKAGE_OPERATIONS + GC_OPERATIONS + CLI_OPERATIONS
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
@@ -151,6 +151,10 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     gc_sources = source_text(root, "crates/gc_effects/src/runner_gc_ops.rs", overrides)
     cli_adapter = source_text(root, "crates/gc_cli_driver/src/pkg_lock_model_authority.rs", overrides)
     cli_remove = source_text(root, "crates/gc_cli_driver/src/pkg_workspace_remove.rs", overrides)
+    cli_workspace = source_text(root, "crates/gc_cli_driver/src/pkg_workspace_ops.rs", overrides)
+    cli_env = source_text(root, "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs", overrides)
+    cli_env_route = source_text(root, "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs", overrides)
+    cli_tests = source_text(root, "crates/gc_cli/tests/cli_pkg_workspace.rs", overrides)
     runner = source_text(root, "crates/gc_effects/src/runner.rs", overrides)
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
 
@@ -208,12 +212,20 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
 
     for marker in (
         'const AUTHORITY_BINDING: &str = "core/pkg::lock-model-authority"',
+        'const LOCK_WRITE_BINDING: &str = "core/pkg::lock-write-authority"',
         "const SOURCE_LIMIT: usize = 4 * 1024 * 1024", "pub(crate) fn read_bounded(",
-        ".take((SOURCE_LIMIT as u64) + 1)", "authorize_bytes(",
+        ".take((SOURCE_LIMIT as u64) + 1)", ".is_file()", "Vec::with_capacity(",
+        "options.custom_flags(libc::O_NONBLOCK)",
+        "authorize_bytes(",
         ".get(AUTHORITY_BINDING)", "decode(value, &request_hash)", "validate_model(&model)",
+        "pub(crate) struct LoadedLockModel", "pub(crate) fn load(",
+        "pub(crate) fn render_canonical(", "canonical_model != model",
+        "pub(crate) fn locked_artifact_hashes(",
     ):
         if marker not in cli_adapter:
             fail(f"CLI lock model adapter missing marker: {marker}")
+    if cli_adapter.count(".is_file()") != 1:
+        fail("CLI lock model regular-file admission inventory drift")
     if cli_remove.count("pkg_lock_model_authority::authorize_bytes(") != 2:
         fail("gcpm remove does not authorize both input and emitted lock models")
     production_remove = cli_remove.split("pub(super) fn handle_remove(", 1)[1].split(
@@ -225,6 +237,28 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("gcpm remove retains an unbounded user-controlled lock read")
     if "GenesisLock::" in production_remove or "candidate != plan.model" not in production_remove:
         fail("gcpm remove retains native model authority or omits exact post-write comparison")
+    for marker in (
+        "crate::pkg_lock_model_authority::load(cli, lock)",
+        "collect_missing_locked_hashes(", "&lock_model.model", "&lock_model,",
+    ):
+        if marker not in cli_env_route:
+            fail(f"gcpm env lock-model route missing marker: {marker}")
+    hydrate_projection = cli_workspace.split(
+        "pub(crate) fn collect_missing_locked_hashes(", 1
+    )[1].split("pub(crate) fn resolve_workspace_task_for_run(", 1)[0]
+    if "pkg_lock_model_authority::locked_artifact_hashes(lock_model)" not in hydrate_projection:
+        fail("gcpm env hydration does not use the authorized lock projection")
+    for marker in ("lock_model.canonical_bytes.clone()", "lock_observation(workspace_file, &lock_model.model)"):
+        if marker not in cli_env:
+            fail(f"gcpm env authority request missing marker: {marker}")
+    if "GenesisLock::" in hydrate_projection or "GenesisLock::" in cli_env:
+        fail("gcpm env retains native lock-model authority")
+    for marker in (
+        "gcpm_env_hydrate_rejects_invalid_lock_before_store_or_environment_write",
+        "gcpm_env_rejects_nonregular_lock_before_store_or_environment_write",
+    ):
+        if marker not in cli_tests:
+            fail(f"gcpm env lacks pre-write lock integration control: {marker}")
 
     for marker in (
         "pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>",
@@ -318,6 +352,10 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/runner_gc_ops.rs", "crates/gc_effects/src/runner.rs",
         "crates/gc_cli_driver/src/pkg_lock_model_authority.rs",
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
+        "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
+        "crates/gc_cli/tests/cli_pkg_workspace.rs",
     ]
     sources = {path: source_text(root, path, {}) for path in paths}
     mutations = []
@@ -360,8 +398,16 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "sandbox_path_allow_missing(base_dir, lock_s, false)", "base_dir.join(lock_s)", "gc-lock-path-admission")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
     source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".get(AUTHORITY_BINDING)", ".get(\"native-model\")", "cli-model-route")
+    source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".is_file()", ".is_dir()", "cli-regular-file-admission")
+    source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", "options.custom_flags(libc::O_NONBLOCK)", "options.custom_flags(0)", "cli-nonblocking-open")
     source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "pkg_lock_model_authority::read_bounded(lock_path)", "std::fs::read(lock_path)", "cli-bounded-read")
     source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "candidate != plan.model", "candidate == plan.model", "cli-post-write-check")
+    source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", "canonical_model != model", "canonical_model == model", "cli-canonical-model-check")
+    source_mutation("crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs", "crate::pkg_lock_model_authority::load(cli, lock)", "gc_pkg::GenesisLock::load(lock)", "cli-env-route")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_ops.rs", "pkg_lock_model_authority::locked_artifact_hashes(lock_model)", "gc_pkg::GenesisLock::load(lock_file)", "cli-env-hydration")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_ops_env.rs", "lock_model.canonical_bytes.clone()", "gc_pkg::GenesisLock::load(lock)", "cli-env-model")
+    source_mutation("crates/gc_cli/tests/cli_pkg_workspace.rs", "gcpm_env_hydrate_rejects_invalid_lock_before_store_or_environment_write", "legacy_env_lock_test", "cli-env-prewrite-control")
+    source_mutation("crates/gc_cli/tests/cli_pkg_workspace.rs", "gcpm_env_rejects_nonregular_lock_before_store_or_environment_write", "legacy_env_nonregular_lock_test", "cli-env-nonregular-control")
 
     controls = 0
     for changed_profile, overrides, name in mutations:
@@ -371,7 +417,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 25:
+    if controls != 33:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-model-authority: self-test ok (negative_controls={controls})")
     return controls

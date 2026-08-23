@@ -6,16 +6,65 @@ use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_kernel::{Apply, Env, EvalCtx, Value};
 
 const AUTHORITY_BINDING: &str = "core/pkg::lock-model-authority";
+const LOCK_WRITE_BINDING: &str = "core/pkg::lock-write-authority";
 const REQUEST_KIND: &str = "genesis/pkg-lock-model-authority-request-v0.1";
 const RESULT_KIND: &str = "genesis/pkg-lock-model-authority-result-v0.1";
+const LOCK_WRITE_REQUEST_KIND: &str = "genesis/pkg-lock-write-authority-request-v0.1";
+const LOCK_WRITE_RESULT_KIND: &str = "genesis/pkg-lock-write-authority-result-v0.1";
 const SOURCE_LIMIT: usize = 4 * 1024 * 1024;
 const COLLECTION_LIMIT: usize = 65_536;
 const VALUE_LIMIT: usize = 4 * 1024 * 1024;
 
+pub(crate) struct LoadedLockModel {
+    pub(crate) model: Term,
+    pub(crate) canonical_bytes: Vec<u8>,
+}
+
+pub(crate) fn load(cli: &crate::Cli, path: &Path) -> Result<LoadedLockModel, String> {
+    let bytes = read_bounded(path)?;
+    let mut context = crate::mk_ctx(cli);
+    let prelude = crate::build_prelude(&mut context);
+    let mut environment = prelude.env;
+    crate::load_selfhost_toolchain(cli, &mut context, &mut environment)
+        .map_err(|error| format!("load lock-model authority: {error:?}"))?;
+    let model = authorize_bytes(&mut context, &environment, &bytes)?;
+    let (canonical_bytes, _) = render_canonical(&mut context, &environment, path, &model)?;
+    let canonical_model = authorize_bytes(&mut context, &environment, &canonical_bytes)?;
+    if canonical_model != model {
+        return Err("canonical lock bytes contradict the authorized model".to_string());
+    }
+    Ok(LoadedLockModel {
+        model,
+        canonical_bytes,
+    })
+}
+
 pub(crate) fn read_bounded(path: &Path) -> Result<Vec<u8>, String> {
-    let file = std::fs::File::open(path)
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK);
+    }
+    let file = options
+        .open(path)
         .map_err(|error| format!("read lock model {}: {error}", path.display()))?;
-    let mut bytes = Vec::new();
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("stat opened lock model {}: {error}", path.display()))?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "lock model is not a regular file: {}",
+            path.display()
+        ));
+    }
+    if metadata.len() > SOURCE_LIMIT as u64 {
+        return Err(format!(
+            "lock file exceeds {SOURCE_LIMIT}-byte transport limit"
+        ));
+    }
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
     file.take((SOURCE_LIMIT as u64) + 1)
         .read_to_end(&mut bytes)
         .map_err(|error| format!("read lock model {}: {error}", path.display()))?;
@@ -60,6 +109,23 @@ pub(crate) fn authorize_bytes(
         ));
     }
     decode(value, &request_hash)
+}
+
+pub(crate) fn render_canonical(
+    context: &mut EvalCtx,
+    environment: &Env,
+    lock_path: &Path,
+    model: &Term,
+) -> Result<(Vec<u8>, String), String> {
+    let request = lock_write_request(lock_path, model)?;
+    let request_hash = hex32(hash_term(&request));
+    let authority = environment
+        .get(LOCK_WRITE_BINDING)
+        .ok_or_else(|| format!("missing binding {LOCK_WRITE_BINDING}"))?;
+    let value = authority
+        .apply(context, Value::data(request))
+        .map_err(|error| format!("{LOCK_WRITE_BINDING} failed: {error}"))?;
+    decode_lock_write(value, &request_hash)
 }
 
 fn decode(value: Value, request_hash: &str) -> Result<Term, String> {
@@ -274,6 +340,132 @@ fn bounded(value: &str, label: &str) -> Result<(), String> {
     } else {
         Err(format!("{label} exceeds {VALUE_LIMIT}-byte result limit"))
     }
+}
+
+pub(crate) fn locked_artifact_hashes(model: &Term) -> Result<Vec<String>, String> {
+    validate_model(model)?;
+    let fields = required_map(model, "lock model")?;
+    let locked = bounded_map(field(fields, ":locked")?, "locked entries")?;
+    let mut hashes = Vec::with_capacity(locked.len().saturating_mul(2));
+    for entry in locked.values() {
+        let fields = required_map(entry, "locked entry")?;
+        hashes.push(required_string(fields, ":snapshot")?.to_string());
+        if let Term::Str(commit) = field(fields, ":commit")? {
+            hashes.push(commit.clone());
+        }
+    }
+    hashes.sort();
+    hashes.dedup();
+    Ok(hashes)
+}
+
+fn lock_write_request(lock_path: &Path, model: &Term) -> Result<Term, String> {
+    let Term::Map(mut payload) = model.clone() else {
+        return Err("lock model must be map".to_string());
+    };
+    let locked = payload
+        .get(&TermOrdKey(Term::symbol(":locked")))
+        .ok_or_else(|| "lock model missing :locked".to_string())?;
+    payload.insert(
+        TermOrdKey(Term::symbol(":locked")),
+        lock_writer_locked_model(locked)?,
+    );
+    payload.insert(
+        TermOrdKey(Term::symbol(":lock")),
+        Term::Str(lock_path.display().to_string()),
+    );
+    Ok(map([
+        (":kind", Term::Str(LOCK_WRITE_REQUEST_KIND.to_string())),
+        (":op", Term::symbol(":write")),
+        (":payload", Term::Map(payload)),
+        (":v", Term::Int(1.into())),
+    ]))
+}
+
+fn lock_writer_locked_model(term: &Term) -> Result<Term, String> {
+    let entries = bounded_map(term, "locked entries")?;
+    entries
+        .iter()
+        .map(|(name, value)| {
+            let fields = required_map(value, "locked entry")?;
+            require_exact_fields(
+                fields,
+                &[
+                    ":commit",
+                    ":environment-fingerprint",
+                    ":exports-hash",
+                    ":registry",
+                    ":resolved-ref",
+                    ":snapshot",
+                    ":source-selector",
+                ],
+                "locked entry",
+            )?;
+            Ok((
+                name.clone(),
+                map([
+                    (":commit", field(fields, ":commit")?.clone()),
+                    (
+                        ":environment-fingerprint",
+                        field(fields, ":environment-fingerprint")?.clone(),
+                    ),
+                    (":exports_hash", field(fields, ":exports-hash")?.clone()),
+                    (":registry", field(fields, ":registry")?.clone()),
+                    (":resolved-ref", field(fields, ":resolved-ref")?.clone()),
+                    (":snapshot", field(fields, ":snapshot")?.clone()),
+                    (
+                        ":source_selector",
+                        field(fields, ":source-selector")?.clone(),
+                    ),
+                ]),
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>, _>>()
+        .map(Term::Map)
+}
+
+fn decode_lock_write(value: Value, request_hash: &str) -> Result<(Vec<u8>, String), String> {
+    let Some(Term::Map(fields)) = value.to_plain_term() else {
+        return Err("lock-write authority returned non-map".to_string());
+    };
+    require_exact_fields(
+        &fields,
+        &[
+            ":bytes",
+            ":code",
+            ":kind",
+            ":lock-h",
+            ":message",
+            ":ok",
+            ":request-h",
+            ":v",
+        ],
+        "lock-write envelope",
+    )?;
+    require_string(&fields, ":kind", LOCK_WRITE_RESULT_KIND)?;
+    require_string(&fields, ":request-h", request_hash)?;
+    require_int(&fields, ":v", 1)?;
+    if field(&fields, ":ok")? != &Term::Bool(true) {
+        return Err(format!(
+            "lock-write authority rejected lock model: {}",
+            required_string(&fields, ":message")?
+        ));
+    }
+    require_nil(&fields, ":code")?;
+    require_nil(&fields, ":message")?;
+    let Term::Bytes(bytes) = field(&fields, ":bytes")? else {
+        return Err("lock-write :bytes must be bytes".to_string());
+    };
+    if bytes.len() > SOURCE_LIMIT {
+        return Err(format!(
+            "canonical lock exceeds {SOURCE_LIMIT}-byte transport limit"
+        ));
+    }
+    let lock_hash = required_string(&fields, ":lock-h")?.to_string();
+    if blake3::hash(bytes).to_hex().as_str() != lock_hash {
+        return Err("lock-write bytes/hash contradiction".to_string());
+    }
+    Ok((bytes.to_vec(), lock_hash))
 }
 
 fn require_exact_fields(

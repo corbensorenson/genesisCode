@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Read;
 use std::path::Path;
 
 use gc_coreform::{Term, TermOrdKey, hash_term};
@@ -28,13 +29,7 @@ pub(super) fn load(
     require_profile: bool,
 ) -> Result<AuthorizedWorkspace, String> {
     bounded(selected_profile, NAME_LIMIT, "selected workspace profile")?;
-    let bytes = std::fs::read(path)
-        .map_err(|error| format!("read workspace manifest `{}`: {error}", path.display()))?;
-    if bytes.len() > SOURCE_LIMIT {
-        return Err(format!(
-            "workspace manifest exceeds {SOURCE_LIMIT}-byte transport limit"
-        ));
-    }
+    let bytes = read_bounded(path)?;
     let source = std::str::from_utf8(&bytes)
         .map_err(|_| "workspace manifest is not valid UTF-8".to_string())?;
     let document = toml::from_str::<toml::Value>(source)
@@ -179,7 +174,7 @@ fn decode_defaults(term: &Term) -> Result<WorkspaceDefaults, String> {
         registry: optional_string(fields, ":registry", VALUE_LIMIT)?,
         policy: optional_string(fields, ":policy", VALUE_LIMIT)?,
         toolchain: optional_string(fields, ":toolchain", VALUE_LIMIT)?,
-        runtime_backend: optional_backend(fields, ":runtime-backend")?,
+        runtime_backend: optional_string(fields, ":runtime-backend", 64)?,
     })
 }
 
@@ -224,7 +219,7 @@ fn decode_profile(term: &Term) -> Result<(String, WorkspaceProfile), String> {
             registry: optional_string(fields, ":registry", VALUE_LIMIT)?,
             policy: optional_string(fields, ":policy", VALUE_LIMIT)?,
             toolchain: optional_string(fields, ":toolchain", VALUE_LIMIT)?,
-            runtime_backend: optional_backend(fields, ":runtime-backend")?,
+            runtime_backend: optional_string(fields, ":runtime-backend", 64)?,
         },
     ))
 }
@@ -261,22 +256,6 @@ fn decode_tasks(term: &Term) -> Result<BTreeMap<String, WorkspaceTask>, String> 
     Ok(tasks)
 }
 
-fn optional_backend(
-    fields: &BTreeMap<TermOrdKey, Term>,
-    name: &str,
-) -> Result<Option<String>, String> {
-    let value = optional_string(fields, name, 64)?;
-    if value
-        .as_deref()
-        .is_some_and(|value| !matches!(value, "headless" | "gpu" | "gfx" | "backend"))
-    {
-        return Err(format!(
-            "workspace-manifest result {name} has invalid backend"
-        ));
-    }
-    Ok(value)
-}
-
 fn toml_to_term(value: toml::Value) -> Term {
     match value {
         toml::Value::String(value) => Term::Str(value),
@@ -292,6 +271,48 @@ fn toml_to_term(value: toml::Value) -> Term {
                 .collect(),
         ),
     }
+}
+
+fn read_bounded(path: &Path) -> Result<Vec<u8>, String> {
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK);
+    }
+    let mut file = options
+        .open(path)
+        .map_err(|error| format!("read workspace manifest `{}`: {error}", path.display()))?;
+    let metadata = file.metadata().map_err(|error| {
+        format!(
+            "stat opened workspace manifest `{}`: {error}",
+            path.display()
+        )
+    })?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "workspace manifest is not a regular file: {}",
+            path.display()
+        ));
+    }
+    let declared = metadata.len();
+    if declared > SOURCE_LIMIT as u64 {
+        return Err(format!(
+            "workspace manifest exceeds {SOURCE_LIMIT}-byte transport limit"
+        ));
+    }
+    let mut bytes = Vec::with_capacity(declared as usize);
+    file.by_ref()
+        .take(SOURCE_LIMIT as u64 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("read workspace manifest `{}`: {error}", path.display()))?;
+    if bytes.len() > SOURCE_LIMIT {
+        return Err(format!(
+            "workspace manifest exceeds {SOURCE_LIMIT}-byte transport limit"
+        ));
+    }
+    Ok(bytes)
 }
 
 fn bounded_vector<'a>(term: &'a Term, label: &str) -> Result<&'a [Term], String> {

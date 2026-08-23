@@ -7,11 +7,8 @@ use gc_kernel::{Apply, Value};
 use super::LocalPkgResult;
 
 const AUTHORITY_BINDING: &str = "core/pkg::workspace-remove-authority";
-const LOCK_WRITE_BINDING: &str = "core/pkg::lock-write-authority";
 const REQUEST_KIND: &str = "genesis/pkg-workspace-remove-authority-request-v0.1";
 const RESULT_KIND: &str = "genesis/pkg-workspace-remove-authority-result-v0.1";
-const LOCK_WRITE_REQUEST_KIND: &str = "genesis/pkg-lock-write-authority-request-v0.1";
-const LOCK_WRITE_RESULT_KIND: &str = "genesis/pkg-lock-write-authority-result-v0.1";
 
 struct AuthorizedRemovePlan {
     model: Term,
@@ -65,15 +62,12 @@ pub(super) fn handle_remove(
         ));
     }
     let plan = decode_plan(value, &request_hash, name, lock_path)?;
-    let writer_request = lock_write_request(lock_path, &plan.model)?;
-    let writer_hash = hex32(hash_term(&writer_request));
-    let writer = environment
-        .get(LOCK_WRITE_BINDING)
-        .ok_or_else(|| format!("missing binding {LOCK_WRITE_BINDING}"))?;
-    let writer_value = writer
-        .apply(&mut context, Value::data(writer_request))
-        .map_err(|error| format!("{LOCK_WRITE_BINDING} failed: {error}"))?;
-    let (bytes, lock_hash) = decode_lock_write(writer_value, &writer_hash)?;
+    let (bytes, lock_hash) = crate::pkg_lock_model_authority::render_canonical(
+        &mut context,
+        &environment,
+        lock_path,
+        &plan.model,
+    )?;
     let candidate =
         crate::pkg_lock_model_authority::authorize_bytes(&mut context, &environment, &bytes)?;
     if candidate != plan.model {
@@ -175,117 +169,11 @@ fn decode_plan(
     Ok(AuthorizedRemovePlan { model, removed })
 }
 
-fn lock_write_request(lock_path: &Path, model: &Term) -> Result<Term, String> {
-    let Term::Map(mut payload) = model.clone() else {
-        return Err("workspace-remove model must be map".to_string());
-    };
-    let locked = payload
-        .get(&TermOrdKey(Term::symbol(":locked")))
-        .ok_or_else(|| "workspace-remove model missing :locked".to_string())?;
-    let writer_locked = lock_writer_locked_model(locked)?;
-    payload.insert(TermOrdKey(Term::symbol(":locked")), writer_locked);
-    payload.insert(
-        TermOrdKey(Term::symbol(":lock")),
-        Term::Str(lock_path.display().to_string()),
-    );
-    Ok(map([
-        (":kind", Term::Str(LOCK_WRITE_REQUEST_KIND.to_string())),
-        (":op", Term::symbol(":write")),
-        (":payload", Term::Map(payload)),
-        (":v", Term::Int(1.into())),
-    ]))
-}
-
-fn decode_lock_write(value: Value, request_hash: &str) -> Result<(Vec<u8>, String), String> {
-    let Some(Term::Map(fields)) = value.to_plain_term() else {
-        return Err("lock-write authority returned non-map".to_string());
-    };
-    require_exact_fields(
-        &fields,
-        &[
-            ":bytes",
-            ":code",
-            ":kind",
-            ":lock-h",
-            ":message",
-            ":ok",
-            ":request-h",
-            ":v",
-        ],
-        "lock-write envelope",
-    )?;
-    require_string(&fields, ":kind", LOCK_WRITE_RESULT_KIND)?;
-    require_string(&fields, ":request-h", request_hash)?;
-    require_int(&fields, ":v", 1)?;
-    if field(&fields, ":ok")? != &Term::Bool(true) {
-        return Err(format!(
-            "lock-write authority rejected remove model: {}",
-            required_string(&fields, ":message")?
-        ));
-    }
-    require_nil(&fields, ":code")?;
-    require_nil(&fields, ":message")?;
-    let Term::Bytes(bytes) = field(&fields, ":bytes")? else {
-        return Err("lock-write :bytes must be bytes".to_string());
-    };
-    let lock_hash = required_string(&fields, ":lock-h")?.to_string();
-    if blake3::hash(bytes).to_hex().as_str() != lock_hash {
-        return Err("lock-write bytes/hash contradiction".to_string());
-    }
-    Ok((bytes.to_vec(), lock_hash))
-}
-
 fn require_exact_term_map(term: &Term, names: &[&str], label: &str) -> Result<(), String> {
     let Term::Map(fields) = term else {
         return Err(format!("{label} must be map"));
     };
     require_exact_fields(fields, names, label)
-}
-
-fn lock_writer_locked_model(term: &Term) -> Result<Term, String> {
-    let Term::Map(entries) = term else {
-        return Err("workspace-remove model :locked must be map".to_string());
-    };
-    entries
-        .iter()
-        .map(|(name, value)| {
-            let Term::Map(fields) = value else {
-                return Err("workspace-remove locked entry must be map".to_string());
-            };
-            require_exact_fields(
-                fields,
-                &[
-                    ":commit",
-                    ":environment-fingerprint",
-                    ":exports-hash",
-                    ":registry",
-                    ":resolved-ref",
-                    ":snapshot",
-                    ":source-selector",
-                ],
-                "workspace-remove locked entry",
-            )?;
-            Ok((
-                name.clone(),
-                map([
-                    (":commit", field(fields, ":commit")?.clone()),
-                    (
-                        ":environment-fingerprint",
-                        field(fields, ":environment-fingerprint")?.clone(),
-                    ),
-                    (":exports_hash", field(fields, ":exports-hash")?.clone()),
-                    (":registry", field(fields, ":registry")?.clone()),
-                    (":resolved-ref", field(fields, ":resolved-ref")?.clone()),
-                    (":snapshot", field(fields, ":snapshot")?.clone()),
-                    (
-                        ":source_selector",
-                        field(fields, ":source-selector")?.clone(),
-                    ),
-                ]),
-            ))
-        })
-        .collect::<Result<BTreeMap<_, _>, _>>()
-        .map(Term::Map)
 }
 
 fn model_contains_name(model: &Term, collection: &str, name: &str) -> Result<bool, String> {

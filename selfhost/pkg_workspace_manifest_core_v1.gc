@@ -37,15 +37,10 @@
           (selfhost/pkg-workspace-manifest::ok value)
           (selfhost/pkg-workspace-manifest::bad label))))))
 
-(def selfhost/pkg-workspace-manifest::normalize-backend
+(def selfhost/pkg-workspace-manifest::observe-backend
   (fn (value)
-    (if (core/list::is-nil? value)
-      (selfhost/pkg-workspace-manifest::ok nil)
-      (let ((normalized (selfhost/pkg-workspace-env-select::normalize value)))
-        (if (core/list::is-nil? normalized)
-          (selfhost/pkg-workspace-manifest::bad
-            "runtime_backend must name a supported backend")
-          (selfhost/pkg-workspace-manifest::ok normalized))))))
+    (((selfhost/pkg-workspace-manifest::optional-string value) 64)
+      "runtime_backend must be a string of at most 64 bytes")))
 
 (def selfhost/pkg-workspace-manifest::member
   (fn (value)
@@ -142,7 +137,7 @@
                   ((core/map::get table) "toolchain")) 16777216)
                 "default toolchain must be a string"))
             (backend
-              (selfhost/pkg-workspace-manifest::normalize-backend
+              (selfhost/pkg-workspace-manifest::observe-backend
                 ((core/map::get table) "runtime_backend"))))
           (if ((core/map::get registry) (quote :ok))
             (if ((core/map::get policy) (quote :ok))
@@ -187,7 +182,7 @@
                       ((core/map::get value) "toolchain")) 16777216)
                     "profile toolchain must be a string"))
                 (backend
-                  (selfhost/pkg-workspace-manifest::normalize-backend
+                  (selfhost/pkg-workspace-manifest::observe-backend
                     ((core/map::get value) "runtime_backend"))))
               (if ((core/map::get caps) (quote :ok))
                 (if ((core/map::get registry) (quote :ok))

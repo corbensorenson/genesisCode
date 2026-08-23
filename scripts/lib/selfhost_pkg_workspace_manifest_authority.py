@@ -63,7 +63,7 @@ CONSTANTS = {
         "exact-workspace-version-and-root-admission",
         "member-field-and-duplicate-admission",
         "defaults-profile-and-task-type-normalization",
-        "runtime-backend-normalization-across-defaults-and-profiles",
+        "runtime-backend-shape-and-bound-admission-across-defaults-and-profiles",
         "selected-profile-presence-and-projection",
         "bounded-closed-workspace-config-construction",
         "request-and-source-bound-result-verdict",
@@ -192,8 +192,11 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "(def selfhost/pkg-workspace-manifest::tasks",
         "(def selfhost/pkg-workspace-manifest::normalize",
         "workspace version must be exactly 1", "workspace has too many profiles",
-        "selfhost/pkg-workspace-env-select::normalize",
+        "(def selfhost/pkg-workspace-manifest::observe-backend",
+        '"runtime_backend must be a string of at most 64 bytes"',
     ], "GenesisCode workspace-manifest core")
+    if "selfhost/pkg-workspace-env-select::normalize" in core:
+        fail("workspace-manifest authority preempts backend selection semantics")
     require_markers(authority, [
         "(def core/pkg::workspace-manifest-authority", profile["requestKind"],
         profile["resultKind"],
@@ -214,14 +217,20 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         ".get(AUTHORITY_BINDING)", "decode(value, &request_hash, &source_hash",
         'require_string(result, ":source-h", source_hash)',
         "fn decode_members(", "fn decode_profiles(", "fn decode_tasks(",
+        "fn read_bounded(", ".take(SOURCE_LIMIT as u64 + 1)", ".is_file()",
+        "options.custom_flags(libc::O_NONBLOCK)",
+        'optional_string(fields, ":runtime-backend", 64)',
         "require_exact_fields(",
     ], "strict workspace-manifest adapter")
     for forbidden in (
         "WorkspaceConfig::from_toml_str", "normalize_runtime_backend_profile(",
         "runtime_backend_profile_is_compatible(", ".trim().is_empty()",
+        "fn optional_backend(", "std::fs::read(path)",
     ):
         if forbidden in adapter:
             fail(f"native workspace semantic oracle reachable in adapter: {forbidden}")
+    if adapter.count(".is_file()") != 1:
+        fail("workspace-manifest regular-file admission inventory drift")
     if adapter.count("require_exact_fields(") < 7:
         fail("workspace-manifest exact-field check inventory drift")
 
@@ -249,6 +258,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "gcpm_env_materializes_deterministic_profile_record",
         "gcpm_run_executes_workspace_task_without_shell_glue",
         "gcpm_env_manifest_authority_rejects_duplicate_members_before_file_access",
+        "gcpm_env_manifest_authority_rejects_nonregular_source_before_materialization",
         "gcpm_run_manifest_authority_rejects_invalid_task_before_dispatch",
     ], "workspace-manifest integration evidence")
 
@@ -313,6 +323,8 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(core, "(def selfhost/pkg-workspace-manifest::members-loop", "(def selfhost/pkg-workspace-manifest::legacy-members", "member admission")
     source_mutation(core, '"duplicate workspace member name"', '"allow duplicate workspace member name"', "member duplicate")
     source_mutation(core, "(def selfhost/pkg-workspace-manifest::defaults", "(def selfhost/pkg-workspace-manifest::legacy-defaults", "defaults")
+    source_mutation(core, "(def selfhost/pkg-workspace-manifest::observe-backend", "(def selfhost/pkg-workspace-manifest::legacy-backend", "backend observation")
+    source_mutation(core, '"runtime_backend must be a string of at most 64 bytes"', '"runtime_backend accepted without bounds"', "backend bound")
     source_mutation(core, "(def selfhost/pkg-workspace-manifest::profile", "(def selfhost/pkg-workspace-manifest::legacy-profile", "profiles")
     source_mutation(core, "(def selfhost/pkg-workspace-manifest::tasks", "(def selfhost/pkg-workspace-manifest::legacy-tasks", "tasks")
     source_mutation(core, "workspace version must be exactly 1", "workspace version ignored", "version")
@@ -332,6 +344,9 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(adapter, "require_exact_fields(", "accept_open_fields(", "field closure")
     source_mutation(adapter, 'require_string(result, ":source-h", source_hash)', 'required_string(result, ":source-h")', "source binding")
     source_mutation(adapter, "COLLECTION_LIMIT: usize = 4096", "COLLECTION_LIMIT: usize = usize::MAX", "collection bound")
+    source_mutation(adapter, ".take(SOURCE_LIMIT as u64 + 1)", ".take(u64::MAX)", "source allocation bound")
+    source_mutation(adapter, ".is_file()", ".is_dir()", "regular-file admission")
+    source_mutation(adapter, "options.custom_flags(libc::O_NONBLOCK)", "options.custom_flags(0)", "nonblocking open")
     legacy = "crates/gc_cli_driver/src/pkg_workspace_env_select.rs"
     source_mutation(
         legacy,
@@ -346,6 +361,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(env_ops, "profile, true)", "profile, false)", "env required-profile custody")
     tests = "crates/gc_cli/tests/cli_pkg_workspace.rs"
     source_mutation(tests, "gcpm_env_manifest_authority_rejects_duplicate_members_before_file_access", "legacy_duplicate_test", "duplicate control")
+    source_mutation(tests, "gcpm_env_manifest_authority_rejects_nonregular_source_before_materialization", "legacy_nonregular_manifest_test", "regular-file control")
     source_mutation(tests, "gcpm_run_manifest_authority_rejects_invalid_task_before_dispatch", "legacy_task_test", "task control")
     ledger = "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json"
     source_mutation(ledger, profile["kind"], "native-workspace-manifest", "ledger authority")
@@ -359,7 +375,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 30:
+    if controls != 36:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

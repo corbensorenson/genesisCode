@@ -6,8 +6,9 @@ Status: normative partial authority contract for `R4.2.e`.
 
 The artifact-loaded `core/pkg::lock-model-authority` binding is the production semantic authority for
 the complete typed lock model consumed by `core/pkg-low::{info,lock,update,install,verify}`, the
-lock-root projection consumed by `core/gc-low::{plan,run}`, and the input and post-write lock models
-for `genesis gcpm remove`. It owns supported lock versions,
+lock-root projection consumed by `core/gc-low::{plan,run}`, the input and post-write lock models
+for `genesis gcpm remove`, and the lock model consumed by `genesis gcpm env` environment planning
+and optional hydration. It owns supported lock versions,
 required workspace admission, policy defaults, requirement update-policy and resolution-strategy
 normalization, tag-policy compatibility, locked-entry normalization, artifact-root normalization,
 and retention of every field needed by package resolution and GC reachability planning.
@@ -23,8 +24,11 @@ authorizes only interpretation of lock-derived roots, not mutation of the store.
 ## Limits and bootstrap
 
 Production evaluation MUST use `SelfhostBootstrapMode::ArtifactOnly` and fail closed if the artifact
-or binding is absent. Input is capped at 4 MiB before unbounded host allocation, UTF-8 validation, or
-TOML decoding. The authority shares a
+or binding is absent. On Unix the host opens input nonblocking, then admits only an opened descriptor
+whose metadata proves it is a regular file; the descriptor size is capped at 4 MiB before host
+allocation, UTF-8 validation, or TOML decoding. This removes the path-check/open FIFO race while
+retaining compatibility with a symlink that resolves to a regular file. Non-regular input fails
+before reading, authority evaluation, hydration, or persistence. The authority shares a
 context bounded to 20,000,000 steps, 80,000,000 logical allocation units, 4 MiB strings or bytes,
 and 65,536 map or vector entries. GC rejects invalid, escaping, or otherwise inadmissible lock paths
 as sealed `core/gc/bad-lock` errors before root planning, dead-set construction, or store mutation;
@@ -78,7 +82,10 @@ enabled and the artifact authority is unavailable. Production has no typed-parse
 declared operations. `GenesisLock::load` is reachable for the package-low routes only under tests or
 the explicit `parity-oracle` feature and is absent from the production GC lock-root and `gcpm remove`
 routes. Remove re-authorizes the exact emitted bytes and requires their closed model to equal the
-authorized mutation before persistence.
+authorized mutation before persistence. Environment planning reads the lock once, renders canonical
+bytes through the independently governed lock writer, re-authorizes those bytes against the input
+model, and uses only that accepted model for hydration and environment observations. Invalid input or
+a render/model contradiction fails before store hydration or environment persistence.
 
 ## Nonclaims
 

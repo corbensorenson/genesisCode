@@ -142,7 +142,9 @@ not claim pairwise crash atomicity after the first individually atomic rename.
 
 ## Structural workspace-manifest authority contract
 
-Production `gcpm env` and `gcpm run` read at most 16 MiB of UTF-8 workspace source, decode only
+Production `gcpm env` and `gcpm run` open the workspace source nonblocking on Unix, admit only an
+opened descriptor whose metadata proves it is a regular file, read at most 16 MiB without permitting
+allocation beyond that bound, decode only
 TOML syntax into a neutral CoreForm term, and evaluate
 `core/pkg::workspace-manifest-authority` from the exact admitted self-host artifact before profile
 selection, capability-file access, task lookup, path joining, or dispatch. The closed request kind
@@ -154,9 +156,11 @@ compatible with workspaces that only declare tasks.
 
 GenesisCode exclusively owns version-1 admission; non-empty workspace and member name/path rules;
 exact duplicate member-name and member-path rejection; optional member role; defaults, profile,
-and task field types and absent-value defaults; runtime-backend trimming, ASCII case folding,
-`profile-` alias normalization across defaults and every profile; task command and argument
-admission; selected-profile lookup; and construction of the closed normalized workspace value.
+and task field types and absent-value defaults; nil-or-string runtime-backend shape and 64-byte
+bounds across defaults and every profile; task command and argument admission; selected-profile
+lookup; and construction of the closed structurally admitted workspace value. Backend strings are
+preserved exactly at this layer so the separately governed workspace-environment selector remains
+the sole normalization, precedence, membership, and compatibility authority.
 Unknown TOML fields retain the established ignored-field compatibility behavior. Empty quoted
 profile and task names remain admitted for compatibility, while workspace names, member names,
 member paths, and task commands remain non-empty. Source, member, profile, task, and argument
@@ -167,11 +171,12 @@ Every result uses kind `genesis/pkg-workspace-manifest-authority-result-v0.1` an
 request-hash-bound envelope `[:code :kind :message :ok :request-h :v :value]`. Success has nil
 code/message and a value containing exactly
 `[:defaults :members :profiles :selected-profile :source-h :tasks :version :workspace]`.
-Defaults, profiles, members, and tasks use closed typed records; canonical runtime backends are
-exactly `headless`, `gpu`, `gfx`, and `backend`. Rejection uses only
+Defaults, profiles, members, and tasks use closed typed records; runtime-backend fields are nil or
+the exact bounded raw string supplied by the source. Rejection uses only
 `core/pkg/bad-workspace-manifest` and nil value.
 
-Rust remains a bounded mechanism adapter: file read and UTF-8 validation, generic TOML syntax
+Rust remains a bounded mechanism adapter: nonblocking descriptor open, regular-file and size
+admission, file read and UTF-8 validation, generic TOML syntax
 decoding, neutral recursive term conversion (including opaque float/datetime observations),
 artifact-only evaluation, strict closed request/source-bound result decoding, typed structure
 materialization, and downstream path and dispatch mechanisms. It does not deserialize a production

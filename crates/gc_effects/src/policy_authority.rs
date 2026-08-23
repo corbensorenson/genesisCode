@@ -146,8 +146,8 @@ pub(super) fn decode_cap(
 
 const MAX_POLICY_OPS: usize = 4_096;
 const POLICY_AUTHORITY_STEP_LIMIT: u64 = 20_000_000;
-// The 120-module artifact evaluates an ordinary package policy at ~32.13M allocation units.
-const POLICY_AUTHORITY_ALLOC_LIMIT: u64 = 40_000_000;
+// The 141-module artifact plus the 101-operation backend policy requires 502,657,953 units.
+const POLICY_AUTHORITY_ALLOC_LIMIT: u64 = 625_000_000;
 
 fn authority_error(message: impl Into<String>) -> EffectsError {
     EffectsError::Log(format!(

@@ -172,25 +172,27 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"published artifact missing workspace-remove marker: {marker}")
 
     require_markers(adapter, [
-        "const AUTHORITY_BINDING", "const LOCK_WRITE_BINDING", ".get(AUTHORITY_BINDING)",
-        ".get(LOCK_WRITE_BINDING)", "decode_plan(", "decode_lock_write(",
+        "const AUTHORITY_BINDING", ".get(AUTHORITY_BINDING)", "decode_plan(",
         "require_exact_fields(", "pkg_lock_model_authority::read_bounded(lock_path)",
         "pkg_lock_model_authority::authorize_bytes(",
-        "candidate != plan.model", "lock_writer_locked_model(",
+        "pkg_lock_model_authority::render_canonical(", "candidate != plan.model",
         "workspace-remove authority :removed contradicts input", "preflight_lock_path(lock_path)",
         "file_type().is_symlink()", "atomic_write_text(lock_path, &bytes)",
     ], "strict workspace-remove adapter")
     require_markers(model_adapter, [
         'const AUTHORITY_BINDING: &str = "core/pkg::lock-model-authority"',
+        'const LOCK_WRITE_BINDING: &str = "core/pkg::lock-write-authority"',
         "const SOURCE_LIMIT: usize = 4 * 1024 * 1024", "pub(crate) fn read_bounded(",
         ".take((SOURCE_LIMIT as u64) + 1)", "authorize_bytes(",
         ".get(AUTHORITY_BINDING)", "decode(value, &request_hash)", "validate_model(&model)",
+        "pub(crate) fn render_canonical(", ".get(LOCK_WRITE_BINDING)",
+        "decode_lock_write(", "lock_writer_locked_model(",
         "require_exact_fields(", "validate_requirements(", "validate_locked(",
     ], "strict CLI lock-model adapter")
     production = adapter[adapter.index("pub(super) fn handle_remove("):adapter.index("fn decode_plan(")]
     model_at = production.find("pkg_lock_model_authority::authorize_bytes(")
     decode_at = production.find("decode_plan(")
-    writer_at = production.find(".get(LOCK_WRITE_BINDING)")
+    writer_at = production.find("pkg_lock_model_authority::render_canonical(")
     candidate_at = production.rfind("pkg_lock_model_authority::authorize_bytes(")
     write_at = production.find("atomic_write_text(lock_path, &bytes)")
     if min(model_at, decode_at, writer_at, candidate_at, write_at) < 0 or not model_at < decode_at < writer_at < candidate_at < write_at:
@@ -275,7 +277,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("selfhost/toolchain_manifest.gc", profile["binding"], "core/pkg::missing-remove", "manifest")
     mutations.append((profile, {profile["artifact"]: sources[profile["artifact"]].replace(profile["binding"], "core/pkg::missing-remove")}, "artifact"))
     source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", ".get(AUTHORITY_BINDING)", ".get(\"native\")", "loader")
-    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", ".get(LOCK_WRITE_BINDING)", ".get(\"native-writer\")", "writer route")
+    source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".get(LOCK_WRITE_BINDING)", ".get(\"native-writer\")", "writer route")
     source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".get(AUTHORITY_BINDING)", ".get(\"native-model\")", "lock-model route")
     source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "pkg_lock_model_authority::read_bounded(lock_path)", "std::fs::read(lock_path)", "bounded read")
     source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "candidate != plan.model", "candidate == plan.model", "cross-check")
