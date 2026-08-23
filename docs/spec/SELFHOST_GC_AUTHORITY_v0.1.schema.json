@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genesiscode.dev/schemas/selfhost-gc-authority-v0.1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact",
+    "auditDate",
+    "binding",
+    "contentIdentitySha256",
+    "decisionInventory",
+    "hostMechanisms",
+    "hostOracle",
+    "independentVerifier",
+    "kind",
+    "nonclaims",
+    "productionEntrypoints",
+    "requestKind",
+    "resultKind",
+    "runtimeEvidence",
+    "schema",
+    "sourceModule",
+    "sourceSha256",
+    "spec",
+    "version"
+  ],
+  "properties": {
+    "artifact": {"const": "selfhost/toolchain.gc"},
+    "auditDate": {"type": "string", "format": "date"},
+    "binding": {"const": "core/gc::authority"},
+    "contentIdentitySha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decisionInventory": {
+      "const": [
+        "pins-document-admission-and-normalization",
+        "pin-unpin-target-admission",
+        "canonical-pins-byte-rendering",
+        "reference-tombstone-and-pinned-reference-resolution",
+        "root-selection-order-and-provenance",
+        "artifact-edge-selection",
+        "live-closure-edge-admission",
+        "dead-set-selection",
+        "reclaim-byte-accounting",
+        "largest-dead-artifact-ranking",
+        "quarantine-purge-selection"
+      ]
+    },
+    "hostMechanisms": {
+      "const": [
+        "artifact-only-authority-bootstrap-and-bounded-evaluation",
+        "bounded-generic-toml-and-lock-model-observation",
+        "bounded-reference-and-inventory-observation",
+        "content-identity-verification-and-coreform-decoding",
+        "exact-authority-edge-work-queue-execution",
+        "store-pins-and-quarantine-locking",
+        "system-time-and-file-age-observation",
+        "atomic-exact-pins-write",
+        "exact-authorized-rename-delete-and-purge"
+      ]
+    },
+    "hostOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["removalTask", "required"],
+      "properties": {
+        "removalTask": {"const": "R4.2.e"},
+        "required": {"const": false}
+      }
+    },
+    "independentVerifier": {"const": "scripts/lib/selfhost_gc_authority.py"},
+    "kind": {"const": "genesis/selfhost-gc-authority-v0.1"},
+    "nonclaims": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "productionEntrypoints": {"const": ["genesis", "genesis_wasi"]},
+    "requestKind": {"const": "genesis/gc-authority-request-v0.1"},
+    "resultKind": {"const": "genesis/gc-authority-result-v0.1"},
+    "runtimeEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allocationLimit",
+        "largestReportEntries",
+        "maxClosureObjects",
+        "maxItems",
+        "maxPayloadBytes",
+        "maxPinsBytes",
+        "stepLimit"
+      ],
+      "properties": {
+        "allocationLimit": {"const": 320000000},
+        "largestReportEntries": {"const": 25},
+        "maxClosureObjects": {"const": 50000},
+        "maxItems": {"const": 65536},
+        "maxPayloadBytes": {"const": 8388608},
+        "maxPinsBytes": {"const": 4194304},
+        "stepLimit": {"const": 80000000}
+      }
+    },
+    "schema": {"const": "docs/spec/SELFHOST_GC_AUTHORITY_v0.1.schema.json"},
+    "sourceModule": {"const": "selfhost/gc_authority_v1.gc"},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "spec": {"const": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md"},
+    "version": {"const": "0.1.0"}
+  }
+}

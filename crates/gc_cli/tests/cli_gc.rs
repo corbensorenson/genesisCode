@@ -485,3 +485,98 @@ fn gc_keeps_tag_ref_commit_closure_and_prunes_unreachable() {
         "dead artifact should be pruned"
     );
 }
+
+#[test]
+fn gc_pin_rejects_malformed_existing_pins_without_overwrite() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir, &["core/gc-low::pin"]);
+    let pins = dir.join(".genesis").join("pins.toml");
+    fs::create_dir_all(pins.parent().unwrap()).unwrap();
+    let malformed = b"version = 1\n\n[pins]\nkeep = 7\n";
+    fs::write(&pins, malformed).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log", "gc-malformed-pin.gclog"])
+        .args(["pin", &"a".repeat(64), "--pins", ".genesis/pins.toml"])
+        .assert()
+        .failure();
+
+    assert_eq!(fs::read(pins).unwrap(), malformed);
+}
+
+#[test]
+fn gc_plan_accepts_tombstoned_refs_and_treats_their_objects_as_dead() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir, &["core/store::put", "core/gc-low::plan"]);
+    let dead_h = store_put(dir, &caps, "{:dead true}\n", "tombstoned-ref");
+    let refs_path = dir.join(".genesis").join("refs.gc");
+    let refs_db = gc_effects::RefsDb::open(&refs_path).unwrap();
+    refs_db
+        .set("refs/heads/deleted", Some(&dead_h), None)
+        .unwrap();
+    refs_db
+        .set("refs/heads/deleted", None, Some(Some(&dead_h)))
+        .unwrap();
+
+    let output = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log", "gc-tombstone-plan.gclog"])
+        .args([
+            "plan",
+            "--pins",
+            ".genesis/pins.toml",
+            "--no-lock",
+            "--depth",
+            "0",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+
+    let plan = parse_term(&json_value(&output)).unwrap();
+    assert_eq!(term_map_get_i64(&plan, ":dead"), 1);
+}
+
+#[test]
+fn gc_plan_rejects_corrupt_named_inventory_without_mutation() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir, &["core/gc-low::plan"]);
+    let store_dir = dir.join(".genesis").join("store");
+    fs::create_dir_all(&store_dir).unwrap();
+    let false_identity = "a".repeat(64);
+    let corrupt = store_dir.join(&false_identity);
+    fs::write(&corrupt, b"not the named artifact").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .arg("--json")
+        .args(["gc", "--caps"])
+        .arg(&caps)
+        .args(["--log", "gc-corrupt-plan.gclog"])
+        .args([
+            "plan",
+            "--pins",
+            ".genesis/pins.toml",
+            "--no-lock",
+            "--no-refs",
+        ])
+        .assert()
+        .failure();
+
+    assert!(
+        corrupt.exists(),
+        "failed planning must not mutate inventory"
+    );
+}

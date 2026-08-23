@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::error::EffectsError;
+use crate::gc_authority::GcAuthority;
 use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
 use crate::pkg_lock_read_authority::{PkgLockModelDecision, PkgLockReadAuthority};
@@ -207,6 +208,7 @@ pub fn run(
     // actually reaches the corresponding production boundary.
     let mut store_authority = None;
     let mut refs_authority = None;
+    let mut gc_authority = None;
     let mut pkg_lock_read_authority = None;
     let mut pkg_lock_write_authority = None;
     let mut pkg_package_manifest_authority = None;
@@ -327,6 +329,7 @@ pub fn run(
                                 .transpose()
                         );
                     }
+                    run_try!(GcAuthority::ensure(&mut gc_authority, &req.op, policy));
                     if pkg_lock_write_authority.is_none()
                         && matches!(
                             req.op.as_str(),
@@ -444,6 +447,7 @@ pub fn run(
                             store.as_ref(),
                             refs.as_ref(),
                             refs_authority.as_mut(),
+                            gc_authority.as_mut(),
                             pkg_lock_read_authority.as_mut(),
                             pkg_lock_write_authority.as_mut(),
                             pkg_resolution_identity_authority.as_mut(),

@@ -165,13 +165,14 @@ pub(super) fn gc_build_sources(
     lock_s: &str,
     pins_s: &str,
     include_lock: bool,
-    include_refs: bool,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<(Vec<Term>, Term, Term), Value> {
     let mut ref_entries: Vec<Term> = Vec::new();
-    if include_refs && let Some(rdb) = refs {
+    // Pinned references must resolve against the snapshot even when ordinary
+    // refs are excluded from the root set; GenesisCode applies include_refs.
+    if let Some(rdb) = refs {
         match rdb.list(None) {
             Ok(list) => {
                 for r in list {
@@ -264,251 +265,76 @@ pub(super) fn gc_build_sources(
         .collect(),
     );
 
-    let pins = match gc_pins_load(base_dir, pins_s) {
-        Ok(p) => p,
-        Err(e) => return Err(mk_error(error_tok, "core/gc/bad-pins", e, Some(op))),
-    };
-    let mut keep_refs_term: Vec<Term> = Vec::new();
-    for rname in &pins.keep_refs {
-        let Some(rdb) = refs else {
-            return Err(mk_error(
-                error_tok,
-                "core/gc/missing-refs-db",
-                "pins.keep_refs requires refs db".to_string(),
-                Some(op),
-            ));
-        };
-        let cur = match rdb.get(rname) {
-            Ok(h) => h,
-            Err(e) => {
-                return Err(mk_error(
-                    error_tok,
-                    "core/gc/refs-io-error",
-                    e.to_string(),
-                    Some(op),
-                ));
-            }
-        };
-        let Some(h) = cur else {
-            return Err(mk_error(
-                error_tok,
-                "core/gc/ref-not-found",
-                format!("pinned ref not found: {rname}"),
-                Some(op),
-            ));
-        };
-        keep_refs_term.push(Term::Map(
-            [
-                (TermOrdKey(Term::symbol(":name")), Term::Str(rname.clone())),
-                (TermOrdKey(Term::symbol(":hash")), Term::Str(h)),
-            ]
-            .into_iter()
-            .collect(),
-        ));
-    }
-    let pins_info = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":keep")),
-                Term::Vector(pins.keep.into_iter().map(Term::Str).collect()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":keep-refs")),
-                Term::Vector(keep_refs_term),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    let pins_document = gc_pins_document(base_dir, pins_s)
+        .map_err(|error| mk_error(error_tok, "core/gc/bad-pins", error, Some(op)))?;
 
-    Ok((ref_entries, lock_info, pins_info))
-}
-
-pub(super) fn gc_roots_plan_from_sources(
-    refs_entries: &[Term],
-    lock_info: &Term,
-    pins_info: &Term,
-    include_lock: bool,
-    include_refs: bool,
-    error_tok: SealId,
-    op: &str,
-) -> Result<(Vec<String>, Vec<Term>), Value> {
-    let mut helper_ctx = EvalCtx::new();
-    let helper_prelude = build_prelude(&mut helper_ctx);
-    let roots_plan_fn = helper_prelude
-        .env
-        .get("core/gc/reach::roots-plan")
-        .ok_or_else(|| {
-            mk_error(
-                error_tok,
-                "core/gc/planner-missing",
-                "missing prelude binding core/gc/reach::roots-plan".to_string(),
-                Some(op),
-            )
-        })?;
-
-    let plan_term = roots_plan_fn
-        .apply(
-            &mut helper_ctx,
-            Value::data(Term::Vector(refs_entries.to_vec())),
-        )
-        .and_then(|f| f.apply(&mut helper_ctx, Value::data(lock_info.clone())))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::data(pins_info.clone())))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::data(Term::Bool(include_lock))))
-        .and_then(|f| f.apply(&mut helper_ctx, Value::data(Term::Bool(include_refs))))
-        .map(|v| v.to_term_for_log(helper_ctx.protocol.map(|p| p.error)))
-        .map_err(|e| {
-            mk_error(
-                error_tok,
-                "core/gc/planner-error",
-                format!("core/gc/reach::roots-plan failed: {e}"),
-                Some(op),
-            )
-        })?;
-
-    let Term::Map(m) = plan_term else {
-        return Err(mk_error(
-            error_tok,
-            "core/gc/planner-error",
-            "gc roots planner must return a map".to_string(),
-            Some(op),
-        ));
-    };
-    let roots = m
-        .get(&TermOrdKey(Term::symbol(":roots")))
-        .map(gpk_ref_hashes_from_term)
-        .unwrap_or_default();
-    let roots_meta = m
-        .get(&TermOrdKey(Term::symbol(":roots-meta")))
-        .and_then(|t| match t {
-            Term::Vector(v) => Some(v.clone()),
-            _ => None,
-        })
-        .unwrap_or_default();
-
-    Ok((roots, roots_meta))
+    Ok((ref_entries, lock_info, pins_document))
 }
 
 // -----------------------------------------------------------------------------
 // GC helpers (pins + store lock + store scan)
 // -----------------------------------------------------------------------------
 
-#[derive(Debug, Clone)]
-pub(super) struct GcPins {
-    pub(super) keep: Vec<String>,
-    pub(super) keep_refs: Vec<String>,
+pub(super) fn gc_pins_document(base_dir: &Path, pins_path: &str) -> Result<Term, String> {
+    let path = sandbox_path_allow_missing(base_dir, pins_path, false).map_err(|e| e.to_string())?;
+    gc_pins_document_at(&path)
 }
 
-impl GcPins {
-    pub(super) fn empty() -> Self {
-        Self {
-            keep: Vec::new(),
-            keep_refs: Vec::new(),
-        }
+pub(super) fn gc_pins_document_at(path: &Path) -> Result<Term, String> {
+    use std::io::Read;
+
+    let mut options = std::fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(libc::O_NONBLOCK);
     }
+    let file = match options.open(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Term::Nil),
+        Err(error) => return Err(format!("pins open failed: {error}")),
+    };
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("pins descriptor metadata failed: {error}"))?;
+    if !metadata.file_type().is_file() {
+        return Err("pins path must identify a regular file".to_string());
+    }
+    const MAX_PINS_BYTES: u64 = 4 * 1024 * 1024;
+    if metadata.len() > MAX_PINS_BYTES {
+        return Err(format!("pins document exceeds {MAX_PINS_BYTES} bytes"));
+    }
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.take(MAX_PINS_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("pins read failed: {error}"))?;
+    if bytes.len() as u64 > MAX_PINS_BYTES {
+        return Err(format!("pins document exceeds {MAX_PINS_BYTES} bytes"));
+    }
+    let source = std::str::from_utf8(&bytes).map_err(|_| "pins file is not utf-8".to_string())?;
+    let document: toml::Value =
+        toml::from_str(source).map_err(|error| format!("pins toml parse: {error}"))?;
+    Ok(gc_toml_to_term(document))
 }
 
-pub(super) fn gc_normalize_hash(s: &str) -> Option<String> {
-    let ss = s.strip_prefix("h:").unwrap_or(s).trim();
-    if gc_vcs::validate_hex_hash(ss).is_err() {
-        return None;
-    }
-    Some(ss.to_ascii_lowercase())
-}
-
-pub(super) fn gc_pins_load(base_dir: &Path, pins_path: &str) -> Result<GcPins, String> {
-    let p = sandbox_path_allow_missing(base_dir, pins_path, false).map_err(|e| format!("{e}"))?;
-    if !p.exists() {
-        return Ok(GcPins::empty());
-    }
-    let bytes = std::fs::read(&p).map_err(|e| format!("pins read failed: {e}"))?;
-    let s = String::from_utf8(bytes).map_err(|_| "pins file is not utf-8".to_string())?;
-    let v: toml::Value = toml::from_str(&s).map_err(|e| format!("pins toml parse: {e}"))?;
-
-    let version = v.get("version").and_then(|x| x.as_integer()).unwrap_or(1);
-    if version != 1 {
-        return Err(format!("unsupported pins version: {version}"));
-    }
-
-    let pins_tbl = v
-        .get("pins")
-        .and_then(|x| x.as_table())
-        .ok_or_else(|| "pins.toml missing [pins] table".to_string())?;
-
-    let mut keep: Vec<String> = Vec::new();
-    if let Some(arr) = pins_tbl.get("keep").and_then(|x| x.as_array()) {
-        for x in arr {
-            let Some(s) = x.as_str() else {
-                return Err("pins.keep entries must be strings".to_string());
-            };
-            let Some(h) = gc_normalize_hash(s) else {
-                return Err(format!("pins.keep contains invalid hash: {s}"));
-            };
-            keep.push(h);
+fn gc_toml_to_term(value: toml::Value) -> Term {
+    match value {
+        toml::Value::String(value) => Term::Str(value),
+        toml::Value::Integer(value) => Term::Int(value.into()),
+        toml::Value::Float(value) => Term::Str(value.to_string()),
+        toml::Value::Boolean(value) => Term::Bool(value),
+        toml::Value::Datetime(value) => Term::Str(value.to_string()),
+        toml::Value::Array(values) => {
+            Term::Vector(values.into_iter().map(gc_toml_to_term).collect())
         }
+        toml::Value::Table(values) => Term::Map(
+            values
+                .into_iter()
+                .map(|(key, value)| (TermOrdKey(Term::Str(key)), gc_toml_to_term(value)))
+                .collect(),
+        ),
     }
-
-    let mut keep_refs: Vec<String> = Vec::new();
-    if let Some(arr) = pins_tbl.get("keep_refs").and_then(|x| x.as_array()) {
-        for x in arr {
-            let Some(s) = x.as_str() else {
-                return Err("pins.keep_refs entries must be strings".to_string());
-            };
-            if !s.starts_with("refs/") {
-                return Err(format!("pins.keep_refs must start with refs/: {s}"));
-            }
-            keep_refs.push(s.to_string());
-        }
-    }
-
-    keep.sort();
-    keep.dedup();
-    keep_refs.sort();
-    keep_refs.dedup();
-
-    Ok(GcPins { keep, keep_refs })
-}
-
-pub(super) fn gc_pins_write(path: &Path, pins: &GcPins) -> Result<(), EffectsError> {
-    // Stable writer: fixed key order, single-line arrays.
-    fn write_arr(buf: &mut String, xs: &[String]) {
-        buf.push('[');
-        for (i, x) in xs.iter().enumerate() {
-            if i != 0 {
-                buf.push_str(", ");
-            }
-            buf.push('"');
-            for c in x.chars() {
-                match c {
-                    '\\' => buf.push_str("\\\\"),
-                    '"' => buf.push_str("\\\""),
-                    '\n' => buf.push_str("\\n"),
-                    '\r' => buf.push_str("\\r"),
-                    '\t' => buf.push_str("\\t"),
-                    other => buf.push(other),
-                }
-            }
-            buf.push('"');
-        }
-        buf.push(']');
-    }
-
-    let mut keep = pins.keep.clone();
-    keep.sort();
-    keep.dedup();
-    let mut keep_refs = pins.keep_refs.clone();
-    keep_refs.sort();
-    keep_refs.dedup();
-
-    let mut out = String::new();
-    out.push_str("version = 1\n\n[pins]\nkeep = ");
-    write_arr(&mut out, &keep);
-    out.push('\n');
-    out.push_str("keep_refs = ");
-    write_arr(&mut out, &keep_refs);
-    out.push('\n');
-
-    atomic_write_text(path, out.as_bytes()).map_err(EffectsError::Io)
 }
 
 pub(super) fn gc_store_lock(store_dir: &Path) -> Result<GcStoreLock, EffectsError> {
@@ -517,49 +343,166 @@ pub(super) fn gc_store_lock(store_dir: &Path) -> Result<GcStoreLock, EffectsErro
     ExclusiveLock::acquire(&lock_path)
 }
 
-pub(super) type GcDeadSet = (Vec<String>, u64, Vec<(String, u64)>);
+pub(super) fn gc_path_lock(path: &Path) -> Result<GcStoreLock, EffectsError> {
+    let mut lock_name = path.as_os_str().to_os_string();
+    lock_name.push(".lock");
+    ExclusiveLock::acquire(Path::new(&lock_name))
+}
 
-pub(super) fn gc_store_dead_set(
-    store_dir: &Path,
-    live: &std::collections::BTreeSet<String>,
-) -> Result<GcDeadSet, EffectsError> {
-    let mut dead: Vec<String> = Vec::new();
-    let mut dead_bytes: u64 = 0;
-    let mut largest: Vec<(String, u64)> = Vec::new();
-
-    for ent in std::fs::read_dir(store_dir)? {
-        let ent = ent?;
-        let ft = ent.file_type()?;
-        if !ft.is_file() {
+pub(super) fn gc_store_inventory(
+    store: &ArtifactStore,
+) -> Result<Vec<(String, u64)>, EffectsError> {
+    let store_dir = store.root_dir();
+    let mut inventory = Vec::new();
+    for entry in std::fs::read_dir(store_dir)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
             continue;
         }
-        let Ok(name) = ent.file_name().into_string() else {
+        let Ok(hash) = entry.file_name().into_string() else {
             continue;
         };
-        if gc_vcs::validate_hex_hash(&name).is_err() {
+        if !is_canonical_gc_hash(&hash) {
             continue;
         }
-        if live.contains(&name) {
-            continue;
-        }
-        let len = ent.metadata()?.len();
-        dead_bytes = dead_bytes.saturating_add(len);
-        dead.push(name.clone());
-        largest.push((name, len));
+        store.verify_hex(&hash)?;
+        inventory.push((hash, entry.metadata()?.len()));
     }
+    inventory.sort_by(|left, right| left.0.cmp(&right.0));
+    Ok(inventory)
+}
 
-    dead.sort();
-    // Largest list is deterministic: sort by size desc then hash asc.
-    largest.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
-    if largest.len() > 25 {
-        largest.truncate(25);
+pub(super) fn gc_quarantine_inventory(
+    directory: &Path,
+    now: std::time::SystemTime,
+) -> Result<Vec<(String, u64)>, EffectsError> {
+    let mut inventory = Vec::new();
+    if !directory.exists() {
+        return Ok(inventory);
     }
-    Ok((dead, dead_bytes, largest))
+    let quarantine_store = ArtifactStore::open_with_integrity_cache(directory, false)?;
+    for entry in std::fs::read_dir(directory)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        let Ok(hash) = entry.file_name().into_string() else {
+            continue;
+        };
+        if !is_canonical_gc_hash(&hash) {
+            continue;
+        }
+        quarantine_store.verify_hex(&hash)?;
+        let modified = entry.metadata()?.modified()?;
+        let age = now.duration_since(modified).unwrap_or_default().as_secs();
+        inventory.push((hash, age));
+    }
+    inventory.sort_by(|left, right| left.0.cmp(&right.0));
+    Ok(inventory)
+}
+
+fn is_canonical_gc_hash(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .as_bytes()
+            .iter()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
+}
+
+pub(super) fn gc_closure_local(
+    store: &ArtifactStore,
+    authority: &mut GcAuthority,
+    root: &str,
+    depth: u64,
+    out: &mut std::collections::BTreeSet<String>,
+    error_tok: SealId,
+    op: &str,
+) -> Result<(), Value> {
+    use std::collections::{HashSet, VecDeque};
+
+    let mut queue = VecDeque::from([(root.to_string(), depth)]);
+    let mut seen = HashSet::new();
+    while let Some((hash, depth_left)) = queue.pop_front() {
+        if !seen.insert(hash.clone()) {
+            continue;
+        }
+        if seen.len() > 50_000 {
+            return Err(mk_error(
+                error_tok,
+                "core/gc/too-many-objects",
+                "closure exceeded 50k objects".to_string(),
+                Some(op),
+            ));
+        }
+        if store.verify_hex(&hash).is_err() {
+            return Err(mk_error(
+                error_tok,
+                "core/store/corruption",
+                format!("artifact is absent or corrupt: {hash}"),
+                Some(op),
+            ));
+        }
+        out.insert(hash.clone());
+        let Ok(artifact) = store_get_term(store, &hash) else {
+            continue;
+        };
+        let edges = authority
+            .artifact_edges(artifact, true, true, depth_left > 0)
+            .map_err(|error| {
+                mk_error(
+                    error_tok,
+                    "core/gc/authority-error",
+                    error.to_string(),
+                    Some(op),
+                )
+            })?;
+        for next in edges.refs {
+            queue.push_back((next, depth_left));
+        }
+        if depth_left > 0 {
+            for parent in edges.parents {
+                queue.push_back((parent, depth_left - 1));
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gc_pins_reader_rejects_oversized_regular_files() {
+        let directory = tempfile::tempdir().expect("temporary GC workspace");
+        let path = directory.path().join("pins.toml");
+        let file = std::fs::File::create(&path).expect("create pins fixture");
+        file.set_len(4 * 1024 * 1024 + 1)
+            .expect("size pins fixture");
+
+        assert_eq!(
+            gc_pins_document_at(&path).expect_err("oversized pins must fail closed"),
+            "pins document exceeds 4194304 bytes"
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn gc_pins_reader_rejects_fifo_without_blocking() {
+        use std::ffi::CString;
+        use std::os::unix::ffi::OsStrExt;
+
+        let directory = tempfile::tempdir().expect("temporary GC workspace");
+        let path = directory.path().join("pins.fifo");
+        let c_path = CString::new(path.as_os_str().as_bytes()).expect("fifo path without nul");
+        // SAFETY: c_path is a valid NUL-terminated path and no pointer escapes this call.
+        assert_eq!(unsafe { libc::mkfifo(c_path.as_ptr(), 0o600) }, 0);
+
+        assert_eq!(
+            gc_pins_document_at(&path).expect_err("FIFO pins must fail closed"),
+            "pins path must identify a regular file"
+        );
+    }
 
     #[test]
     fn gc_lock_authority_fails_closed_before_store_mutation_when_missing() {
@@ -584,7 +527,6 @@ mod tests {
             "genesis.lock",
             ".genesis/pins.toml",
             true,
-            false,
             None,
             error_token,
             "core/gc-low::run",
@@ -630,7 +572,6 @@ mod tests {
             "../outside/genesis.lock",
             ".genesis/pins.toml",
             true,
-            false,
             None,
             error_token,
             "core/gc-low::run",

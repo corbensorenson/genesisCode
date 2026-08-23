@@ -262,7 +262,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
 
     for marker in (
         "pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>",
-        "gc_build_sources(", "gc_roots_plan_from_sources(",
+        "gc_build_sources(", ".roots(", ".dead_plan(",
     ):
         if marker not in gc_dispatch:
             fail(f"GC dispatch missing lock authority marker: {marker}")
@@ -291,9 +291,10 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     )[0]
     for name, route in (("plan", plan_route), ("run", run_route)):
         source_index = route.find("gc_build_sources(")
-        roots_index = route.find("gc_roots_plan_from_sources(")
-        dead_index = route.find("gc_store_dead_set(")
-        if not (0 <= source_index < roots_index < dead_index):
+        roots_index = route.find(".roots(")
+        lock_index = route.find("lock_info,", roots_index)
+        dead_index = route.find(".dead_plan(")
+        if not (0 <= source_index < roots_index < lock_index < dead_index):
             fail(f"GC {name} does not consume authority-backed roots before dead-set planning")
 
     row = next((item for item in ledger.get("semanticDecisions", [])
@@ -393,6 +394,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::verify"', '"core/pkg-low::legacy-verify"', "lazy-route-set")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/gc-low::run"', '"core/gc-low::legacy-run"', "gc-lazy-route-set")
     source_mutation("crates/gc_effects/src/runner_cap_gc_gpk_low.rs", "pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>", "legacy_lock_authority: Option<&mut PkgLockReadAuthority>", "gc-authority-dispatch")
+    source_mutation("crates/gc_effects/src/runner_cap_gc_gpk_low.rs", "                    lock_info,", "                    Term::Nil,", "gc-lock-observation-binding")
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "lock_authority.read_model_toml(&bytes)", "gc_pkg::GenesisLock::load(&lock_path)", "gc-authority-route")
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "gc_lock_authority_fails_closed_before_store_mutation_when_missing", "gc_missing_authority_is_ignored", "gc-fail-closed-control")
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "sandbox_path_allow_missing(base_dir, lock_s, false)", "base_dir.join(lock_s)", "gc-lock-path-admission")
@@ -417,7 +419,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 33:
+    if controls != 34:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-model-authority: self-test ok (negative_controls={controls})")
     return controls

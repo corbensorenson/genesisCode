@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `73b7fe99f36072a9872ac4bc4473e18450e67ad5ebdd21c1aa0eb11368c49973`
-- Freshness artifact hash: `73b7fe99f36072a9872ac4bc4473e18450e67ad5ebdd21c1aa0eb11368c49973`
-- Freshness source hash: `bad0da434af663582b0598c778be1af8bf74733f8a48dd350ccdeecf6c491c3f`
-- Source aggregate hash (module path + module sha256): `a3ce180dd8460341a89f21b8475a38227e78b5fddea82ed5c9767fe70b6e4644`
+- Artifact sha256: `b7ad918c88875eb01c459aa45df5e06476749cea3179dd142f417af82a97d5b5`
+- Freshness artifact hash: `b7ad918c88875eb01c459aa45df5e06476749cea3179dd142f417af82a97d5b5`
+- Freshness source hash: `e8742e7c13c9c11d385fc32c0c73890e196c9a0ee8b6b33a7607065efc8b3a66`
+- Source aggregate hash (module path + module sha256): `f58392569281df39d10ae967b0caf53241f271f8f40d977f7c1e54b735544766`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `141`
+- Module count: `142`
 
 ## Module Summary
 
@@ -86,6 +86,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/store_verify_authority_v1.gc` | 374 | 18313 | 24 | `0588486a78bd068c` |
 | `selfhost/commit_authority_v1.gc` | 344 | 16401 | 24 | `dba6fc77d9fa18bb` |
 | `selfhost/refs_authority_v1.gc` | 191 | 8348 | 18 | `e960ef5bc80f891a` |
+| `selfhost/gc_authority_v1.gc` | 572 | 27280 | 42 | `30f19338d1227003` |
 | `selfhost/pkg_lock_read_authority_v1.gc` | 420 | 19242 | 37 | `da0e7e49f5cd25a6` |
 | `selfhost/pkg_lock_model_authority_v1.gc` | 274 | 13367 | 13 | `171e257d7532fec2` |
 | `selfhost/pkg_lock_write_authority_v1.gc` | 693 | 33615 | 37 | `33ae79671ad544d5` |
@@ -230,6 +231,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/store_verify_authority_v1.gc`: `selfhost/store-verify::vec?`, `selfhost/store-verify::sym?`, `selfhost/store-verify::single`, `selfhost/store-verify::hash-vectors-equal-loop?`, `selfhost/store-verify::hash-vectors-equal?`, `selfhost/store-verify::result`, `selfhost/store-verify::reject`, `selfhost/store-verify::error`
 - `selfhost/commit_authority_v1.gc`: `selfhost/commit::vec?`, `selfhost/commit::sym?`, `selfhost/commit::nonempty-str?`, `selfhost/commit::optional-nonempty-str?`, `selfhost/commit::hash-vector-loop?`, `selfhost/commit::hash-vector?`, `selfhost/commit::obligation?`, `selfhost/commit::obligation-vector-loop?`
 - `selfhost/refs_authority_v1.gc`: `selfhost/refs::tag`, `selfhost/refs::nil?`, `selfhost/refs::map?`, `selfhost/refs::str?`, `selfhost/refs::bool?`, `selfhost/refs::sym?`, `selfhost/refs::starts-with?`, `selfhost/refs::refs-loop?`
+- `selfhost/gc_authority_v1.gc`: `selfhost/gc-authority::nil?`, `selfhost/gc-authority::tag`, `selfhost/gc-authority::map?`, `selfhost/gc-authority::vec?`, `selfhost/gc-authority::str?`, `selfhost/gc-authority::int?`, `selfhost/gc-authority::bool?`, `selfhost/gc-authority::sym?`
 - `selfhost/pkg_lock_read_authority_v1.gc`: `selfhost/pkg-lock-read::tag`, `selfhost/pkg-lock-read::map?`, `selfhost/pkg-lock-read::vec?`, `selfhost/pkg-lock-read::str?`, `selfhost/pkg-lock-read::int?`, `selfhost/pkg-lock-read::nil?`, `selfhost/pkg-lock-read::map-has-key-loop?`, `selfhost/pkg-lock-read::map-has-keys-loop?`
 - `selfhost/pkg_lock_model_authority_v1.gc`: `selfhost/pkg-lock-read::strategy-symbol`, `selfhost/pkg-lock-read::normalize-model-requirement`, `selfhost/pkg-lock-read::model-requirements-loop`, `selfhost/pkg-lock-read::model-requirements`, `selfhost/pkg-lock-read::normalize-model-locked`, `selfhost/pkg-lock-read::model-locked-loop`, `selfhost/pkg-lock-read::model-locked`, `selfhost/pkg-lock-read::normalize-model-document-tail`
 - `selfhost/pkg_lock_write_authority_v1.gc`: `selfhost/pkg-lock-write::append`, `selfhost/pkg-lock-write::append3`, `selfhost/pkg-lock-write::quoted`, `selfhost/pkg-lock-write::starts-with?`, `selfhost/pkg-lock-write::ascii-space?`, `selfhost/pkg-lock-write::trim-left`, `selfhost/pkg-lock-write::trim-right`, `selfhost/pkg-lock-write::trim`

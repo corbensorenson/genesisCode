@@ -14,6 +14,7 @@ pub(super) fn capability_gc_gpk_low(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    gc_authority: Option<&mut GcAuthority>,
     pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
@@ -21,8 +22,15 @@ pub(super) fn capability_gc_gpk_low(
     timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
     let _ = timeout_ms;
+    let mut gc_authority = gc_authority;
     match op_eff {
         "core/gc-low::plan" => {
+            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+                EffectsError::Log(
+                    "core/gc-low::plan requires the artifact-loaded GenesisCode GC authority"
+                        .to_string(),
+                )
+            })?;
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gc-low::plan".to_string())
             })?;
@@ -35,13 +43,12 @@ pub(super) fn capability_gc_gpk_low(
             let include_lock = payload_gc_include_lock(payload).unwrap_or(true);
             let include_refs = payload_gc_include_refs(payload).unwrap_or(true);
 
-            let (refs_entries, lock_info, pins_info) = match gc_build_sources(
+            let (refs_entries, lock_info, pins_document) = match gc_build_sources(
                 refs,
                 &base_dir,
                 &lock_s,
                 &pins_s,
                 include_lock,
-                include_refs,
                 pkg_lock_read_authority,
                 error_tok,
                 op,
@@ -49,24 +56,19 @@ pub(super) fn capability_gc_gpk_low(
                 Ok(v) => v,
                 Err(v) => return Ok(v),
             };
-            let (mut roots, roots_kind) = match gc_roots_plan_from_sources(
-                &refs_entries,
-                &lock_info,
-                &pins_info,
-                include_lock,
-                include_refs,
-                error_tok,
-                op,
-            ) {
-                Ok(v) => v,
-                Err(v) => return Ok(v),
-            };
-            roots.sort();
-            roots.dedup();
+            let roots_plan = authority
+                .roots(
+                    refs_entries,
+                    lock_info,
+                    pins_document,
+                    include_lock,
+                    include_refs,
+                )
+                .map_err(|error| EffectsError::Log(error.to_string()))?;
 
             let mut live: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-            for h in &roots {
-                match sync_closure_local(store, h, depth, &mut live, error_tok, op) {
+            for hash in &roots_plan.roots {
+                match gc_closure_local(store, authority, hash, depth, &mut live, error_tok, op) {
                     Ok(()) => {}
                     Err(v) => return Ok(v),
                 }
@@ -74,9 +76,11 @@ pub(super) fn capability_gc_gpk_low(
 
             let store_dir = store.root_dir();
             let _lk = gc_store_lock(store_dir)?;
-            let (dead, dead_bytes, largest) = gc_store_dead_set(store_dir, &live)?;
+            let inventory = gc_store_inventory(store)?;
+            let dead_plan = authority.dead_plan(live.iter().cloned().collect(), inventory)?;
 
-            let largest_term: Vec<Term> = largest
+            let largest_term: Vec<Term> = dead_plan
+                .largest
                 .into_iter()
                 .map(|(h, b)| {
                     Term::Map(
@@ -93,7 +97,13 @@ pub(super) fn capability_gc_gpk_low(
                 })
                 .collect();
 
-            let dead_sample: Vec<Term> = dead.iter().take(50).cloned().map(Term::Str).collect();
+            let dead_sample: Vec<Term> = dead_plan
+                .dead
+                .iter()
+                .take(50)
+                .cloned()
+                .map(Term::Str)
+                .collect();
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -103,13 +113,16 @@ pub(super) fn capability_gc_gpk_low(
             );
             m.insert(
                 TermOrdKey(Term::symbol(":dead")),
-                Term::Int((dead.len() as i64).into()),
+                Term::Int((dead_plan.dead.len() as i64).into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":reclaim-bytes")),
-                Term::Int((dead_bytes as i64).into()),
+                Term::Int(dead_plan.reclaim_bytes.into()),
             );
-            m.insert(TermOrdKey(Term::symbol(":roots")), Term::Vector(roots_kind));
+            m.insert(
+                TermOrdKey(Term::symbol(":roots")),
+                Term::Vector(roots_plan.metadata),
+            );
             m.insert(
                 TermOrdKey(Term::symbol(":largest")),
                 Term::Vector(largest_term),
@@ -121,6 +134,12 @@ pub(super) fn capability_gc_gpk_low(
             Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::run" => {
+            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+                EffectsError::Log(
+                    "core/gc-low::run requires the artifact-loaded GenesisCode GC authority"
+                        .to_string(),
+                )
+            })?;
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/gc-low::run".to_string())
             })?;
@@ -135,13 +154,12 @@ pub(super) fn capability_gc_gpk_low(
             let quarantine = payload_gc_quarantine(payload).unwrap_or(false);
             let quarantine_dir_s = payload_gc_quarantine_dir(payload);
 
-            let (refs_entries, lock_info, pins_info) = match gc_build_sources(
+            let (refs_entries, lock_info, pins_document) = match gc_build_sources(
                 refs,
                 &base_dir,
                 &lock_s,
                 &pins_s,
                 include_lock,
-                include_refs,
                 pkg_lock_read_authority,
                 error_tok,
                 op,
@@ -149,24 +167,19 @@ pub(super) fn capability_gc_gpk_low(
                 Ok(v) => v,
                 Err(v) => return Ok(v),
             };
-            let (mut roots, _) = match gc_roots_plan_from_sources(
-                &refs_entries,
-                &lock_info,
-                &pins_info,
-                include_lock,
-                include_refs,
-                error_tok,
-                op,
-            ) {
-                Ok(v) => v,
-                Err(v) => return Ok(v),
-            };
-            roots.sort();
-            roots.dedup();
+            let roots_plan = authority
+                .roots(
+                    refs_entries,
+                    lock_info,
+                    pins_document,
+                    include_lock,
+                    include_refs,
+                )
+                .map_err(|error| EffectsError::Log(error.to_string()))?;
 
             let mut live: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-            for h in &roots {
-                match sync_closure_local(store, h, depth, &mut live, error_tok, op) {
+            for hash in &roots_plan.roots {
+                match gc_closure_local(store, authority, hash, depth, &mut live, error_tok, op) {
                     Ok(()) => {}
                     Err(v) => return Ok(v),
                 }
@@ -174,7 +187,8 @@ pub(super) fn capability_gc_gpk_low(
 
             let store_dir = store.root_dir();
             let _lk = gc_store_lock(store_dir)?;
-            let (dead, dead_bytes, _largest) = gc_store_dead_set(store_dir, &live)?;
+            let inventory = gc_store_inventory(store)?;
+            let dead_plan = authority.dead_plan(live.iter().cloned().collect(), inventory)?;
 
             let quarantine_dir = if quarantine {
                 Some(match quarantine_dir_s {
@@ -192,20 +206,34 @@ pub(super) fn capability_gc_gpk_low(
 
             let mut deleted: u64 = 0;
             let mut quarantined: u64 = 0;
-            for h in &dead {
-                let p = store_dir.join(h);
-                if !p.exists() {
-                    continue;
+            for hash in &dead_plan.dead {
+                let path = store_dir.join(hash);
+                let metadata = std::fs::symlink_metadata(&path).map_err(|error| {
+                    EffectsError::Log(format!(
+                        "authorized GC object changed before mutation ({hash}): {error}"
+                    ))
+                })?;
+                if !metadata.file_type().is_file() {
+                    return Err(EffectsError::Log(format!(
+                        "authorized GC object is no longer a regular file: {hash}"
+                    )));
                 }
+                store.verify_hex(hash).map_err(|error| {
+                    EffectsError::Log(format!(
+                        "authorized GC object identity changed before mutation ({hash}): {error}"
+                    ))
+                })?;
                 if let Some(qd) = &quarantine_dir {
-                    let qp = qd.join(h);
+                    let qp = qd.join(hash);
                     if qp.exists() {
-                        continue;
+                        return Err(EffectsError::Log(format!(
+                            "authorized GC quarantine destination already exists: {hash}"
+                        )));
                     }
-                    std::fs::rename(&p, &qp)?;
+                    std::fs::rename(&path, &qp)?;
                     quarantined = quarantined.saturating_add(1);
                 } else {
-                    std::fs::remove_file(&p)?;
+                    std::fs::remove_file(&path)?;
                     deleted = deleted.saturating_add(1);
                 }
             }
@@ -214,7 +242,7 @@ pub(super) fn capability_gc_gpk_low(
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(
                 TermOrdKey(Term::symbol(":dead")),
-                Term::Int((dead.len() as i64).into()),
+                Term::Int((dead_plan.dead.len() as i64).into()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":deleted")),
@@ -226,88 +254,81 @@ pub(super) fn capability_gc_gpk_low(
             );
             m.insert(
                 TermOrdKey(Term::symbol(":reclaimed-bytes")),
-                Term::Int((dead_bytes as i64).into()),
+                Term::Int(dead_plan.reclaim_bytes.into()),
             );
             Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::pin" => {
+            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+                EffectsError::Log(
+                    "core/gc-low::pin requires the artifact-loaded GenesisCode GC authority"
+                        .to_string(),
+                )
+            })?;
             let base_dir = effective_base_dir(pol)?;
             let pins_s =
                 payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
             let target = payload_gc_target(payload)?;
 
-            let mut pins = gc_pins_load(&base_dir, &pins_s).unwrap_or_else(|_| GcPins::empty());
-            if target.starts_with("refs/") {
-                if !pins.keep_refs.iter().any(|r| r == &target) {
-                    pins.keep_refs.push(target);
-                }
-            } else {
-                let h = gc_normalize_hash(&target).ok_or_else(|| {
-                    EffectsError::BadPayload("pin target must be hex hash or refs/...".to_string())
-                })?;
-                if !pins.keep.iter().any(|x| x == &h) {
-                    pins.keep.push(h);
-                }
-            }
-            pins.keep.sort();
-            pins.keep.dedup();
-            pins.keep_refs.sort();
-            pins.keep_refs.dedup();
-
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
             let pins_path = sandbox_path_write(&base_dir, &pins_s, create_dirs)?;
-            gc_pins_write(&pins_path, &pins)?;
+            let _pins_lock = gc_path_lock(&pins_path)?;
+            let document = gc_pins_document_at(&pins_path).map_err(EffectsError::Log)?;
+            let plan = authority.update_pins(":pin", &target, document)?;
+            atomic_write_text(&pins_path, &plan.body)?;
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":pins")), Term::Str(pins_s));
             m.insert(
                 TermOrdKey(Term::symbol(":keep")),
-                Term::Vector(pins.keep.iter().cloned().map(Term::Str).collect()),
+                Term::Vector(plan.keep.into_iter().map(Term::Str).collect()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":keep-refs")),
-                Term::Vector(pins.keep_refs.iter().cloned().map(Term::Str).collect()),
+                Term::Vector(plan.keep_refs.into_iter().map(Term::Str).collect()),
             );
             Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::unpin" => {
+            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+                EffectsError::Log(
+                    "core/gc-low::unpin requires the artifact-loaded GenesisCode GC authority"
+                        .to_string(),
+                )
+            })?;
             let base_dir = effective_base_dir(pol)?;
             let pins_s =
                 payload_gc_pins(payload).unwrap_or_else(|| ".genesis/pins.toml".to_string());
             let target = payload_gc_target(payload)?;
 
-            let mut pins = gc_pins_load(&base_dir, &pins_s).unwrap_or_else(|_| GcPins::empty());
-            if target.starts_with("refs/") {
-                pins.keep_refs.retain(|r| r != &target);
-            } else if let Some(h) = gc_normalize_hash(&target) {
-                pins.keep.retain(|x| x != &h);
-            } else {
-                return Ok(mk_error(
-                    error_tok,
-                    "core/gc/bad-payload",
-                    "unpin target must be hex hash or refs/...".to_string(),
-                    Some(op),
-                ));
-            }
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
             let pins_path = sandbox_path_write(&base_dir, &pins_s, create_dirs)?;
-            gc_pins_write(&pins_path, &pins)?;
+            let _pins_lock = gc_path_lock(&pins_path)?;
+            let document = gc_pins_document_at(&pins_path).map_err(EffectsError::Log)?;
+            let plan = authority.update_pins(":unpin", &target, document)?;
+            atomic_write_text(&pins_path, &plan.body)?;
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
             m.insert(TermOrdKey(Term::symbol(":pins")), Term::Str(pins_s));
             m.insert(
                 TermOrdKey(Term::symbol(":keep")),
-                Term::Vector(pins.keep.iter().cloned().map(Term::Str).collect()),
+                Term::Vector(plan.keep.into_iter().map(Term::Str).collect()),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":keep-refs")),
-                Term::Vector(pins.keep_refs.iter().cloned().map(Term::Str).collect()),
+                Term::Vector(plan.keep_refs.into_iter().map(Term::Str).collect()),
             );
             Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::purge" => {
+            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+                EffectsError::Log(
+                    "core/gc-low::purge requires the artifact-loaded GenesisCode GC authority"
+                        .to_string(),
+                )
+            })?;
             let base_dir = effective_base_dir(pol)?;
             let ttl_days = payload_gc_ttl_days(payload)
                 .ok_or_else(|| EffectsError::BadPayload("missing :ttl-days int".to_string()))?;
@@ -328,38 +349,45 @@ pub(super) fn capability_gc_gpk_low(
                         .join("quarantine")
                 }
             };
-            if !qd.exists() {
-                let mut m = BTreeMap::new();
-                m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
-                m.insert(TermOrdKey(Term::symbol(":purged")), Term::Int(0.into()));
-                return Ok(Value::data(Term::Map(m)));
-            }
-
             let now = std::time::SystemTime::now();
-            let ttl = std::time::Duration::from_secs(ttl_days.saturating_mul(86_400));
-
+            let _quarantine_lock = if qd.exists() {
+                Some(gc_path_lock(&qd.join(".gc-purge"))?)
+            } else {
+                None
+            };
+            let inventory = gc_quarantine_inventory(&qd, now)?;
+            let purge = authority.purge_plan(ttl_days.saturating_mul(86_400), inventory)?;
+            let quarantine_store = if purge.is_empty() {
+                None
+            } else {
+                Some(ArtifactStore::open_with_integrity_cache(&qd, false)?)
+            };
             let mut purged: u64 = 0;
-            for ent in std::fs::read_dir(&qd)? {
-                let ent = ent?;
-                let p = ent.path();
-                let ft = ent.file_type()?;
-                if !ft.is_file() {
-                    continue;
+            for hash in purge {
+                let path = qd.join(&hash);
+                let metadata = std::fs::symlink_metadata(&path).map_err(|error| {
+                    EffectsError::Log(format!(
+                        "authorized purge object changed before mutation ({hash}): {error}"
+                    ))
+                })?;
+                if !metadata.file_type().is_file() {
+                    return Err(EffectsError::Log(format!(
+                        "authorized purge object is no longer a regular file: {hash}"
+                    )));
                 }
-                let Ok(name) = ent.file_name().into_string() else {
-                    continue;
-                };
-                if gc_vcs::validate_hex_hash(&name).is_err() {
-                    continue;
-                }
-                let meta = ent.metadata()?;
-                if let Ok(mtime) = meta.modified()
-                    && let Ok(age) = now.duration_since(mtime)
-                    && age >= ttl
-                {
-                    let _ = std::fs::remove_file(&p);
-                    purged = purged.saturating_add(1);
-                }
+                quarantine_store
+                    .as_ref()
+                    .ok_or_else(|| {
+                        EffectsError::Log("purge authority returned an inconsistent plan".to_string())
+                    })?
+                    .verify_hex(&hash)
+                    .map_err(|error| {
+                        EffectsError::Log(format!(
+                            "authorized purge object identity changed before mutation ({hash}): {error}"
+                        ))
+                    })?;
+                std::fs::remove_file(path)?;
+                purged = purged.saturating_add(1);
             }
 
             let mut m = BTreeMap::new();

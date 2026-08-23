@@ -1,0 +1,572 @@
+(def selfhost/gc-authority::nil? core/list::is-nil?)
+(def selfhost/gc-authority::tag core/data::tag)
+(def selfhost/gc-authority::map?
+  (fn (value) ((core/sym::eq? (selfhost/gc-authority::tag value)) (quote :map))))
+(def selfhost/gc-authority::vec?
+  (fn (value) ((core/sym::eq? (selfhost/gc-authority::tag value)) (quote :vec))))
+(def selfhost/gc-authority::str?
+  (fn (value) ((core/sym::eq? (selfhost/gc-authority::tag value)) (quote :str))))
+(def selfhost/gc-authority::int?
+  (fn (value) ((core/sym::eq? (selfhost/gc-authority::tag value)) (quote :int))))
+(def selfhost/gc-authority::bool?
+  (fn (value) ((core/sym::eq? (selfhost/gc-authority::tag value)) (quote :bool))))
+(def selfhost/gc-authority::sym?
+  (fn (value) ((core/sym::eq? (selfhost/gc-authority::tag value)) (quote :sym))))
+
+(def selfhost/gc-authority::field
+  (fn (value) (fn (key) (if (selfhost/gc-authority::map? value) ((core/map::get value) key) nil))))
+
+(def selfhost/gc-authority::ok
+  (fn (request)
+    (fn (value)
+      {
+        :code nil
+        :kind "genesis/gc-authority-result-v0.1"
+        :message nil
+        :ok true
+        :request-h (selfhost/hash::hash-term request)
+        :v 1
+        :value value})))
+
+(def selfhost/gc-authority::reject
+  (fn (request)
+    (fn (code)
+      (fn (message)
+        {
+          :code code
+          :kind "genesis/gc-authority-result-v0.1"
+          :message message
+          :ok false
+          :request-h (selfhost/hash::hash-term request)
+          :v 1
+          :value nil}))))
+
+(def selfhost/gc-authority::bad
+  (fn (request)
+    (fn (message)
+      ((selfhost/gc-authority::reject request) "core/gc/bad-authority-request" message))))
+
+(def selfhost/gc-authority::bad-pins
+  (fn (request) (fn (message) ((selfhost/gc-authority::reject request) "core/gc/bad-pins" message))))
+
+(def selfhost/gc-authority::normalize-hash
+  (fn (value)
+    (if (selfhost/gc-authority::str? value)
+      (let ((trimmed (selfhost/pkg-lock-write::trim value)))
+        (let
+          ((raw
+             (if ((selfhost/pkg-lock-write::starts-with? trimmed) "h:")
+               ((selfhost/pkg-lock-write::drop-prefix trimmed) 2)
+               trimmed)))
+          (let ((bytes (core/bytes::from-hex raw)))
+            (if (core/error::is? bytes)
+              nil
+              (if ((core/int::eq? (core/bytes::len bytes)) 32) (core/bytes::to-hex bytes) nil)))))
+      nil)))
+
+(def selfhost/gc-authority::hash-set-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (let ((hash (selfhost/gc-authority::normalize-hash ((core/vec::get values) index))))
+            (if (selfhost/gc-authority::nil? hash)
+              nil
+              (((selfhost/gc-authority::hash-set-loop values) ((core/int::add index) 1))
+                (((core/map::put out) hash) true)))))))))
+
+(def selfhost/gc-authority::string-set-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (let ((value ((core/vec::get values) index)))
+            (if (selfhost/gc-authority::str? value)
+              (((selfhost/gc-authority::string-set-loop values) ((core/int::add index) 1))
+                (((core/map::put out) value) true))
+              nil)))))))
+
+(def selfhost/gc-authority::map-keys-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          out
+          (((selfhost/gc-authority::map-keys-loop entries) ((core/int::add index) 1))
+            ((core/vec::push out) ((core/vec::get ((core/vec::get entries) index)) 0))))))))
+
+(def selfhost/gc-authority::map-keys
+  (fn (value) (((selfhost/gc-authority::map-keys-loop (core/map::entries value)) 0) [])))
+
+(def selfhost/gc-authority::pins-model
+  (fn (document)
+    (if (selfhost/gc-authority::nil? document)
+      {:keep [] :keep-refs []}
+      (if (selfhost/gc-authority::map? document)
+        (let
+          ((version ((selfhost/gc-authority::field document) "version"))
+            (pins ((selfhost/gc-authority::field document) "pins")))
+          (if
+            (if (selfhost/gc-authority::nil? version)
+              true
+              (if (selfhost/gc-authority::int? version) ((core/int::eq? version) 1) false))
+            (if (selfhost/gc-authority::map? pins)
+              (let
+                ((keep0 ((selfhost/gc-authority::field pins) "keep"))
+                  (keep-refs0 ((selfhost/gc-authority::field pins) "keep_refs")))
+                (let
+                  ((keep (if (selfhost/gc-authority::nil? keep0) [] keep0))
+                    (keep-refs (if (selfhost/gc-authority::nil? keep-refs0) [] keep-refs0)))
+                (if
+                  (if (selfhost/gc-authority::vec? keep) (selfhost/gc-authority::vec? keep-refs) false)
+                  (let
+                    ((keep-set (((selfhost/gc-authority::hash-set-loop keep) 0) {}))
+                      (ref-set (((selfhost/gc-authority::string-set-loop keep-refs) 0) {})))
+                    (if
+                      (if (selfhost/gc-authority::map? keep-set) (selfhost/gc-authority::map? ref-set) false)
+                      (let ((refs (selfhost/gc-authority::map-keys ref-set)))
+                        (if
+                          (((selfhost/gc-authority::refs-valid-loop refs) 0))
+                          {:keep (selfhost/gc-authority::map-keys keep-set) :keep-refs refs}
+                          nil))
+                      nil))
+                  nil)))
+              nil)
+            nil))
+        nil))))
+
+(def selfhost/gc-authority::refs-valid-loop
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        true
+        (if
+          ((selfhost/pkg-lock-write::starts-with? ((core/vec::get values) index)) "refs/")
+          ((selfhost/gc-authority::refs-valid-loop values) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/gc-authority::quoted-loop
+  (fn (values)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (let
+            ((quoted
+               ((core/str::concat "\"")
+                 ((core/str::concat (core/coreform::escape-str ((core/vec::get values) index))) "\""))))
+            (((selfhost/gc-authority::quoted-loop values) ((core/int::add index) 1))
+              ((core/vec::push out) quoted))))))))
+
+(def selfhost/gc-authority::render-pins
+  (fn (model)
+    (let
+      ((keep (((selfhost/gc-authority::quoted-loop ((selfhost/gc-authority::field model) (quote :keep))) 0) []))
+        (refs
+          (((selfhost/gc-authority::quoted-loop ((selfhost/gc-authority::field model) (quote :keep-refs))) 0)
+            [])))
+      (core/str::to-utf8
+        ((core/str::concat "version = 1\n\n[pins]\nkeep = [")
+          ((core/str::concat ((core/str::join keep) ", "))
+            ((core/str::concat "]\nkeep_refs = [")
+              ((core/str::concat ((core/str::join refs) ", ")) "]\n"))))))))
+
+(def selfhost/gc-authority::pins-update
+  (fn (request)
+    (fn (payload)
+      (if ((selfhost/store-authority::exact-map? payload) [:action :document :target])
+        (let
+          ((action ((selfhost/gc-authority::field payload) (quote :action)))
+            (target ((selfhost/gc-authority::field payload) (quote :target)))
+            (model (selfhost/gc-authority::pins-model ((selfhost/gc-authority::field payload) (quote :document)))))
+          (if (selfhost/gc-authority::nil? model)
+            ((selfhost/gc-authority::bad-pins request) "pins document is not canonical schema v1")
+            (if (selfhost/gc-authority::str? target)
+              (let
+                ((keep-set
+                   (((selfhost/gc-authority::hash-set-loop
+                         ((selfhost/gc-authority::field model) (quote :keep))) 0) {}))
+                  (ref-set
+                    (((selfhost/gc-authority::string-set-loop
+                          ((selfhost/gc-authority::field model) (quote :keep-refs))) 0) {})))
+                (let
+                  ((is-ref ((selfhost/pkg-lock-write::starts-with? target) "refs/"))
+                    (hash (selfhost/gc-authority::normalize-hash target)))
+                  (if (if is-ref true (if (selfhost/gc-authority::nil? hash) false true))
+                    (let
+                      ((next-keep
+                         (if is-ref
+                           keep-set
+                           (if ((core/sym::eq? action) (quote :pin))
+                             (((core/map::put keep-set) hash) true)
+                             ((selfhost/gc-authority::map-remove keep-set) hash))))
+                        (next-refs
+                          (if is-ref
+                            (if ((core/sym::eq? action) (quote :pin))
+                              (((core/map::put ref-set) target) true)
+                              ((selfhost/gc-authority::map-remove ref-set) target))
+                            ref-set)))
+                      (if
+                        (if ((core/sym::eq? action) (quote :pin))
+                          true
+                          ((core/sym::eq? action) (quote :unpin)))
+                        (let
+                          ((next
+                             {:keep (selfhost/gc-authority::map-keys next-keep)
+                              :keep-refs (selfhost/gc-authority::map-keys next-refs)}))
+                          ((selfhost/gc-authority::ok request)
+                            {:body (selfhost/gc-authority::render-pins next)
+                             :keep ((selfhost/gc-authority::field next) (quote :keep))
+                             :keep-refs ((selfhost/gc-authority::field next) (quote :keep-refs))}))
+                        ((selfhost/gc-authority::bad request) "pins action must be :pin or :unpin")))
+                    ((selfhost/gc-authority::bad request) "pin target must be a hash or refs/..."))))
+              ((selfhost/gc-authority::bad request) "pin target must be a string"))))
+        ((selfhost/gc-authority::bad request) "pins-update payload fields mismatch")))))
+
+(def selfhost/gc-authority::map-remove
+  (fn (value)
+    (fn (key)
+      (((selfhost/gc-authority::map-remove-loop (core/map::entries value)) key) 0 {}))))
+
+(def selfhost/gc-authority::map-remove-loop
+  (fn (entries)
+    (fn (key)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            out
+            (let ((entry ((core/vec::get entries) index)))
+              ((((selfhost/gc-authority::map-remove-loop entries) key) ((core/int::add index) 1))
+                (if ((core/eq? ((core/vec::get entry) 0)) key)
+                  out
+                  (((core/map::put out) ((core/vec::get entry) 0)) ((core/vec::get entry) 1)))))))))))
+
+(def selfhost/gc-authority::refs-map-loop
+  (fn (refs)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len refs))
+          out
+          (let ((entry ((core/vec::get refs) index)))
+            (if ((selfhost/store-authority::exact-map? entry) [:hash :name])
+              (let
+                ((name ((selfhost/gc-authority::field entry) (quote :name)))
+                  (raw-hash ((selfhost/gc-authority::field entry) (quote :hash))))
+                (if (selfhost/gc-authority::str? name)
+                  (if (selfhost/gc-authority::nil? raw-hash)
+                    (((selfhost/gc-authority::refs-map-loop refs) ((core/int::add index) 1)) out)
+                    (let ((hash (selfhost/gc-authority::normalize-hash raw-hash)))
+                      (if (selfhost/gc-authority::nil? hash)
+                        nil
+                        (((selfhost/gc-authority::refs-map-loop refs) ((core/int::add index) 1))
+                          (((core/map::put out) name) hash)))))
+                  nil))
+              nil)))))))
+
+(def selfhost/gc-authority::pin-ref-info-loop
+  (fn (names)
+    (fn (refs)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len names))
+            out
+            (let
+              ((name ((core/vec::get names) index)) (hash ((core/map::get refs) name)))
+              (if (selfhost/gc-authority::nil? hash)
+                nil
+                ((((selfhost/gc-authority::pin-ref-info-loop names) refs)
+                    ((core/int::add index) 1))
+                  ((core/vec::push out) {:hash hash :name name}))))))))))
+
+(def selfhost/gc-authority::root-map-loop
+  (fn (roots)
+    (fn (metadata)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len roots))
+            out
+            (let ((hash (selfhost/gc-authority::normalize-hash ((core/vec::get roots) index))))
+              (if (selfhost/gc-authority::nil? hash)
+                ((((selfhost/gc-authority::root-map-loop roots) metadata)
+                    ((core/int::add index) 1)) out)
+                ((((selfhost/gc-authority::root-map-loop roots) metadata)
+                    ((core/int::add index) 1))
+                  (((core/map::put out) hash) ((core/vec::get metadata) index)))))))))))
+
+(def selfhost/gc-authority::root-result-loop
+  (fn (entries)
+    (fn (index)
+      (fn (roots)
+        (fn (metadata)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            {:metadata metadata :roots roots}
+            (let ((entry ((core/vec::get entries) index)))
+              (((((selfhost/gc-authority::root-result-loop entries) ((core/int::add index) 1))
+                    ((core/vec::push roots) ((core/vec::get entry) 0)))
+                  ((core/vec::push metadata) ((core/vec::get entry) 1)))))))))))
+
+(def selfhost/gc-authority::roots
+  (fn (request)
+    (fn (payload)
+      (if
+        ((selfhost/store-authority::exact-map? payload)
+          [:include-lock :include-refs :lock :pins :refs])
+        (let
+          ((include-lock ((selfhost/gc-authority::field payload) (quote :include-lock)))
+            (include-refs ((selfhost/gc-authority::field payload) (quote :include-refs)))
+            (refs ((selfhost/gc-authority::field payload) (quote :refs)))
+            (pins (selfhost/gc-authority::pins-model ((selfhost/gc-authority::field payload) (quote :pins)))))
+          (if
+            (if (selfhost/gc-authority::bool? include-lock)
+              (if (selfhost/gc-authority::bool? include-refs)
+                (if (selfhost/gc-authority::vec? refs)
+                  (if (selfhost/gc-authority::nil? pins) false true)
+                  false)
+                false)
+              false)
+            (let ((refs-map (((selfhost/gc-authority::refs-map-loop refs) 0) {})))
+              (if (selfhost/gc-authority::map? refs-map)
+                (let
+                  ((pin-refs
+                     ((((selfhost/gc-authority::pin-ref-info-loop
+                           ((selfhost/gc-authority::field pins) (quote :keep-refs))) refs-map) 0) [])))
+                  (if (selfhost/gc-authority::vec? pin-refs)
+                    (let
+                      ((plan
+                         (((((core/gc/reach::roots-plan refs)
+                                ((selfhost/gc-authority::field payload) (quote :lock)))
+                              {:keep ((selfhost/gc-authority::field pins) (quote :keep))
+                               :keep-refs pin-refs}) include-lock) include-refs)))
+                      (let
+                        ((roots ((selfhost/gc-authority::field plan) (quote :roots)))
+                          (metadata ((selfhost/gc-authority::field plan) (quote :roots-meta))))
+                        (if
+                          (if (selfhost/gc-authority::vec? roots)
+                            (if (selfhost/gc-authority::vec? metadata)
+                              ((core/int::eq? (core/vec::len roots)) (core/vec::len metadata))
+                              false)
+                            false)
+                          (let ((root-map ((((selfhost/gc-authority::root-map-loop roots) metadata) 0) {})))
+                            ((selfhost/gc-authority::ok request)
+                              ((((selfhost/gc-authority::root-result-loop (core/map::entries root-map)) 0)
+                                  []) [])))
+                          ((selfhost/gc-authority::bad request) "root planner returned an invalid shape"))))
+                    ((selfhost/gc-authority::bad-pins request) "pinned reference is not present")))
+                ((selfhost/gc-authority::bad request) "reference observations are malformed")))
+            ((selfhost/gc-authority::bad request) "roots payload is malformed")))
+        ((selfhost/gc-authority::bad request) "roots payload fields mismatch")))))
+
+(def selfhost/gc-authority::canonical-hashes
+  (fn (values)
+    (if (selfhost/gc-authority::vec? values)
+      (let ((set (((selfhost/gc-authority::hash-set-loop values) 0) {})))
+        (if (selfhost/gc-authority::map? set) (selfhost/gc-authority::map-keys set) nil))
+      nil)))
+
+(def selfhost/gc-authority::artifact-edges
+  (fn (request)
+    (fn (payload)
+      (if
+        ((selfhost/store-authority::exact-map? payload)
+          [:artifact :include-deps :include-evidence :include-parents])
+        (let
+          ((include-deps ((selfhost/gc-authority::field payload) (quote :include-deps)))
+            (include-evidence ((selfhost/gc-authority::field payload) (quote :include-evidence)))
+            (include-parents ((selfhost/gc-authority::field payload) (quote :include-parents))))
+          (if
+            (if (selfhost/gc-authority::bool? include-deps)
+              (if (selfhost/gc-authority::bool? include-evidence)
+                (selfhost/gc-authority::bool? include-parents)
+                false)
+              false)
+            (let
+              ((plan
+                 ((core/vcs/reach::artifact-ref-plan
+                      ((selfhost/gc-authority::field payload) (quote :artifact)))
+                   {:include-deps include-deps
+                    :include-evidence include-evidence
+                    :include-parents include-parents})))
+              (let
+                ((refs (selfhost/gc-authority::canonical-hashes
+                         ((selfhost/gc-authority::field plan) (quote :refs))))
+                  (parents (selfhost/gc-authority::canonical-hashes
+                            ((selfhost/gc-authority::field plan) (quote :parents)))))
+                (if
+                  (if (selfhost/gc-authority::vec? refs) (selfhost/gc-authority::vec? parents) false)
+                  ((selfhost/gc-authority::ok request) {:parents parents :refs refs})
+                  ((selfhost/gc-authority::bad request) "artifact edge planner returned invalid hashes"))))
+            ((selfhost/gc-authority::bad request) "artifact edge options must be bool")))
+        ((selfhost/gc-authority::bad request) "artifact-edges payload fields mismatch")))))
+
+(def selfhost/gc-authority::inventory-loop
+  (fn (inventory)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len inventory))
+          out
+          (let ((entry ((core/vec::get inventory) index)))
+            (if ((selfhost/store-authority::exact-map? entry) [:hash :value])
+              (let
+                ((hash (selfhost/gc-authority::normalize-hash
+                         ((selfhost/gc-authority::field entry) (quote :hash))))
+                  (value ((selfhost/gc-authority::field entry) (quote :value))))
+                (if
+                  (if (selfhost/gc-authority::nil? hash)
+                    false
+                    (if (selfhost/gc-authority::int? value)
+                      (if ((core/int::lt? value) 0)
+                        false
+                        (selfhost/gc-authority::nil? ((core/map::get out) hash)))
+                      false))
+                  (((selfhost/gc-authority::inventory-loop inventory) ((core/int::add index) 1))
+                    (((core/map::put out) hash) value))
+                  nil))
+              nil)))))))
+
+(def selfhost/gc-authority::top-insert
+  (fn (entry)
+    (fn (values)
+      (((selfhost/gc-authority::top-insert-loop entry) values) 0 []))))
+
+(def selfhost/gc-authority::top-insert-loop
+  (fn (entry)
+    (fn (values)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len values))
+            ((core/vec::push out) entry)
+            (let ((current ((core/vec::get values) index)))
+              (if
+                ((core/int::lt? ((selfhost/gc-authority::field current) (quote :value)))
+                  ((selfhost/gc-authority::field entry) (quote :value)))
+                (((selfhost/gc-authority::append-rest ((core/vec::push out) entry)) values) index)
+                ((((selfhost/gc-authority::top-insert-loop entry) values)
+                    ((core/int::add index) 1)) ((core/vec::push out) current))))))))))
+
+(def selfhost/gc-authority::append-rest
+  (fn (out)
+    (fn (values)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len values))
+          out
+          (((selfhost/gc-authority::append-rest ((core/vec::push out) ((core/vec::get values) index)))
+              values) ((core/int::add index) 1)))))))
+
+(def selfhost/gc-authority::take-loop
+  (fn (values)
+    (fn (limit)
+      (fn (index)
+        (fn (out)
+          (if
+            (if ((core/int::eq? index) (core/vec::len values))
+              true
+              ((core/int::eq? index) limit))
+            out
+            ((((selfhost/gc-authority::take-loop values) limit) ((core/int::add index) 1))
+              ((core/vec::push out) ((core/vec::get values) index)))))))))
+
+(def selfhost/gc-authority::dead-loop
+  (fn (entries)
+    (fn (live)
+      (fn (index)
+        (fn (dead)
+          (fn (largest)
+            (fn (total)
+              (if ((core/int::eq? index) (core/vec::len entries))
+                {:dead dead
+                 :largest ((((selfhost/gc-authority::take-loop largest) 25) 0) [])
+                 :reclaim-bytes total}
+                (let ((entry ((core/vec::get entries) index)))
+                  (let
+                    ((hash ((core/vec::get entry) 0)) (value ((core/vec::get entry) 1)))
+                    (if (selfhost/gc-authority::nil? ((core/map::get live) hash))
+                      ((((((selfhost/gc-authority::dead-loop entries) live)
+                              ((core/int::add index) 1)) ((core/vec::push dead) hash))
+                            ((selfhost/gc-authority::top-insert {:hash hash :value value}) largest))
+                          ((core/int::add total) value))
+                      ((((((selfhost/gc-authority::dead-loop entries) live)
+                              ((core/int::add index) 1)) dead) largest) total))))))))))))
+
+(def selfhost/gc-authority::dead-plan
+  (fn (request)
+    (fn (payload)
+      (if ((selfhost/store-authority::exact-map? payload) [:inventory :live])
+        (let
+          ((inventory ((selfhost/gc-authority::field payload) (quote :inventory)))
+            (live-values ((selfhost/gc-authority::field payload) (quote :live))))
+          (if
+            (if (selfhost/gc-authority::vec? inventory) (selfhost/gc-authority::vec? live-values) false)
+            (let
+              ((inventory-map (((selfhost/gc-authority::inventory-loop inventory) 0) {}))
+                (live (((selfhost/gc-authority::hash-set-loop live-values) 0) {})))
+              (if
+                (if (selfhost/gc-authority::map? inventory-map) (selfhost/gc-authority::map? live) false)
+                ((selfhost/gc-authority::ok request)
+                  ((((((selfhost/gc-authority::dead-loop (core/map::entries inventory-map)) live) 0) []) []) 0))
+                ((selfhost/gc-authority::bad request) "dead-plan observations are malformed")))
+            ((selfhost/gc-authority::bad request) "dead-plan observations must be vectors")))
+        ((selfhost/gc-authority::bad request) "dead-plan payload fields mismatch")))))
+
+(def selfhost/gc-authority::purge-loop
+  (fn (entries)
+    (fn (ttl)
+      (fn (index)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len entries))
+            out
+            (let ((entry ((core/vec::get entries) index)))
+              ((((selfhost/gc-authority::purge-loop entries) ttl) ((core/int::add index) 1))
+                (if
+                  (if ((core/int::lt? ((core/vec::get entry) 1)) ttl)
+                    false
+                    true)
+                  ((core/vec::push out) ((core/vec::get entry) 0))
+                  out)))))))))
+
+(def selfhost/gc-authority::purge-plan
+  (fn (request)
+    (fn (payload)
+      (if ((selfhost/store-authority::exact-map? payload) [:inventory :ttl-seconds])
+        (let
+          ((inventory ((selfhost/gc-authority::field payload) (quote :inventory)))
+            (ttl ((selfhost/gc-authority::field payload) (quote :ttl-seconds))))
+          (if
+            (if (selfhost/gc-authority::vec? inventory)
+              (if (selfhost/gc-authority::int? ttl) (if ((core/int::lt? ttl) 0) false true) false)
+              false)
+            (let ((inventory-map (((selfhost/gc-authority::inventory-loop inventory) 0) {})))
+              (if (selfhost/gc-authority::map? inventory-map)
+                ((selfhost/gc-authority::ok request)
+                  {:purge ((((selfhost/gc-authority::purge-loop (core/map::entries inventory-map)) ttl) 0) [])})
+                ((selfhost/gc-authority::bad request) "purge inventory is malformed")))
+            ((selfhost/gc-authority::bad request) "purge-plan payload is malformed")))
+        ((selfhost/gc-authority::bad request) "purge-plan payload fields mismatch")))))
+
+(def core/gc::authority
+  (fn (request)
+    (if ((selfhost/store-authority::exact-map? request) [:kind :op :payload :v])
+      (if
+        ((core/eq? ((selfhost/gc-authority::field request) (quote :kind)))
+          "genesis/gc-authority-request-v0.1")
+        (if ((core/int::eq? ((selfhost/gc-authority::field request) (quote :v))) 1)
+          (let
+            ((op ((selfhost/gc-authority::field request) (quote :op)))
+              (payload ((selfhost/gc-authority::field request) (quote :payload))))
+            (if (selfhost/gc-authority::sym? op)
+              (if ((core/sym::eq? op) (quote :roots))
+                ((selfhost/gc-authority::roots request) payload)
+                (if ((core/sym::eq? op) (quote :artifact-edges))
+                  ((selfhost/gc-authority::artifact-edges request) payload)
+                  (if ((core/sym::eq? op) (quote :dead-plan))
+                    ((selfhost/gc-authority::dead-plan request) payload)
+                    (if ((core/sym::eq? op) (quote :pins-update))
+                      ((selfhost/gc-authority::pins-update request) payload)
+                      (if ((core/sym::eq? op) (quote :purge-plan))
+                        ((selfhost/gc-authority::purge-plan request) payload)
+                        ((selfhost/gc-authority::bad request) "unsupported gc authority operation"))))))
+              ((selfhost/gc-authority::bad request) "gc authority operation must be a symbol")))
+          ((selfhost/gc-authority::bad request) "gc authority request version mismatch"))
+        ((selfhost/gc-authority::bad request) "gc authority request kind mismatch"))
+      ((selfhost/gc-authority::bad request) "gc authority request fields mismatch"))))

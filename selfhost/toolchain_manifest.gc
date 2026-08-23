@@ -72,6 +72,7 @@
     "selfhost/store_verify_authority_v1.gc"
     "selfhost/commit_authority_v1.gc"
     "selfhost/refs_authority_v1.gc"
+    "selfhost/gc_authority_v1.gc"
     "selfhost/pkg_lock_read_authority_v1.gc"
     "selfhost/pkg_lock_model_authority_v1.gc"
     "selfhost/pkg_lock_write_authority_v1.gc"
@@ -181,6 +182,7 @@
     core/cli::refs-list-program
     core/cli::refs-set-program
     core/refs::authority
+    core/gc::authority
     core/pkg::publish-authority
     core/pkg::lock-read-authority
     core/pkg::lock-model-authority

@@ -1,4 +1,5 @@
 mod error;
+mod gc_authority;
 mod lock;
 mod log;
 mod pkg_lock_read_authority;

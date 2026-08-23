@@ -1,8 +1,8 @@
-# Self-hosted Store Authority v0.1
+# Self-hosted Store and Artifact GC Authority v0.1
 
 ## Status and scope
 
-This specification defines the content-store production-authority slice of `SD-STORE` under `R4.2.e`. The artifact-loaded bindings `core/store::authority` and `core/store::verify-authority` are the sole production semantic producers for `core/store::{put,has,get,verify}`: payload and lowercase-hash admission; canonical artifact bytes; local-integrity verdicts; local/remote source selection; operation and cumulative cache-write budgets; self-hosted CoreForm parsing; canonical whole-store inventory selection and order; verification bounds; first-failure attribution; and content identity.
+This specification defines the content-store production-authority slice of `SD-STORE` and the H2 artifact-GC authority boundary of `SD-ARTIFACT-GC` under `R4.2.e`. The artifact-loaded bindings `core/store::authority` and `core/store::verify-authority` are the sole production semantic producers for `core/store::{put,has,get,verify}`: payload and lowercase-hash admission; canonical artifact bytes; local-integrity verdicts; local/remote source selection; operation and cumulative cache-write budgets; self-hosted CoreForm parsing; canonical whole-store inventory selection and order; verification bounds; first-failure attribution; and content identity. The separate `core/gc::authority` contract and retained host mechanisms are normative under the Artifact GC H2 authority section below.
 
 This slice does not promote `SD-STORE` above H0. Internal direct-store consumers, package/registry/VCS storage decisions, and non-store canonical identities remain host-authoritative and must be migrated before the row or `R4.2.e` can close.
 
@@ -33,3 +33,54 @@ Rust retains TOML transport, already-authorized operation-limit extraction, boun
 Authority evaluation is bounded to 20,000,000 steps, 160,000,000 allocation units, 40 MiB byte/string values, 16,384 vector entries, and 32 map entries per request. The store capability retains the lower 32 MiB hard artifact ceiling. Whole-store verification additionally admits at most 8,192 raw entries, 2 MiB of cumulative raw entry-name bytes, and 512 MiB of cumulative artifact bytes. Limit arithmetic is saturating in the host mechanism and rechecked from exact observations by GenesisCode.
 
 `scripts/lib/selfhost_store_authority.py` verifies profile and both source identities, artifact custody, all four exact protocols, planner-before-I/O and authority-before-write ordering, bounded raw inventory and streamed hash observations, exact parse/cache/inventory binding, strict result decoding, parity-only fallback isolation, native CLI coverage, truthful H0 ledger scope, and permanent source/route mutations. Its report is evidence for this partial slice only and cannot promote `SD-STORE`, close `R4.2.e`, replace later runtime tests, or authorize a release.
+
+## Artifact GC H2 authority
+
+Status: normative H2 contract for `SD-ARTIFACT-GC` under R4.2.e.
+
+## Authority
+
+`core/gc::authority`, loaded from the exact artifact-only self-host toolchain, is the sole production semantic producer for `core/gc-low::{plan,run,pin,unpin,purge}`. It owns pins admission and normalization, pin/unpin target admission, canonical pins bytes, reference-tombstone and pinned-reference resolution, canonical roots and provenance, artifact-edge selection, dead-set selection, reclaim-byte accounting, largest-artifact ranking, and quarantine purge selection.
+
+Production Rust MUST fail closed when the binding is absent, artifact bootstrap or evaluation fails, an input or output map is open or malformed, the result is not bound to the exact canonical request hash, a result contains a noncanonical identity, or an authorized object changes before mutation. No Rust semantic fallback, success-capable default, repair path, or alternate dead/purge planner is permitted.
+
+## Closed protocol
+
+Requests have kind `genesis/gc-authority-request-v0.1`, version `1`, and exactly `:kind`, `:op`, `:payload`, and `:v`. Results have kind `genesis/gc-authority-result-v0.1`, version `1`, and exactly `:code`, `:kind`, `:message`, `:ok`, `:request-h`, `:v`, and `:value`. `:request-h` is the lowercase canonical CoreForm hash of the exact request. Acceptance requires `:ok true`, nil code/message, and an operation-specific closed value. Rejection requires `:ok false`, nil value, and one of the closed codes `core/gc/bad-authority-request` or `core/gc/bad-pins`.
+
+The operation inventory is:
+
+- `:roots` accepts exact refs, lock, generic pins-document, and include flags. It normalizes all 32-byte artifact hashes, ignores valid reference tombstones, resolves every pinned reference against the observed refs snapshot even when ordinary refs are excluded, invokes `core/gc/reach::roots-plan`, deduplicates by canonical identity, and returns one provenance entry per sorted root.
+- `:artifact-edges` accepts an exact artifact and three boolean inclusion controls. It invokes `core/vcs/reach::artifact-ref-plan`, rejects malformed produced identities, and returns sorted unique ordinary and parent edges. The host MUST enqueue every returned ordinary edge at the current parent depth and every returned parent edge at depth minus one; it cannot add, remove, repair, or reinterpret edges.
+- `:dead-plan` accepts sorted live identities and a content-verified store inventory. It rejects duplicate or malformed inventory entries, selects every inventory identity absent from the live set, sums exact reclaim bytes, and returns the first 25 dead artifacts ordered by descending size with canonical-hash tie order.
+- `:pins-update` accepts `:pin` or `:unpin`, a target, and a generic TOML document observation. A missing document is empty. For compatibility, version defaults to 1 and absent `keep` or `keep_refs` arrays default empty; unknown TOML keys are ignored exactly as in the frozen v1 behavior. Present versions other than 1, mistyped fields, malformed hashes, and non-`refs/` reference names fail closed. The authority returns the complete canonical UTF-8 pins document and normalized sorted unique projections; Rust writes those exact bytes atomically while holding the pins lock.
+- `:purge-plan` accepts a nonnegative TTL in seconds and a content-verified quarantine inventory whose values are host-observed ages in whole seconds. It returns exactly the sorted identities whose observed age is greater than or equal to the TTL.
+
+## Host mechanisms
+
+Rust may perform only bounded, contradiction-checking mechanisms:
+
+- load and evaluate the artifact-only authority with declared limits;
+- transport already-authorized lock models and refs snapshots as neutral terms;
+- open pins through a nonblocking descriptor, prove the descriptor is a regular file, read at most 4 MiB plus one byte, decode UTF-8 and generic TOML without applying pins semantics;
+- lock the store before inventory/dead planning, lock pins across read-authorize-write, and lock quarantine across inventory-authorize-purge;
+- enumerate lowercase 64-hex names in canonical order, prove each artifact's bytes match its name before authority evaluation, and repeat that proof immediately before mutation;
+- decode a content-verified artifact as CoreForm, ask the authority for exact edges, execute the mandated bounded work queue, and stop above 50,000 distinct objects;
+- observe system time and file modification time to calculate nonnegative whole-second age;
+- atomically write exact authority-produced pins bytes, or rename/delete only exact authority-produced identities.
+
+An unparseable but content-valid artifact is a leaf, preserving the artifact-store contract. Missing or corrupt live objects fail before dead planning. Corrupt dead or quarantined objects also fail rather than being silently reclaimed. A disappearing object, nonregular replacement, content replacement, preexisting quarantine destination, malformed pins document, lock failure, or I/O error aborts the operation. Partial mutation caused by a later external race remains an explicit failed operation and is never reported as a successful complete plan.
+
+## Determinism and resource bounds
+
+The authority evaluator resets counters after trusted bootstrap and receives 80,000,000 post-bootstrap steps, 320,000,000 logical allocation units, 8 MiB byte/string values, and 65,536 map/vector entries. Pins observations are capped at 4 MiB. Closure is capped at 50,000 distinct objects. The largest-dead projection is capped at 25 entries. Host inventory and work-queue order are canonical, every authority result is request-hash-bound, and outer effect logging binds the request and response under the ordinary strict replay contract.
+
+System time and file metadata are explicit host observations used only by purge selection. They do not enter pure kernel semantics. Replay consumes the recorded effect result and does not re-observe time or storage.
+
+## Fallback and verification
+
+The former Rust pins parser/writer, roots planner, dead-set planner, and purge selector are removed from production rather than retained as reachable fallback. The generic TOML decoder, bounded work queue, inventory scanner, file locks, artifact verifier, atomic writer, rename, delete, and clock are mechanisms and cannot produce an accepting semantic verdict.
+
+`scripts/lib/selfhost_gc_authority.py` independently verifies profile/schema/source/artifact custody, closed protocol markers, artifact-only runner loading, strict adapter decoding, no-fallback source reachability, operation ordering, bounded descriptor reads, lock coverage, repeated content-identity checks, exact mutation sets, adversarial tests, and the H2 semantic-ownership row. Its self-test must reject mutations that remove authority loading, restore native planners, move mutation before authority, weaken identity checks, open the result schema, weaken bounds, or inflate claims.
+
+This contract does not claim H3/H4, bootstrap fixpoint, aggregate R4.2.e or SH-C closure, GPK/sync/store/refs/package authority, or release qualification.

@@ -170,6 +170,15 @@ python3 scripts/lib/selfhost_store_authority.py \
   --artifact selfhost/toolchain.gc \
   --self-test
 
+# R4.2.e artifact GC is H2: GenesisCode owns pins, roots, edges, dead/reclaim,
+# report, and purge selection while Rust retains only bounded exact mechanisms.
+python3 scripts/lib/selfhost_gc_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_gc_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_GC_AUTHORITY_v0.1.schema.json \
+  --artifact selfhost/toolchain.gc \
+  --self-test
+
 # R4.2.e commit authority is partial: GenesisCode constructs and validates
 # native commit objects while internal package/registry/VCS consumers remain H0.
 python3 scripts/lib/selfhost_commit_authority.py \

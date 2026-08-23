@@ -1,0 +1,64 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-23",
+  "binding": "core/gc::authority",
+  "contentIdentitySha256": "26bf2b966314f30242d41be27322d4a0d521f75ca7e8fdfa2534f04106010573",
+  "decisionInventory": [
+    "pins-document-admission-and-normalization",
+    "pin-unpin-target-admission",
+    "canonical-pins-byte-rendering",
+    "reference-tombstone-and-pinned-reference-resolution",
+    "root-selection-order-and-provenance",
+    "artifact-edge-selection",
+    "live-closure-edge-admission",
+    "dead-set-selection",
+    "reclaim-byte-accounting",
+    "largest-dead-artifact-ranking",
+    "quarantine-purge-selection"
+  ],
+  "hostMechanisms": [
+    "artifact-only-authority-bootstrap-and-bounded-evaluation",
+    "bounded-generic-toml-and-lock-model-observation",
+    "bounded-reference-and-inventory-observation",
+    "content-identity-verification-and-coreform-decoding",
+    "exact-authority-edge-work-queue-execution",
+    "store-pins-and-quarantine-locking",
+    "system-time-and-file-age-observation",
+    "atomic-exact-pins-write",
+    "exact-authorized-rename-delete-and-purge"
+  ],
+  "hostOracle": {
+    "removalTask": "R4.2.e",
+    "required": false
+  },
+  "independentVerifier": "scripts/lib/selfhost_gc_authority.py",
+  "kind": "genesis/selfhost-gc-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "gpk-sync-store-refs-or-package-authority",
+    "h3-h4-closure",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure"
+  ],
+  "productionEntrypoints": [
+    "genesis",
+    "genesis_wasi"
+  ],
+  "requestKind": "genesis/gc-authority-request-v0.1",
+  "resultKind": "genesis/gc-authority-result-v0.1",
+  "runtimeEvidence": {
+    "allocationLimit": 320000000,
+    "largestReportEntries": 25,
+    "maxClosureObjects": 50000,
+    "maxItems": 65536,
+    "maxPayloadBytes": 8388608,
+    "maxPinsBytes": 4194304,
+    "stepLimit": 80000000
+  },
+  "schema": "docs/spec/SELFHOST_GC_AUTHORITY_v0.1.schema.json",
+  "sourceModule": "selfhost/gc_authority_v1.gc",
+  "sourceSha256": "9af5d9066eb51e49783db712d395ccafcc0d4f9fd2e2e771df3df3706bff31cb",
+  "spec": "docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

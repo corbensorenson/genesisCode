@@ -205,8 +205,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `scripts/lib/selfhost_signing_authority.py` - independent signing source/artifact custody, production-route, secret-boundary, ledger, and mutation verifier.
 - `docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.md` - normative H0 inventory and partial transparency/DSSE cutover contract with explicit package-semantic residuals.
 - `docs/spec/SELFHOST_EVIDENCE_VERIFY_AUTHORITY_v0.1.schema.json` - closed schema for the partial evidence-verification profile.
-- `docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md` - normative partial R4.2.e store-put semantic authority, exact-write host boundary, resource contract, and non-closure scope.
+- `docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.md` - normative R4.2.e artifact-store and H2 artifact-GC semantic authority, exact-mechanism boundary, resource contracts, and non-closure scope.
 - `docs/spec/SELFHOST_STORE_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial store-authority profile.
+- `docs/spec/SELFHOST_GC_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked H2 artifact-GC authority profile.
 - `docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.md` - normative partial R4.2.e native commit construction/inspection authority and residual host boundary.
 - `docs/spec/SELFHOST_COMMIT_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked partial commit-authority profile.
 - `policies/selfhost_commit_authority_v0.1.json` - content-addressed native commit decision inventory, host mechanisms, and explicit nonclaims.
