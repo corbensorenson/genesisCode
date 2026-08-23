@@ -26,6 +26,7 @@ pub enum SetResult {
     Conflict { current: Option<String> },
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 #[derive(Debug, Clone)]
 pub struct SetInput {
     pub name: String,
@@ -33,6 +34,7 @@ pub struct SetInput {
     pub expected_old: Option<Option<String>>,
 }
 
+#[cfg(any(test, feature = "parity-oracle"))]
 #[derive(Debug, Clone)]
 pub enum SetManyResult {
     Updated,
@@ -114,6 +116,7 @@ impl RefsDb {
         Ok(SetResult::Updated)
     }
 
+    #[cfg(any(test, feature = "parity-oracle"))]
     pub fn set_many(&self, ops: &[SetInput]) -> Result<SetManyResult, EffectsError> {
         let _lk = self.lock_exclusive()?;
         let mut db = self.load_locked()?;

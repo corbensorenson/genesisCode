@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "8cc46f6fd365eb4fbb720af036c18e6b508eaa3044804a5f22f62accbdd440dd",
+      "inputIdentitySha256": "6d840f38cb1fa7ce7763df0959c6d42ae7b6b8780f275d96c774d046f9313be0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -569,7 +569,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "457eeb5f1cb1fc4dc2757a12911e41f3bcf8b0aae3480b31aac0ce935a7d89eb",
+      "inputIdentitySha256": "8b7644dc6dd34d57515557bbd0edf5de54e74c01c918b17a322e028a02d2ed58",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1218,6 +1218,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -1268,6 +1269,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -1292,6 +1294,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -2634,7 +2637,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "5ee7924ff6006ab979ff80139e562e2e5df5018dc08faf616f18858082891bb1",
+      "inputIdentitySha256": "933cfe1871b9e10095e6042c84fe0148ade95cec4f559f113854540227423b08",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2762,7 +2765,7 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "0b57e1cc6f31e065423dcb86f42876c10fd31bfaa697e015a8a01f0afaee1c67",
+      "inputIdentitySha256": "f3987b4c0f0c740f78e80d8d75b77e03423089c58479f64f19915452896c2cec",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -2833,7 +2836,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3063,6 +3066,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -3113,6 +3117,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -3137,6 +3142,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -4233,7 +4239,7 @@
       "executionIdentitySha256": "b4ce4975b452fb76c91db4f754bf4d81f60de6de17232d04ba83c8cc3da37594",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-indices",
-      "inputIdentitySha256": "188c6c5c8c8d9ce7aef88fbffb89be973665c6736491fbb283bd2f5e8e3eebf1",
+      "inputIdentitySha256": "b0d65f55a5890defea14d63461bc3ede342b97bf023df7642ea82157fbaa05c2",
       "inputs": {
         "paths": [
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -4374,7 +4380,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4604,6 +4610,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -4654,6 +4661,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -4678,6 +4686,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -5790,7 +5799,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6020,6 +6029,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -6070,6 +6080,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -6094,6 +6105,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -7194,7 +7206,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "16dc6078dc7abe2ea648604425f66314c34c8be22fc9e01ebfbcbcac223ab8aa",
+      "inputIdentitySha256": "300d01e1109afd4dd10aede84f9b1f28484661c1d446abbe282fa959c170273d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7285,7 +7297,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7515,6 +7527,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -7565,6 +7578,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -7589,6 +7603,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -8989,7 +9004,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "70b606074f61a257ceb6b270dbd17afd21ce0579be1ed87bbfc34d1830cfd762",
+      "inputIdentitySha256": "81d76a2258f7d3bd71bd62bae8192f2029d39d13085761645bd0e8ac55d2f1c6",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9204,7 +9219,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "93cf9ec511a6beebd62431b5a813f0348d1d2c791230e689093bcd8533cbf900",
+      "inputIdentitySha256": "f19d60b15fe8b44946cab7ac0f06f9cf0c7c5bcda115489234656dfbac8426a2",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9272,7 +9287,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9502,6 +9517,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -9552,6 +9568,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -9576,6 +9593,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -10672,7 +10690,7 @@
       "executionIdentitySha256": "8cff602dbf244463fb827f70fc6ce31257fb76b4541100508567d3f1fd7ba641",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-adversarial-matrix",
-      "inputIdentitySha256": "6135055d8d85ba00807b1ef4d5248d8724dcf81c6692ae2b926866273bc1421d",
+      "inputIdentitySha256": "ee6cd45a12be603324001777152c5670612c856e1a462e0d8e23076a6a9466ac",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10833,7 +10851,7 @@
       "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "accac80f27b3230e7fc45bcd76a08765ab6c9c949a3ea6e76e31b5f2abea0a1e",
+      "inputIdentitySha256": "79ec0c94b3538603f409200366efe2509951ba1357f0d8c6d2aea3ee31275c90",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -10976,7 +10994,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "c8f497278207d608c75744f2604662119980cec4187e9ad11f7ba3cca961ca8d",
+      "inputIdentitySha256": "a1b4babe4e19acf323acafcf98a3b86f77e29e0ca9249b6743b114ca01d62f97",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11050,7 +11068,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "0fa41d0a4df16e5267059443593e160feba8b6a8d594fa652d602a4367123d04",
+      "inputIdentitySha256": "a227530076c2a1065c16bee19e8ca9570630e94a575d67a8d96d7a64b8068a8e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11161,10 +11179,12 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+          "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs",
           "crates/gc_effects/src/runner_cap_pkg_low.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs",
@@ -11205,6 +11225,7 @@
           "crates/gc_effects/src/runner_pkg_payload.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -11225,6 +11246,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -11772,7 +11794,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "d69ace6cb4fc607ad00902b5d42cd41ead752f8a55dfad5d21d848631daec58d",
+      "inputIdentitySha256": "f0af21c81dee50ee5d317b1426556ce72665cd015d6e3d0d648ecd1ca313bcc0",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11959,7 +11981,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12189,6 +12211,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -12239,6 +12262,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -12263,6 +12287,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -13359,7 +13384,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "8cc46f6fd365eb4fbb720af036c18e6b508eaa3044804a5f22f62accbdd440dd",
+      "inputIdentitySha256": "6d840f38cb1fa7ce7763df0959c6d42ae7b6b8780f275d96c774d046f9313be0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13718,7 +13743,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "8cc46f6fd365eb4fbb720af036c18e6b508eaa3044804a5f22f62accbdd440dd",
+      "inputIdentitySha256": "6d840f38cb1fa7ce7763df0959c6d42ae7b6b8780f275d96c774d046f9313be0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14077,7 +14102,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "8cc46f6fd365eb4fbb720af036c18e6b508eaa3044804a5f22f62accbdd440dd",
+      "inputIdentitySha256": "6d840f38cb1fa7ce7763df0959c6d42ae7b6b8780f275d96c774d046f9313be0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14436,7 +14461,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "8cc46f6fd365eb4fbb720af036c18e6b508eaa3044804a5f22f62accbdd440dd",
+      "inputIdentitySha256": "6d840f38cb1fa7ce7763df0959c6d42ae7b6b8780f275d96c774d046f9313be0",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14849,7 +14874,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "573c46e743e16807cee577aee10ce0f2bcd028f36a1886304416c459bf01371f",
+      "inputIdentitySha256": "9401c96ad8b85a0b25bcaa7687fdb4006f45acadc4447e59f627da43334d021c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -14992,7 +15017,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15222,6 +15247,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -15272,6 +15298,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -15296,6 +15323,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -17050,7 +17078,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17280,6 +17308,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -17330,6 +17359,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -17354,6 +17384,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -18454,7 +18485,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18655,7 +18686,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18885,6 +18916,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -18935,6 +18967,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -18959,6 +18992,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -20110,7 +20144,7 @@
       "executionIdentitySha256": "6466f307236f05e28ff3f1dd3b3e1715c59366428c614be4555b07b7e876cc25",
       "expectedDurationSeconds": 600,
       "id": "gate/host-abi-conformance",
-      "inputIdentitySha256": "1d7d8ae60bf6e3047cb0e3084a5e0f513e987f81723417745a5a587160693729",
+      "inputIdentitySha256": "f8ac9ea406c48221817f6b75e0a385f5fb063bab6fbec3b0e50c8f120e43fd57",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20234,7 +20268,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20642,7 +20676,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20872,6 +20906,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -20922,6 +20957,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -20946,6 +20982,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -22339,7 +22376,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22569,6 +22606,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -22619,6 +22657,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -22643,6 +22682,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -23935,7 +23975,7 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "79768dcd40560744cdd555afb00e03c8bf77f066a68504edbe74d53f492d74c5",
+      "inputIdentitySha256": "17dca88472c43d0443f82a19fb825ac872cd72c46daaff8ee8e15508b21987ea",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -24071,7 +24111,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "e7b32ed4a31e19dbb2d1aa1a36bd522ec23fe53c8d9dbc70c7575b52626323ed",
+      "inputIdentitySha256": "3bd1c5de60bffea028e35b36bcbf9092db10815821135d3c9dacd21e1ef24c57",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24272,7 +24312,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "e3bfd61a9f6a859993bfc11078655f476ff8840eec8b396899cdb2b3763f55d9",
+      "inputIdentitySha256": "9c274aa379ba8f628aed7c7abb841b07d7bb383876232ea40e4a6cab0ff2264e",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24487,7 +24527,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "e71922097b2df07c2b525f959c58fd7990572d6cdf9b6aa6367bcc0575fd84f9",
+      "inputIdentitySha256": "db345d61de6d801404725af543bf2c90fa46ca4fef8297cc18252f6d1554416c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24553,7 +24593,7 @@
       "executionIdentitySha256": "8f5310e9a5301ac5e50ca6fceb9746bc7a9eb296b438b2dbbfe00fbb7b91b932",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "ca95151291db1aa3bc4e7fd1cb6a311f77dce00a23d113d60fd7141c95db151b",
+      "inputIdentitySha256": "1ba842f8010a74e3184ab798e9c0c2c12416e1ff013cea609cc0706fcd55d536",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24646,7 +24686,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "48c9cdd43040636fed2848fb6f17c76c3e943c8f60ad70d432cf2f15ed2fe036",
+      "inputIdentitySha256": "5f578ad1cd025e8dfc50a9cc9ae66c83e552d61108625fd0a267c77df1953aec",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -24722,7 +24762,7 @@
       "executionIdentitySha256": "42697c907b00290611339f0db66de06fc10fbd461fee6ab8c0e0726ac51325f3",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-workloads",
-      "inputIdentitySha256": "f1282871be7272a0731d18240d349952c546ec0ff7d17e2dd502f420c4e47fa1",
+      "inputIdentitySha256": "2baf810b8f017a9f2f5b02c8c99dc0c4bf458999be65a033cee1ef23be663188",
       "inputs": {
         "paths": [
           "benchmarks/roadmap/v0.1/pb10_bootstrap_inputs.json",
@@ -24841,7 +24881,7 @@
       "executionIdentitySha256": "c372f7a6ce19dd4e42e022f101937121a2ec70a6ada954600de2f74ada6e0183",
       "expectedDurationSeconds": 15,
       "id": "gate/runner-high-level-op-guard",
-      "inputIdentitySha256": "ace10363e580acf592948fadbe6f7430a1c4129a76132bca6fea8d71b75e200f",
+      "inputIdentitySha256": "cf2ca78d648fd3490ffe7c87f867d8bf09a59406aa31c7ba660eef8ff0ff459d",
       "inputs": {
         "paths": [
           "crates/gc_effects/src/runner_capability_dispatch.rs",
@@ -24893,7 +24933,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25243,7 +25283,7 @@
       "executionIdentitySha256": "2cb630dc95963b8f1f56eb63ade2ab93c476ff6caaad083666376d8ec86ed971",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "32cfc0c22d3544fb2af8a8468f1f448fab258f97b4d3f001dc44aab42775c556",
+      "inputIdentitySha256": "020b77016922126f12eedea83b1c813734dbaef4d91417253804136fa9c0db59",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25323,7 +25363,7 @@
       "executionIdentitySha256": "605aa59a4fc7df643fa1470e994534127f07bff8312bf30126bacfc3b5c26643",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "6b97a5b0a99aadd3aa704d2e95fe94704a73ec6ea4eab929c976c8e6c349e20b",
+      "inputIdentitySha256": "5bba5807d7a6971ed2a1a4e10e635267cfbb8ee74dc548f9352a26ebad5a9a0f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25432,10 +25472,12 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
           "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+          "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs",
           "crates/gc_effects/src/runner_cap_pkg_low.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
           "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs",
@@ -25476,6 +25518,7 @@
           "crates/gc_effects/src/runner_pkg_payload.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -25496,6 +25539,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -25885,7 +25929,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "6301a818791c882741e83478e8f107f17ffb8186c3600e25cc6584873cd8dcf4",
+      "inputIdentitySha256": "7990beea4ea38466d32145eed3a940340e435f1ff1288203f9ea824e08587176",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25956,7 +26000,7 @@
       "executionIdentitySha256": "31ea6993c7fcee4f72d4359ffa9c18009525b26d4a1587ddb2bc2e0e559ee21c",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-doc-runtime-parity",
-      "inputIdentitySha256": "aa5386cc59bab21a02de4f103aa8aa95eb792eef2816d2d3ff0d7db078bae58b",
+      "inputIdentitySha256": "db6674cb6ea7f9c4202491820457d8ad66dd058c6fdd89cc46208fed32f19ee7",
       "inputs": {
         "paths": [
           "docs/spec/CLI.md",
@@ -26062,7 +26106,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "4cf4a869d5c86ed1993c957d895ceaed7591c4381b030de33afedeb47732290c",
+      "inputIdentitySha256": "ead4dfc90050abeda30bfa882dc5400f8b9e490b88df7a4f317723ed74d7ceda",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26205,7 +26249,7 @@
       "executionIdentitySha256": "de98a9b2dd03b246bd228fb5aa58e6c216ddd3e98c2db5a2dfe508c302766370",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-refactor-guard",
-      "inputIdentitySha256": "6b68735ffab7702159e209f86d8d3db91accd7d223ab54cd39d5fec341bd1375",
+      "inputIdentitySha256": "81caa25975a14242e19d0b11491e661df383ed573a4e2c05bffaf0ffd289659e",
       "inputs": {
         "paths": [
           "scripts/check_selfhost_refactor_guard.sh",
@@ -26323,7 +26367,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "6e59486b6d883990862869655db34199ba12c34b5493df3ae52d5b1ecc1d43ba",
+      "inputIdentitySha256": "10620f81bd1fedd7b66afa18d09cfe2f4392a378cd44055f5cb1e90acaf5bb86",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26390,7 +26434,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26863,7 +26907,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -27093,6 +27137,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -27143,6 +27188,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -27167,6 +27213,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -28381,7 +28428,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "7f677d4c3439be75a623153c1ebe3ad21fd81bcf840f00a4fb0fa9b0aafbd987",
+      "inputIdentitySha256": "5f527e6396624135039adb2334d0edabf45fc3ca9cb8a27be9a0d1936f14a9aa",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28611,6 +28658,7 @@
           "crates/gc_effects/src/policy_transport.rs",
           "crates/gc_effects/src/refs.rs",
           "crates/gc_effects/src/refs_authority.rs",
+          "crates/gc_effects/src/refs_authority_bulk.rs",
           "crates/gc_effects/src/replay_authority.rs",
           "crates/gc_effects/src/runner.rs",
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -28661,6 +28709,7 @@
           "crates/gc_effects/src/runner_process_control.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth.rs",
           "crates/gc_effects/src/runner_remote_ops/policy_auth_store.rs",
+          "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
           "crates/gc_effects/src/runner_replay_authority.rs",
           "crates/gc_effects/src/runner_response_budget.rs",
           "crates/gc_effects/src/runner_runtime_budget.rs",
@@ -28685,6 +28734,7 @@
           "crates/gc_effects/tests/store_caps.rs",
           "crates/gc_effects/tests/sync_registry.rs",
           "crates/gc_effects/tests/sync_registry/cases_a.rs",
+          "crates/gc_effects/tests/sync_registry/cases_b.rs",
           "crates/gc_kernel/src/compiled.rs",
           "crates/gc_kernel/src/compiled_blob.rs",
           "crates/gc_kernel/src/compiled_compile.rs",
@@ -29906,7 +29956,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "227c573083110fb14f40a4935d6e83e3f4fceaac2bceea7946cc20695a4ac5be",
+      "inputIdentitySha256": "49f1d3842c25e1fda9895aa28d6ee2f1c4a33612290eb38ef4052d57cd48df1f",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -29979,7 +30029,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "e79135ae909b3808e9e0530a18ac3109e7db695efb210b2ad8ebf6328cb16533",
+      "inputIdentitySha256": "526349b58b52ef7f0e0832a10847c3658e4e1d125082c864ce4d882da07350d9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -30341,7 +30391,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -30498,7 +30548,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "9643fd82167e648a3e209a4f3d9d2f17a02fcf41e31b19b7c0986d051a3e89f1",
+      "inputIdentitySha256": "12749408b872e52829a5499b7bb2345e215785b2459fce08c8da52a6c4cae4bc",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",

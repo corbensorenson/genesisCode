@@ -8,6 +8,10 @@ use crate::EffectsError;
 use crate::policy::SelfhostAuthorityConfig;
 use crate::refs::{RefEntry, RefsDb, SetResult};
 
+#[path = "refs_authority_bulk.rs"]
+mod bulk;
+pub(crate) use bulk::{BulkSetInput, BulkSetMode, BulkSetResult};
+
 const BINDING: &str = "core/refs::authority";
 const REQUEST_KIND: &str = "genesis/refs-authority-request-v0.1";
 const RESULT_KIND: &str = "genesis/refs-authority-result-v0.1";
@@ -338,7 +342,10 @@ fn exact_map<'a>(
     expected: &[&str],
 ) -> Result<&'a BTreeMap<TermOrdKey, Term>, EffectsError> {
     let Term::Map(fields) = term else {
-        return Err(authority_error("result must be a map"));
+        return Err(authority_error(format!(
+            "result must be a map, got {}",
+            print_term(term)
+        )));
     };
     let actual: Vec<String> = fields
         .keys()
@@ -458,15 +465,11 @@ fn required_entries(
     let mut out = Vec::with_capacity(values.len());
     for value in values {
         let entry = exact_map(value, &[":hash", ":name"])?;
-        let hash = optional_hash(entry, ":hash")?
-            .ok_or_else(|| authority_error("result entry hash must not be nil"))?;
+        let hash = optional_hash(entry, ":hash")?;
         let name = optional_string(entry, ":name")?
             .ok_or_else(|| authority_error("result entry name must not be nil"))?
             .to_string();
-        out.push(RefEntry {
-            name,
-            hash: Some(hash),
-        });
+        out.push(RefEntry { name, hash });
     }
     Ok(out)
 }

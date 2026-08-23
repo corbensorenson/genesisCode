@@ -468,6 +468,22 @@ impl gc_registry::InProcRegistry for MemRegistry {
     }
 }
 
+fn selfhost_sync_caps(source: &str) -> CapsPolicy {
+    let artifact = std::env::var_os("GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../selfhost/toolchain.gc")
+        })
+        .canonicalize()
+        .expect("canonical selfhost artifact path");
+    CapsPolicy::from_toml_str_with_selfhost_authority(
+        source,
+        SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
+    .expect("selfhost-authorized sync caps")
+}
+
 fn mk_caps_for_sync(
     store_dir: &std::path::Path,
     refs_path: &std::path::Path,
@@ -536,7 +552,7 @@ basic_password = "{basic_password}"
         basic_username = basic_username,
         basic_password = basic_password
     );
-    CapsPolicy::from_toml_str(&s).expect("caps")
+    selfhost_sync_caps(&s)
 }
 
 fn mk_caps_for_sync_with_mtls_files(
@@ -574,7 +590,7 @@ mtls_identity_pem = "{identity_pem_path}"
         ca_pem_path = ca_pem_path.display(),
         identity_pem_path = identity_pem_path.display(),
     );
-    CapsPolicy::from_toml_str(&s).expect("caps")
+    selfhost_sync_caps(&s)
 }
 
 fn mk_caps_for_sync_with_limits(
@@ -652,7 +668,7 @@ transfer_workers = 4
         auth_pull = auth_pull,
         auth_push = auth_push
     );
-    CapsPolicy::from_toml_str(&s).expect("caps")
+    selfhost_sync_caps(&s)
 }
 
 fn mk_caps_for_pkg_publish(

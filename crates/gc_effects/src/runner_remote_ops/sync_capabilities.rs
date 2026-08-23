@@ -8,6 +8,7 @@ pub(super) fn capability_sync_pull(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -80,6 +81,7 @@ pub(super) fn capability_sync_pull(
     let mut pulled: u64 = 0;
     let mut already: u64 = 0;
     let mut heads: Vec<Term> = Vec::new();
+    let mut pending_refs: Vec<BulkSetInput> = Vec::with_capacity(refnames.len());
 
     for h in &roots {
         let mut stats = SyncPullStats {
@@ -131,37 +133,11 @@ pub(super) fn capability_sync_pull(
             Err(v) => return Ok(v),
         }
 
-        let cur = refs.get(rname)?;
-        if !force
-            && let Some(curh) = &cur
-            && curh != &h
-        {
-            return Ok(mk_error_with_ctx(
-                error_tok,
-                "core/refs/conflict",
-                "local ref differs; use force to overwrite".to_string(),
-                Some(op),
-                Term::Map(
-                    [
-                        (
-                            TermOrdKey(Term::symbol(":refs/name")),
-                            Term::Str(rname.clone()),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":refs/current")),
-                            cur.clone().map(Term::Str).unwrap_or(Term::Nil),
-                        ),
-                        (
-                            TermOrdKey(Term::symbol(":refs/remote")),
-                            Term::Str(h.clone()),
-                        ),
-                    ]
-                    .into_iter()
-                    .collect(),
-                ),
-            ));
-        }
-        let _ = refs.set(rname, Some(&h), None)?;
+        pending_refs.push(BulkSetInput {
+            name: rname.clone(),
+            new_hash: Some(h.clone()),
+            expected_old: None,
+        });
 
         heads.push(Term::Map(
             [
@@ -171,6 +147,58 @@ pub(super) fn capability_sync_pull(
             .into_iter()
             .collect(),
         ));
+    }
+
+    if !pending_refs.is_empty() {
+        pending_refs.sort_by(|left, right| left.name.cmp(&right.name));
+        let authority = refs_authority.ok_or_else(|| {
+            EffectsError::Log(
+                "core/sync::pull refs requires the artifact-loaded GenesisCode refs authority"
+                    .to_string(),
+            )
+        })?;
+        let mode = if force {
+            BulkSetMode::Unconditional
+        } else {
+            BulkSetMode::SameOrAbsent
+        };
+        if let BulkSetResult::Conflict { name, current } =
+            authority.set_many(refs, &pending_refs, mode)?
+        {
+            let remote = pending_refs
+                .iter()
+                .find(|entry| entry.name == name)
+                .and_then(|entry| entry.new_hash.clone())
+                .ok_or_else(|| {
+                    EffectsError::Log(
+                        "GenesisCode refs authority returned an unbound sync conflict".to_string(),
+                    )
+                })?;
+            return Ok(mk_error_with_ctx(
+                error_tok,
+                "core/refs/conflict",
+                "local ref differs; use force to overwrite".to_string(),
+                Some(op),
+                Term::Map(
+                    [
+                        (
+                            TermOrdKey(Term::symbol(":refs/name")),
+                            Term::Str(name),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":refs/current")),
+                            current.map(Term::Str).unwrap_or(Term::Nil),
+                        ),
+                        (
+                            TermOrdKey(Term::symbol(":refs/remote")),
+                            Term::Str(remote),
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                ),
+            ));
+        }
     }
 
     heads.sort_by_cached_key(print_term);

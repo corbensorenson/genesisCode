@@ -51,7 +51,9 @@ CONSTANTS = {
     "decisionInventory": [
         "direct-ref-lookup", "direct-ref-prefix-filter-and-order",
         "direct-ref-cas-conflict-verdict", "direct-ref-update-and-delete-transition",
-        "direct-ref-response-construction", "request-bound-result-verdict",
+        "direct-ref-response-construction", "bulk-ref-mode-and-input-admission",
+        "bulk-ref-canonical-order-and-uniqueness", "bulk-ref-first-conflict-verdict",
+        "bulk-ref-atomic-transition", "request-bound-result-verdict",
     ],
     "hostMechanisms": [
         "artifact-only-authority-bootstrap-and-bounded-evaluation",
@@ -71,7 +73,8 @@ CONSTANTS = {
     "version": "0.1.0",
 }
 NONCLAIMS = {
-    "bootstrap-fixpoint", "bulk-gpk-sync-ref-authority", "h2-sd-refs",
+    "all-internal-ref-consumer-authority", "bootstrap-fixpoint",
+    "gpk-sync-policy-and-transport-authority", "h2-sd-refs",
     "policy-evidence-signature-gate-authority", "r4-2-e-closure",
     "registry-ref-authority", "release-qualification", "sh-c-closure",
 }
@@ -129,14 +132,26 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     module = source_text(root, profile["sourceModule"], overrides)
     manifest = source_text(root, "selfhost/toolchain_manifest.gc", overrides)
     authority = source_text(root, "crates/gc_effects/src/refs_authority.rs", overrides)
+    bulk = source_text(root, "crates/gc_effects/src/refs_authority_bulk.rs", overrides)
     refs_db = source_text(root, "crates/gc_effects/src/refs.rs", overrides)
     cap_refs = source_text(root, "crates/gc_effects/src/runner_cap_refs.rs", overrides)
+    gpk = source_text(
+        root, "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs", overrides
+    )
+    sync = source_text(
+        root, "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs", overrides
+    )
+    sync_tests = source_text(
+        root, "crates/gc_effects/tests/sync_registry/cases_b.rs", overrides
+    )
     runner = source_text(root, "crates/gc_effects/src/runner.rs", overrides)
 
     required_module = [
         "(def core/refs::authority", profile["requestKind"], profile["resultKind"],
         "selfhost/refs::list-loop", "selfhost/refs::expected-matches?",
-        "selfhost/refs::remove-loop", "selfhost/hash::hash-term request",
+        "selfhost/refs::remove-loop", "selfhost/refs::set-many",
+        "selfhost/refs::bulk-conflict-loop", ":same-or-absent", ":unconditional",
+        "bulk ref update exceeds 4096 operations", "selfhost/hash::hash-term request",
     ]
     for marker in required_module:
         if marker not in module:
@@ -149,16 +164,53 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ):
         if marker not in authority:
             fail(f"Rust refs authority adapter missing marker: {marker}")
+    for marker in (
+        "const MAX_BULK_OPS: usize = 4096", "pub(crate) fn set_many(",
+        'self.evaluate(":set-many", payload)', "decode_bulk_set",
+        "bulk conflict attribution contradiction", "bulk replacement snapshot contradiction",
+        "bulk ref inputs must be strictly sorted and unique",
+    ):
+        if marker not in bulk:
+            fail(f"Rust bulk refs authority adapter missing marker: {marker}")
     for marker in ("pub(crate) fn snapshot", "pub(crate) fn replace_if_unchanged"):
         if marker not in refs_db:
             fail(f"refs persistence mechanism missing marker: {marker}")
+    if not re.search(
+        r'#\[cfg\(any\(test, feature = "parity-oracle"\)\)\]\s+pub fn set_many',
+        refs_db,
+    ):
+        fail("native bulk refs oracle is not compile-isolated")
     for marker in ("authority.get(refs, &name)", "authority.list(refs, prefix.as_deref())", "authority.set("):
         if marker not in cap_refs:
             fail(f"production refs route missing authority call: {marker}")
     for forbidden in ("let h = refs.get(&name)?", "let xs = refs.list(prefix.as_deref())?"):
         if forbidden in cap_refs:
             fail(f"production refs route retains direct semantic fallback: {forbidden}")
-    if ".map(RefsAuthority::load)" not in runner or "refs_authority.as_mut()" not in runner:
+    for marker in (
+        "refs_authority.set_many(refs_db, &ops, BulkSetMode::CompareAndSet)",
+        "BulkSetResult::Conflict { name, current }",
+    ):
+        if marker not in gpk:
+            fail(f"GPK bulk ref route missing authority marker: {marker}")
+    if "refs_db.set_many(" in gpk:
+        fail("GPK production route retains native bulk mutation fallback")
+    for marker in (
+        "pending_refs.sort_by", "BulkSetMode::SameOrAbsent",
+        "BulkSetMode::Unconditional", "authority.set_many(refs, &pending_refs, mode)",
+    ):
+        if marker not in sync:
+            fail(f"sync bulk ref route missing authority marker: {marker}")
+    for forbidden in ("refs.set(rname", "let cur = refs.get(rname)"):
+        if forbidden in sync:
+            fail(f"sync production route retains per-ref mutation decision: {forbidden}")
+    if "sync_pull_ref_conflict_leaves_the_entire_batch_unchanged" not in sync_tests:
+        fail("sync atomic negative control missing")
+    if (
+        ".map(RefsAuthority::load)" not in runner
+        or "refs_authority.as_mut()" not in runner
+        or '"core/sync::pull"' not in runner
+        or '"core/gpk-low::import"' not in runner
+    ):
         fail("runner does not load and forward artifact refs authority")
 
     source_bytes = module.encode()
@@ -175,7 +227,11 @@ def self_test(root: Path, profile, schema) -> int:
     module = (root / profile["sourceModule"]).read_text()
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
     cap_refs = (root / "crates/gc_effects/src/runner_cap_refs.rs").read_text()
+    bulk = (root / "crates/gc_effects/src/refs_authority_bulk.rs").read_text()
     refs_db = (root / "crates/gc_effects/src/refs.rs").read_text()
+    gpk = (root / "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs").read_text()
+    sync = (root / "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs").read_text()
+    sync_tests = (root / "crates/gc_effects/tests/sync_registry/cases_b.rs").read_text()
     runner = (root / "crates/gc_effects/src/runner.rs").read_text()
     mutations = []
 
@@ -196,10 +252,17 @@ def self_test(root: Path, profile, schema) -> int:
     mutations.append((open_profile, {}, "profile closure"))
     mutations.extend([
         (profile, {profile["sourceModule"]: module.replace("(def core/refs::authority", "(def core/refs::legacy", 1)}, "source binding"),
+        (profile, {profile["sourceModule"]: module.replace("(def selfhost/refs::set-many", "(def selfhost/refs::legacy-set-many", 1)}, "bulk source"),
         (profile, {"selfhost/toolchain_manifest.gc": manifest.replace(f'    "{profile["sourceModule"]}"\n', "", 1)}, "module custody"),
         (profile, {"selfhost/toolchain_manifest.gc": manifest.replace(f"    {profile['binding']}\n", "", 1)}, "binding custody"),
         (profile, {"crates/gc_effects/src/runner_cap_refs.rs": cap_refs.replace("authority.get(refs, &name)", "refs.get(&name)", 1)}, "lookup route"),
+        (profile, {"crates/gc_effects/src/refs_authority_bulk.rs": bulk.replace("pub(crate) fn set_many(", "pub(crate) fn legacy_set_many(", 1)}, "bulk adapter"),
+        (profile, {"crates/gc_effects/src/refs_authority_bulk.rs": bulk.replace("bulk conflict attribution contradiction", "bulk conflict accepted", 1)}, "conflict binding"),
         (profile, {"crates/gc_effects/src/refs.rs": refs_db.replace("pub(crate) fn replace_if_unchanged", "pub(crate) fn replace_without_check", 1)}, "atomic adapter"),
+        (profile, {"crates/gc_effects/src/refs.rs": refs_db.replace('#[cfg(any(test, feature = "parity-oracle"))]\n    pub fn set_many', "    pub fn set_many", 1)}, "native oracle isolation"),
+        (profile, {"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk.replace("refs_authority.set_many(refs_db, &ops, BulkSetMode::CompareAndSet)", "refs_db.set_many(&ops)", 1)}, "GPK authority route"),
+        (profile, {"crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs": sync.replace("authority.set_many(refs, &pending_refs, mode)", "refs.set(rname, Some(&h), None)", 1)}, "sync authority route"),
+        (profile, {"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests.replace("sync_pull_ref_conflict_leaves_the_entire_batch_unchanged", "sync_pull_partial_update_allowed", 1)}, "sync atomic control"),
         (profile, {"crates/gc_effects/src/runner.rs": runner.replace(".map(RefsAuthority::load)", ".map(StoreAuthority::load)", 1)}, "runner load"),
     ])
     controls = 0
@@ -210,7 +273,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"mutation survived: {label}")
-    if controls != 13:
+    if controls != 20:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

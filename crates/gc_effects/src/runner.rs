@@ -16,8 +16,8 @@ use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
 use crate::pkg_package_manifest_authority::PkgPackageManifestAuthority;
 use crate::pkg_resolution_identity_authority::*;
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
-use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
-use crate::refs_authority::RefsAuthority;
+use crate::refs::{RefsDb, SetResult};
+use crate::refs_authority::{BulkSetInput, BulkSetMode, BulkSetResult, RefsAuthority};
 use crate::runner_browser_host::{BrowserHostRuntime, browser_host_call};
 use crate::runner_editor_host::{EditorHostRuntime, editor_host_call};
 use crate::runner_gc_payload::{
@@ -320,6 +320,8 @@ pub fn run(
                                 | "core/refs::list"
                                 | "core/refs::set"
                                 | "core/refs::delete"
+                                | "core/sync::pull"
+                                | "core/gpk-low::import"
                         )
                     {
                         refs_authority = run_try!(

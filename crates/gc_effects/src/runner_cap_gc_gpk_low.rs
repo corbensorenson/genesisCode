@@ -14,6 +14,7 @@ pub(super) fn capability_gc_gpk_low(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     gc_authority: Option<&mut GcAuthority>,
     pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
@@ -23,6 +24,7 @@ pub(super) fn capability_gc_gpk_low(
 ) -> Result<Value, EffectsError> {
     let _ = timeout_ms;
     let mut gc_authority = gc_authority;
+    let mut refs_authority = refs_authority;
     match op_eff {
         "core/gc-low::plan" => {
             let authority = gc_authority.as_deref_mut().ok_or_else(|| {
@@ -404,6 +406,7 @@ pub(super) fn capability_gc_gpk_low(
                 policy,
                 store,
                 refs,
+                refs_authority: None,
                 budget,
                 error_tok,
                 op,
@@ -416,6 +419,7 @@ pub(super) fn capability_gc_gpk_low(
                 policy,
                 store,
                 refs,
+                refs_authority: refs_authority.as_deref_mut(),
                 budget,
                 error_tok,
                 op,

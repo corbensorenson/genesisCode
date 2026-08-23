@@ -5,6 +5,7 @@ pub(super) struct GpkDispatchCtx<'a> {
     pub(super) policy: &'a CapsPolicy,
     pub(super) store: Option<&'a ArtifactStore>,
     pub(super) refs: Option<&'a RefsDb>,
+    pub(super) refs_authority: Option<&'a mut RefsAuthority>,
     pub(super) budget: &'a mut ArtifactBudgetState,
     pub(super) error_tok: SealId,
     pub(super) op: &'a str,
@@ -501,10 +502,19 @@ pub(super) fn handle_gpk_import(
         }
         m.insert(TermOrdKey(Term::symbol(":refs")), Term::Vector(rs));
     }
-    if let Some(refs_db) = refs_db {
+    if !set_refs.is_empty() {
+        let refs_db = refs_db.ok_or_else(|| {
+            EffectsError::Log("core/gpk-low::import set-refs requires a refs database".to_string())
+        })?;
+        let refs_authority = ctx.refs_authority.as_deref_mut().ok_or_else(|| {
+            EffectsError::Log(
+                "core/gpk-low::import set-refs requires the artifact-loaded GenesisCode refs authority"
+                    .to_string(),
+            )
+        })?;
         let mut sorted = set_refs;
         sorted.sort_by(|a, b| a.name.cmp(&b.name));
-        let mut ops: Vec<SetInput> = Vec::with_capacity(sorted.len());
+        let mut ops: Vec<BulkSetInput> = Vec::with_capacity(sorted.len());
         for sr in &sorted {
             if let Err(v) = local_refs_validate_policy_gate(
                 store,
@@ -516,20 +526,20 @@ pub(super) fn handle_gpk_import(
             ) {
                 return Ok(v);
             }
-            ops.push(SetInput {
+            ops.push(BulkSetInput {
                 name: sr.name.clone(),
                 new_hash: sr.hash.clone(),
                 expected_old: sr.expected_old.clone(),
             });
         }
-        match refs_db.set_many(&ops)? {
-            SetManyResult::Updated => {
+        match refs_authority.set_many(refs_db, &ops, BulkSetMode::CompareAndSet)? {
+            BulkSetResult::Updated => {
                 m.insert(
                     TermOrdKey(Term::symbol(":refs-updated")),
                     Term::Int((ops.len() as i64).into()),
                 );
             }
-            SetManyResult::Conflict { name, current } => {
+            BulkSetResult::Conflict { name, current } => {
                 return Ok(mk_error_with_ctx(
                     error_tok,
                     "core/refs/conflict",

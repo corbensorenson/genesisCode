@@ -665,7 +665,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "46e2729ac217954c8074556d0aff08f48e0cc77e9d2f510a219187933b8edeac",
+  "contentIdentitySha256": "15ddceef095eba09e48198ba880f7413b393dc6ac10aaf079ccb30c4ed9ced4f",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1827,8 +1827,8 @@
       "id": "SD-REFS",
       "internalOnly": false,
       "limitations": [
-        "Artifact-loaded GenesisCode exclusively decides direct core/refs get/list lookup, prefix filtering/order, expected-old conflict, update/delete transition, and response facts under genesis/selfhost-refs-authority-v0.1",
-        "Rust policy/evidence/signature admission and bulk sync/GPK reference updates remain host-authoritative, so SD-REFS remains H0"
+        "Artifact-loaded GenesisCode exclusively decides direct core/refs get/list lookup, prefix filtering/order, expected-old conflict, update/delete transition, response facts, and atomic local bulk-ref modes, canonical ordering, first-conflict attribution, and complete replacement snapshots for GPK import and sync pull under genesis/selfhost-refs-authority-v0.1",
+        "Rust policy/evidence/signature admission, registry transport, remaining internal package/VCS/export ref reads, and the reachable parity oracle remain host-authoritative or unretired, so SD-REFS remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -1837,12 +1837,16 @@
         "selfhost/toolchain.gc",
         "selfhost/refs_authority_v1.gc",
         "crates/gc_effects/src/refs_authority.rs",
+        "crates/gc_effects/src/refs_authority_bulk.rs",
         "crates/gc_cli_driver/src/cmd_refs.rs"
       ],
       "productionAuthorityPaths": [
         "selfhost/refs_authority_v1.gc",
         "crates/gc_effects/src/refs_authority.rs",
-        "crates/gc_effects/src/runner_cap_refs.rs"
+        "crates/gc_effects/src/refs_authority_bulk.rs",
+        "crates/gc_effects/src/runner_cap_refs.rs",
+        "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs",
+        "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
@@ -1854,11 +1858,16 @@
       ],
       "testPaths": [
         "crates/gc_effects/src/refs_authority.rs",
+        "crates/gc_effects/src/refs_authority_bulk.rs",
+        "crates/gc_effects/tests/sync_registry/cases_b.rs",
+        "crates/gc_cli/tests/cli_pkg_import_set_ref.rs",
         "crates/gc_cli/tests/cli_refs.rs"
       ],
-      "title": "Reference read, list, update, and delete decisions",
+      "title": "Reference read, list, direct update, and atomic bulk mutation decisions",
       "verifierPaths": [
         "crates/gc_cli/tests/cli_refs.rs",
+        "crates/gc_effects/tests/sync_registry/cases_b.rs",
+        "crates/gc_cli/tests/cli_pkg_import_set_ref.rs",
         "scripts/lib/selfhost_refs_authority.py"
       ]
     },

@@ -2,13 +2,17 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-13",
   "binding": "core/refs::authority",
-  "contentIdentitySha256": "0c907043f31ecf9188b81c53fb45b737a817e8caba5b7d0bf1068ebd3a17a74c",
+  "contentIdentitySha256": "f57aa39247287e8a9315664764986bc03b65dea8b8d790f60491ddb3a71436ab",
   "decisionInventory": [
     "direct-ref-lookup",
     "direct-ref-prefix-filter-and-order",
     "direct-ref-cas-conflict-verdict",
     "direct-ref-update-and-delete-transition",
     "direct-ref-response-construction",
+    "bulk-ref-mode-and-input-admission",
+    "bulk-ref-canonical-order-and-uniqueness",
+    "bulk-ref-first-conflict-verdict",
+    "bulk-ref-atomic-transition",
     "request-bound-result-verdict"
   ],
   "hostMechanisms": [
@@ -28,8 +32,9 @@
   "kind": "genesis/selfhost-refs-authority-v0.1",
   "nonclaims": [
     "bootstrap-fixpoint",
-    "bulk-gpk-sync-ref-authority",
+    "all-internal-ref-consumer-authority",
     "h2-sd-refs",
+    "gpk-sync-policy-and-transport-authority",
     "policy-evidence-signature-gate-authority",
     "r4-2-e-closure",
     "registry-ref-authority",
@@ -44,7 +49,7 @@
   "resultKind": "genesis/refs-authority-result-v0.1",
   "schema": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.schema.json",
   "sourceModule": "selfhost/refs_authority_v1.gc",
-  "sourceSha256": "57b56ebc487033ddacaa4e000f209420dbb43aeff002877ace6f2a43999d6df6",
+  "sourceSha256": "79a2dad13768b3b391641197a8e04d3e748e24cbee55694539cbd2eed1027e1f",
   "spec": "docs/spec/SELFHOST_REFS_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

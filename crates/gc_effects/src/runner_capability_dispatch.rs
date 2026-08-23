@@ -369,7 +369,16 @@ pub(super) fn call_capability_with_runtime(
     }
     match op_eff {
         "core/sync::pull" => capability_sync_pull(
-            payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
+            payload,
+            pol,
+            policy,
+            store,
+            refs,
+            refs_authority,
+            budget,
+            error_tok,
+            op,
+            timeout_ms,
         ),
 
         "core/sync::push" => capability_sync_push(payload, pol, store, error_tok, op, timeout_ms),
@@ -440,6 +449,7 @@ pub(super) fn call_capability_with_runtime(
                 policy,
                 store,
                 refs,
+                refs_authority,
                 gc_authority,
                 pkg_lock_read_authority,
                 budget,

@@ -14,6 +14,9 @@
 (def selfhost/refs::sym?
   (fn (value) ((core/sym::eq? (selfhost/refs::tag value)) (quote :sym))))
 
+(def selfhost/refs::vec?
+  (fn (value) ((core/sym::eq? (selfhost/refs::tag value)) (quote :vec))))
+
 (def selfhost/refs::starts-with?
   (fn (value)
     (fn (prefix)
@@ -167,6 +170,164 @@
           (selfhost/refs::reject request "expected-old-present must be bool")))
       (selfhost/refs::reject request "set payload fields mismatch"))))
 
+(def selfhost/refs::bytes-lex-lt?
+  (fn (left)
+    (fn (right)
+      (fn (index)
+        (let ((left-length (core/bytes::len left)) (right-length (core/bytes::len right)))
+          (if ((core/int::eq? index) left-length)
+            ((core/int::lt? index) right-length)
+            (if ((core/int::eq? index) right-length)
+              false
+              (let
+                ((left-byte ((core/bytes::get left) index))
+                  (right-byte ((core/bytes::get right) index)))
+                (if ((core/int::lt? left-byte) right-byte)
+                  true
+                  (if ((core/int::eq? left-byte) right-byte)
+                    (((selfhost/refs::bytes-lex-lt? left) right) ((core/int::add index) 1))
+                    false))))))))))
+
+(def selfhost/refs::str-lex-lt?
+  (fn (left)
+    (fn (right)
+      (((selfhost/refs::bytes-lex-lt? (core/str::to-utf8 left)) (core/str::to-utf8 right)) 0))))
+
+(def selfhost/refs::bulk-mode?
+  (fn (mode)
+    (if (selfhost/refs::sym? mode)
+      (if ((core/sym::eq? mode) (quote :cas))
+        true
+        (if ((core/sym::eq? mode) (quote :same-or-absent))
+          true
+          ((core/sym::eq? mode) (quote :unconditional))))
+      false)))
+
+(def selfhost/refs::bulk-op?
+  (fn (mode)
+    (fn (op)
+      (fn (previous-name)
+        (if
+          ((selfhost/store-authority::exact-map? op)
+            [:expected-old :expected-old-present :name :new-hash])
+          (let
+            ((expected ((selfhost/store-authority::field op) (quote :expected-old)))
+              (present ((selfhost/store-authority::field op) (quote :expected-old-present)))
+              (name ((selfhost/store-authority::field op) (quote :name)))
+              (new-hash ((selfhost/store-authority::field op) (quote :new-hash))))
+            (if (selfhost/refs::bool? present)
+              (if
+                (if (selfhost/refs::nil? expected)
+                  true
+                  (selfhost/store-authority::hash? expected))
+                (if (selfhost/refs::str? name)
+                  (if
+                    (if (selfhost/refs::nil? previous-name)
+                      true
+                      ((selfhost/refs::str-lex-lt? previous-name) name))
+                    (if
+                      (if (selfhost/refs::nil? new-hash)
+                        true
+                        (selfhost/store-authority::hash? new-hash))
+                      (if ((core/sym::eq? mode) (quote :same-or-absent))
+                        (selfhost/store-authority::hash? new-hash)
+                        true)
+                      false)
+                    false)
+                  false)
+                false)
+              false))
+          false)))))
+
+(def selfhost/refs::bulk-ops?
+  (fn (mode)
+    (fn (ops)
+      (fn (index)
+        (fn (previous-name)
+          (if ((core/int::eq? index) (core/vec::len ops))
+            true
+            (let ((op ((core/vec::get ops) index)))
+              (if (((selfhost/refs::bulk-op? mode) op) previous-name)
+                ((((selfhost/refs::bulk-ops? mode) ops) ((core/int::add index) 1))
+                  ((selfhost/store-authority::field op) (quote :name)))
+                false))))))))
+
+(def selfhost/refs::bulk-expected-matches?
+  (fn (mode)
+    (fn (op)
+      (fn (current)
+        (if ((core/sym::eq? mode) (quote :unconditional))
+          true
+          (if ((core/sym::eq? mode) (quote :same-or-absent))
+            (if (selfhost/refs::nil? current)
+              true
+              ((core/eq? current)
+                ((selfhost/store-authority::field op) (quote :new-hash))))
+            (((selfhost/refs::expected-matches?
+                 ((selfhost/store-authority::field op) (quote :expected-old-present)))
+               ((selfhost/store-authority::field op) (quote :expected-old)))
+              current)))))))
+
+(def selfhost/refs::bulk-conflict-loop
+  (fn (mode)
+    (fn (ops)
+      (fn (refs)
+        (fn (index)
+          (if ((core/int::eq? index) (core/vec::len ops))
+            nil
+            (let ((op ((core/vec::get ops) index)))
+              (let
+                ((name ((selfhost/store-authority::field op) (quote :name)))
+                  (current
+                    ((core/map::get refs)
+                      ((selfhost/store-authority::field op) (quote :name)))))
+                (if (((selfhost/refs::bulk-expected-matches? mode) op) current)
+                  ((((selfhost/refs::bulk-conflict-loop mode) ops) refs)
+                    ((core/int::add index) 1))
+                  {:hash current :name name})))))))))
+
+(def selfhost/refs::bulk-apply-loop
+  (fn (ops)
+    (fn (index)
+      (fn (refs)
+        (if ((core/int::eq? index) (core/vec::len ops))
+          refs
+          (let ((op ((core/vec::get ops) index)))
+            (let
+              ((name ((selfhost/store-authority::field op) (quote :name)))
+                (new-hash ((selfhost/store-authority::field op) (quote :new-hash))))
+              (((selfhost/refs::bulk-apply-loop ops) ((core/int::add index) 1))
+                (if (selfhost/refs::nil? new-hash)
+                  (selfhost/refs::remove-loop (core/map::entries refs) name 0 {})
+                  (((core/map::put refs) name) new-hash))))))))))
+
+(def selfhost/refs::set-many
+  (fn (request payload)
+    (if ((selfhost/store-authority::exact-map? payload) [:mode :ops :refs])
+      (let
+        ((mode ((selfhost/store-authority::field payload) (quote :mode)))
+          (ops ((selfhost/store-authority::field payload) (quote :ops)))
+          (refs ((selfhost/store-authority::field payload) (quote :refs))))
+        (if (selfhost/refs::bulk-mode? mode)
+          (if (selfhost/refs::vec? ops)
+            (if ((core/int::lt? 4096) (core/vec::len ops))
+              (selfhost/refs::reject request "bulk ref update exceeds 4096 operations")
+              (if ((((selfhost/refs::bulk-ops? mode) ops) 0) nil)
+                (if (selfhost/refs::refs? refs)
+                  (let ((conflict ((((selfhost/refs::bulk-conflict-loop mode) ops) refs) 0)))
+                    (if (selfhost/refs::nil? conflict)
+                      (selfhost/refs::result request (quote :write) nil []
+                        (((selfhost/refs::bulk-apply-loop ops) 0) refs) nil)
+                      (selfhost/refs::result request (quote :conflict)
+                        ((selfhost/store-authority::field conflict) (quote :hash))
+                        ((core/vec::push []) conflict) nil nil)))
+                  (selfhost/refs::reject request "refs snapshot must be a string-to-hash map"))
+                (selfhost/refs::reject request
+                  "bulk ref operations must be valid, strictly sorted, and unique")))
+            (selfhost/refs::reject request "bulk ref operations must be a vector"))
+          (selfhost/refs::reject request "unsupported bulk ref update mode")))
+      (selfhost/refs::reject request "set-many payload fields mismatch"))))
+
 (def core/refs::authority
   (fn (request)
     (if ((selfhost/store-authority::exact-map? request) [:kind :op :payload :v])
@@ -184,7 +345,9 @@
                   (selfhost/refs::list request payload)
                   (if ((core/sym::eq? op) (quote :set))
                     (selfhost/refs::set request payload)
-                    (selfhost/refs::reject request "unsupported refs operation"))))
+                    (if ((core/sym::eq? op) (quote :set-many))
+                      (selfhost/refs::set-many request payload)
+                      (selfhost/refs::reject request "unsupported refs operation")))))
               (selfhost/refs::reject request "refs operation must be a symbol")))
           (selfhost/refs::reject request "refs request version mismatch"))
         (selfhost/refs::reject request "refs request kind mismatch"))

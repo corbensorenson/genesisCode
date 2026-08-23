@@ -81,6 +81,74 @@ fn sync_pull_ref_conflict_requires_force() {
 }
 
 #[test]
+fn sync_pull_ref_conflict_leaves_the_entire_batch_unchanged() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_sync_atomic_refs", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_atomic_refs");
+
+    let module_art = parse_term(r#"{:kind "module" :v 1 :content "atomic"}"#).unwrap();
+    let module_hex = reg.put_artifact(print_term(&module_art).as_bytes());
+    let module_h = gc_coreform::hash_term(&module_art);
+    let snap_t = mk_snapshot(&module_hex, module_h);
+    let snap_hex = reg.put_artifact(print_term(&snap_t).as_bytes());
+    let patch_t = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hex = reg.put_artifact(print_term(&patch_t).as_bytes());
+    let evidence_t =
+        parse_term(r#"{:type :vcs/evidence :v 1 :kind :unit-tests :data nil}"#).unwrap();
+    let evidence_hex = reg.put_artifact(print_term(&evidence_t).as_bytes());
+    let commit_t = mk_commit(&snap_hex, &patch_hex, &evidence_hex);
+    let remote_head = reg.put_artifact(print_term(&commit_t).as_bytes());
+    {
+        let mut state = reg.st.lock().unwrap();
+        state
+            .refs
+            .insert("refs/heads/a".to_string(), remote_head.clone());
+        state
+            .refs
+            .insert("refs/heads/z".to_string(), remote_head.clone());
+    }
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+    let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
+    let original = "0".repeat(64);
+    refs.set("refs/heads/z", Some(&original), None).unwrap();
+
+    let payload = parse_term(&format!(
+        r#"{{
+          :remote "{remote}"
+          :refs ["refs/heads/a" "refs/heads/z"]
+          :depth 0
+          :force false
+        }}"#
+    ))
+    .unwrap();
+    let (forms, hash) = mk_prog("core/sync::pull", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let result = run(
+        &mut context,
+        &caps,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    assert!(is_sealed_error(
+        &context,
+        &result.value,
+        "core/refs/conflict"
+    ));
+    assert_eq!(refs.get("refs/heads/a").unwrap(), None);
+    assert_eq!(refs.get("refs/heads/z").unwrap(), Some(original));
+}
+
+#[test]
 fn sync_remote_allowlist_is_enforced() {
     let reg = Arc::new(MemRegistry::new());
     gc_registry::register_inproc("t3", reg).expect("register inproc");
