@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/pkg::lock-model-authority",
-  "contentIdentitySha256": "7501ca33b5769ca3430ba42a07c29481fa9f15d32c4b6d5cdde2a6dc75683b56",
+  "contentIdentitySha256": "2bd5da98d0c2c323d056a93cc0b6f3dc485506da9fd4d5a1720cfc2f4366631b",
   "decisionInventory": [
     "supported-lock-version-admission",
     "workspace-and-policy-normalization",
@@ -47,7 +47,8 @@
     "core/pkg-low::install",
     "core/pkg-low::verify",
     "core/gc-low::plan",
-    "core/gc-low::run"
+    "core/gc-low::run",
+    "genesis gcpm remove"
   ],
   "requestKind": "genesis/pkg-lock-model-authority-request-v0.1",
   "resultKind": "genesis/pkg-lock-model-authority-result-v0.1",

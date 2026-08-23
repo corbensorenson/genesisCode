@@ -260,7 +260,7 @@ policy = "policy:default-v0.1"
 
 [locked]
 "dep" = { snapshot = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", source_selector = "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
-"keep" = { snapshot = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source_selector = "snapshot:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", registry = "mirror", environment_fingerprint = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" }
+"keep" = { commit = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", snapshot = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", source_selector = "snapshot:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", resolved_ref = "refs/tags/v1.0.0", exports_hash = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", registry = "mirror", environment_fingerprint = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" }
 
 [artifacts]
 receipt = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
@@ -294,6 +294,15 @@ receipt = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     assert!(!lock_src.contains("\"dep\" ="));
     assert!(lock_src.contains("\"keep\" ="));
     assert!(lock_src.contains("environment_fingerprint = \"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\""));
+    assert!(
+        lock_src.contains(
+            "commit = \"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\""
+        )
+    );
+    assert!(lock_src.contains("resolved_ref = \"refs/tags/v1.0.0\""));
+    assert!(lock_src.contains(
+        "exports_hash = \"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\""
+    ));
     assert!(lock_src.contains(
         "receipt = \"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\""
     ));
@@ -348,6 +357,52 @@ fn gcpm_remove_rejects_empty_name_without_write() {
         .failure();
 
     assert_eq!(fs::read_to_string(dir.join("genesis.lock")).unwrap(), body);
+}
+
+#[test]
+fn gcpm_remove_rejects_semantically_invalid_lock_without_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let body = r#"version = 2
+workspace = "ws"
+policy = "policy:default-v0.1"
+
+[requirements]
+dep = { selector = "snapshot:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", update_policy = 7 }
+
+[locked]
+"#;
+    fs::write(dir.join("genesis.lock"), body).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["remove", "dep", "--lock", "genesis.lock"])
+        .assert()
+        .failure();
+
+    assert_eq!(fs::read_to_string(dir.join("genesis.lock")).unwrap(), body);
+}
+
+#[test]
+fn gcpm_remove_rejects_oversized_lock_without_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let body = vec![b'x'; (4 * 1024 * 1024) + 1];
+    fs::write(dir.join("genesis.lock"), &body).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["remove", "dep", "--lock", "genesis.lock"])
+        .assert()
+        .failure();
+
+    assert_eq!(fs::read(dir.join("genesis.lock")).unwrap(), body);
 }
 
 #[cfg(unix)]

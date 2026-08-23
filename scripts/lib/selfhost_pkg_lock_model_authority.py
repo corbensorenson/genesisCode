@@ -50,7 +50,8 @@ PACKAGE_OPERATIONS = [
     "core/pkg-low::install", "core/pkg-low::verify",
 ]
 GC_OPERATIONS = ["core/gc-low::plan", "core/gc-low::run"]
-OPERATIONS = PACKAGE_OPERATIONS + GC_OPERATIONS
+CLI_OPERATIONS = ["genesis gcpm remove"]
+OPERATIONS = PACKAGE_OPERATIONS + GC_OPERATIONS + CLI_OPERATIONS
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
     "binding": "core/pkg::lock-model-authority",
@@ -148,6 +149,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     classifier = source_text(root, "crates/gc_effects/src/pkg_lock_read_authority.rs", overrides)
     gc_dispatch = source_text(root, "crates/gc_effects/src/runner_cap_gc_gpk_low.rs", overrides)
     gc_sources = source_text(root, "crates/gc_effects/src/runner_gc_ops.rs", overrides)
+    cli_adapter = source_text(root, "crates/gc_cli_driver/src/pkg_lock_model_authority.rs", overrides)
+    cli_remove = source_text(root, "crates/gc_cli_driver/src/pkg_workspace_remove.rs", overrides)
     runner = source_text(root, "crates/gc_effects/src/runner.rs", overrides)
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
 
@@ -179,7 +182,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ):
         if marker not in parent:
             fail(f"bounded lock transport missing marker: {marker}")
-    for operation in OPERATIONS:
+    for operation in PACKAGE_OPERATIONS + GC_OPERATIONS:
         if operation not in classifier:
             fail(f"runner lazy authority set missing {operation}")
     if 'matches!(op, "core/gc-low::plan" | "core/gc-low::run")' not in classifier:
@@ -202,6 +205,26 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("production missing-authority path does not fail closed")
     if "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)" not in runner:
         fail("runner does not use the closed lock authority operation set")
+
+    for marker in (
+        'const AUTHORITY_BINDING: &str = "core/pkg::lock-model-authority"',
+        "const SOURCE_LIMIT: usize = 4 * 1024 * 1024", "pub(crate) fn read_bounded(",
+        ".take((SOURCE_LIMIT as u64) + 1)", "authorize_bytes(",
+        ".get(AUTHORITY_BINDING)", "decode(value, &request_hash)", "validate_model(&model)",
+    ):
+        if marker not in cli_adapter:
+            fail(f"CLI lock model adapter missing marker: {marker}")
+    if cli_remove.count("pkg_lock_model_authority::authorize_bytes(") != 2:
+        fail("gcpm remove does not authorize both input and emitted lock models")
+    production_remove = cli_remove.split("pub(super) fn handle_remove(", 1)[1].split(
+        "fn decode_plan(", 1
+    )[0]
+    if "pkg_lock_model_authority::read_bounded(lock_path)" not in production_remove:
+        fail("gcpm remove does not cap the user lock before allocation growth")
+    if "std::fs::read(lock_path)" in production_remove:
+        fail("gcpm remove retains an unbounded user-controlled lock read")
+    if "GenesisLock::" in production_remove or "candidate != plan.model" not in production_remove:
+        fail("gcpm remove retains native model authority or omits exact post-write comparison")
 
     for marker in (
         "pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>",
@@ -262,6 +285,17 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if ("internal" not in limitations or "toml" not in limitations or "h0" not in limitations
             or "core/gc-low::{plan,run}" not in limitations):
         fail("semantic ledger does not disclose the partial internal authority and TOML oracle")
+    workspace_row = next((item for item in ledger.get("semanticDecisions", [])
+                          if item.get("id") == "SD-PACKAGE-WORKSPACE"), None)
+    if not workspace_row or workspace_row.get("currentLevel") != "H0":
+        fail("SD-PACKAGE-WORKSPACE must remain truthful H0")
+    for path in (profile["sourceModule"], "crates/gc_cli_driver/src/pkg_lock_model_authority.rs"):
+        if path not in workspace_row.get("productionAuthorityPaths", []):
+            fail(f"workspace ledger missing lock model authority path: {path}")
+    if profile["spec"] not in workspace_row.get("specAuthorityPaths", []):
+        fail("workspace ledger missing lock model specification")
+    if profile["independentVerifier"] not in workspace_row.get("verifierPaths", []):
+        fail("workspace ledger missing lock model verifier")
     if source_identity(profile["sourceModule"], module.encode()) != profile["sourceSha256"]:
         fail("lock model authority source identity mismatch")
 
@@ -282,6 +316,8 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/runner_cap_pkg_low.rs",
         "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
         "crates/gc_effects/src/runner_gc_ops.rs", "crates/gc_effects/src/runner.rs",
+        "crates/gc_cli_driver/src/pkg_lock_model_authority.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
     ]
     sources = {path: source_text(root, path, {}) for path in paths}
     mutations = []
@@ -323,6 +359,9 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "gc_lock_authority_fails_closed_before_store_mutation_when_missing", "gc_missing_authority_is_ignored", "gc-fail-closed-control")
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "sandbox_path_allow_missing(base_dir, lock_s, false)", "base_dir.join(lock_s)", "gc-lock-path-admission")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
+    source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".get(AUTHORITY_BINDING)", ".get(\"native-model\")", "cli-model-route")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "pkg_lock_model_authority::read_bounded(lock_path)", "std::fs::read(lock_path)", "cli-bounded-read")
+    source_mutation("crates/gc_cli_driver/src/pkg_workspace_remove.rs", "candidate != plan.model", "candidate == plan.model", "cli-post-write-check")
 
     controls = 0
     for changed_profile, overrides, name in mutations:
@@ -332,7 +371,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 22:
+    if controls != 25:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-model-authority: self-test ok (negative_controls={controls})")
     return controls

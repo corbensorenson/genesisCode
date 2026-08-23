@@ -3,7 +3,6 @@ use std::path::Path;
 
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_kernel::{Apply, Value};
-use gc_pkg::{GenesisLock, LockedEntry, Requirement};
 
 use super::LocalPkgResult;
 
@@ -24,7 +23,15 @@ pub(super) fn handle_remove(
     name: &str,
     lock_path: &Path,
 ) -> Result<LocalPkgResult, String> {
-    let original = GenesisLock::load(lock_path).map_err(|error| error.to_string())?;
+    preflight_lock_path(lock_path)?;
+    let lock_bytes = crate::pkg_lock_model_authority::read_bounded(lock_path)?;
+    let mut context = crate::mk_ctx(cli);
+    let prelude = crate::build_prelude(&mut context);
+    let mut environment = prelude.env;
+    crate::load_selfhost_toolchain(cli, &mut context, &mut environment)
+        .map_err(|error| format!("load workspace-remove authority: {error:?}"))?;
+    let original =
+        crate::pkg_lock_model_authority::authorize_bytes(&mut context, &environment, &lock_bytes)?;
     let request = Term::Map(
         [
             (
@@ -35,10 +42,7 @@ pub(super) fn handle_remove(
                 TermOrdKey(Term::symbol(":lock")),
                 Term::Str(lock_path.display().to_string()),
             ),
-            (
-                TermOrdKey(Term::symbol(":model")),
-                lock_model_term(&original)?,
-            ),
+            (TermOrdKey(Term::symbol(":model")), original.clone()),
             (
                 TermOrdKey(Term::symbol(":name")),
                 Term::Str(name.to_string()),
@@ -49,11 +53,6 @@ pub(super) fn handle_remove(
         .collect(),
     );
     let request_hash = hex32(hash_term(&request));
-    let mut context = crate::mk_ctx(cli);
-    let prelude = crate::build_prelude(&mut context);
-    let mut environment = prelude.env;
-    crate::load_selfhost_toolchain(cli, &mut context, &mut environment)
-        .map_err(|error| format!("load workspace-remove authority: {error:?}"))?;
     let authority = environment
         .get(AUTHORITY_BINDING)
         .ok_or_else(|| format!("missing binding {AUTHORITY_BINDING}"))?;
@@ -66,7 +65,7 @@ pub(super) fn handle_remove(
         ));
     }
     let plan = decode_plan(value, &request_hash, name, lock_path)?;
-    let writer_request = lock_write_request(lock_path, plan.model)?;
+    let writer_request = lock_write_request(lock_path, &plan.model)?;
     let writer_hash = hex32(hash_term(&writer_request));
     let writer = environment
         .get(LOCK_WRITE_BINDING)
@@ -75,13 +74,13 @@ pub(super) fn handle_remove(
         .apply(&mut context, Value::data(writer_request))
         .map_err(|error| format!("{LOCK_WRITE_BINDING} failed: {error}"))?;
     let (bytes, lock_hash) = decode_lock_write(writer_value, &writer_hash)?;
-    let body = std::str::from_utf8(&bytes)
-        .map_err(|_| "workspace-remove lock bytes must be UTF-8".to_string())?;
-    let candidate = GenesisLock::from_toml_str(lock_path, body)
-        .map_err(|error| format!("workspace-remove lock document is invalid: {error}"))?;
-    validate_candidate(&original, &candidate, name)?;
-    let expected_removed =
-        original.requirements.contains_key(name) || original.locked.contains_key(name);
+    let candidate =
+        crate::pkg_lock_model_authority::authorize_bytes(&mut context, &environment, &bytes)?;
+    if candidate != plan.model {
+        return Err("workspace-remove written lock model contradicts authorized plan".to_string());
+    }
+    let expected_removed = model_contains_name(&original, ":requirements", name)?
+        || model_contains_name(&original, ":locked", name)?;
     if plan.removed != expected_removed {
         return Err("workspace-remove authority :removed contradicts input".to_string());
     }
@@ -93,7 +92,6 @@ pub(super) fn handle_remove(
         (":removed", Term::Bool(plan.removed)),
     ]);
 
-    preflight_lock_path(lock_path)?;
     crate::pkg_scaffold::atomic_write_text(lock_path, &bytes)
         .map_err(|error| format!("write {}: {error}", lock_path.display()))?;
 
@@ -177,10 +175,15 @@ fn decode_plan(
     Ok(AuthorizedRemovePlan { model, removed })
 }
 
-fn lock_write_request(lock_path: &Path, model: Term) -> Result<Term, String> {
-    let Term::Map(mut payload) = model else {
+fn lock_write_request(lock_path: &Path, model: &Term) -> Result<Term, String> {
+    let Term::Map(mut payload) = model.clone() else {
         return Err("workspace-remove model must be map".to_string());
     };
+    let locked = payload
+        .get(&TermOrdKey(Term::symbol(":locked")))
+        .ok_or_else(|| "workspace-remove model missing :locked".to_string())?;
+    let writer_locked = lock_writer_locked_model(locked)?;
+    payload.insert(TermOrdKey(Term::symbol(":locked")), writer_locked);
     payload.insert(
         TermOrdKey(Term::symbol(":lock")),
         Term::Str(lock_path.display().to_string()),
@@ -239,218 +242,60 @@ fn require_exact_term_map(term: &Term, names: &[&str], label: &str) -> Result<()
     require_exact_fields(fields, names, label)
 }
 
-fn validate_candidate(
-    original: &GenesisLock,
-    candidate: &GenesisLock,
-    removed_name: &str,
-) -> Result<(), String> {
-    for (matches, label) in [
-        (candidate.version == original.version, "version"),
-        (candidate.workspace == original.workspace, "workspace"),
-        (candidate.policy == original.policy, "policy"),
-        (candidate.registries == original.registries, "registries"),
-        (candidate.artifacts == original.artifacts, "artifacts"),
-        (
-            !candidate.requirements.contains_key(removed_name),
-            "target requirement",
-        ),
-        (
-            !candidate.locked.contains_key(removed_name),
-            "target locked entry",
-        ),
-    ] {
-        if !matches {
-            return Err(format!(
-                "workspace-remove lock contradicts requested mutation: {label}"
-            ));
-        }
-    }
-    validate_requirements_except(
-        &original.requirements,
-        &candidate.requirements,
-        removed_name,
-    )?;
-    validate_locked_except(&original.locked, &candidate.locked, removed_name)?;
-    Ok(())
-}
-
-fn validate_requirements_except(
-    original: &BTreeMap<String, Requirement>,
-    candidate: &BTreeMap<String, Requirement>,
-    removed_name: &str,
-) -> Result<(), String> {
-    let expected_len = original.len() - usize::from(original.contains_key(removed_name));
-    if candidate.len() != expected_len {
-        return Err(format!(
-            "workspace-remove lock contradicts requested mutation: requirement inventory expected {expected_len}, got {}",
-            candidate.len()
-        ));
-    }
-    for (name, value) in original
-        .iter()
-        .filter(|(name, _)| name.as_str() != removed_name)
-    {
-        let other = candidate.get(name).ok_or_else(|| {
-            "workspace-remove lock contradicts requested mutation: missing requirement".to_string()
-        })?;
-        for (matches, label) in [
-            (value.selector == other.selector, "selector"),
-            (value.update_policy == other.update_policy, "update policy"),
-            (value.registry == other.registry, "requirement registry"),
-            (value.strategy == other.strategy, "strategy"),
-            (value.tag_policy == other.tag_policy, "tag policy"),
-        ] {
-            if !matches {
-                return Err(format!(
-                    "workspace-remove lock contradicts requested mutation: requirement {label}"
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn validate_locked_except(
-    original: &BTreeMap<String, LockedEntry>,
-    candidate: &BTreeMap<String, LockedEntry>,
-    removed_name: &str,
-) -> Result<(), String> {
-    if candidate.len() != original.len() - usize::from(original.contains_key(removed_name)) {
-        return Err(
-            "workspace-remove lock contradicts requested mutation: locked inventory".to_string(),
-        );
-    }
-    for (name, value) in original
-        .iter()
-        .filter(|(name, _)| name.as_str() != removed_name)
-    {
-        let other = candidate.get(name).ok_or_else(|| {
-            "workspace-remove lock contradicts requested mutation: missing locked entry".to_string()
-        })?;
-        for (matches, label) in [
-            (value.commit == other.commit, "commit"),
-            (value.snapshot == other.snapshot, "snapshot"),
-            (value.registry == other.registry, "locked registry"),
-            (
-                value.source_selector == other.source_selector,
-                "source selector",
-            ),
-            (value.resolved_ref == other.resolved_ref, "resolved ref"),
-            (value.exports_hash == other.exports_hash, "exports hash"),
-            (
-                value.environment_fingerprint == other.environment_fingerprint,
-                "environment fingerprint",
-            ),
-        ] {
-            if !matches {
-                return Err(format!(
-                    "workspace-remove lock contradicts requested mutation: locked {label}"
-                ));
-            }
-        }
-    }
-    Ok(())
-}
-
-fn lock_model_term(lock: &GenesisLock) -> Result<Term, String> {
-    let version = i64::try_from(lock.version)
-        .map_err(|_| "lock version exceeds protocol integer range".to_string())?;
-    let string_map = |values: &BTreeMap<String, String>| {
-        Term::Map(
-            values
-                .iter()
-                .map(|(name, value)| {
-                    (
-                        TermOrdKey(Term::Str(name.clone())),
-                        Term::Str(value.clone()),
-                    )
-                })
-                .collect(),
-        )
+fn lock_writer_locked_model(term: &Term) -> Result<Term, String> {
+    let Term::Map(entries) = term else {
+        return Err("workspace-remove model :locked must be map".to_string());
     };
-    let requirements = lock
-        .requirements
+    entries
         .iter()
         .map(|(name, value)| {
-            let update_policy = match value.update_policy {
-                gc_pkg::UpdatePolicy::Manual => ":manual",
-                gc_pkg::UpdatePolicy::Auto => ":auto",
+            let Term::Map(fields) = value else {
+                return Err("workspace-remove locked entry must be map".to_string());
             };
-            (
-                TermOrdKey(Term::Str(name.clone())),
+            require_exact_fields(
+                fields,
+                &[
+                    ":commit",
+                    ":environment-fingerprint",
+                    ":exports-hash",
+                    ":registry",
+                    ":resolved-ref",
+                    ":snapshot",
+                    ":source-selector",
+                ],
+                "workspace-remove locked entry",
+            )?;
+            Ok((
+                name.clone(),
                 map([
-                    (
-                        ":registry",
-                        value.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-                    ),
-                    (":selector", Term::Str(value.selector.clone())),
-                    (
-                        ":strategy",
-                        Term::symbol(format!(":{}", value.strategy.as_str())),
-                    ),
-                    (
-                        ":tag-policy",
-                        value.tag_policy.clone().map(Term::Str).unwrap_or(Term::Nil),
-                    ),
-                    (":update-policy", Term::symbol(update_policy)),
-                ]),
-            )
-        })
-        .collect();
-    let locked = lock
-        .locked
-        .iter()
-        .map(|(name, value)| {
-            (
-                TermOrdKey(Term::Str(name.clone())),
-                map([
-                    (
-                        ":commit",
-                        value.commit.clone().map(Term::Str).unwrap_or(Term::Nil),
-                    ),
+                    (":commit", field(fields, ":commit")?.clone()),
                     (
                         ":environment-fingerprint",
-                        value
-                            .environment_fingerprint
-                            .clone()
-                            .map(Term::Str)
-                            .unwrap_or(Term::Nil),
+                        field(fields, ":environment-fingerprint")?.clone(),
                     ),
+                    (":exports_hash", field(fields, ":exports-hash")?.clone()),
+                    (":registry", field(fields, ":registry")?.clone()),
+                    (":resolved-ref", field(fields, ":resolved-ref")?.clone()),
+                    (":snapshot", field(fields, ":snapshot")?.clone()),
                     (
-                        ":exports_hash",
-                        value
-                            .exports_hash
-                            .clone()
-                            .map(Term::Str)
-                            .unwrap_or(Term::Nil),
+                        ":source_selector",
+                        field(fields, ":source-selector")?.clone(),
                     ),
-                    (
-                        ":registry",
-                        value.registry.clone().map(Term::Str).unwrap_or(Term::Nil),
-                    ),
-                    (
-                        ":resolved-ref",
-                        value
-                            .resolved_ref
-                            .clone()
-                            .map(Term::Str)
-                            .unwrap_or(Term::Nil),
-                    ),
-                    (":snapshot", Term::Str(value.snapshot.clone())),
-                    (":source_selector", Term::Str(value.source_selector.clone())),
                 ]),
-            )
+            ))
         })
-        .collect();
-    Ok(map([
-        (":artifacts", string_map(&lock.artifacts)),
-        (":locked", Term::Map(locked)),
-        (":policy", Term::Str(lock.policy.clone())),
-        (":registries", string_map(&lock.registries)),
-        (":requirements", Term::Map(requirements)),
-        (":version", Term::Int(version.into())),
-        (":workspace", Term::Str(lock.workspace.clone())),
-    ]))
+        .collect::<Result<BTreeMap<_, _>, _>>()
+        .map(Term::Map)
+}
+
+fn model_contains_name(model: &Term, collection: &str, name: &str) -> Result<bool, String> {
+    let Term::Map(fields) = model else {
+        return Err("workspace-remove model must be map".to_string());
+    };
+    let Term::Map(entries) = field(fields, collection)? else {
+        return Err(format!("workspace-remove model {collection} must be map"));
+    };
+    Ok(entries.contains_key(&TermOrdKey(Term::Str(name.to_string()))))
 }
 
 fn preflight_lock_path(path: &Path) -> Result<(), String> {

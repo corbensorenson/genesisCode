@@ -83,6 +83,7 @@ mod pkg_assurance_pack_ops;
 mod pkg_caps_templates;
 mod pkg_contract;
 mod pkg_doctor;
+mod pkg_lock_model_authority;
 mod pkg_manifest_authority;
 mod pkg_reports;
 mod pkg_runtime_profile;
