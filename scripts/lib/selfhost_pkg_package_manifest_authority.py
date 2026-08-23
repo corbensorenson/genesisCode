@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independently verify the partial package-manifest authority cutover."""
+"""Independently verify the package-manifest authority cutover."""
 
 from __future__ import annotations
 
@@ -51,11 +51,6 @@ SOURCE_MODULES = [
     "selfhost/pkg_package_manifest_config_v1.gc",
     "selfhost/pkg_package_manifest_authority_v1.gc",
 ]
-EFFECT_RESIDUALS = {
-    "crates/gc_effects/src/runner_editor_tasks.rs": 1,
-    "crates/gc_effects/src/runner_editor_task_workflows.rs": 1,
-    "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs": 2,
-}
 FIELDS = {
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
     "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
@@ -83,14 +78,14 @@ CONSTANTS = {
         "package-relative-path-resolution-source-loading-and-effect-dispatch",
     ],
     "hostOracle": {
-        "productionRequired": True,
-        "productionResidualPaths": list(EFFECT_RESIDUALS),
-        "reachability": "effects-residual-and-test-or-parity",
+        "productionRequired": False,
+        "productionResidualPaths": [],
+        "reachability": "test-or-parity-only",
         "removalTask": "R4.2.e",
     },
     "independentVerifier": "scripts/lib/selfhost_pkg_package_manifest_authority.py",
     "kind": "genesis/selfhost-pkg-package-manifest-authority-v0.1",
-    "productionEntrypoints": ["genesis", "gc_obligations", "gc_patches"],
+    "productionEntrypoints": ["genesis", "gc_effects", "gc_obligations", "gc_patches"],
     "requestKind": "genesis/pkg-package-manifest-authority-request-v0.1",
     "resultKind": "genesis/pkg-package-manifest-authority-result-v0.1",
     "schema": "docs/spec/SELFHOST_PKG_PACKAGE_MANIFEST_AUTHORITY_v0.1.schema.json",
@@ -100,7 +95,6 @@ CONSTANTS = {
 }
 NONCLAIMS = {
     "bootstrap-fixpoint",
-    "effects-editor-package-manifest-cutover",
     "generic-toml-syntax-codec",
     "h2-package-resolution-closure",
     "package-filesystem-or-source-loading-authority",
@@ -170,6 +164,21 @@ def validate_profile(profile, schema, check_identity=True) -> None:
     for name, expected in CONSTANTS.items():
         if profile.get(name) != expected:
             fail(f"profile {name} drift")
+    host_schema = schema["properties"].get("hostOracle", {}).get("properties", {})
+    if (
+        host_schema.get("productionRequired", {}).get("const") is not False
+        or host_schema.get("productionResidualPaths", {}).get("maxItems") != 0
+        or host_schema.get("reachability", {}).get("const") != "test-or-parity-only"
+        or host_schema.get("removalTask", {}).get("const") != "R4.2.e"
+    ):
+        fail("schema host-oracle closure drift")
+    entrypoint_schema = schema["properties"].get("productionEntrypoints", {})
+    if (
+        set(entrypoint_schema.get("items", {}).get("enum", []))
+        != set(CONSTANTS["productionEntrypoints"])
+        or entrypoint_schema.get("minItems") != len(CONSTANTS["productionEntrypoints"])
+    ):
+        fail("schema production-entrypoint closure drift")
     if set(profile.get("nonclaims", [])) != NONCLAIMS:
         fail("profile nonclaim inventory drift")
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(profile.get("auditDate", ""))):
@@ -215,6 +224,17 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     transport = text(root, "crates/gc_pkg/src/manifest_authority.rs", overrides)
     adapter = text(root, "crates/gc_obligations/src/package_manifest_authority.rs", overrides)
     cli_adapter = text(root, "crates/gc_cli_driver/src/pkg_manifest_authority.rs", overrides)
+    effects_adapter = text(
+        root, "crates/gc_effects/src/pkg_package_manifest_authority.rs", overrides
+    )
+    effects_runner = text(root, "crates/gc_effects/src/runner.rs", overrides)
+    effects_module = text(
+        root, "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs", overrides
+    )
+    editor_tasks = text(root, "crates/gc_effects/src/runner_editor_tasks.rs", overrides)
+    editor_workflows = text(
+        root, "crates/gc_effects/src/runner_editor_task_workflows.rs", overrides
+    )
     tests = text(root, "crates/gc_obligations/src/tests/package_manifest_authority.rs", overrides)
     spec = text(root, profile["spec"], overrides)
     ledger = parse_json(
@@ -282,6 +302,29 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "resolved_coreform_frontend(cli)",
         "gc_obligations::load_package_manifest_with_frontend(path, frontend)",
     ], "CLI package-manifest adapter")
+    require_markers(effects_adapter, [
+        "pub(crate) struct PkgPackageManifestAuthority",
+        "pub(crate) fn required_for_request",
+        "load_selfhost_coreform_toolchain_v1_with_mode(",
+        ".get(PACKAGE_MANIFEST_AUTHORITY_BINDING)",
+        "read_package_manifest_transport(path)",
+        "package_manifest_authority_request(",
+        "decode_authorized_package_manifest(",
+        "returned sealed ERROR",
+    ], "effects package-manifest adapter")
+    if "PackageManifest::load(" in effects_adapter:
+        fail("native package-manifest fallback reachable in effects adapter")
+    require_markers(effects_runner, [
+        "PkgPackageManifestAuthority::required_for_request",
+        ".and_then(PkgPackageManifestAuthority::load)",
+        "package-manifest consumers require the artifact-loaded GenesisCode authority",
+    ], "effects package-manifest authority loader")
+    if effects_module.count(".load_manifest(&pkg_path)") != 2:
+        fail("package-low package-manifest authority custody drift")
+    if editor_tasks.count(".load_manifest(&pkg_pathbuf)") != 1:
+        fail("editor package-analysis manifest authority custody drift")
+    if editor_workflows.count(".load_manifest(path)") != 1:
+        fail("editor workspace-index manifest authority custody drift")
     for path, marker in CLAIMED_CALLERS.items():
         require_markers(text(root, path, overrides), [marker], f"manifest custody {path}")
 
@@ -290,7 +333,6 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "crates/gc_obligations/src/obligation_authority_tests.rs": 19,
         "crates/gc_obligations/src/obligations/frontend_module_ops.rs": 1,
         "crates/gc_obligations/src/package_manifest_authority.rs": 1,
-        **EFFECT_RESIDUALS,
     }
     actual_direct = direct_load_inventory(root, overrides)
     # Files under src/tests are test-only and do not participate in production reachability.
@@ -321,7 +363,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ], "package-manifest authority tests")
     require_markers(spec, [
         "Artifact-loaded `core/pkg::package-manifest-authority` exclusively decides",
-        "named temporary\n  production residual",
+        "No production\n  caller may invoke that native semantic oracle",
         "Unknown TOML keys are ignored",
         "Unicode-NFC module file path",
     ], "package-manifest normative specification")
@@ -339,8 +381,9 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
         "crates/gc_pkg/src/manifest_authority.rs",
         "crates/gc_obligations/src/package_manifest_authority.rs",
+        "crates/gc_effects/src/pkg_package_manifest_authority.rs",
         "GenesisCode exclusively owns structural package-manifest admission",
-        "effects package-low and editor routes remain a production residual",
+        "no production route retains the native package-manifest semantic oracle",
     ], "package-manifest ownership ledger")
 
 
@@ -358,6 +401,11 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_pkg/src/manifest_authority.rs",
         "crates/gc_obligations/src/package_manifest_authority.rs",
         "crates/gc_cli_driver/src/pkg_manifest_authority.rs",
+        "crates/gc_effects/src/pkg_package_manifest_authority.rs",
+        "crates/gc_effects/src/runner.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs",
+        "crates/gc_effects/src/runner_editor_tasks.rs",
+        "crates/gc_effects/src/runner_editor_task_workflows.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
         "crates/gc_obligations/src/obligations/frontend_module_ops.rs",
         "crates/gc_obligations/src/obligation_authority_tests.rs",
@@ -365,7 +413,6 @@ def self_test(root: Path, profile, schema) -> int:
         "docs/spec/PACKAGE_TOML.md",
         "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
         *CLAIMED_CALLERS,
-        *EFFECT_RESIDUALS,
     ]
     sources = {path: text(root, path, {}) for path in dict.fromkeys(paths)}
     mutations = []
@@ -380,7 +427,7 @@ def self_test(root: Path, profile, schema) -> int:
         ("binding", "core/pkg::legacy-package-manifest"),
         ("decisionInventory", profile["decisionInventory"][:-1]),
         ("hostMechanisms", profile["hostMechanisms"][:-1]),
-        ("hostOracle", {**profile["hostOracle"], "productionRequired": False}),
+        ("hostOracle", {**profile["hostOracle"], "productionRequired": True}),
         ("nonclaims", profile["nonclaims"][:-1]),
         ("sourceSha256", "f" * 64),
     ):
@@ -427,7 +474,7 @@ def self_test(root: Path, profile, schema) -> int:
     caller = "crates/gc_patches/src/patch_apply.rs"
     source_mutation(caller, "load_package_manifest_with_frontend(", "PackageManifest::load(", "patch custody")
     effects = "crates/gc_effects/src/runner_editor_tasks.rs"
-    source_mutation(effects, "PackageManifest::load(&pkg_pathbuf)", "load_package_manifest_with_frontend(&pkg_pathbuf)", "declared effects residual")
+    source_mutation(effects, ".load_manifest(&pkg_pathbuf)", "PackageManifest::load(&pkg_pathbuf)", "effects native fallback")
     tests = "crates/gc_obligations/src/tests/package_manifest_authority.rs"
     source_mutation(tests, "package_manifest_authority_rejects_nonportable_paths", "legacy_nonportable_paths", "path negative control")
     source_mutation(tests, "package_manifest_authority_preserves_schema_repair_contract", "legacy_schema_repair_test", "schema repair control")
@@ -436,7 +483,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation(spec, "Unknown TOML keys are ignored", "Unknown TOML keys are semantic", "unknown field contract")
     ledger = "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json"
     source_mutation(ledger, profile["kind"], "native-package-manifest", "ledger authority")
-    source_mutation(ledger, "effects package-low and editor routes remain a production residual", "all effects routes are self-hosted", "ledger residual")
+    source_mutation(ledger, "no production route retains the native package-manifest semantic oracle", "effects routes may use the native package-manifest semantic oracle", "ledger residual")
 
     controls = 0
     for changed_profile, overrides, name in mutations:

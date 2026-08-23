@@ -21,18 +21,12 @@
     "hostOracle": {
       "additionalProperties": false,
       "properties": {
-        "productionRequired": { "const": true },
+        "productionRequired": { "const": false },
         "productionResidualPaths": {
-          "prefixItems": [
-            { "const": "crates/gc_effects/src/runner_editor_tasks.rs" },
-            { "const": "crates/gc_effects/src/runner_editor_task_workflows.rs" },
-            { "const": "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs" }
-          ],
-          "items": false,
-          "minItems": 3,
+          "maxItems": 0,
           "type": "array"
         },
-        "reachability": { "const": "effects-residual-and-test-or-parity" },
+        "reachability": { "const": "test-or-parity-only" },
         "removalTask": { "const": "R4.2.e" }
       },
       "required": [
@@ -51,8 +45,8 @@
       "uniqueItems": true
     },
     "productionEntrypoints": {
-      "items": { "enum": ["gc_obligations", "gc_patches", "genesis"] },
-      "minItems": 3,
+      "items": { "enum": ["gc_effects", "gc_obligations", "gc_patches", "genesis"] },
+      "minItems": 4,
       "type": "array",
       "uniqueItems": true
     },

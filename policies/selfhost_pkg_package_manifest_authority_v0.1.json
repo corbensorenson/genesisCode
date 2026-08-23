@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/pkg::package-manifest-authority",
-  "contentIdentitySha256": "e9e1d8ad6aa11b7102b035900837b9c699ee2e9b9e843446060422817cfb0ebf",
+  "contentIdentitySha256": "efdcafbe1aee57788b63368684c9f547e7cfb4defa9390557c434ffb4aa85fb8",
   "decisionInventory": [
     "documented-pre-schema-and-exact-schema-one-admission",
     "required-field-and-legacy-default-normalization",
@@ -21,20 +21,15 @@
     "package-relative-path-resolution-source-loading-and-effect-dispatch"
   ],
   "hostOracle": {
-    "productionRequired": true,
-    "productionResidualPaths": [
-      "crates/gc_effects/src/runner_editor_tasks.rs",
-      "crates/gc_effects/src/runner_editor_task_workflows.rs",
-      "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs"
-    ],
-    "reachability": "effects-residual-and-test-or-parity",
+    "productionRequired": false,
+    "productionResidualPaths": [],
+    "reachability": "test-or-parity-only",
     "removalTask": "R4.2.e"
   },
   "independentVerifier": "scripts/lib/selfhost_pkg_package_manifest_authority.py",
   "kind": "genesis/selfhost-pkg-package-manifest-authority-v0.1",
   "nonclaims": [
     "bootstrap-fixpoint",
-    "effects-editor-package-manifest-cutover",
     "generic-toml-syntax-codec",
     "h2-package-resolution-closure",
     "package-filesystem-or-source-loading-authority",
@@ -46,6 +41,7 @@
   ],
   "productionEntrypoints": [
     "genesis",
+    "gc_effects",
     "gc_obligations",
     "gc_patches"
   ],

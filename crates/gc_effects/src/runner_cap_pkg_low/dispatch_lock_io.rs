@@ -21,6 +21,7 @@ pub(super) fn dispatch_lock_io(
     refs: Option<&RefsDb>,
     pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     pkg_lock_write_authority: Option<&mut PkgLockWriteAuthority>,
+    pkg_package_manifest_authority: Option<&mut PkgPackageManifestAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -246,7 +247,9 @@ pub(super) fn dispatch_lock_io(
                 }
             }
         }
-        "core/pkg-low::load-package" => handle_load_package(payload, pol, error_tok, op),
+        "core/pkg-low::load-package" => {
+            handle_load_package(payload, pol, pkg_package_manifest_authority, error_tok, op)
+        }
         "core/pkg-low::save-lock" => {
             save_lock::dispatch_save_lock(payload, pol, pkg_lock_write_authority, error_tok, op)
         }
@@ -470,6 +473,7 @@ mod tests {
             None,
             None,
             Some(&mut authority),
+            None,
             None,
             &mut budget,
             error_token,

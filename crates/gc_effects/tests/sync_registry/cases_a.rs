@@ -94,7 +94,9 @@ path = "demo.gc"
     };
     let message = error.to_string();
     assert!(
-        message.contains("missing selfhost package snapshot authority"),
+        message.contains(
+            "package-manifest consumers require the artifact-loaded GenesisCode authority"
+        ),
         "unexpected missing-authority error: {message}"
     );
     assert_eq!(std::fs::read_dir(&missing_store).unwrap().count(), 0);

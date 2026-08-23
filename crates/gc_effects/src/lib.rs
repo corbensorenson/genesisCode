@@ -3,6 +3,7 @@ mod lock;
 mod log;
 mod pkg_lock_read_authority;
 mod pkg_lock_write_authority;
+mod pkg_package_manifest_authority;
 mod pkg_resolution_identity_authority;
 mod policy;
 mod refs;

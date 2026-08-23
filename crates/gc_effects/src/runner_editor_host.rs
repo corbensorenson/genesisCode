@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 use gc_coreform::{Term, TermOrdKey, canonicalize_module, hash_module, parse_module, print_module};
 use gc_kernel::{SealId, Value};
 use gc_opt::optimize_module_with_report;
-use gc_pkg::PackageManifest;
 
+use crate::pkg_package_manifest_authority::PkgPackageManifestAuthority;
 use crate::policy::OpPolicy;
 use crate::runner_host_bridge::{BridgeError, HostBridgeRuntime, call_host_bridge};
 use crate::runner_io_ops::path_to_slash;
@@ -53,6 +53,7 @@ impl Default for EditorHostRuntime {
 pub(crate) fn editor_host_call(
     runtime: &mut EditorHostRuntime,
     bridge_runtime: &mut HostBridgeRuntime,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
     op: &str,
     payload: &Term,
     pol: Option<&OpPolicy>,
@@ -63,7 +64,10 @@ pub(crate) fn editor_host_call(
     }
     if is_first_party_editor_op(op) && !has_explicit_bridge_profile(pol) {
         return Some(Value::data(first_party_editor_response(
-            runtime, op, payload,
+            runtime,
+            manifest_authority,
+            op,
+            payload,
         )));
     }
     Some(
@@ -100,7 +104,12 @@ fn is_first_party_editor_op(op: &str) -> bool {
     )
 }
 
-fn first_party_editor_response(runtime: &mut EditorHostRuntime, op: &str, payload: &Term) -> Term {
+fn first_party_editor_response(
+    runtime: &mut EditorHostRuntime,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+    op: &str,
+    payload: &Term,
+) -> Term {
     match op {
         "editor/clipboard::get" => first_party_clipboard_get(runtime),
         "editor/clipboard::set" => first_party_clipboard_set(runtime, payload),
@@ -115,7 +124,9 @@ fn first_party_editor_response(runtime: &mut EditorHostRuntime, op: &str, payloa
         | "editor/task::optimize-module"
         | "editor/task::parse-module"
         | "editor/task::test-pkg"
-        | "editor/task::typecheck-pkg" => first_party_task_spawn(runtime, op, payload),
+        | "editor/task::typecheck-pkg" => {
+            first_party_task_spawn(runtime, manifest_authority, op, payload)
+        }
         "editor/task::poll" => first_party_task_poll(runtime, payload),
         "editor/task::cancel" => first_party_task_cancel(runtime, payload),
         _ => editor_error(op, "editor/first-party-unsupported-op"),
@@ -301,10 +312,15 @@ fn first_party_watch_unsubscribe(runtime: &mut EditorHostRuntime, payload: &Term
     ])
 }
 
-fn first_party_task_spawn(runtime: &mut EditorHostRuntime, op: &str, payload: &Term) -> Term {
+fn first_party_task_spawn(
+    runtime: &mut EditorHostRuntime,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+    op: &str,
+    payload: &Term,
+) -> Term {
     let task_kind = requested_task_kind(op, payload);
     let task_input = requested_task_input(op, payload);
-    let execution = execute_editor_task(&task_kind, &task_input);
+    let execution = execute_editor_task(&task_kind, &task_input, manifest_authority);
     let partial_count = execution.partials.len();
     let result = execution.result;
     let state = if !execution.partials.is_empty() {

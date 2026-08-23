@@ -12,6 +12,7 @@ use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
 use crate::pkg_lock_read_authority::PkgLockReadAuthority;
 use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
+use crate::pkg_package_manifest_authority::PkgPackageManifestAuthority;
 use crate::pkg_resolution_identity_authority::*;
 use crate::policy::{AuthorizedMaxBytes, CapsPolicy, OpPolicy};
 use crate::refs::{RefsDb, SetInput, SetManyResult, SetResult};
@@ -70,6 +71,9 @@ use crate::runner_xr_host::{XrHostRuntime, xr_host_call};
 use crate::store::ArtifactStore;
 use crate::store_authority::StoreAuthority;
 
+#[cfg(all(test, not(target_os = "wasi")))]
+#[path = "runner_remote_allow_tests.rs"]
+mod remote_allow_tests;
 #[path = "runner_cap_gc_gpk_low.rs"]
 mod runner_cap_gc_gpk_low;
 #[path = "runner_cap_pkg_low.rs"]
@@ -205,6 +209,7 @@ pub fn run(
     let mut refs_authority = None;
     let mut pkg_lock_read_authority = None;
     let mut pkg_lock_write_authority = None;
+    let mut pkg_package_manifest_authority = None;
     let mut pkg_resolution_identity_authority = None;
 
     macro_rules! run_try {
@@ -347,6 +352,19 @@ pub fn run(
                                 .transpose()
                         );
                     }
+                    if pkg_package_manifest_authority.is_none()
+                        && PkgPackageManifestAuthority::required_for_request(&req.op, &req.payload)
+                    {
+                        pkg_package_manifest_authority = Some(run_try!(
+                            policy
+                                .selfhost_authority_config()
+                                .ok_or_else(|| EffectsError::Log(
+                                    "package-manifest consumers require the artifact-loaded GenesisCode authority"
+                                        .to_string(),
+                                ))
+                                .and_then(PkgPackageManifestAuthority::load)
+                        ));
+                    }
                     if pkg_resolution_identity_authority.is_none()
                         && matches!(
                             req.op.as_str(),
@@ -410,6 +428,7 @@ pub fn run(
                     } else if let Some(editor_resp) = editor_host_call(
                         &mut editor_runtime,
                         &mut bridge_runtime,
+                        pkg_package_manifest_authority.as_mut(),
                         &req.op,
                         &req.payload,
                         pol,
@@ -428,6 +447,7 @@ pub fn run(
                             pkg_lock_read_authority.as_mut(),
                             pkg_lock_write_authority.as_mut(),
                             pkg_resolution_identity_authority.as_mut(),
+                            pkg_package_manifest_authority.as_mut(),
                             &mut artifact_budget_state,
                             store_authority.as_mut(),
                             &mut bridge_runtime,
@@ -668,32 +688,5 @@ fn replay_validate_decision_cap(
             }
             Ok(())
         }
-    }
-}
-
-#[cfg(all(test, not(target_os = "wasi")))]
-mod remote_allow_tests {
-    use super::remote_allow_matches;
-
-    #[test]
-    fn remote_allow_rejects_host_confusion() {
-        assert!(
-            !remote_allow_matches(
-                "https://trusted.example.com.evil",
-                "https://trusted.example.com"
-            )
-            .expect("allow check")
-        );
-    }
-
-    #[test]
-    fn remote_allow_accepts_exact_origin_and_path_prefix() {
-        assert!(
-            remote_allow_matches(
-                "https://registry.example.com",
-                "https://registry.example.com"
-            )
-            .expect("allow check")
-        );
     }
 }

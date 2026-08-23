@@ -712,7 +712,10 @@ path = "a.gc"
     )
     .expect("write a.gc");
 
-    let pol = CapsPolicy::from_toml_str(&format!(
+    let artifact = replay_authority_artifact();
+    let caps_path = root.join("caps.toml");
+    std::fs::write(
+        &caps_path,
         r#"
 allow = [
   "editor/clipboard::set",
@@ -730,11 +733,16 @@ allow = [
 ]
 
 [op."io/fs::write"]
-base_dir = "{}"
+base_dir = "."
 create_dirs = true
 "#,
-        root.display()
-    ))
+    )
+    .expect("write caps");
+    let pol = CapsPolicy::load_with_selfhost_authority(
+        &caps_path,
+        gc_prelude::SelfhostBootstrapMode::ArtifactOnly,
+        Some(&artifact),
+    )
     .expect("caps");
     let run_once = |src: &str| -> Value {
         let forms = parse_module(src).expect("parse module");
@@ -815,7 +823,7 @@ create_dirs = true
               (let ((watch-id ((core/map::get watch-resp) ':watch-id)))
                 ((core/effect::bind (core/effect::perform
                                       'io/fs::write
-                                      {{:path "{}/new.gc" :data "(def z 1)\n"}}
+                                      {{:path "new.gc" :data "(def z 1)\n"}}
                                       (fn (x) (core/effect::pure x))))
                   (fn (_)
                     (core/effect::perform
@@ -824,7 +832,6 @@ create_dirs = true
                       (fn (x) (core/effect::pure x)))))))))
         prog
     "#,
-        root.display(),
         root.display()
     );
     let watch_v = run_once(&watch_src);

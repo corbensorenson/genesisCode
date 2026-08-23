@@ -99,16 +99,16 @@ Each entry:
 
 - Artifact-loaded `core/pkg::package-manifest-authority` exclusively decides
   structural package-manifest admission and normalization for production CLI,
-  obligation, recursive dependency, and patch routes. Its request and result are
-  bound to the exact BLAKE3 hash of the source bytes. Rust may perform a bounded
-  file read, UTF-8 validation, generic TOML syntax decoding into a neutral term,
-  bounded artifact evaluation, strict closed result decoding, and typed structure
-  materialization; those mechanisms do not decide manifest semantics.
+  obligation, recursive dependency, patch, package-low effect, and editor package
+  routes. Its request and result are bound to the exact BLAKE3 hash of the source
+  bytes. Rust may perform a bounded file read, UTF-8 validation, generic TOML
+  syntax decoding into a neutral term, bounded artifact evaluation, strict closed
+  result decoding, and typed structure materialization; those mechanisms do not
+  decide manifest semantics.
 - The retained Rust `PackageManifest::load` implementation is a compatibility
-  oracle for tests and the explicit parity profile, plus a named temporary
-  production residual in package-low and editor effect routes. Those effect routes
-  remain host-authoritative until their separate R4.2.e lifecycle transaction;
-  this partial cutover does not claim H2 or aggregate R4.2.e closure.
+  oracle reachable only from tests and the explicit parity profile. No production
+  caller may invoke that native semantic oracle. This package-manifest cutover does
+  not claim H2 package-resolution authority or aggregate R4.2.e closure.
 
 - `genesis test` must verify that each module’s current hash matches the pinned `hash` field.
 - Dependencies must be hash-checked before use (local path deps are allowed but must match pinned hashes).

@@ -2,8 +2,11 @@ use super::*;
 use std::collections::BTreeMap;
 use std::collections::VecDeque;
 
-pub(super) fn task_build_pkg(input: &Term) -> TaskOutcome {
-    let analyzed = match analyze_package(input, false) {
+pub(super) fn task_build_pkg(
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> TaskOutcome {
+    let analyzed = match analyze_package(input, false, manifest_authority) {
         Ok(ok) => ok,
         Err(err) => return TaskOutcome::immediate(err),
     };
@@ -63,8 +66,11 @@ pub(super) fn task_build_pkg(input: &Term) -> TaskOutcome {
     }
 }
 
-pub(super) fn task_run_pkg(input: &Term) -> TaskOutcome {
-    let analyzed = match analyze_package(input, false) {
+pub(super) fn task_run_pkg(
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> TaskOutcome {
+    let analyzed = match analyze_package(input, false, manifest_authority) {
         Ok(ok) => ok,
         Err(err) => return TaskOutcome::immediate(err),
     };
@@ -130,8 +136,11 @@ pub(super) fn task_run_pkg(input: &Term) -> TaskOutcome {
     }
 }
 
-pub(super) fn task_debug_pkg(input: &Term) -> TaskOutcome {
-    let analyzed = match analyze_package(input, false) {
+pub(super) fn task_debug_pkg(
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> TaskOutcome {
+    let analyzed = match analyze_package(input, false, manifest_authority) {
         Ok(ok) => ok,
         Err(err) => return TaskOutcome::immediate(err),
     };
@@ -309,7 +318,10 @@ pub(super) fn task_refactor_module(input: &Term) -> TaskOutcome {
     }
 }
 
-pub(super) fn task_index_workspace(input: &Term) -> TaskOutcome {
+pub(super) fn task_index_workspace(
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> TaskOutcome {
     let Some(input_map) = payload_map(input) else {
         return TaskOutcome::immediate(task_diagnostic_error(
             "editor/task::index-workspace",
@@ -347,8 +359,16 @@ pub(super) fn task_index_workspace(input: &Term) -> TaskOutcome {
 
     let mut package_entries = Vec::new();
     let mut diagnostics = Vec::new();
+    let Some(manifest_authority) = manifest_authority else {
+        return TaskOutcome::immediate(task_diagnostic_error(
+            "editor/task::index-workspace",
+            "editor/task/pkg-authority-unavailable",
+            &root,
+            "artifact-loaded GenesisCode package-manifest authority is required".to_string(),
+        ));
+    };
     for path in &package_paths {
-        match PackageManifest::load(path) {
+        match manifest_authority.load_manifest(path) {
             Ok((manifest, _dir)) => {
                 package_entries.push(map_term(vec![
                     (":path", Term::Str(path_to_slash(path))),

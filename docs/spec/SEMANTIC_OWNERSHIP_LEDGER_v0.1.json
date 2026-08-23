@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "0b5752da342d1b21290f71b52556d55bf3aae4313c750936a51049de8b780d81",
+  "contentIdentitySha256": "d3628466c53386ad8d35fc2a9f73ee2b81ebf94c88d03408c426443576254f7c",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2074,6 +2074,7 @@
       "fallbackReachability": "reachable-parity-harness",
       "hostBindingPaths": [
         "crates/gc_effects/src",
+        "crates/gc_effects/src/pkg_package_manifest_authority.rs",
         "crates/gc_pkg/src/manifest_authority.rs",
         "crates/gc_obligations/src/package_manifest_authority.rs",
         "crates/gc_cli_driver/src/pkg_manifest_authority.rs",
@@ -2095,8 +2096,8 @@
         "Artifact-loaded GenesisCode exclusively owns core/pkg-low::verify ordered dependency planning, canonical hash observation and terminal-prefix binding, fail-fast error disposition, checked/missing/success accounting, contextual sealed diagnostics, and the exact public report under genesis/selfhost-pkg-verify-authority-v0.1; Rust retains bounded artifact presence, BLAKE3 integrity, schema parsing, and commit-closure traversal mechanisms",
         "Artifact-loaded GenesisCode exclusively chooses highest or lowest semver candidate ranks, applies deterministic lexical ref tie-breaking, and decides empty candidate sets under genesis/selfhost-pkg-semver-select-authority-v0.1; Rust retains semver grammar, range matching, precedence ranking, and ref observation only as bounded mechanisms",
         "Artifact-loaded GenesisCode exclusively owns core/pkg-low::publish policy and class selection, commit, evidence, and assurance admission, ordered object and cryptographic requests, signer threshold, role, and independence decisions, publication provenance, and the exact core/sync::push plan under genesis/selfhost-pkg-publish-authority-v0.1",
-        "Artifact-loaded GenesisCode exclusively owns structural package-manifest admission and normalization for production CLI, obligation, recursive dependency, and patch routes under genesis/selfhost-pkg-package-manifest-authority-v0.1, including documented pre-schema compatibility, exact schema-one admission, portable path rules, nested resource configuration, bounded collections and strings, and request/source-bound result construction",
-        "The generic Rust TOML syntax decoder, bounded package-manifest byte/UTF-8/neutral-term transport and typed materialization, package source frontend transport, bridge payload transport, exact-byte storage and atomic persistence, Ed25519 signing and supplied-key verification mechanisms, semver grammar/range matching/precedence ranking, ref observation, package graph solving and resolver mechanisms, registry behavior and transport, non-publish snapshot/commit/evidence/attestation schema parsing and artifact-store/BLAKE3 validation mechanisms, workspace scaffolding, non-publish policy admission, sandboxing, and bounded file transport remain production-required host mechanisms or host-authoritative; effects package-low and editor routes remain a production residual using the retained native package-manifest oracle, so SD-PACKAGE-RESOLUTION remains H0"
+        "Artifact-loaded GenesisCode exclusively owns structural package-manifest admission and normalization for production CLI, obligation, recursive dependency, patch, package-low effect, and editor package routes under genesis/selfhost-pkg-package-manifest-authority-v0.1, including documented pre-schema compatibility, exact schema-one admission, portable path rules, nested resource configuration, bounded collections and strings, and request/source-bound result construction",
+        "The generic Rust TOML syntax decoder, bounded package-manifest byte/UTF-8/neutral-term transport and typed materialization, package source frontend transport, bridge payload transport, exact-byte storage and atomic persistence, Ed25519 signing and supplied-key verification mechanisms, semver grammar/range matching/precedence ranking, ref observation, package graph solving and resolver mechanisms, registry behavior and transport, non-publish snapshot/commit/evidence/attestation schema parsing and artifact-store/BLAKE3 validation mechanisms, workspace scaffolding, non-publish policy admission, sandboxing, and bounded file transport remain production-required host mechanisms or host-authoritative; no production route retains the native package-manifest semantic oracle, but those broader unresolved package semantics keep SD-PACKAGE-RESOLUTION at H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -2142,6 +2143,7 @@
         "selfhost/pkg_package_manifest_core_v1.gc",
         "selfhost/pkg_package_manifest_config_v1.gc",
         "selfhost/pkg_package_manifest_authority_v1.gc",
+        "crates/gc_effects/src/pkg_package_manifest_authority.rs",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
@@ -2205,6 +2207,7 @@
         "selfhost/pkg_package_manifest_core_v1.gc",
         "selfhost/pkg_package_manifest_config_v1.gc",
         "selfhost/pkg_package_manifest_authority_v1.gc",
+        "crates/gc_effects/src/pkg_package_manifest_authority.rs",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
@@ -2269,6 +2272,7 @@
         "crates/gc_effects/src/pkg_verify_authority.rs",
         "crates/gc_effects/src/pkg_semver_select_authority.rs",
         "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
+        "crates/gc_effects/src/pkg_package_manifest_authority.rs",
         "crates/gc_effects/tests/sync_registry.rs",
         "crates/gc_obligations/src/tests/package_manifest_authority.rs"
       ],

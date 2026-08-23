@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "e281f1b9055a8814d408f2aca7decbb3b8618910b24e66ba29adf6a48d013970",
+      "inputIdentitySha256": "f7e1e68ca8d9d3d3c219b987acd9bc02065dc44a40aa19b9c9d5c427f71fecc5",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -364,7 +364,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -668,7 +668,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -828,7 +828,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1184,6 +1184,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -2753,7 +2754,7 @@
       "executionIdentitySha256": "d368d86edc3ac9c640e631f0fafc9012460c8fb68f88949143d1f595760d87c8",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger",
-      "inputIdentitySha256": "1f01587d735b669a1f20679f7f087aefc7249e0ac30f8007554e817c1ba26877",
+      "inputIdentitySha256": "25a8ba7113bf579653f56ab606e6ed38259a643f8d94b1f44f0083d7c461d140",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -2824,7 +2825,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3020,6 +3021,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -4215,7 +4217,7 @@
       "executionIdentitySha256": "b4ce4975b452fb76c91db4f754bf4d81f60de6de17232d04ba83c8cc3da37594",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-indices",
-      "inputIdentitySha256": "3dae9cd117270846d7eb81266ab638418027c85485b1d4ebad6c5363b292a020",
+      "inputIdentitySha256": "7ce0a09266e347ab8713dca94ba00b41cdee58ab3d4bf167acf01a7b5c895670",
       "inputs": {
         "paths": [
           "crates/gc_effects/src/runner_browser_host.rs",
@@ -4356,7 +4358,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4552,6 +4554,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -5763,7 +5766,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5959,6 +5962,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -7249,7 +7253,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7445,6 +7449,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -8944,7 +8949,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "f393b6bf7abc4f3f5be3be71f98e36f42eb657de44a63491a41712a3fe354baa",
+      "inputIdentitySha256": "dfce6da174119d75ebc7b810a048a96dcfda317624b73feabebc35d68275e2c0",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9159,7 +9164,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "6870be9e19eea43fedfd0e1b61492aa23cf06caf997b5fe480292ed2a8ac7065",
+      "inputIdentitySha256": "498c7a0807619038b2d1541c9846c51df35de9d5873c0dc37b9253ac78b9ee52",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9227,7 +9232,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -9423,6 +9428,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -10618,7 +10624,7 @@
       "executionIdentitySha256": "8cff602dbf244463fb827f70fc6ce31257fb76b4541100508567d3f1fd7ba641",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-adversarial-matrix",
-      "inputIdentitySha256": "f90d2532601acce417ef8049624c3841ce578c0fd2f076747ff2afacd302321d",
+      "inputIdentitySha256": "6f5472d77d8c90ff6d7e82ee2ec8120e8905d25ad432c0250b3c4d72fea0096b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10779,7 +10785,7 @@
       "executionIdentitySha256": "a633534861b74b8d43cdd3226dbcfc79e1b417f9f151828002d3177a7e37eb79",
       "expectedDurationSeconds": 600,
       "id": "gate/feature-matrix-gap-hygiene",
-      "inputIdentitySha256": "eefff1be32592a5a9a3ff99bbf4a63573911070fb8ef1793848bdac8865f7e3e",
+      "inputIdentitySha256": "a5a032b0ed23254c7c01bb985fc4049f332db855dced5fe40ed410e02f906b1a",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -10996,7 +11002,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "6aa6368ee460278d2f5343af5a0e241ac4f59a3c68fe59fa4cc4dcd33c5105c1",
+      "inputIdentitySha256": "ccb8ca6c92cd4d01a7536a317fe13204793513cce87274714e840e39d61818a1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11073,6 +11079,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -11708,7 +11715,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "50b5269a5b5b0a2bb0a8b7169538d933b628220f533e49c3c853883a29ce1466",
+      "inputIdentitySha256": "5dd3351ff9bfa2762e02c66629b291343c6dd527a276fb9ed8467e3a6482a89c",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -11895,7 +11902,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -12091,6 +12098,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -13286,7 +13294,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "e281f1b9055a8814d408f2aca7decbb3b8618910b24e66ba29adf6a48d013970",
+      "inputIdentitySha256": "f7e1e68ca8d9d3d3c219b987acd9bc02065dc44a40aa19b9c9d5c427f71fecc5",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13645,7 +13653,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "e281f1b9055a8814d408f2aca7decbb3b8618910b24e66ba29adf6a48d013970",
+      "inputIdentitySha256": "f7e1e68ca8d9d3d3c219b987acd9bc02065dc44a40aa19b9c9d5c427f71fecc5",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14004,7 +14012,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "e281f1b9055a8814d408f2aca7decbb3b8618910b24e66ba29adf6a48d013970",
+      "inputIdentitySha256": "f7e1e68ca8d9d3d3c219b987acd9bc02065dc44a40aa19b9c9d5c427f71fecc5",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14363,7 +14371,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "e281f1b9055a8814d408f2aca7decbb3b8618910b24e66ba29adf6a48d013970",
+      "inputIdentitySha256": "f7e1e68ca8d9d3d3c219b987acd9bc02065dc44a40aa19b9c9d5c427f71fecc5",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14919,7 +14927,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -15115,6 +15123,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -16968,7 +16977,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -17164,6 +17173,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -18363,7 +18373,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18564,7 +18574,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18760,6 +18770,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -20010,7 +20021,7 @@
       "executionIdentitySha256": "6466f307236f05e28ff3f1dd3b3e1715c59366428c614be4555b07b7e876cc25",
       "expectedDurationSeconds": 600,
       "id": "gate/host-abi-conformance",
-      "inputIdentitySha256": "088e9edede9221d8676f3d1b2d939052112d026a5b1e3f9d66718a3656627f99",
+      "inputIdentitySha256": "12ba91906a8192b51404097b2e3f73d5ebe16ad0fd2378bd212ded90bea05748",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20134,7 +20145,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20542,7 +20553,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20738,6 +20749,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -22122,7 +22134,7 @@
       "executionIdentitySha256": "e2b5370784c63ecd8601f5b9f80672f608955aa018ea494af34e68864b0908ce",
       "expectedDurationSeconds": 15,
       "id": "gate/pkg-low-semantic-boundary",
-      "inputIdentitySha256": "49afe55315231ec377fde62ff014cf7b266936e0246fa0a516e155e9b3f70bd2",
+      "inputIdentitySha256": "dabaf79a265f21c7d605c81091fa33064afd9a6b6ec681fa836ccbb706968747",
       "inputs": {
         "paths": [
           "crates/gc_effects/src/runner_cap_pkg_low.rs",
@@ -22230,7 +22242,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -22426,6 +22438,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -23817,7 +23830,7 @@
       "executionIdentitySha256": "40e0e760812ac402a0da62d9f43d62652d9bbe79f74df874a1bd7d528bb19c06",
       "expectedDurationSeconds": 600,
       "id": "gate/redteam-report",
-      "inputIdentitySha256": "3bd2f0d6269017bdc857c5efb674c386ec78b708dcb78eef263bd9464c5b5568",
+      "inputIdentitySha256": "26fcd06ad4a689c6d81108a10d67f00c09547195988a0b03954359c60c4777d0",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -23953,7 +23966,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "eab4b06dc1ea653783b327d51538a32169a2a353cd54afaa48aa50fc487a5f5d",
+      "inputIdentitySha256": "eb4084e509ec6ce75614fc9e6b44e1a6a3bf6bbb2e9091c193022e8aa8905dac",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24154,7 +24167,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "0f5125ef337faf8daeaa8cda547981625780a7a0695df8f0b66c5437efea36c3",
+      "inputIdentitySha256": "e6b7a0a0e010af5dd6cfca2b5eace63b40fcb099adc430871c1d3954144a3829",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24528,7 +24541,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "2d39b8b7e0d0a559cef1675450eb22cdaa7e9ee113876259dcaecc3f013de4e0",
+      "inputIdentitySha256": "92aecffadf0308b5f83f6399c0ff953c225990455a31c4874eabce306945f5c4",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -24723,7 +24736,7 @@
       "executionIdentitySha256": "c372f7a6ce19dd4e42e022f101937121a2ec70a6ada954600de2f74ada6e0183",
       "expectedDurationSeconds": 15,
       "id": "gate/runner-high-level-op-guard",
-      "inputIdentitySha256": "ba386d22083ff9dc90fcb512484cdf674c194b84033b4c94e24bd98795336ff4",
+      "inputIdentitySha256": "6ec21c47566aff78f3bd10032f7713c7a7a60e082ec74fd9dbe8f8d1cf318d9a",
       "inputs": {
         "paths": [
           "crates/gc_effects/src/runner_capability_dispatch.rs",
@@ -24775,7 +24788,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25205,7 +25218,7 @@
       "executionIdentitySha256": "01bb785daab1ca34fce902a23ee6468db4d05d60eae0a4f6e3ae0cbbb9cf68cc",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "266a79683924784711d6ea388176ec4f0ca07f472df1d6f8a0d1f232b27049d1",
+      "inputIdentitySha256": "d83af27570f63cccdd29bd8192c83221bfa36a41a95dd5ea25c6e16906d5e162",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25280,6 +25293,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -25828,7 +25842,7 @@
       "executionIdentitySha256": "31ea6993c7fcee4f72d4359ffa9c18009525b26d4a1587ddb2bc2e0e559ee21c",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-doc-runtime-parity",
-      "inputIdentitySha256": "fccd36c0275366964dd5f2de161cfea7a110920c9b3478cc0f83b719da9fd669",
+      "inputIdentitySha256": "3846127beae448e25bbd9d3b26da38f9fafe9f52de63cca38890cc11943a0904",
       "inputs": {
         "paths": [
           "docs/spec/CLI.md",
@@ -25934,7 +25948,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "194cf2785ebe1cf7c8f8c4943999d2d0d82555a40003c89f588d30a921e200f1",
+      "inputIdentitySha256": "55acd0f3cb2f4d6196b2efb20b68a0b49a480687ff569313accce670eb6f5b61",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26262,7 +26276,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26735,7 +26749,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26931,6 +26945,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -28244,7 +28259,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "657fa468eb7f7c5271b9094075a24bd641ff655af77a5fbe6d9557b290310a86",
+      "inputIdentitySha256": "02bdc71ca203a10e233ad5863a560efda74e7fe13a90289ae62a9a87849875cf",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28440,6 +28455,7 @@
           "crates/gc_effects/src/pkg_lock_ops_authority.rs",
           "crates/gc_effects/src/pkg_lock_read_authority.rs",
           "crates/gc_effects/src/pkg_lock_write_authority.rs",
+          "crates/gc_effects/src/pkg_package_manifest_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority.rs",
           "crates/gc_effects/src/pkg_publish_authority_adapter_tests.rs",
           "crates/gc_effects/src/pkg_publish_authority_crypto.rs",
@@ -29760,7 +29776,7 @@
       "executionIdentitySha256": "c5f2b56497aede470d6e28562b4027f1290bbc90388179f53c93cc1759059e1c",
       "expectedDurationSeconds": 15,
       "id": "gate/version-surfaces",
-      "inputIdentitySha256": "b32790fc915d75d602286f9fffb03cadbeb6aeb7e2c3d406c79f91a2b8dde4e4",
+      "inputIdentitySha256": "af6c01172e60ac2a651d41dcf56e8ab3d2a8483906920eb69f90bfe5c25b2877",
       "inputs": {
         "paths": [
           "Cargo.toml",
@@ -29833,7 +29849,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "eae267bda6757ef18f5e262110a926be7248996d05c03df4b1a66eefe7c978d6",
+      "inputIdentitySha256": "6b7fe1c8a0b643b8bf8d2a6f5da4858e1862a1316b9355dd5a020a0aa7182a70",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -30195,7 +30211,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -30352,7 +30368,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "407808fdd03b822f1c004a598ada8853e4b1370c668be15fda2a7c2411c3f09c",
+      "inputIdentitySha256": "88a6b352fae45fa523417c5bdc0329032c1bf5f408d8aba54743e21b7a3667d7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -30511,7 +30527,7 @@
       "executionIdentitySha256": "352025cc70b36a3be61f30d540c703e68cd628f85dd842ac902f78dacb6f2a9b",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-guide",
-      "inputIdentitySha256": "82d12e5399879e6d68c90a3e90e9b791382f01fb34d4fea29d93e90a0c7b639c",
+      "inputIdentitySha256": "4e68a535b9cb89e1c370a7cace33efeed8949580a3ca4fb2b8038de9e7fe8f99",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",

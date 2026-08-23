@@ -7,7 +7,7 @@ struct TaskSchema {
 }
 
 struct TaskSpec {
-    handler: fn(&Term) -> TaskOutcome,
+    handler: fn(&Term, Option<&mut PkgPackageManifestAuthority>) -> TaskOutcome,
     kind: &'static str,
     schema: TaskSchema,
 }
@@ -117,7 +117,7 @@ fn task_specs() -> &'static [TaskSpec] {
     &[
         TaskSpec {
             kind: "editor/task::parse-module",
-            handler: |input| TaskOutcome::immediate(task_parse_module(input)),
+            handler: |input, _| TaskOutcome::immediate(task_parse_module(input)),
             schema: TaskSchema {
                 required: &[],
                 optional: &[":path", ":source"],
@@ -126,7 +126,7 @@ fn task_specs() -> &'static [TaskSpec] {
         },
         TaskSpec {
             kind: "editor/task::fmt-coreform",
-            handler: |input| TaskOutcome::immediate(task_fmt_coreform(input)),
+            handler: |input, _| TaskOutcome::immediate(task_fmt_coreform(input)),
             schema: TaskSchema {
                 required: &[],
                 optional: &[":path", ":source"],
@@ -135,7 +135,7 @@ fn task_specs() -> &'static [TaskSpec] {
         },
         TaskSpec {
             kind: "editor/task::lint-module",
-            handler: |input| TaskOutcome::immediate(task_lint_module(input)),
+            handler: |input, _| TaskOutcome::immediate(task_lint_module(input)),
             schema: TaskSchema {
                 required: &[],
                 optional: &[":input", ":path", ":source"],
@@ -144,7 +144,7 @@ fn task_specs() -> &'static [TaskSpec] {
         },
         TaskSpec {
             kind: "editor/task::optimize-module",
-            handler: |input| TaskOutcome::immediate(task_optimize_module(input)),
+            handler: |input, _| TaskOutcome::immediate(task_optimize_module(input)),
             schema: TaskSchema {
                 required: &[],
                 optional: &[":out", ":path", ":source"],
@@ -153,7 +153,9 @@ fn task_specs() -> &'static [TaskSpec] {
         },
         TaskSpec {
             kind: "editor/task::typecheck-pkg",
-            handler: |input| TaskOutcome::immediate(task_typecheck_pkg(input)),
+            handler: |input, authority| {
+                TaskOutcome::immediate(task_typecheck_pkg(input, authority))
+            },
             schema: TaskSchema {
                 required: &[":pkg"],
                 optional: &[":path"],
@@ -162,7 +164,7 @@ fn task_specs() -> &'static [TaskSpec] {
         },
         TaskSpec {
             kind: "editor/task::test-pkg",
-            handler: |input| TaskOutcome::immediate(task_test_pkg(input)),
+            handler: |input, authority| TaskOutcome::immediate(task_test_pkg(input, authority)),
             schema: TaskSchema {
                 required: &[":pkg"],
                 optional: &[":caps", ":path"],
@@ -198,7 +200,7 @@ fn task_specs() -> &'static [TaskSpec] {
         },
         TaskSpec {
             kind: "editor/task::refactor-module",
-            handler: runner_editor_task_workflows::task_refactor_module,
+            handler: |input, _| runner_editor_task_workflows::task_refactor_module(input),
             schema: TaskSchema {
                 required: &[":from", ":to"],
                 optional: &[":path", ":source"],
@@ -221,7 +223,11 @@ fn task_spec(kind: &str) -> Option<&'static TaskSpec> {
     task_specs().iter().find(|spec| spec.kind == kind)
 }
 
-pub(super) fn execute_editor_task(kind: &str, input: &Term) -> TaskExecution {
+pub(super) fn execute_editor_task(
+    kind: &str,
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> TaskExecution {
     let Some(spec) = task_spec(kind) else {
         return unsupported_task_execution(kind);
     };
@@ -232,7 +238,7 @@ pub(super) fn execute_editor_task(kind: &str, input: &Term) -> TaskExecution {
             result: err,
         };
     }
-    let out = (spec.handler)(input);
+    let out = (spec.handler)(input, manifest_authority);
     TaskExecution {
         contract: task_contract(spec),
         partials: out.partials,

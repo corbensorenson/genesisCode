@@ -1,4 +1,5 @@
 use super::*;
+use crate::pkg_package_manifest_authority::PkgPackageManifestAuthority;
 
 #[path = "runner_editor_task_registry.rs"]
 mod runner_editor_task_registry;
@@ -25,8 +26,12 @@ impl TaskOutcome {
     }
 }
 
-pub(super) fn execute_editor_task(kind: &str, input: &Term) -> TaskExecution {
-    runner_editor_task_registry::execute_editor_task(kind, input)
+pub(super) fn execute_editor_task(
+    kind: &str,
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> TaskExecution {
+    runner_editor_task_registry::execute_editor_task(kind, input, manifest_authority)
 }
 
 fn task_parse_module(input: &Term) -> Term {
@@ -234,8 +239,11 @@ fn task_optimize_module(input: &Term) -> Term {
     ])
 }
 
-fn task_typecheck_pkg(input: &Term) -> Term {
-    let analyzed = match analyze_package(input, false) {
+fn task_typecheck_pkg(
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> Term {
+    let analyzed = match analyze_package(input, false, manifest_authority) {
         Ok(ok) => ok,
         Err(err) => return err,
     };
@@ -247,8 +255,11 @@ fn task_typecheck_pkg(input: &Term) -> Term {
     Term::Map(base)
 }
 
-fn task_test_pkg(input: &Term) -> Term {
-    let analyzed = match analyze_package(input, true) {
+fn task_test_pkg(
+    input: &Term,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
+) -> Term {
+    let analyzed = match analyze_package(input, true, manifest_authority) {
         Ok(ok) => ok,
         Err(err) => return err,
     };
@@ -268,6 +279,7 @@ fn task_test_pkg(input: &Term) -> Term {
 fn analyze_package(
     input: &Term,
     include_test_symbol_checks: bool,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
 ) -> Result<BTreeMap<TermOrdKey, Term>, Term> {
     let Some(input_map) = payload_map(input) else {
         return Err(task_diagnostic_error(
@@ -288,7 +300,15 @@ fn analyze_package(
         ));
     };
     let pkg_pathbuf = PathBuf::from(pkg_path.clone());
-    let (manifest, dir) = match PackageManifest::load(&pkg_pathbuf) {
+    let Some(manifest_authority) = manifest_authority else {
+        return Err(task_diagnostic_error(
+            "editor/task::pkg-analysis",
+            "editor/task/pkg-authority-unavailable",
+            &pkg_path,
+            "artifact-loaded GenesisCode package-manifest authority is required".to_string(),
+        ));
+    };
+    let (manifest, dir) = match manifest_authority.load_manifest(&pkg_pathbuf) {
         Ok(ok) => ok,
         Err(err) => {
             return Err(task_diagnostic_error(

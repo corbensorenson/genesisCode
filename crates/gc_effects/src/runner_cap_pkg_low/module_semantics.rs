@@ -1,5 +1,6 @@
 use super::*;
 use crate::pkg_lock_read_authority::{PkgLockReadAuthority, PkgSnapshotDecision};
+use crate::pkg_package_manifest_authority::PkgPackageManifestAuthority;
 use crate::runner_io_ops::payload_pkg_path;
 
 #[derive(Debug, Clone)]
@@ -71,6 +72,7 @@ fn module_semantics_error(e: ModuleSemanticError, error_tok: SealId, op: &str) -
 pub(super) fn handle_load_package(
     payload: &Term,
     pol: Option<&OpPolicy>,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
@@ -88,7 +90,13 @@ pub(super) fn handle_load_package(
     let base_dir = effective_base_dir(pol)?;
     let pkg_path = sandbox_path_read(&base_dir, &pkg_path_s)?;
 
-    let (manifest, pkg_dir) = match gc_pkg::PackageManifest::load(&pkg_path) {
+    let Some(manifest_authority) = manifest_authority else {
+        return Err(EffectsError::Log(
+            "core/pkg-low::load-package requires the artifact-loaded GenesisCode package-manifest authority"
+                .to_string(),
+        ));
+    };
+    let (manifest, pkg_dir) = match manifest_authority.load_manifest(&pkg_path) {
         Ok(x) => x,
         Err(e) => {
             return Ok(mk_error(
@@ -219,6 +227,7 @@ pub(super) fn handle_snapshot(
     policy: &CapsPolicy,
     store: &ArtifactStore,
     snapshot_authority: Option<&mut PkgLockReadAuthority>,
+    manifest_authority: Option<&mut PkgPackageManifestAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -240,7 +249,13 @@ pub(super) fn handle_snapshot(
     let base_dir = effective_base_dir(pol)?;
     let pkg_path = sandbox_path_read(&base_dir, &pkg_path_s)?;
 
-    let (manifest, pkg_dir) = match gc_pkg::PackageManifest::load(&pkg_path) {
+    let Some(manifest_authority) = manifest_authority else {
+        return Err(EffectsError::Log(
+            "core/pkg-low::snapshot requires the artifact-loaded GenesisCode package-manifest authority"
+                .to_string(),
+        ));
+    };
+    let (manifest, pkg_dir) = match manifest_authority.load_manifest(&pkg_path) {
         Ok(x) => x,
         Err(e) => {
             return Ok(mk_error(
