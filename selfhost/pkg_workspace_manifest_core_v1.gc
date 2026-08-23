@@ -1,0 +1,405 @@
+; Structural workspace-manifest admission from neutral TOML terms.
+
+(def selfhost/pkg-workspace-manifest::ok
+  (fn (value) {:message nil :ok true :value value}))
+
+(def selfhost/pkg-workspace-manifest::bad
+  (fn (message) {:message message :ok false :value nil}))
+
+(def selfhost/pkg-workspace-manifest::bool?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :bool))))
+
+(def selfhost/pkg-workspace-manifest::optional-string
+  (fn (value)
+    (fn (limit)
+      (fn (label)
+        (if (core/list::is-nil? value)
+          (selfhost/pkg-workspace-manifest::ok nil)
+          (if (((selfhost/pkg-scaffold::bounded-str? value) limit))
+            (selfhost/pkg-workspace-manifest::ok value)
+            (selfhost/pkg-workspace-manifest::bad label)))))))
+
+(def selfhost/pkg-workspace-manifest::required-string
+  (fn (value)
+    (fn (limit)
+      (fn (label)
+        (if (((selfhost/pkg-scaffold::bounded-str? value) limit))
+          (if (selfhost/pkg-scaffold::nonempty-str? value)
+            (selfhost/pkg-workspace-manifest::ok value)
+            (selfhost/pkg-workspace-manifest::bad label))
+          (selfhost/pkg-workspace-manifest::bad label))))))
+
+(def selfhost/pkg-workspace-manifest::bounded-string
+  (fn (value)
+    (fn (limit)
+      (fn (label)
+        (if (((selfhost/pkg-scaffold::bounded-str? value) limit))
+          (selfhost/pkg-workspace-manifest::ok value)
+          (selfhost/pkg-workspace-manifest::bad label))))))
+
+(def selfhost/pkg-workspace-manifest::normalize-backend
+  (fn (value)
+    (if (core/list::is-nil? value)
+      (selfhost/pkg-workspace-manifest::ok nil)
+      (let ((normalized (selfhost/pkg-workspace-env-select::normalize value)))
+        (if (core/list::is-nil? normalized)
+          (selfhost/pkg-workspace-manifest::bad
+            "runtime_backend must name a supported backend")
+          (selfhost/pkg-workspace-manifest::ok normalized))))))
+
+(def selfhost/pkg-workspace-manifest::member
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      (let
+        ((name
+          (((selfhost/pkg-workspace-manifest::required-string
+              ((core/map::get value) "name")) 1024)
+            "member name must be a non-empty string"))
+          (path
+            (((selfhost/pkg-workspace-manifest::required-string
+                ((core/map::get value) "path")) 16777216)
+              "member path must be a non-empty string"))
+          (role
+            (((selfhost/pkg-workspace-manifest::optional-string
+                ((core/map::get value) "role")) 16777216)
+              "member role must be a string")))
+        (if ((core/map::get name) (quote :ok))
+          (if ((core/map::get path) (quote :ok))
+            (if ((core/map::get role) (quote :ok))
+              (selfhost/pkg-workspace-manifest::ok
+                {
+                  :name ((core/map::get name) (quote :value))
+                  :path ((core/map::get path) (quote :value))
+                  :role ((core/map::get role) (quote :value))})
+              role)
+            path)
+          name))
+      (selfhost/pkg-workspace-manifest::bad "workspace member must be a table"))))
+
+(def selfhost/pkg-workspace-manifest::members-loop
+  (fn (values)
+    (fn (index)
+      (fn (state)
+        (if ((core/int::eq? index) (core/vec::len values))
+          (selfhost/pkg-workspace-manifest::ok state)
+          (let ((item (selfhost/pkg-workspace-manifest::member ((core/vec::get values) index))))
+            (if ((core/map::get item) (quote :ok))
+              (let
+                ((member ((core/map::get item) (quote :value)))
+                  (name ((core/map::get member) (quote :name)))
+                  (path ((core/map::get member) (quote :path))))
+                (if
+                  (core/list::is-nil?
+                    ((core/map::get ((core/map::get state) (quote :names))) name))
+                  (if
+                    (core/list::is-nil?
+                      ((core/map::get ((core/map::get state) (quote :paths))) path))
+                    (((selfhost/pkg-workspace-manifest::members-loop values)
+                        ((core/int::add index) 1))
+                      {
+                        :names
+                          (((core/map::put ((core/map::get state) (quote :names))) name) true)
+                        :paths
+                          (((core/map::put ((core/map::get state) (quote :paths))) path) true)
+                        :values
+                          ((core/vec::push ((core/map::get state) (quote :values))) member)})
+                    (selfhost/pkg-workspace-manifest::bad "duplicate workspace member path"))
+                  (selfhost/pkg-workspace-manifest::bad "duplicate workspace member name")))
+              item)))))))
+
+(def selfhost/pkg-workspace-manifest::members
+  (fn (value)
+    (if (selfhost/pkg-lock-read::vec? value)
+      (if ((core/int::lt? 0) (core/vec::len value))
+        (if ((core/int::lt? 4096) (core/vec::len value))
+          (selfhost/pkg-workspace-manifest::bad "workspace has too many members")
+          (let
+            ((result
+              (((selfhost/pkg-workspace-manifest::members-loop value) 0)
+                {:names {} :paths {} :values []})))
+            (if ((core/map::get result) (quote :ok))
+              (selfhost/pkg-workspace-manifest::ok
+                ((core/map::get ((core/map::get result) (quote :value))) (quote :values)))
+              result)))
+        (selfhost/pkg-workspace-manifest::bad "members must be non-empty"))
+      (selfhost/pkg-workspace-manifest::bad "members must be an array"))))
+
+(def selfhost/pkg-workspace-manifest::defaults
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let
+          ((registry
+            (((selfhost/pkg-workspace-manifest::optional-string
+                ((core/map::get table) "registry")) 16777216)
+              "default registry must be a string"))
+            (policy
+              (((selfhost/pkg-workspace-manifest::optional-string
+                  ((core/map::get table) "policy")) 16777216)
+                "default policy must be a string"))
+            (toolchain
+              (((selfhost/pkg-workspace-manifest::optional-string
+                  ((core/map::get table) "toolchain")) 16777216)
+                "default toolchain must be a string"))
+            (backend
+              (selfhost/pkg-workspace-manifest::normalize-backend
+                ((core/map::get table) "runtime_backend"))))
+          (if ((core/map::get registry) (quote :ok))
+            (if ((core/map::get policy) (quote :ok))
+              (if ((core/map::get toolchain) (quote :ok))
+                (if ((core/map::get backend) (quote :ok))
+                  (selfhost/pkg-workspace-manifest::ok
+                    {
+                      :policy ((core/map::get policy) (quote :value))
+                      :registry ((core/map::get registry) (quote :value))
+                      :runtime-backend ((core/map::get backend) (quote :value))
+                      :toolchain ((core/map::get toolchain) (quote :value))})
+                  backend)
+                toolchain)
+              policy)
+            registry))
+        (selfhost/pkg-workspace-manifest::bad "defaults must be a table")))))
+
+(def selfhost/pkg-workspace-manifest::profile
+  (fn (name)
+    (fn (value)
+      (let
+        ((valid-name
+          (((selfhost/pkg-workspace-manifest::bounded-string name) 1024)
+            "profile name must be a string")))
+        (if ((core/map::get valid-name) (quote :ok))
+          (if (selfhost/pkg-lock-read::map? value)
+            (let
+              ((caps
+                (((selfhost/pkg-workspace-manifest::optional-string
+                    ((core/map::get value) "caps_policy")) 16777216)
+                  "profile caps_policy must be a string"))
+                (registry
+                  (((selfhost/pkg-workspace-manifest::optional-string
+                      ((core/map::get value) "registry")) 16777216)
+                    "profile registry must be a string"))
+                (policy
+                  (((selfhost/pkg-workspace-manifest::optional-string
+                      ((core/map::get value) "policy")) 16777216)
+                    "profile policy must be a string"))
+                (toolchain
+                  (((selfhost/pkg-workspace-manifest::optional-string
+                      ((core/map::get value) "toolchain")) 16777216)
+                    "profile toolchain must be a string"))
+                (backend
+                  (selfhost/pkg-workspace-manifest::normalize-backend
+                    ((core/map::get value) "runtime_backend"))))
+              (if ((core/map::get caps) (quote :ok))
+                (if ((core/map::get registry) (quote :ok))
+                  (if ((core/map::get policy) (quote :ok))
+                    (if ((core/map::get toolchain) (quote :ok))
+                      (if ((core/map::get backend) (quote :ok))
+                        (selfhost/pkg-workspace-manifest::ok
+                          {
+                            :caps-policy ((core/map::get caps) (quote :value))
+                            :name name
+                            :policy ((core/map::get policy) (quote :value))
+                            :registry ((core/map::get registry) (quote :value))
+                            :runtime-backend ((core/map::get backend) (quote :value))
+                            :toolchain ((core/map::get toolchain) (quote :value))})
+                        backend)
+                      toolchain)
+                    policy)
+                  registry)
+                caps))
+            (selfhost/pkg-workspace-manifest::bad "profile must be a table"))
+          valid-name)))))
+
+(def selfhost/pkg-workspace-manifest::profiles-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-workspace-manifest::ok out)
+          (let
+            ((entry ((core/vec::get entries) index)))
+            (let
+              ((item
+                ((selfhost/pkg-workspace-manifest::profile
+                    ((core/vec::get entry) 0))
+                  ((core/vec::get entry) 1))))
+              (if ((core/map::get item) (quote :ok))
+                (((selfhost/pkg-workspace-manifest::profiles-loop entries)
+                    ((core/int::add index) 1))
+                  ((core/vec::push out) ((core/map::get item) (quote :value))))
+                item))))))))
+
+(def selfhost/pkg-workspace-manifest::profiles
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let ((entries (core/map::entries table)))
+          (if ((core/int::lt? 4096) (core/vec::len entries))
+            (selfhost/pkg-workspace-manifest::bad "workspace has too many profiles")
+            (((selfhost/pkg-workspace-manifest::profiles-loop entries) 0) [])))
+        (selfhost/pkg-workspace-manifest::bad "profiles must be a table")))))
+
+(def selfhost/pkg-workspace-manifest::string-vector-loop
+  (fn (values)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len values))
+        (selfhost/pkg-workspace-manifest::ok values)
+        (if (((selfhost/pkg-scaffold::bounded-str? ((core/vec::get values) index)) 16777216))
+          (((selfhost/pkg-workspace-manifest::string-vector-loop values)
+              ((core/int::add index) 1)))
+          (selfhost/pkg-workspace-manifest::bad "task args must contain only strings"))))))
+
+(def selfhost/pkg-workspace-manifest::task-args
+  (fn (value)
+    (let ((values (if (core/list::is-nil? value) [] value)))
+      (if (selfhost/pkg-lock-read::vec? values)
+        (if ((core/int::lt? 4096) (core/vec::len values))
+          (selfhost/pkg-workspace-manifest::bad "task has too many args")
+          ((selfhost/pkg-workspace-manifest::string-vector-loop values) 0))
+        (selfhost/pkg-workspace-manifest::bad "task args must be an array")))))
+
+(def selfhost/pkg-workspace-manifest::task
+  (fn (name)
+    (fn (value)
+      (let
+        ((valid-name
+          (((selfhost/pkg-workspace-manifest::bounded-string name) 1024)
+            "task name must be a string")))
+        (if ((core/map::get valid-name) (quote :ok))
+          (if (selfhost/pkg-lock-read::map? value)
+            (let
+              ((cmd
+                (((selfhost/pkg-workspace-manifest::required-string
+                    ((core/map::get value) "cmd")) 16777216)
+                  "task cmd must be a non-empty string"))
+                (file
+                  (((selfhost/pkg-workspace-manifest::optional-string
+                      ((core/map::get value) "file")) 16777216)
+                    "task file must be a string"))
+                (pkg
+                  (((selfhost/pkg-workspace-manifest::optional-string
+                      ((core/map::get value) "pkg")) 16777216)
+                    "task pkg must be a string"))
+                (args
+                  (selfhost/pkg-workspace-manifest::task-args
+                    ((core/map::get value) "args"))))
+              (if ((core/map::get cmd) (quote :ok))
+                (if ((core/map::get file) (quote :ok))
+                  (if ((core/map::get pkg) (quote :ok))
+                    (if ((core/map::get args) (quote :ok))
+                      (selfhost/pkg-workspace-manifest::ok
+                        {
+                          :args ((core/map::get args) (quote :value))
+                          :cmd ((core/map::get cmd) (quote :value))
+                          :file ((core/map::get file) (quote :value))
+                          :name name
+                          :pkg ((core/map::get pkg) (quote :value))})
+                      args)
+                    pkg)
+                  file)
+                cmd))
+            (selfhost/pkg-workspace-manifest::bad "task must be a table"))
+          valid-name)))))
+
+(def selfhost/pkg-workspace-manifest::tasks-loop
+  (fn (entries)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len entries))
+          (selfhost/pkg-workspace-manifest::ok out)
+          (let ((entry ((core/vec::get entries) index)))
+            (let
+              ((item
+                ((selfhost/pkg-workspace-manifest::task
+                    ((core/vec::get entry) 0))
+                  ((core/vec::get entry) 1))))
+              (if ((core/map::get item) (quote :ok))
+                (((selfhost/pkg-workspace-manifest::tasks-loop entries)
+                    ((core/int::add index) 1))
+                  ((core/vec::push out) ((core/map::get item) (quote :value))))
+                item))))))))
+
+(def selfhost/pkg-workspace-manifest::tasks
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let ((entries (core/map::entries table)))
+          (if ((core/int::lt? 4096) (core/vec::len entries))
+            (selfhost/pkg-workspace-manifest::bad "workspace has too many tasks")
+            (((selfhost/pkg-workspace-manifest::tasks-loop entries) 0) [])))
+        (selfhost/pkg-workspace-manifest::bad "tasks must be a table")))))
+
+(def selfhost/pkg-workspace-manifest::find-profile-loop
+  (fn (profiles)
+    (fn (name)
+      (fn (index)
+        (if ((core/int::eq? index) (core/vec::len profiles))
+          nil
+          (let ((profile ((core/vec::get profiles) index)))
+            (if ((core/eq? ((core/map::get profile) (quote :name))) name)
+              profile
+              (((selfhost/pkg-workspace-manifest::find-profile-loop profiles) name)
+                ((core/int::add index) 1)))))))))
+
+(def selfhost/pkg-workspace-manifest::find-profile
+  (fn (profiles)
+    (fn (name)
+      (((selfhost/pkg-workspace-manifest::find-profile-loop profiles) name) 0))))
+
+(def selfhost/pkg-workspace-manifest::normalize
+  (fn (document)
+    (fn (selected-profile)
+      (fn (require-profile)
+        (if (selfhost/pkg-lock-read::map? document)
+          (let
+            ((version ((core/map::get document) "version"))
+              (workspace
+                (((selfhost/pkg-workspace-manifest::required-string
+                    ((core/map::get document) "workspace")) 16777216)
+                  "workspace must be a non-empty string"))
+              (members
+                (selfhost/pkg-workspace-manifest::members
+                  ((core/map::get document) "members")))
+              (defaults
+                (selfhost/pkg-workspace-manifest::defaults
+                  ((core/map::get document) "defaults")))
+              (profiles
+                (selfhost/pkg-workspace-manifest::profiles
+                  ((core/map::get document) "profiles")))
+              (tasks
+                (selfhost/pkg-workspace-manifest::tasks
+                  ((core/map::get document) "tasks"))))
+            (if
+              (if (selfhost/pkg-lock-read::int? version)
+                ((core/int::eq? version) 1)
+                false)
+              (if ((core/map::get workspace) (quote :ok))
+                (if ((core/map::get members) (quote :ok))
+                  (if ((core/map::get defaults) (quote :ok))
+                    (if ((core/map::get profiles) (quote :ok))
+                      (if ((core/map::get tasks) (quote :ok))
+                        (let
+                          ((profile
+                            ((selfhost/pkg-workspace-manifest::find-profile
+                                ((core/map::get profiles) (quote :value)))
+                              selected-profile)))
+                          (if (if require-profile (core/list::is-nil? profile) false)
+                            (selfhost/pkg-workspace-manifest::bad
+                              "required workspace profile was not found")
+                            (selfhost/pkg-workspace-manifest::ok
+                              {
+                                :defaults ((core/map::get defaults) (quote :value))
+                                :members ((core/map::get members) (quote :value))
+                                :profiles ((core/map::get profiles) (quote :value))
+                                :selected-profile profile
+                                :tasks ((core/map::get tasks) (quote :value))
+                                :version 1
+                                :workspace ((core/map::get workspace) (quote :value))})))
+                        tasks)
+                      profiles)
+                    defaults)
+                  members)
+                workspace)
+              (selfhost/pkg-workspace-manifest::bad
+                "workspace version must be exactly 1")))
+          (selfhost/pkg-workspace-manifest::bad "workspace document must be a table"))))))

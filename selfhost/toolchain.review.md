@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `fbb85e8229024ac2255f390e2c4d14dbbb7a1ed178249070be6b8b013a39ab0f`
-- Freshness artifact hash: `fbb85e8229024ac2255f390e2c4d14dbbb7a1ed178249070be6b8b013a39ab0f`
-- Freshness source hash: `cf63af8fd890b32e43b43b9e093cc8f3993793aaa0f8e71afb76a27b0352c5ab`
-- Source aggregate hash (module path + module sha256): `5982e847160544f0ba5240f41575ab88e45a408afe83069320bfb30f6253a85d`
+- Artifact sha256: `9635790634d55cff817aa04baf2ae4f75324a25871bd2f37157940a11382fec1`
+- Freshness artifact hash: `9635790634d55cff817aa04baf2ae4f75324a25871bd2f37157940a11382fec1`
+- Freshness source hash: `4f7a2b8de70e8b7baa0a3fa0649e21032a63aab447007073098d833ab1e66fea`
+- Source aggregate hash (module path + module sha256): `040ec93d8d88feeb9a7a7c41ce26de3bc5bedb95b4dc46f79a28cb546327c071`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `136`
+- Module count: `138`
 
 ## Module Summary
 
@@ -110,7 +110,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_workspace_remove_authority_v1.gc` | 172 | 6825 | 12 | `ceb198ed6e8afc23` |
 | `selfhost/pkg_workspace_migrate_authority_v1.gc` | 281 | 12305 | 16 | `aaeaf0a9dbceb9ce` |
 | `selfhost/pkg_workspace_env_select_authority_v1.gc` | 176 | 7073 | 12 | `bad43ec9879fcf8f` |
-| `selfhost/pkg_workspace_env_core_v1.gc` | 563 | 27654 | 36 | `c6fe7fd7cabff4be` |
+| `selfhost/pkg_workspace_manifest_core_v1.gc` | 405 | 18704 | 22 | `e0cc1ff21d9b8ad4` |
+| `selfhost/pkg_workspace_manifest_authority_v1.gc` | 87 | 3403 | 7 | `3f051ddb1fa97ed2` |
+| `selfhost/pkg_workspace_env_core_v1.gc` | 562 | 27653 | 36 | `a7b4083410d24f3e` |
 | `selfhost/pkg_workspace_env_finalize_v1.gc` | 216 | 15378 | 1 | `b9bd4b945ddb10a7` |
 | `selfhost/pkg_workspace_env_authority_v1.gc` | 134 | 6862 | 11 | `c653eb8532bee0cd` |
 | `selfhost/pkg_workspace_task_core_v1.gc` | 409 | 19958 | 26 | `88bf6f9001003544` |
@@ -249,6 +251,8 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_workspace_remove_authority_v1.gc`: `selfhost/pkg-workspace-remove::request-kind`, `selfhost/pkg-workspace-remove::result-kind`, `selfhost/pkg-workspace-remove::bytes-equal-loop`, `selfhost/pkg-workspace-remove::string-equal?`, `selfhost/pkg-workspace-remove::remove-loop`, `selfhost/pkg-workspace-remove::remove-name`, `selfhost/pkg-workspace-remove::result`, `selfhost/pkg-workspace-remove::reject`
 - `selfhost/pkg_workspace_migrate_authority_v1.gc`: `selfhost/pkg-workspace-migrate::request-kind`, `selfhost/pkg-workspace-migrate::result-kind`, `selfhost/pkg-workspace-migrate::result`, `selfhost/pkg-workspace-migrate::reject`, `selfhost/pkg-workspace-migrate::accept`, `selfhost/pkg-workspace-migrate::dependency?`, `selfhost/pkg-workspace-migrate::requirement`, `selfhost/pkg-workspace-migrate::requirements-loop`
 - `selfhost/pkg_workspace_env_select_authority_v1.gc`: `selfhost/pkg-workspace-env-select::request-kind`, `selfhost/pkg-workspace-env-select::result-kind`, `selfhost/pkg-workspace-env-select::result`, `selfhost/pkg-workspace-env-select::reject`, `selfhost/pkg-workspace-env-select::accept`, `selfhost/pkg-workspace-env-select::normalize`, `selfhost/pkg-workspace-env-select::optional-string?`, `selfhost/pkg-workspace-env-select::compatible?`
+- `selfhost/pkg_workspace_manifest_core_v1.gc`: `selfhost/pkg-workspace-manifest::ok`, `selfhost/pkg-workspace-manifest::bad`, `selfhost/pkg-workspace-manifest::bool?`, `selfhost/pkg-workspace-manifest::optional-string`, `selfhost/pkg-workspace-manifest::required-string`, `selfhost/pkg-workspace-manifest::bounded-string`, `selfhost/pkg-workspace-manifest::normalize-backend`, `selfhost/pkg-workspace-manifest::member`
+- `selfhost/pkg_workspace_manifest_authority_v1.gc`: `selfhost/pkg-workspace-manifest::request-kind`, `selfhost/pkg-workspace-manifest::result-kind`, `selfhost/pkg-workspace-manifest::result`, `selfhost/pkg-workspace-manifest::reject`, `selfhost/pkg-workspace-manifest::accept`, `selfhost/pkg-workspace-manifest::request-valid?`, `core/pkg::workspace-manifest-authority`
 - `selfhost/pkg_workspace_env_core_v1.gc`: `selfhost/pkg-workspace-env::none`, `selfhost/pkg-workspace-env::bool?`, `selfhost/pkg-workspace-env::bytes?`, `selfhost/pkg-workspace-env::optional`, `selfhost/pkg-workspace-env::choose`, `selfhost/pkg-workspace-env::digest`, `selfhost/pkg-workspace-env::term-bytes`, `selfhost/pkg-workspace-env::file`
 - `selfhost/pkg_workspace_env_finalize_v1.gc`: `selfhost/pkg-workspace-env::make-final`
 - `selfhost/pkg_workspace_env_authority_v1.gc`: `selfhost/pkg-workspace-env-authority::plan-kind`, `selfhost/pkg-workspace-env-authority::finalize-kind`, `selfhost/pkg-workspace-env-authority::result-kind`, `selfhost/pkg-workspace-env-authority::result`, `selfhost/pkg-workspace-env-authority::reject-code`, `selfhost/pkg-workspace-env-authority::reject`, `selfhost/pkg-workspace-env-authority::accept`, `selfhost/pkg-workspace-env-authority::plan`

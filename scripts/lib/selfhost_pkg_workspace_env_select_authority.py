@@ -65,8 +65,7 @@ CONSTANTS = {
         "request-bound-closed-selection-result",
     ],
     "hostMechanisms": [
-        "bounded-workspace-toml-and-active-backend-observation",
-        "non-backend-structural-workspace-admission",
+        "manifest-authorized-workspace-profile-and-active-backend-observation",
         "artifact-only-bounded-authority-evaluation",
         "strict-request-bound-result-decoding",
         "composed-workspace-environment-authority",
@@ -91,7 +90,7 @@ NONCLAIMS = {
     "bootstrap-fixpoint",
     "environment-descriptor-projection-hash-or-materialization-authority",
     "filesystem-or-path-policy-authority",
-    "generic-toml-or-path-authority",
+    "generic-toml-syntax-or-path-authority",
     "h2-workspace-closure",
     "manifest-authority",
     "r4-2-e-closure",
@@ -233,7 +232,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "decode_plan(", "decode_environment(",
     ], "composed workspace-env adapter")
     require_markers(environment, [
-        "pkg_workspace_env_select::load_workspace(workspace_file, profile)",
+        "pkg_workspace_manifest_authority::load(",
         "pkg_workspace_env_authority::authorize(cli, plan_request, out_dir",
         "pkg_workspace_env_materialize::commit(&authorized, backend_plan.as_ref())",
     ], "gcpm env production route")
@@ -246,10 +245,10 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
 
     require_markers(workspace_ops, [
         "pub(crate) fn resolve_workspace_task_for_run(",
-        'pkg_workspace_env_select::load_workspace(workspace_file, "dev")',
+        'pkg_workspace_manifest_authority::load(cli, workspace_file, "dev", false)',
         "crate::pkg_workspace_task::resolve(",
         "workspace.default_runtime_backend.as_deref()",
-        "workspace.profile_runtime_backend.as_deref()",
+        ".selected_profile",
     ], "gcpm run backend-admission route")
     run_admission = workspace_ops[
         workspace_ops.index("pub(crate) fn resolve_workspace_task_for_run("):

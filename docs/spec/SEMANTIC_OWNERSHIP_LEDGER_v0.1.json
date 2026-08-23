@@ -664,7 +664,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "64be090a608a0e90d925f3dce406534eff54d858dce021f17ae19f5befe028d2",
+  "contentIdentitySha256": "1332df29c80dc789cc111f967344e2c46412832464c718048f37b4dd8e7d5eb8",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1967,10 +1967,11 @@
         "Artifact-loaded GenesisCode exclusively owns gcpm new member parsing, default-root construction, legacy-exact TOML escaping, workspace/default/profile and empty-lock rendering, fixed file order, body identities, and exact report under genesis/selfhost-pkg-workspace-new-authority-v0.1; Rust retains the active-backend observation, strict result and cross-document decoding, two-destination path preflight, and exact-byte persistence mechanisms",
         "Artifact-loaded GenesisCode exclusively owns gcpm remove exact requirement/locked key deletion, non-target lock-model preservation, absent-name disposition, and the exact updated model under genesis/selfhost-pkg-workspace-remove-authority-v0.1; the independently governed GenesisCode lock writer owns canonical bytes and lock identity, while Rust retains bounded lock read/model transport, strict request-bound decoding and cross-document validation, stable report projection from accepted authority facts, destination preflight, and exact-byte persistence mechanisms",
         "Artifact-loaded GenesisCode exclusively owns gcpm migrate workspace-name defaulting, dependency snapshot eligibility, canonical lock model, one-member workspace/default/task rendering, workspace body identity, dependency count, and request-bound report facts under genesis/selfhost-pkg-workspace-migrate-authority-v0.1; the independently governed GenesisCode lock writer owns canonical lock bytes and identity, while Rust retains bounded manifest parsing and path observation, strict result and cross-document decoding, two-destination preflight, and exact-byte persistence mechanisms",
-        "Artifact-loaded GenesisCode exclusively owns gcpm env and gcpm run backend-admission precedence, Unicode trim and ASCII case/profile-alias normalization, selected-source attribution, and active-profile compatibility under genesis/selfhost-pkg-workspace-env-select-authority-v0.1; Rust retains bounded TOML/profile and active-backend observations, non-backend structural admission, strict request-bound decoding, and composed handoff into the environment and task authorities",
+        "Artifact-loaded GenesisCode exclusively owns structural workspace-manifest admission, exact version/workspace/member rules, duplicate member rejection, defaults/profile/task type and default normalization, runtime-backend normalization across defaults and every profile, selected-profile admission, and bounded closed workspace configuration under genesis/selfhost-pkg-workspace-manifest-authority-v0.1; Generic TOML syntax decoding remains a bounded host mechanism, together with file/UTF-8 transport, neutral term conversion, strict request/source-bound decoding, typed structure materialization, and downstream path/dispatch mechanisms, while the former Rust WorkspaceConfig semantic parser is test/parity-only",
+        "Artifact-loaded GenesisCode exclusively owns gcpm env and gcpm run backend-admission precedence, Unicode trim and ASCII case/profile-alias normalization, selected-source attribution, and active-profile compatibility under genesis/selfhost-pkg-workspace-env-select-authority-v0.1; Rust retains only manifest-authorized profile and active-backend observations, strict request-bound decoding, and composed handoff into the environment and task authorities",
         "GenesisCode exclusively owns gcpm env workspace, lock, member, dependency, descriptor, identity, and ordered write-plan decisions under genesis/selfhost-pkg-workspace-env-authority-v0.1, including effective policy/registry/toolchain/capability selection, canonical environment/profile/provenance/WASI bodies, complete authority-bearing hashes, backend artifact binding, immutable root naming, exact file and mkdir inventories, and the public result; Filesystem preflight, atomic file writes, and atomic immutable environment-root publication remain host mechanisms, along with bounded regular-file observations, strict decoding, path joining, cryptographic rechecks, and backend launcher persistence",
         "GenesisCode exclusively owns gcpm run task lookup, bounded inventory admission, command and engine normalization, build/lint/bench aliases, primary-input selection, package defaulting, action-specific option grammar, contract-hash normalization, and closed canonical action construction under genesis/selfhost-pkg-workspace-task-authority-v0.1; Workspace-relative path joining, contract-file hashing, and typed action dispatch remain host mechanisms, while the former Rust grammar is test/parity-only",
-        "Manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, cross-root crash-atomic commit and recovery, backend bridge binary semantics, and WASI workspace command support remain unproven, so SD-PACKAGE-WORKSPACE remains H0"
+        "Generic TOML syntax codec, generic path authority, filesystem policy, cross-root crash-atomic commit and recovery, backend bridge binary semantics, remaining package/VCS identities and fallback closure, and WASI workspace command support remain host-required, host-authoritative, or unproven, so SD-PACKAGE-WORKSPACE remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -1984,6 +1985,8 @@
         "selfhost/pkg_workspace_remove_authority_v1.gc",
         "selfhost/pkg_workspace_migrate_authority_v1.gc",
         "selfhost/pkg_workspace_env_select_authority_v1.gc",
+        "selfhost/pkg_workspace_manifest_core_v1.gc",
+        "selfhost/pkg_workspace_manifest_authority_v1.gc",
         "selfhost/pkg_workspace_env_core_v1.gc",
         "selfhost/pkg_workspace_env_finalize_v1.gc",
         "selfhost/pkg_workspace_env_authority_v1.gc",
@@ -1995,6 +1998,7 @@
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
         "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_manifest_authority.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_authority.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_authority/decode.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_materialize.rs",
@@ -2013,6 +2017,8 @@
         "selfhost/pkg_workspace_remove_authority_v1.gc",
         "selfhost/pkg_workspace_migrate_authority_v1.gc",
         "selfhost/pkg_workspace_env_select_authority_v1.gc",
+        "selfhost/pkg_workspace_manifest_core_v1.gc",
+        "selfhost/pkg_workspace_manifest_authority_v1.gc",
         "selfhost/pkg_workspace_env_core_v1.gc",
         "selfhost/pkg_workspace_env_finalize_v1.gc",
         "selfhost/pkg_workspace_env_authority_v1.gc",
@@ -2022,7 +2028,7 @@
         "crates/gc_cli_driver/src/pkg_workspace_new.rs",
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
         "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
-        "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_manifest_authority.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_authority.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_authority/decode.rs",
         "crates/gc_cli_driver/src/pkg_workspace_env_materialize.rs",
@@ -2054,6 +2060,7 @@
         "scripts/lib/selfhost_pkg_workspace_remove_authority.py",
         "scripts/lib/selfhost_pkg_workspace_migrate_authority.py",
         "scripts/lib/selfhost_pkg_workspace_env_select_authority.py",
+        "scripts/lib/selfhost_pkg_workspace_manifest_authority.py",
         "scripts/lib/selfhost_pkg_workspace_env_authority.py",
         "scripts/lib/selfhost_pkg_workspace_task_authority.py"
       ]

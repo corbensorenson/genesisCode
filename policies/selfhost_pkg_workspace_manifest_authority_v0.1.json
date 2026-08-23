@@ -1,0 +1,56 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-23",
+  "binding": "core/pkg::workspace-manifest-authority",
+  "contentIdentitySha256": "1490ffe99c808479bc1c080ce7b77ab4045b98ceb88e6058faac806876f585e7",
+  "decisionInventory": [
+    "exact-workspace-version-and-root-admission",
+    "member-field-and-duplicate-admission",
+    "defaults-profile-and-task-type-normalization",
+    "runtime-backend-normalization-across-defaults-and-profiles",
+    "selected-profile-presence-and-projection",
+    "bounded-closed-workspace-config-construction",
+    "request-and-source-bound-result-verdict"
+  ],
+  "hostMechanisms": [
+    "bounded-file-read-and-utf8-validation",
+    "generic-toml-syntax-decoding-and-neutral-term-transport",
+    "artifact-only-bounded-authority-evaluation",
+    "strict-request-and-source-bound-result-decoding",
+    "typed-workspace-structure-materialization",
+    "workspace-relative-path-joining-and-command-dispatch"
+  ],
+  "hostOracle": {
+    "productionRequired": false,
+    "reachability": "test-or-parity-only",
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_workspace_manifest_authority.py",
+  "kind": "genesis/selfhost-pkg-workspace-manifest-authority-v0.1",
+  "nonclaims": [
+    "bootstrap-fixpoint",
+    "cross-root-crash-atomic-transaction-or-recovery",
+    "filesystem-or-path-policy-authority",
+    "generic-toml-syntax-codec",
+    "h2-workspace-closure",
+    "package-command-implementation-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-workspace-command-support",
+    "workspace-rendering-authority"
+  ],
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "requestKind": "genesis/pkg-workspace-manifest-authority-request-v0.1",
+  "resultKind": "genesis/pkg-workspace-manifest-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_MANIFEST_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_workspace_manifest_core_v1.gc",
+    "selfhost/pkg_workspace_manifest_authority_v1.gc"
+  ],
+  "sourceSha256": "6c559d1c00f1041ddf7f1761523ddf853d6913ad3eadd927afc5ec7b876cfc9c",
+  "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

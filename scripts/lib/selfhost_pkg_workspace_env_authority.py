@@ -72,7 +72,7 @@ CONSTANTS = {
     ],
     "finalizeRequestKind": "genesis/pkg-workspace-env-finalize-authority-request-v0.1",
     "hostMechanisms": [
-        "bounded-workspace-lock-package-capability-and-toolchain-observation",
+        "manifest-authorized-workspace-plus-bounded-lock-package-capability-and-toolchain-observation",
         "active-backend-store-and-path-prefix-observation",
         "artifact-only-bounded-two-phase-evaluation",
         "strict-request-bound-plan-result-and-body-decoding",
@@ -100,7 +100,7 @@ NONCLAIMS = {
     "bootstrap-fixpoint",
     "cross-root-crash-atomic-transaction-or-recovery",
     "filesystem-or-generic-path-policy-authority",
-    "generic-toml-authority",
+    "generic-toml-syntax-authority",
     "h2-workspace-closure",
     "manifest-authority",
     "r4-2-e-closure",
@@ -240,7 +240,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if adapter.count("validate_authorized_bodies(") != 2:
         fail("workspace-env body-validation call inventory drift")
     require_markers(route, [
-        "pkg_workspace_env_select::load_workspace(workspace_file, profile)",
+        "pkg_workspace_manifest_authority::load(",
         "pkg_workspace_env_authority::authorize(cli, plan_request, out_dir",
         "plan_backend_env_bundle(workspace_file)",
         "pkg_workspace_env_materialize::commit(&authorized, backend_plan.as_ref())",

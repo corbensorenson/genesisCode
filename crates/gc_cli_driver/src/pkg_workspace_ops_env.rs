@@ -15,13 +15,14 @@ pub(crate) fn handle_env(
     workspace_file: &Path,
     out_dir: &Path,
 ) -> Result<LocalPkgResult, String> {
-    let env_workspace = super::pkg_workspace_env_select::load_workspace(workspace_file, profile)?;
+    let env_workspace =
+        super::pkg_workspace_manifest_authority::load(cli, workspace_file, profile, true)?;
     let workspace = env_workspace.config;
     let lock_model = GenesisLock::load(lock).map_err(|error| error.to_string())?;
-    let selected_profile = workspace
-        .profiles
-        .get(profile)
-        .ok_or_else(|| format!("workspace profile `{profile}` not found"))?;
+    let selected_profile = env_workspace
+        .selected_profile
+        .as_ref()
+        .ok_or_else(|| "workspace manifest authority omitted required profile".to_string())?;
     let workspace_bytes = workspace.to_toml_canonical().into_bytes();
     let lock_bytes = lock_model.to_toml_canonical().into_bytes();
     bounded_bytes(&workspace_bytes, "canonical workspace")?;
@@ -94,7 +95,7 @@ pub(crate) fn handle_env(
         (":profile", Term::Str(profile.to_string())),
         (
             ":profile-backend",
-            optional(env_workspace.profile_runtime_backend.as_deref()),
+            optional(selected_profile.runtime_backend.as_deref()),
         ),
         (
             ":profile-values",

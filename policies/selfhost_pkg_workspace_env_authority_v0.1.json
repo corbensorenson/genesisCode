@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/pkg::workspace-env-authority",
-  "contentIdentitySha256": "91de401693386b98497876529b8ec0f9f2fa7b5c7c3af47ee8d9514fac3f1254",
+  "contentIdentitySha256": "23f1c2325a25b5abee688afc353f369f850fc3e397737d482c654dc61f5ad161",
   "decisionInventory": [
     "closed-workspace-lock-member-and-dependency-projection",
     "effective-policy-registry-toolchain-and-capability-selection",
@@ -14,7 +14,7 @@
     "request-bound-two-phase-observation-validation"
   ],
   "hostMechanisms": [
-    "bounded-workspace-lock-package-capability-and-toolchain-observation",
+    "manifest-authorized-workspace-plus-bounded-lock-package-capability-and-toolchain-observation",
     "active-backend-store-and-path-prefix-observation",
     "artifact-only-bounded-two-phase-evaluation",
     "strict-request-bound-plan-result-and-body-decoding",
@@ -34,7 +34,7 @@
     "bootstrap-fixpoint",
     "cross-root-crash-atomic-transaction-or-recovery",
     "filesystem-or-generic-path-policy-authority",
-    "generic-toml-authority",
+    "generic-toml-syntax-authority",
     "h2-workspace-closure",
     "manifest-authority",
     "r4-2-e-closure",
@@ -54,7 +54,7 @@
     "selfhost/pkg_workspace_env_finalize_v1.gc",
     "selfhost/pkg_workspace_env_authority_v1.gc"
   ],
-  "sourceSha256": "cc53fe3fd6512af749f26a2d83ea0ffd2ec6ed76e79acd9ec5b951c550e06733",
+  "sourceSha256": "560f24e40fb3570da15293068367d037d396012afe41db239b77013c49c3a706",
   "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
   "version": "0.1.0"
 }

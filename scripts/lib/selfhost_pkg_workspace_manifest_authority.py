@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent custody verifier for gcpm workspace-task authority."""
+"""Independent custody verifier for structural workspace-manifest authority."""
 
 from __future__ import annotations
 
@@ -47,8 +47,8 @@ def load_json(path: Path):
 
 
 SOURCE_MODULES = [
-    "selfhost/pkg_workspace_task_core_v1.gc",
-    "selfhost/pkg_workspace_task_authority_v1.gc",
+    "selfhost/pkg_workspace_manifest_core_v1.gc",
+    "selfhost/pkg_workspace_manifest_authority_v1.gc",
 ]
 FIELDS = {
     "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
@@ -58,52 +58,51 @@ FIELDS = {
 }
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
-    "binding": "core/pkg::workspace-task-authority",
+    "binding": "core/pkg::workspace-manifest-authority",
     "decisionInventory": [
-        "backend-admission-before-task-interpretation",
-        "exact-requested-task-lookup",
-        "closed-command-normalization-and-aliases",
-        "primary-input-selection-and-package-default",
-        "action-specific-option-grammar",
-        "active-executable-engine-membership",
-        "contract-hash-normalization-and-validation",
-        "request-bound-closed-canonical-action",
+        "exact-workspace-version-and-root-admission",
+        "member-field-and-duplicate-admission",
+        "defaults-profile-and-task-type-normalization",
+        "runtime-backend-normalization-across-defaults-and-profiles",
+        "selected-profile-presence-and-projection",
+        "bounded-closed-workspace-config-construction",
+        "request-and-source-bound-result-verdict",
     ],
     "hostMechanisms": [
-        "manifest-authorized-workspace-task-and-profile-observation",
+        "bounded-file-read-and-utf8-validation",
+        "generic-toml-syntax-decoding-and-neutral-term-transport",
         "artifact-only-bounded-authority-evaluation",
-        "strict-request-bound-action-decoding",
-        "workspace-relative-path-joining",
-        "contract-file-read-and-hash-verification",
-        "typed-action-dispatch",
+        "strict-request-and-source-bound-result-decoding",
+        "typed-workspace-structure-materialization",
+        "workspace-relative-path-joining-and-command-dispatch",
     ],
     "hostOracle": {
         "productionRequired": False,
         "reachability": "test-or-parity-only",
         "removalTask": "R4.2.e",
     },
-    "independentVerifier": "scripts/lib/selfhost_pkg_workspace_task_authority.py",
-    "kind": "genesis/selfhost-pkg-workspace-task-authority-v0.1",
+    "independentVerifier": "scripts/lib/selfhost_pkg_workspace_manifest_authority.py",
+    "kind": "genesis/selfhost-pkg-workspace-manifest-authority-v0.1",
     "productionEntrypoints": ["genesis"],
-    "requestKind": "genesis/pkg-workspace-task-authority-request-v0.1",
-    "resultKind": "genesis/pkg-workspace-task-authority-result-v0.1",
-    "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_TASK_AUTHORITY_v0.1.schema.json",
+    "requestKind": "genesis/pkg-workspace-manifest-authority-request-v0.1",
+    "resultKind": "genesis/pkg-workspace-manifest-authority-result-v0.1",
+    "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_MANIFEST_AUTHORITY_v0.1.schema.json",
     "sourceModules": SOURCE_MODULES,
     "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
     "version": "0.1.0",
 }
 NONCLAIMS = {
     "bootstrap-fixpoint",
-    "environment-descriptor-projection-hash-or-materialization-authority",
+    "cross-root-crash-atomic-transaction-or-recovery",
     "filesystem-or-path-policy-authority",
-    "generic-toml-syntax-or-path-authority",
+    "generic-toml-syntax-codec",
     "h2-workspace-closure",
-    "manifest-authority",
     "package-command-implementation-authority",
     "r4-2-e-closure",
     "release-qualification",
     "sh-c-closure",
-    "wasi-workspace-task-support",
+    "wasi-workspace-command-support",
+    "workspace-rendering-authority",
 }
 
 
@@ -165,82 +164,93 @@ def require_markers(subject: str, markers, label: str) -> None:
             fail(f"{label} missing marker: {marker}")
 
 
+def require_pattern(subject: str, pattern: str, label: str) -> None:
+    if re.search(pattern, subject) is None:
+        fail(f"{label} missing structural pattern")
+
+
 def validate_sources(root: Path, profile, overrides=None) -> None:
     overrides = overrides or {}
     core = text(root, SOURCE_MODULES[0], overrides)
     authority = text(root, SOURCE_MODULES[1], overrides)
     manifest = text(root, "selfhost/toolchain_manifest.gc", overrides)
     artifact = text(root, profile["artifact"], overrides)
-    adapter = text(root, "crates/gc_cli_driver/src/pkg_workspace_task.rs", overrides)
+    adapter = text(root, "crates/gc_cli_driver/src/pkg_workspace_manifest_authority.rs", overrides)
+    legacy = text(root, "crates/gc_cli_driver/src/pkg_workspace_env_select.rs", overrides)
     workspace_ops = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops.rs", overrides)
-    native = text(root, "crates/gc_cli_driver/src/pkg_task_runner.rs", overrides)
-    route = text(root, "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs", overrides)
+    env_ops = text(root, "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs", overrides)
     tests = text(root, "crates/gc_cli/tests/cli_pkg_workspace.rs", overrides)
     ledger = parse_json(
         text(root, "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", overrides), "ledger"
     )
 
     require_markers(core, [
-        "(def selfhost/pkg-workspace-task::tasks?", "(def selfhost/pkg-workspace-task::find",
-        "(def selfhost/pkg-workspace-task::normalize-action", '"build"', '"lint"', '"bench"',
-        "(def selfhost/pkg-workspace-task::parse-args", '"--contract-h"', '"--engine"',
-        "(def selfhost/pkg-workspace-task::resolve", ":stage1-pipeline", ":emit-wasm",
-    ], "GenesisCode workspace-task core")
+        "(def selfhost/pkg-workspace-manifest::members-loop",
+        '"duplicate workspace member name"', '"duplicate workspace member path"',
+        "(def selfhost/pkg-workspace-manifest::defaults",
+        "(def selfhost/pkg-workspace-manifest::profile",
+        "(def selfhost/pkg-workspace-manifest::tasks",
+        "(def selfhost/pkg-workspace-manifest::normalize",
+        "workspace version must be exactly 1", "workspace has too many profiles",
+        "selfhost/pkg-workspace-env-select::normalize",
+    ], "GenesisCode workspace-manifest core")
     require_markers(authority, [
-        "(def core/pkg::workspace-task-authority", profile["requestKind"], profile["resultKind"],
-        "core/pkg::workspace-env-select-authority", "selfhost/pkg-workspace-task::resolve",
-        "[:active :default :engines :kind :profile :profile-backend :task :tasks :v]",
-        '"core/pkg/bad-workspace-env-selection"', '"core/pkg/bad-workspace-task"',
-    ], "GenesisCode workspace-task authority")
-    selection_at = authority.find("core/pkg::workspace-env-select-authority")
-    resolution_at = authority.find("selfhost/pkg-workspace-task::resolve", selection_at)
-    if selection_at < 0 or resolution_at < 0 or selection_at >= resolution_at:
-        fail("backend admission no longer precedes task interpretation")
+        "(def core/pkg::workspace-manifest-authority", profile["requestKind"],
+        profile["resultKind"],
+        "[:document :kind :require-profile :selected-profile :source-h :v]",
+        '"core/pkg/bad-workspace-manifest"',
+        "selfhost/pkg-lock-ops::lower-hex64?",
+    ], "GenesisCode workspace-manifest authority")
     for marker in (profile["binding"], *SOURCE_MODULES):
         if marker not in manifest:
-            fail(f"toolchain manifest missing workspace-task marker: {marker}")
+            fail(f"toolchain manifest missing workspace-manifest marker: {marker}")
         if marker not in artifact:
-            fail(f"published artifact missing workspace-task marker: {marker}")
+            fail(f"published artifact missing workspace-manifest marker: {marker}")
 
     require_markers(adapter, [
-        "pub(crate) fn resolve(", "fn task_request(", "fn task_observation(",
-        "TASK_LIMIT: usize = 256", "TASK_ARG_LIMIT: usize = 64",
-        "crate::load_selfhost_toolchain", ".get(AUTHORITY_BINDING)",
-        "decode_authorized(", "decode_action(", "require_exact_fields(",
-        'require_string(action, ":task", requested_task)',
-        'require_bool(result, ":compatible", true)', "task_engine_inventory()",
-    ], "strict workspace-task adapter")
-    if adapter.count("require_exact_fields(") != 4:
-        fail("workspace-task exact-field check inventory drift")
+        "pub(super) fn load(", "SOURCE_LIMIT: usize = 16 * 1024 * 1024",
+        "COLLECTION_LIMIT: usize = 4096", "toml::from_str::<toml::Value>",
+        "fn toml_to_term(", "crate::load_selfhost_toolchain",
+        ".get(AUTHORITY_BINDING)", "decode(value, &request_hash, &source_hash",
+        'require_string(result, ":source-h", source_hash)',
+        "fn decode_members(", "fn decode_profiles(", "fn decode_tasks(",
+        "require_exact_fields(",
+    ], "strict workspace-manifest adapter")
     for forbidden in (
-        "workspace.tasks.get(task_name)", "task.cmd.trim().to_ascii_lowercase()",
-        'match cmd.as_str()', "parse_run_like_args(", "parse_eval_args(",
+        "WorkspaceConfig::from_toml_str", "normalize_runtime_backend_profile(",
+        "runtime_backend_profile_is_compatible(", ".trim().is_empty()",
     ):
         if forbidden in adapter:
-            fail(f"native task semantic oracle reachable in adapter: {forbidden}")
+            fail(f"native workspace semantic oracle reachable in adapter: {forbidden}")
+    if adapter.count("require_exact_fields(") < 7:
+        fail("workspace-manifest exact-field check inventory drift")
 
+    require_markers(legacy, [
+        '#[cfg(any(test, feature = "parity-harness"))]',
+        "pub(super) fn load_workspace(", "WorkspaceConfig::from_toml_str",
+    ], "retained workspace parser oracle")
+    loader_at = legacy.index("pub(super) fn load_workspace(")
+    loader_prefix = legacy[max(0, loader_at - 220):loader_at]
+    if '#[cfg(any(test, feature = "parity-harness"))]' not in loader_prefix:
+        fail("retained workspace parser is not directly test/parity guarded")
     require_markers(workspace_ops, [
-        "pub(crate) fn resolve_workspace_task_for_run(",
-        'pkg_workspace_manifest_authority::load(cli, workspace_file, "dev", false)',
-        "crate::pkg_workspace_task::resolve(", "workspace.default_runtime_backend.as_deref()",
-        ".selected_profile",
-    ], "workspace-task production custody")
-    require_markers(native, [
-        "#[cfg(any(test, feature = \"parity-harness\"))]",
-        "pub(crate) fn resolve_workspace_task_parity(",
-        "pub(crate) fn verify_contract_task_file_hash(",
-    ], "retained native task oracle")
-    require_markers(route, [
-        "pkg_workspace_ops::resolve_workspace_task_for_run(cli, workspace_file, task)",
-        "pkg_task_runner::verify_contract_task_file_hash",
-    ], "workspace-task CLI route")
+        "pkg_workspace_manifest_authority::load(cli, workspace_file, \"dev\", false)",
+        "crate::pkg_workspace_task::resolve(",
+    ], "workspace-task manifest custody")
+    require_pattern(
+        env_ops,
+        r"super::pkg_workspace_manifest_authority::load\(\s*cli\s*,\s*workspace_file\s*,\s*profile\s*,\s*true\s*,?\s*\)\?",
+        "workspace-env manifest custody",
+    )
+    require_markers(env_ops, [
+        ".selected_profile", "workspace manifest authority omitted required profile",
+    ], "workspace-env manifest custody")
     require_markers(tests, [
+        "gcpm_env_materializes_deterministic_profile_record",
         "gcpm_run_executes_workspace_task_without_shell_glue",
-        "gcpm_run_invalid_selected_backend_rejects_before_task_resolution",
-        "gcpm_run_selfhost_authority_rejects_unsupported_task_command",
-        "gcpm_run_selfhost_authority_rejects_ignored_package_arguments",
-        "gcpm_run_selfhost_authority_rejects_unavailable_engine_before_file_access",
-    ], "workspace-task integration evidence")
+        "gcpm_env_manifest_authority_rejects_duplicate_members_before_file_access",
+        "gcpm_run_manifest_authority_rejects_invalid_task_before_dispatch",
+    ], "workspace-manifest integration evidence")
 
     rows = ledger.get("semanticDecisions")
     if not isinstance(rows, list):
@@ -251,10 +261,10 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     joined = json.dumps(row, sort_keys=True)
     require_markers(joined, [
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
-        "crates/gc_cli_driver/src/pkg_workspace_task.rs",
-        "GenesisCode exclusively owns gcpm run task lookup",
-        "Workspace-relative path joining, contract-file hashing, and typed action dispatch remain host mechanisms",
-    ], "workspace-task ownership ledger")
+        "crates/gc_cli_driver/src/pkg_workspace_manifest_authority.rs",
+        "GenesisCode exclusively owns structural workspace-manifest admission",
+        "Generic TOML syntax decoding remains a bounded host mechanism",
+    ], "workspace-manifest ownership ledger")
 
 
 def validate_all(root: Path, profile, schema, overrides=None) -> None:
@@ -268,10 +278,10 @@ def validate_all(root: Path, profile, schema, overrides=None) -> None:
 def self_test(root: Path, profile, schema) -> int:
     paths = SOURCE_MODULES + [
         "selfhost/toolchain_manifest.gc", profile["artifact"],
-        "crates/gc_cli_driver/src/pkg_workspace_task.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_manifest_authority.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_env_select.rs",
         "crates/gc_cli_driver/src/pkg_workspace_ops.rs",
-        "crates/gc_cli_driver/src/pkg_task_runner.rs",
-        "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs",
+        "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
         "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
     ]
@@ -285,7 +295,7 @@ def self_test(root: Path, profile, schema) -> int:
         mutations.append((changed, {}, name))
 
     for name, value in (
-        ("binding", "core/pkg::legacy-workspace-task"),
+        ("binding", "core/pkg::legacy-workspace-manifest"),
         ("decisionInventory", profile["decisionInventory"][:-1]),
         ("hostMechanisms", profile["hostMechanisms"][:-1]),
         ("hostOracle", {**profile["hostOracle"], "reachability": "production"}),
@@ -300,39 +310,46 @@ def self_test(root: Path, profile, schema) -> int:
         mutations.append((profile, {path: sources[path].replace(old, new, 1)}, name))
 
     core = SOURCE_MODULES[0]
-    source_mutation(core, "(def selfhost/pkg-workspace-task::find", "(def selfhost/pkg-workspace-task::legacy-find", "task lookup")
-    source_mutation(core, "(def selfhost/pkg-workspace-task::normalize-action", "(def selfhost/pkg-workspace-task::legacy-action", "command normalization")
-    source_mutation(core, '"build"', '"legacy-build"', "command alias")
-    source_mutation(core, "(def selfhost/pkg-workspace-task::parse-args", "(def selfhost/pkg-workspace-task::legacy-args", "argument grammar")
-    source_mutation(core, '"--engine"', '"--legacy-engine"', "engine option")
+    source_mutation(core, "(def selfhost/pkg-workspace-manifest::members-loop", "(def selfhost/pkg-workspace-manifest::legacy-members", "member admission")
+    source_mutation(core, '"duplicate workspace member name"', '"allow duplicate workspace member name"', "member duplicate")
+    source_mutation(core, "(def selfhost/pkg-workspace-manifest::defaults", "(def selfhost/pkg-workspace-manifest::legacy-defaults", "defaults")
+    source_mutation(core, "(def selfhost/pkg-workspace-manifest::profile", "(def selfhost/pkg-workspace-manifest::legacy-profile", "profiles")
+    source_mutation(core, "(def selfhost/pkg-workspace-manifest::tasks", "(def selfhost/pkg-workspace-manifest::legacy-tasks", "tasks")
+    source_mutation(core, "workspace version must be exactly 1", "workspace version ignored", "version")
     authority = SOURCE_MODULES[1]
-    source_mutation(authority, "(def core/pkg::workspace-task-authority", "(def core/pkg::legacy-task-authority", "source binding")
-    source_mutation(authority, profile["requestKind"], "genesis/legacy-task-request", "request kind")
-    source_mutation(authority, "core/pkg::workspace-env-select-authority", "core/pkg::legacy-env-select", "backend composition")
-    source_mutation("selfhost/toolchain_manifest.gc", profile["binding"], "core/pkg::missing-task", "manifest binding")
+    source_mutation(authority, "(def core/pkg::workspace-manifest-authority", "(def core/pkg::legacy-manifest-authority", "source binding")
+    source_mutation(authority, profile["requestKind"], "genesis/legacy-manifest-request", "request kind")
+    source_mutation(authority, "selfhost/pkg-lock-ops::lower-hex64?", "selfhost/pkg-lock-read::str?", "source binding")
+    source_mutation("selfhost/toolchain_manifest.gc", profile["binding"], "core/pkg::missing-manifest", "manifest binding")
     mutations.append((profile, {
         profile["artifact"]: sources[profile["artifact"]].replace(
-            profile["binding"], "core/pkg::missing-task"
+            profile["binding"], "core/pkg::missing-manifest"
         )
     }, "artifact binding"))
-    adapter = "crates/gc_cli_driver/src/pkg_workspace_task.rs"
+    adapter = "crates/gc_cli_driver/src/pkg_workspace_manifest_authority.rs"
     source_mutation(adapter, "crate::load_selfhost_toolchain", "crate::load_legacy_toolchain", "artifact loader")
+    source_mutation(adapter, "toml::from_str::<toml::Value>", "WorkspaceConfig::from_toml_str", "neutral TOML transport")
     source_mutation(adapter, "require_exact_fields(", "accept_open_fields(", "field closure")
-    source_mutation(adapter, 'require_string(action, ":task", requested_task)', 'required_string(action, ":task")', "request binding")
-    source_mutation(adapter, "TASK_LIMIT: usize = 256", "TASK_LIMIT: usize = usize::MAX", "task bound")
+    source_mutation(adapter, 'require_string(result, ":source-h", source_hash)', 'required_string(result, ":source-h")', "source binding")
+    source_mutation(adapter, "COLLECTION_LIMIT: usize = 4096", "COLLECTION_LIMIT: usize = usize::MAX", "collection bound")
+    legacy = "crates/gc_cli_driver/src/pkg_workspace_env_select.rs"
+    source_mutation(
+        legacy,
+        '#[cfg(any(test, feature = "parity-harness"))]\n#[allow(dead_code)] // Retained only as the explicit pre-authority compatibility oracle.\npub(super) fn load_workspace',
+        '#[allow(dead_code)]\npub(super) fn load_workspace',
+        "legacy reachability",
+    )
     workspace_ops = "crates/gc_cli_driver/src/pkg_workspace_ops.rs"
-    source_mutation(workspace_ops, "crate::pkg_workspace_task::resolve(", "crate::pkg_task_runner::resolve_workspace_task_parity(", "production custody")
-    native = "crates/gc_cli_driver/src/pkg_task_runner.rs"
-    source_mutation(native, "pub(crate) fn resolve_workspace_task_parity(", "pub(crate) fn resolve_workspace_task(", "native reachability")
-    route = "crates/gc_cli_driver/src/cmd_pkg/local_workspace_ops.rs"
-    source_mutation(route, "pkg_workspace_ops::resolve_workspace_task_for_run(cli, workspace_file, task)", "pkg_task_runner::resolve_workspace_task(workspace_file, task)", "route custody")
+    source_mutation(workspace_ops, "pkg_workspace_manifest_authority::load(cli, workspace_file, \"dev\", false)", "pkg_workspace_env_select::load_workspace(workspace_file, \"dev\")", "run custody")
+    env_ops = "crates/gc_cli_driver/src/pkg_workspace_ops_env.rs"
+    source_mutation(env_ops, "super::pkg_workspace_manifest_authority::load(", "super::pkg_workspace_env_select::load_workspace(", "env custody")
+    source_mutation(env_ops, "profile, true)", "profile, false)", "env required-profile custody")
     tests = "crates/gc_cli/tests/cli_pkg_workspace.rs"
-    source_mutation(tests, "gcpm_run_selfhost_authority_rejects_unsupported_task_command", "legacy_command_test", "command control")
-    source_mutation(tests, "gcpm_run_selfhost_authority_rejects_ignored_package_arguments", "legacy_args_test", "argument control")
-    source_mutation(tests, "gcpm_run_selfhost_authority_rejects_unavailable_engine_before_file_access", "legacy_engine_test", "engine control")
+    source_mutation(tests, "gcpm_env_manifest_authority_rejects_duplicate_members_before_file_access", "legacy_duplicate_test", "duplicate control")
+    source_mutation(tests, "gcpm_run_manifest_authority_rejects_invalid_task_before_dispatch", "legacy_task_test", "task control")
     ledger = "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json"
-    source_mutation(ledger, profile["kind"], "native-workspace-task", "ledger authority")
-    source_mutation(ledger, "Workspace-relative path joining, contract-file hashing, and typed action dispatch remain host mechanisms", "Workspace task behavior remains host-authoritative", "ledger residual")
+    source_mutation(ledger, profile["kind"], "native-workspace-manifest", "ledger authority")
+    source_mutation(ledger, "Generic TOML syntax decoding remains a bounded host mechanism", "Workspace manifest decisions remain host-authoritative", "ledger residual")
 
     controls = 0
     for changed_profile, overrides, name in mutations:
@@ -342,7 +359,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 28:
+    if controls != 30:
         fail(f"negative control inventory drift: {controls}")
     return controls
 
@@ -371,11 +388,11 @@ def main(argv=None) -> int:
         validate_all(root, profile, schema)
         controls = self_test(root, profile, schema) if args.self_test else 0
         print(
-            "selfhost-pkg-workspace-task-authority: ok "
+            "selfhost-pkg-workspace-manifest-authority: ok "
             f"profile={profile['contentIdentitySha256']} controls={controls}"
         )
     except CheckError as error:
-        print(f"selfhost-pkg-workspace-task-authority: {error}", file=sys.stderr)
+        print(f"selfhost-pkg-workspace-manifest-authority: {error}", file=sys.stderr)
         return 1
     return 0
 

@@ -1504,6 +1504,89 @@ fn gcpm_env_materializes_deterministic_profile_record() {
 }
 
 #[test]
+fn gcpm_env_manifest_authority_rejects_duplicate_members_before_file_access() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"version = 1
+workspace = "ws"
+
+[[members]]
+name = "duplicate"
+path = "one"
+
+[[members]]
+name = "duplicate"
+path = "two"
+
+[profiles.dev]
+caps_policy = "must-not-read.toml"
+"#,
+    )
+    .unwrap();
+    fs::write(
+        dir.join("genesis.lock"),
+        GenesisLock::empty("ws").to_toml_canonical(),
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    assert!(output.contains("core/pkg/bad-workspace-manifest"));
+    assert!(output.contains("duplicate workspace member name"));
+    assert!(!output.contains("must-not-read.toml"));
+    assert!(!dir.join(".genesis").join("env").exists());
+}
+
+#[test]
+fn gcpm_run_manifest_authority_rejects_invalid_task_before_dispatch() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(
+        dir.join("genesis.workspace.toml"),
+        r#"version = 1
+workspace = "ws"
+
+[[members]]
+name = "ws"
+path = "."
+
+[tasks.bad]
+cmd = 7
+file = "must-not-read.gc"
+"#,
+    )
+    .unwrap();
+
+    let output = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["run", "bad"])
+        .assert()
+        .failure()
+        .get_output()
+        .stdout
+        .clone();
+    let output = String::from_utf8(output).unwrap();
+    assert!(output.contains("core/pkg/bad-workspace-manifest"));
+    assert!(output.contains("task cmd must be a non-empty string"));
+    assert!(!output.contains("must-not-read.gc"));
+}
+
+#[test]
 fn gcpm_env_identity_binds_capability_policy_bytes() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

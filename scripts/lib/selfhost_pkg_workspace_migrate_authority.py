@@ -213,7 +213,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     require_markers(joined, [
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
         "crates/gc_cli_driver/src/pkg_workspace_migrate.rs",
-        "Manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, cross-root crash-atomic commit and recovery, backend bridge binary semantics, and WASI workspace command support remain unproven, so SD-PACKAGE-WORKSPACE remains H0",
+        "Generic TOML syntax codec, generic path authority, filesystem policy, cross-root crash-atomic commit and recovery, backend bridge binary semantics, remaining package/VCS identities and fallback closure, and WASI workspace command support remain host-required, host-authoritative, or unproven, so SD-PACKAGE-WORKSPACE remains H0",
     ], "workspace ownership ledger")
 
 

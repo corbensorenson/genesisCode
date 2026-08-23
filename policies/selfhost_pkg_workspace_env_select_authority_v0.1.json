@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/pkg::workspace-env-select-authority",
-  "contentIdentitySha256": "9df7260c2099f83f3102cdf2674640b19da97da862a7e1687285a358aff6c749",
+  "contentIdentitySha256": "a23cdb560383d6a75b2f85a09c4b3f872319eb61f8f8d4108981c95e08323c28",
   "decisionInventory": [
     "closed-runtime-backend-precedence",
     "unicode-trim-and-ascii-case-normalization",
@@ -12,8 +12,7 @@
     "request-bound-closed-selection-result"
   ],
   "hostMechanisms": [
-    "bounded-workspace-toml-and-active-backend-observation",
-    "non-backend-structural-workspace-admission",
+    "manifest-authorized-workspace-profile-and-active-backend-observation",
     "artifact-only-bounded-authority-evaluation",
     "strict-request-bound-result-decoding",
     "composed-workspace-environment-authority",
@@ -30,7 +29,7 @@
     "bootstrap-fixpoint",
     "environment-descriptor-projection-hash-or-materialization-authority",
     "filesystem-or-path-policy-authority",
-    "generic-toml-or-path-authority",
+    "generic-toml-syntax-or-path-authority",
     "h2-workspace-closure",
     "manifest-authority",
     "r4-2-e-closure",

@@ -1,12 +1,15 @@
+#[cfg(any(test, feature = "parity-harness"))]
 use std::collections::BTreeMap;
 #[cfg(feature = "parity-harness")]
 use std::collections::BTreeSet;
+#[cfg(any(test, feature = "parity-harness"))]
 use std::path::Path;
 
 #[cfg(feature = "parity-harness")]
 use gc_coreform::{Term, TermOrdKey, hash_term};
 #[cfg(feature = "parity-harness")]
 use gc_kernel::{Apply, Value};
+#[cfg(any(test, feature = "parity-harness"))]
 use gc_pkg::WorkspaceConfig;
 
 #[cfg(feature = "parity-harness")]
@@ -23,12 +26,16 @@ pub(super) struct AuthorizedRuntimeBackend {
     pub(super) compatible: bool,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Retained only as the explicit pre-authority compatibility oracle.
 pub(super) struct EnvWorkspace {
     pub(super) config: WorkspaceConfig,
     pub(super) default_runtime_backend: Option<String>,
     pub(super) profile_runtime_backend: Option<String>,
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Retained only as the explicit pre-authority compatibility oracle.
 pub(super) fn load_workspace(path: &Path, selected_profile: &str) -> Result<EnvWorkspace, String> {
     let source = std::fs::read_to_string(path).map_err(|error| error.to_string())?;
     let mut document = source
@@ -76,6 +83,8 @@ pub(super) fn load_workspace(path: &Path, selected_profile: &str) -> Result<EnvW
     })
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
+#[allow(dead_code)] // Used only by the retained compatibility oracle above.
 fn take_runtime_backend(
     table: Option<&mut toml::Table>,
     location: &str,

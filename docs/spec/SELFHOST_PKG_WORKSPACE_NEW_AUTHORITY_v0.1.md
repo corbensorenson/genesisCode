@@ -140,6 +140,47 @@ document/report contradictions, identical paths, symlink boundaries, and non-fil
 Preflight guarantees these known destination conflicts cause no file mutation; this profile does
 not claim pairwise crash atomicity after the first individually atomic rename.
 
+## Structural workspace-manifest authority contract
+
+Production `gcpm env` and `gcpm run` read at most 16 MiB of UTF-8 workspace source, decode only
+TOML syntax into a neutral CoreForm term, and evaluate
+`core/pkg::workspace-manifest-authority` from the exact admitted self-host artifact before profile
+selection, capability-file access, task lookup, path joining, or dispatch. The closed request kind
+is `genesis/pkg-workspace-manifest-authority-request-v0.1` with exactly
+`[:document :kind :require-profile :selected-profile :source-h :v]`. The source hash is lowercase
+BLAKE3 over the exact source bytes. `gcpm env` requires its requested profile to exist; `gcpm run`
+requests fixed profile `dev` but permits it to be absent so built-in backend selection remains
+compatible with workspaces that only declare tasks.
+
+GenesisCode exclusively owns version-1 admission; non-empty workspace and member name/path rules;
+exact duplicate member-name and member-path rejection; optional member role; defaults, profile,
+and task field types and absent-value defaults; runtime-backend trimming, ASCII case folding,
+`profile-` alias normalization across defaults and every profile; task command and argument
+admission; selected-profile lookup; and construction of the closed normalized workspace value.
+Unknown TOML fields retain the established ignored-field compatibility behavior. Empty quoted
+profile and task names remain admitted for compatibility, while workspace names, member names,
+member paths, and task commands remain non-empty. Source, member, profile, task, and argument
+inventories are explicitly bounded; exceeding a bound fails closed rather than raising an
+evaluator budget.
+
+Every result uses kind `genesis/pkg-workspace-manifest-authority-result-v0.1` and the exact
+request-hash-bound envelope `[:code :kind :message :ok :request-h :v :value]`. Success has nil
+code/message and a value containing exactly
+`[:defaults :members :profiles :selected-profile :source-h :tasks :version :workspace]`.
+Defaults, profiles, members, and tasks use closed typed records; canonical runtime backends are
+exactly `headless`, `gpu`, `gfx`, and `backend`. Rejection uses only
+`core/pkg/bad-workspace-manifest` and nil value.
+
+Rust remains a bounded mechanism adapter: file read and UTF-8 validation, generic TOML syntax
+decoding, neutral recursive term conversion (including opaque float/datetime observations),
+artifact-only evaluation, strict closed request/source-bound result decoding, typed structure
+materialization, and downstream path and dispatch mechanisms. It does not deserialize a production
+`WorkspaceConfig`, normalize backend values, decide required fields or duplicates, select a
+profile, or silently fall back. The former `WorkspaceConfig::from_toml_str` route is compiled only
+for tests or the explicit parity harness. This contract does not claim a self-hosted TOML syntax
+codec, generic path or filesystem-policy authority, WASI workspace commands, aggregate H2 workspace
+closure, SH-C, bootstrap fixpoint, or release qualification.
+
 ## Workspace environment selection contract
 
 Production `gcpm env` loads `core/pkg::workspace-env-select-authority` directly. Production

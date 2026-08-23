@@ -15,6 +15,8 @@ mod pkg_workspace_env_authority;
 mod pkg_workspace_env_materialize;
 #[path = "pkg_workspace_env_select.rs"]
 mod pkg_workspace_env_select;
+#[path = "pkg_workspace_manifest_authority.rs"]
+mod pkg_workspace_manifest_authority;
 #[path = "pkg_workspace_migrate.rs"]
 mod pkg_workspace_migrate;
 #[path = "pkg_workspace_new.rs"]
@@ -429,14 +431,17 @@ pub(crate) fn resolve_workspace_task_for_run(
     workspace_file: &Path,
     task_name: &str,
 ) -> Result<crate::pkg_task_runner::WorkspaceTaskAction, String> {
-    let workspace = pkg_workspace_env_select::load_workspace(workspace_file, "dev")?;
+    let workspace = pkg_workspace_manifest_authority::load(cli, workspace_file, "dev", false)?;
     let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
     crate::pkg_workspace_task::resolve(
         cli,
         workspace_file,
         &workspace.config,
         workspace.default_runtime_backend.as_deref(),
-        workspace.profile_runtime_backend.as_deref(),
+        workspace
+            .selected_profile
+            .as_ref()
+            .and_then(|profile| profile.runtime_backend.as_deref()),
         &active_runtime_backend,
         task_name,
     )
