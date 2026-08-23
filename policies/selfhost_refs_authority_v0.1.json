@@ -1,8 +1,8 @@
 {
   "artifact": "selfhost/toolchain.gc",
-  "auditDate": "2026-08-13",
+  "auditDate": "2026-08-23",
   "binding": "core/refs::authority",
-  "contentIdentitySha256": "f57aa39247287e8a9315664764986bc03b65dea8b8d790f60491ddb3a71436ab",
+  "contentIdentitySha256": "d51b9c135ebfd0453f8d2f0738d6e54fdac8e9d8bc44baf3201b67065d17671b",
   "decisionInventory": [
     "direct-ref-lookup",
     "direct-ref-prefix-filter-and-order",
@@ -13,6 +13,7 @@
     "bulk-ref-canonical-order-and-uniqueness",
     "bulk-ref-first-conflict-verdict",
     "bulk-ref-atomic-transition",
+    "internal-consumer-ref-read-routing",
     "request-bound-result-verdict"
   ],
   "hostMechanisms": [

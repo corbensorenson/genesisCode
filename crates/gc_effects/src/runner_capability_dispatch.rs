@@ -390,6 +390,7 @@ pub(super) fn call_capability_with_runtime(
             policy,
             store,
             refs,
+            refs_authority,
             pkg_lock_read_authority,
             pkg_lock_write_authority,
             pkg_resolution_identity_authority,
@@ -439,7 +440,17 @@ pub(super) fn call_capability_with_runtime(
             error_tok,
         ),
         s if s.starts_with("core/vcs-low::") => capability_vcs_low(
-            s, payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
+            s,
+            payload,
+            pol,
+            policy,
+            store,
+            refs,
+            refs_authority,
+            budget,
+            error_tok,
+            op,
+            timeout_ms,
         ),
         s if s.starts_with("core/gc-low::") || s.starts_with("core/gpk-low::") => {
             capability_gc_gpk_low(

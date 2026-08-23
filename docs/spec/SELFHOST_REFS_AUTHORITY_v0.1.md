@@ -9,14 +9,17 @@ The artifact-loaded `core/refs::authority` binding is the production semantic au
 `core/gpk-low::import` and `core/sync::pull`. It owns exact-name lookup, prefix filtering, canonical
 entry order, expected-old comparison, conflict versus write selection, single-name update or
 deletion, bulk mode/input admission, strict bulk order and uniqueness, first-conflict attribution,
-complete replacement snapshots, and the logical response content.
+complete replacement snapshots, and the logical response content. The same authority supplies every
+local ref lookup or listing consumed by GPK export, package publish, package ref and semver
+resolution, and VCS log/blame/why history discovery.
 
 Rust remains the bounded mechanism for capability transport, reference database parsing, exclusive
 locking, crash-safe replacement, sorted transport construction, and retry after a concurrent
 snapshot change. The existing Rust policy/evidence/signature admission gate runs before direct and
 GPK writes. Registry transport and artifact transfer remain host mechanisms. Internal ref reads in
-remaining package, VCS, and export paths have not all migrated. These residuals keep `SD-REFS` at
-H0.
+GC remain a neutral observation governed by the separate H2 GC contract. Registry references,
+policy/evidence/signature admission, direct legacy persistence APIs, and the explicit parity oracle
+have not migrated. These residuals keep `SD-REFS` at H0.
 
 ## Bootstrap
 
@@ -97,8 +100,20 @@ all requested closures before submitting one `:same-or-absent` or `:unconditiona
 later conflict cannot leave an earlier ref updated. Rust never converts a changed snapshot into its
 own conflict or write verdict.
 
+## Internal consumer routing
+
+Production GPK export, package publish, package ref and semver resolution, and VCS root/history
+lookup MUST call the same `RefsAuthority` adapter used by direct `core/refs` effects. The runner
+loads that authority lazily for only the operations that can consume local refs. A missing
+configuration or binding fails closed when a local ref is actually requested; hash-only and
+commit-override paths do not invent a ref decision. Direct `RefsDb::{get,list}` fallback for these
+consumers is compiled only under the explicit `parity-oracle` feature, never generic `cfg(test)` or
+a production profile. Remote registry lookups remain registry observations and do not inherit this
+local refs authority claim.
+
 ## Nonclaims
 
-This contract does not claim H2 for `SD-REFS`, complete internal-ref consumer authority, GPK/sync
-policy or transport authority, policy/evidence/signature admission authority, registry reference
-authority, `R4.2.e` or SH-C closure, bootstrap fixpoint, or release qualification.
+This contract does not claim H2 for `SD-REFS`, complete internal-ref consumer authority beyond the
+named local routes, GPK/sync policy or transport authority, policy/evidence/signature admission
+authority, registry reference authority, `R4.2.e` or SH-C closure, bootstrap fixpoint, or release
+qualification.

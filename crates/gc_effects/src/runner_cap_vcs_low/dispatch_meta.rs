@@ -11,6 +11,7 @@ pub(super) fn dispatch_meta(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    mut refs_authority: Option<&mut RefsAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -46,7 +47,11 @@ pub(super) fn dispatch_meta(
                         Some(op),
                     ));
                 };
-                let cur = match rdb.get(&root_commit) {
+                let cur = match RefsAuthority::consumer_get(
+                    refs_authority.as_deref_mut(),
+                    rdb,
+                    &root_commit,
+                ) {
                     Ok(h) => h,
                     Err(e) => {
                         return Ok(mk_error(
@@ -247,7 +252,12 @@ pub(super) fn dispatch_meta(
                         Some(op),
                     ));
                 };
-                let found = match vcs_find_commit_for_snapshot(store, rdb, &sh) {
+                let found = match vcs_find_commit_for_snapshot(
+                    store,
+                    rdb,
+                    refs_authority.as_deref_mut(),
+                    &sh,
+                ) {
                     Ok(x) => x,
                     Err(e) => {
                         return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op)));
@@ -411,7 +421,12 @@ pub(super) fn dispatch_meta(
                         Some(op),
                     ));
                 };
-                let found = match vcs_find_commit_for_snapshot(store, rdb, &sh) {
+                let found = match vcs_find_commit_for_snapshot(
+                    store,
+                    rdb,
+                    refs_authority.as_deref_mut(),
+                    &sh,
+                ) {
                     Ok(x) => x,
                     Err(e) => {
                         return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op)));
@@ -555,6 +570,7 @@ mod tests {
             &Term::Nil,
             None,
             &CapsPolicy::empty(),
+            None,
             None,
             None,
             &mut budget,

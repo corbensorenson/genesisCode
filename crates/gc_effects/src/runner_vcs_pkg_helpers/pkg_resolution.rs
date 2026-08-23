@@ -314,6 +314,7 @@ fn collect_available_semver_tags(refs: &[RefEntry]) -> Vec<Term> {
 pub(crate) fn resolve_requirement(
     store: &ArtifactStore,
     refs: &RefsDb,
+    mut refs_authority: Option<&mut RefsAuthority>,
     registries: &BTreeMap<String, String>,
     policy: &CapsPolicy,
     op_pol: Option<&OpPolicy>,
@@ -413,8 +414,7 @@ pub(crate) fn resolve_requirement(
             })
         }
         PkgResolutionSelector::Ref(rn) => {
-            let local_h = refs
-                .get(&rn)
+            let local_h = RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &rn)
                 .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
             let commit_hex = if let Some(h) = local_h {
                 h
@@ -516,9 +516,12 @@ pub(crate) fn resolve_requirement(
                     Some(op),
                 ));
             };
-            let local_refs_list = refs
-                .list(Some("refs/tags/"))
-                .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
+            let local_refs_list = RefsAuthority::consumer_list(
+                refs_authority.as_deref_mut(),
+                refs,
+                Some("refs/tags/"),
+            )
+            .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
             let local_candidates = collect_semver_candidates(&local_refs_list, &req_range);
             let mut resolved = select_semver_tag_ref(
                 identity_authority.as_deref_mut(),

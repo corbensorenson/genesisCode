@@ -17,6 +17,7 @@ pub(super) fn capability_vcs_low(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -27,7 +28,17 @@ pub(super) fn capability_vcs_low(
         "core/vcs-low::log" | "core/vcs-low::blame" | "core/vcs-low::why"
     ) {
         return dispatch_meta::dispatch_meta(
-            op_eff, payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
+            op_eff,
+            payload,
+            pol,
+            policy,
+            store,
+            refs,
+            refs_authority,
+            budget,
+            error_tok,
+            op,
+            timeout_ms,
         );
     }
     if matches!(

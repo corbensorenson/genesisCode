@@ -1,6 +1,7 @@
 pub(super) fn resolve_gpk_root_for_export(
     store: &ArtifactStore,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     root_spec: &str,
     mode: GpkMode,
     error_tok: SealId,
@@ -32,8 +33,7 @@ pub(super) fn resolve_gpk_root_for_export(
             Some(op),
         )
     })?;
-    let resolved = refs
-        .get(&root)
+    let resolved = RefsAuthority::consumer_get(refs_authority, refs, &root)
         .map_err(|e| mk_error(error_tok, "core/gpk/refs-io-error", e.to_string(), Some(op)))?;
     let Some(hash) = resolved else {
         return Err(mk_error(

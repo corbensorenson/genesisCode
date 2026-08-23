@@ -20,6 +20,7 @@ pub(super) fn handle_pkg_install(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    mut refs_authority: Option<&mut RefsAuthority>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
@@ -36,6 +37,7 @@ pub(super) fn handle_pkg_install(
                 policy,
                 store,
                 refs,
+                refs_authority.as_deref_mut(),
                 lock_authority,
                 None,
                 budget,
@@ -135,6 +137,7 @@ pub(super) fn handle_pkg_install(
             match resolve_requirement(
                 store,
                 refs,
+                refs_authority.as_deref_mut(),
                 &lock.registries,
                 policy,
                 pol,

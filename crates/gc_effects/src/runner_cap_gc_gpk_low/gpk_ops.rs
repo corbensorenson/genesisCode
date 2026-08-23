@@ -112,6 +112,7 @@ pub(super) fn handle_gpk_export(
     let resolved_root = match resolve_gpk_root_for_export(
         store,
         refs.as_ref().ok().copied(),
+        ctx.refs_authority.as_deref_mut(),
         &root_spec,
         mode,
         error_tok,
@@ -230,17 +231,18 @@ pub(super) fn handle_gpk_export(
             }
         };
         for name in &embed_refnames {
-            let cur = match refs.get(name) {
-                Ok(h) => h,
-                Err(e) => {
-                    return Ok(mk_error(
-                        error_tok,
-                        "core/gpk/refs-io-error",
-                        e.to_string(),
-                        Some(op),
-                    ));
-                }
-            };
+            let cur =
+                match RefsAuthority::consumer_get(ctx.refs_authority.as_deref_mut(), refs, name) {
+                    Ok(h) => h,
+                    Err(e) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/gpk/refs-io-error",
+                            e.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
             let Some(h) = cur else {
                 return Ok(mk_error(
                     error_tok,

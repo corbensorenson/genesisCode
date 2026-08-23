@@ -10,6 +10,7 @@ pub(super) fn handle_pkg_install_parity(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    mut refs_authority: Option<&mut RefsAuthority>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     budget: &mut ArtifactBudgetState,
@@ -87,6 +88,7 @@ pub(super) fn handle_pkg_install_parity(
             match resolve_requirement(
                 store,
                 refs_db,
+                refs_authority.as_deref_mut(),
                 &l.registries,
                 policy,
                 pol,

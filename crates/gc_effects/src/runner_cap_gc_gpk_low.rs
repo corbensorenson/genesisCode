@@ -406,7 +406,7 @@ pub(super) fn capability_gc_gpk_low(
                 policy,
                 store,
                 refs,
-                refs_authority: None,
+                refs_authority: refs_authority.as_deref_mut(),
                 budget,
                 error_tok,
                 op,

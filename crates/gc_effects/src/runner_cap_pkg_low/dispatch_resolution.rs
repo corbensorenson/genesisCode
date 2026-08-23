@@ -23,6 +23,7 @@ pub(super) fn dispatch_resolution(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     mut lock_authority: Option<&mut PkgLockReadAuthority>,
     lock_write_authority: Option<&mut PkgLockWriteAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
@@ -31,6 +32,7 @@ pub(super) fn dispatch_resolution(
     op: &str,
     timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
+    let mut refs_authority = refs_authority;
     match op_eff {
         "core/pkg-low::info" => {
             let lock_s = match payload_pkg_lock(payload) {
@@ -173,6 +175,7 @@ pub(super) fn dispatch_resolution(
                 &l,
                 store,
                 refs,
+                refs_authority.as_deref_mut(),
                 policy,
                 pol,
                 budget,
@@ -332,6 +335,7 @@ pub(super) fn dispatch_resolution(
                 &l,
                 store,
                 refs,
+                refs_authority.as_deref_mut(),
                 policy,
                 pol,
                 budget,
@@ -458,6 +462,7 @@ pub(super) fn dispatch_resolution(
             policy,
             store,
             refs,
+            refs_authority.as_deref_mut(),
             lock_authority,
             identity_authority,
             budget,
@@ -625,6 +630,7 @@ mod tests {
             &Term::Nil,
             None,
             &CapsPolicy::empty(),
+            None,
             None,
             None,
             None,

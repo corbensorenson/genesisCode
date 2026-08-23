@@ -21,6 +21,7 @@ pub(super) fn capability_pkg_low(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     pkg_lock_write_authority: Option<&mut PkgLockWriteAuthority>,
     pkg_resolution_identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
@@ -31,6 +32,7 @@ pub(super) fn capability_pkg_low(
     op: &str,
     _timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
+    let mut refs_authority = refs_authority;
     if matches!(
         op_eff,
         "core/pkg-low::init"
@@ -71,6 +73,7 @@ pub(super) fn capability_pkg_low(
             policy,
             store,
             refs,
+            refs_authority.as_deref_mut(),
             pkg_lock_read_authority,
             pkg_lock_write_authority,
             pkg_resolution_identity_authority,
@@ -91,6 +94,7 @@ pub(super) fn capability_pkg_low(
             policy,
             store,
             refs,
+            refs_authority.as_deref_mut(),
             pkg_lock_read_authority,
             pkg_package_manifest_authority,
             budget,

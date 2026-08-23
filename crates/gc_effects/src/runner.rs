@@ -313,17 +313,7 @@ pub fn run(
                                 .transpose()
                         );
                     }
-                    if refs_authority.is_none()
-                        && matches!(
-                            req.op.as_str(),
-                            "core/refs::get"
-                                | "core/refs::list"
-                                | "core/refs::set"
-                                | "core/refs::delete"
-                                | "core/sync::pull"
-                                | "core/gpk-low::import"
-                        )
-                    {
+                    if refs_authority.is_none() && RefsAuthority::required_for_request(&req.op) {
                         refs_authority = run_try!(
                             policy
                                 .selfhost_authority_config()

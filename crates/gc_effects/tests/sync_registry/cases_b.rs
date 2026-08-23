@@ -149,6 +149,89 @@ fn sync_pull_ref_conflict_leaves_the_entire_batch_unchanged() {
 }
 
 #[test]
+fn gpk_ref_export_fails_closed_without_authority_and_succeeds_with_it() {
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let output = td.path().join("bundle.gpk");
+    let store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let snapshot = parse_term(
+        r#"{:type :vcs/snapshot :v 1 :kind :module :module/name "ref-export" :defs {} :exports [] :obligations []}"#,
+    )
+    .unwrap();
+    let snapshot_hash = store.put_bytes(print_term(&snapshot).as_bytes()).unwrap();
+    let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
+    refs.set("refs/heads/main", Some(&snapshot_hash), None)
+        .unwrap();
+    let source = format!(
+        r#"
+allow = ["core/gpk-low::export"]
+
+[store]
+dir = "{}"
+
+[refs]
+path = "{}"
+
+[op."core/gpk-low::export"]
+base_dir = "{}"
+"#,
+        store_dir.display(),
+        refs_path.display(),
+        td.path().display(),
+    );
+    let payload = parse_term(
+        r#"{
+          :root "refs/heads/main"
+          :out "bundle.gpk"
+          :mode ":shallow"
+          :include-evidence "required"
+          :include-deps "locked"
+          :refs ["refs/heads/main"]
+        }"#,
+    )
+    .unwrap();
+
+    let no_authority = CapsPolicy::from_toml_str(&source).unwrap();
+    let (forms, hash) = mk_prog("core/gpk-low::export", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let denied = run(
+        &mut context,
+        &no_authority,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(is_sealed_error(
+        &context,
+        &denied.value,
+        "core/gpk/refs-io-error"
+    ));
+    assert!(!output.exists());
+
+    let with_authority = selfhost_sync_caps(&source);
+    let (forms, hash) = mk_prog("core/gpk-low::export", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let result = run(
+        &mut context,
+        &with_authority,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+    assert!(!matches!(result.value, Value::Sealed { .. }));
+    assert!(output.is_file());
+}
+
+#[test]
 fn sync_remote_allowlist_is_enforced() {
     let reg = Arc::new(MemRegistry::new());
     gc_registry::register_inproc("t3", reg).expect("register inproc");

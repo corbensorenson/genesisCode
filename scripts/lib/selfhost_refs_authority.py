@@ -53,7 +53,8 @@ CONSTANTS = {
         "direct-ref-cas-conflict-verdict", "direct-ref-update-and-delete-transition",
         "direct-ref-response-construction", "bulk-ref-mode-and-input-admission",
         "bulk-ref-canonical-order-and-uniqueness", "bulk-ref-first-conflict-verdict",
-        "bulk-ref-atomic-transition", "request-bound-result-verdict",
+        "bulk-ref-atomic-transition", "internal-consumer-ref-read-routing",
+        "request-bound-result-verdict",
     ],
     "hostMechanisms": [
         "artifact-only-authority-bootstrap-and-bounded-evaluation",
@@ -138,6 +139,23 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     gpk = source_text(
         root, "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs", overrides
     )
+    gpk_root = source_text(
+        root, "crates/gc_effects/src/runner_remote_ops/gpk.rs", overrides
+    )
+    publish = source_text(
+        root,
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs",
+        overrides,
+    )
+    resolution = source_text(
+        root, "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs", overrides
+    )
+    vcs_meta = source_text(
+        root, "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs", overrides
+    )
+    vcs_history = source_text(
+        root, "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs", overrides
+    )
     sync = source_text(
         root, "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs", overrides
     )
@@ -161,9 +179,16 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     for marker in (
         "pub(crate) struct RefsAuthority", "const MAX_RETRIES: usize = 16",
         "decode_get", "decode_list", "decode_set", "request-h",
+        "pub(crate) fn required_for_request(",
+        "pub(crate) fn consumer_get(", "pub(crate) fn consumer_list(",
+        '#[cfg(feature = "parity-oracle")]',
+        "local ref lookup requires the artifact-loaded GenesisCode refs authority",
+        "local ref listing requires the artifact-loaded GenesisCode refs authority",
     ):
         if marker not in authority:
             fail(f"Rust refs authority adapter missing marker: {marker}")
+    if '#[cfg(any(test, feature = "parity-oracle"))]' in authority:
+        fail("consumer ref fallback is reachable from generic test builds")
     for marker in (
         "const MAX_BULK_OPS: usize = 4096", "pub(crate) fn set_many(",
         'self.evaluate(":set-many", payload)', "decode_bulk_set",
@@ -205,11 +230,51 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"sync production route retains per-ref mutation decision: {forbidden}")
     if "sync_pull_ref_conflict_leaves_the_entire_batch_unchanged" not in sync_tests:
         fail("sync atomic negative control missing")
+    consumer_routes = {
+        "GPK root": (gpk_root, "RefsAuthority::consumer_get(refs_authority, refs, &root)"),
+        "GPK embedded refs": (gpk, "RefsAuthority::consumer_get(ctx.refs_authority.as_deref_mut(), refs, name)"),
+        "package publish": (publish, "RefsAuthority::consumer_get(refs_authority, refs, &refname)"),
+        "package ref resolution": (resolution, "RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &rn)"),
+        "package semver resolution": (resolution, "RefsAuthority::consumer_list("),
+        "VCS root": (vcs_meta, "RefsAuthority::consumer_get("),
+        "VCS history": (vcs_history, "RefsAuthority::consumer_list(refs_authority, refs, None)"),
+    }
+    for label, (source, marker) in consumer_routes.items():
+        if marker not in source:
+            fail(f"{label} does not route through GenesisCode refs authority")
+    for label, source in {
+        "GPK root": gpk_root,
+        "GPK export": gpk,
+        "package publish": publish,
+        "package resolution": resolution,
+        "VCS meta": vcs_meta,
+        "VCS history": vcs_history,
+    }.items():
+        if re.search(r"\b(?:refs|rdb)\s*\.\s*(?:get|list)\s*\(", source):
+            fail(f"{label} retains a direct local refs read")
+    if "gpk_ref_export_fails_closed_without_authority_and_succeeds_with_it" not in sync_tests:
+        fail("GPK internal-consumer authority control missing")
+    required_ops = (
+        "core/refs::get", "core/refs::list", "core/refs::set", "core/refs::delete",
+        "core/sync::pull", "core/gpk-low::export", "core/gpk-low::import",
+        "core/pkg-low::publish", "core/pkg-low::lock", "core/pkg-low::update",
+        "core/pkg-low::install", "core/vcs-low::log", "core/vcs-low::blame",
+        "core/vcs-low::why",
+    )
+    inventory_match = re.search(
+        r"pub\(crate\) fn required_for_request\(.*?\n\s*}\n\n\s*pub\(crate\) fn load",
+        authority,
+        re.DOTALL,
+    )
+    if inventory_match is None:
+        fail("refs authority lazy-load operation inventory is not structurally bounded")
+    inventory = tuple(re.findall(r'"([^"]+)"', inventory_match.group(0)))
+    if inventory != required_ops:
+        fail("refs authority lazy-load operation inventory drift")
     if (
         ".map(RefsAuthority::load)" not in runner
         or "refs_authority.as_mut()" not in runner
-        or '"core/sync::pull"' not in runner
-        or '"core/gpk-low::import"' not in runner
+        or "RefsAuthority::required_for_request(&req.op)" not in runner
     ):
         fail("runner does not load and forward artifact refs authority")
 
@@ -226,10 +291,16 @@ def validate_all(root: Path, profile, schema, overrides=None, check_identity=Tru
 def self_test(root: Path, profile, schema) -> int:
     module = (root / profile["sourceModule"]).read_text()
     manifest = (root / "selfhost/toolchain_manifest.gc").read_text()
+    authority = (root / "crates/gc_effects/src/refs_authority.rs").read_text()
     cap_refs = (root / "crates/gc_effects/src/runner_cap_refs.rs").read_text()
     bulk = (root / "crates/gc_effects/src/refs_authority_bulk.rs").read_text()
     refs_db = (root / "crates/gc_effects/src/refs.rs").read_text()
     gpk = (root / "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs").read_text()
+    gpk_root = (root / "crates/gc_effects/src/runner_remote_ops/gpk.rs").read_text()
+    publish = (root / "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs").read_text()
+    resolution = (root / "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs").read_text()
+    vcs_meta = (root / "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs").read_text()
+    vcs_history = (root / "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs").read_text()
     sync = (root / "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs").read_text()
     sync_tests = (root / "crates/gc_effects/tests/sync_registry/cases_b.rs").read_text()
     runner = (root / "crates/gc_effects/src/runner.rs").read_text()
@@ -264,6 +335,16 @@ def self_test(root: Path, profile, schema) -> int:
         (profile, {"crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs": sync.replace("authority.set_many(refs, &pending_refs, mode)", "refs.set(rname, Some(&h), None)", 1)}, "sync authority route"),
         (profile, {"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests.replace("sync_pull_ref_conflict_leaves_the_entire_batch_unchanged", "sync_pull_partial_update_allowed", 1)}, "sync atomic control"),
         (profile, {"crates/gc_effects/src/runner.rs": runner.replace(".map(RefsAuthority::load)", ".map(StoreAuthority::load)", 1)}, "runner load"),
+        (profile, {"crates/gc_effects/src/refs_authority.rs": authority.replace('"core/vcs-low::why"', '"core/vcs-low::legacy-why"', 1)}, "lazy-load inventory"),
+        (profile, {"crates/gc_effects/src/refs_authority.rs": authority.replace("pub(crate) fn consumer_get(", "pub(crate) fn legacy_consumer_get(", 1)}, "consumer adapter"),
+        (profile, {"crates/gc_effects/src/refs_authority.rs": authority.replace('#[cfg(feature = "parity-oracle")]', '#[cfg(any(test, feature = "parity-oracle"))]', 1)}, "generic test fallback"),
+        (profile, {"crates/gc_effects/src/runner_remote_ops/gpk.rs": gpk_root.replace("RefsAuthority::consumer_get(refs_authority, refs, &root)", "refs.get(&root)", 1)}, "GPK root read"),
+        (profile, {"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk.replace("RefsAuthority::consumer_get(ctx.refs_authority.as_deref_mut(), refs, name)", "refs.get(name)", 1)}, "GPK embedded read"),
+        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("RefsAuthority::consumer_get(refs_authority, refs, &refname)", "refs.get(&refname)", 1)}, "publish read"),
+        (profile, {"crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs": resolution.replace("RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &rn)", "refs.get(&rn)", 1)}, "package read"),
+        (profile, {"crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs": vcs_meta.replace("RefsAuthority::consumer_get(", "RefsAuthority::legacy_consumer_get(", 1)}, "VCS root read"),
+        (profile, {"crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs": vcs_history.replace("RefsAuthority::consumer_list(refs_authority, refs, None)", "refs.list(None)", 1)}, "VCS history read"),
+        (profile, {"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests.replace("gpk_ref_export_fails_closed_without_authority_and_succeeds_with_it", "gpk_ref_export_bypasses_authority", 1)}, "GPK consumer control"),
     ])
     controls = 0
     for candidate, overrides, label in mutations:
@@ -273,7 +354,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"mutation survived: {label}")
-    if controls != 20:
+    if controls != 30:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

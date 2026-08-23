@@ -665,7 +665,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "15ddceef095eba09e48198ba880f7413b393dc6ac10aaf079ccb30c4ed9ced4f",
+  "contentIdentitySha256": "9a1266b4698fa23162cb3b533a5232b95c400a164892cd1c079d934c320b86b5",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1827,8 +1827,8 @@
       "id": "SD-REFS",
       "internalOnly": false,
       "limitations": [
-        "Artifact-loaded GenesisCode exclusively decides direct core/refs get/list lookup, prefix filtering/order, expected-old conflict, update/delete transition, response facts, and atomic local bulk-ref modes, canonical ordering, first-conflict attribution, and complete replacement snapshots for GPK import and sync pull under genesis/selfhost-refs-authority-v0.1",
-        "Rust policy/evidence/signature admission, registry transport, remaining internal package/VCS/export ref reads, and the reachable parity oracle remain host-authoritative or unretired, so SD-REFS remains H0"
+        "Artifact-loaded GenesisCode exclusively decides direct core/refs get/list lookup, prefix filtering/order, expected-old conflict, update/delete transition, response facts, atomic local bulk-ref modes, canonical ordering, first-conflict attribution, and complete replacement snapshots for GPK import and sync pull, and every local ref read used by GPK export, package publish/ref/semver resolution, and VCS root/history discovery under genesis/selfhost-refs-authority-v0.1",
+        "Rust policy/evidence/signature admission, registry references and transport, the separately governed GC neutral snapshot observation, direct legacy persistence APIs, and the reachable parity oracle remain host-authoritative or unretired, so SD-REFS remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -1846,7 +1846,12 @@
         "crates/gc_effects/src/refs_authority_bulk.rs",
         "crates/gc_effects/src/runner_cap_refs.rs",
         "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs",
-        "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs"
+        "crates/gc_effects/src/runner_remote_ops/gpk.rs",
+        "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
+        "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
       "specAuthorityPaths": [
@@ -1861,13 +1866,19 @@
         "crates/gc_effects/src/refs_authority_bulk.rs",
         "crates/gc_effects/tests/sync_registry/cases_b.rs",
         "crates/gc_cli/tests/cli_pkg_import_set_ref.rs",
+        "crates/gc_cli/tests/cli_pkg_engine.rs",
+        "crates/gc_cli/tests/cli_pkg_publish.rs",
+        "crates/gc_cli/tests/cli_vcs_engine.rs",
         "crates/gc_cli/tests/cli_refs.rs"
       ],
-      "title": "Reference read, list, direct update, and atomic bulk mutation decisions",
+      "title": "Reference reads, direct updates, atomic bulk mutations, and local consumer routing",
       "verifierPaths": [
         "crates/gc_cli/tests/cli_refs.rs",
         "crates/gc_effects/tests/sync_registry/cases_b.rs",
         "crates/gc_cli/tests/cli_pkg_import_set_ref.rs",
+        "crates/gc_cli/tests/cli_pkg_engine.rs",
+        "crates/gc_cli/tests/cli_pkg_publish.rs",
+        "crates/gc_cli/tests/cli_vcs_engine.rs",
         "scripts/lib/selfhost_refs_authority.py"
       ]
     },

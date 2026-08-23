@@ -35,11 +35,13 @@ pub(crate) fn vcs_snapshot_symbol_ref(
 pub(crate) fn vcs_find_commit_for_snapshot(
     store: &ArtifactStore,
     refs: &RefsDb,
+    refs_authority: Option<&mut RefsAuthority>,
     snapshot_h: &str,
 ) -> Result<Option<String>, String> {
     use std::collections::HashSet;
 
-    let refs = refs.list(None).map_err(|e| e.to_string())?;
+    let refs =
+        RefsAuthority::consumer_list(refs_authority, refs, None).map_err(|e| e.to_string())?;
     let mut visited: HashSet<String> = HashSet::new();
     let mut stack: Vec<String> = refs
         .into_iter()

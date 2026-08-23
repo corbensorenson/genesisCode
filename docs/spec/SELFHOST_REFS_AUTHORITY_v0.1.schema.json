@@ -19,7 +19,8 @@
       "direct-ref-cas-conflict-verdict", "direct-ref-update-and-delete-transition",
       "direct-ref-response-construction", "bulk-ref-mode-and-input-admission",
       "bulk-ref-canonical-order-and-uniqueness", "bulk-ref-first-conflict-verdict",
-      "bulk-ref-atomic-transition", "request-bound-result-verdict"
+      "bulk-ref-atomic-transition", "internal-consumer-ref-read-routing",
+      "request-bound-result-verdict"
     ]},
     "hostMechanisms": {"const": [
       "artifact-only-authority-bootstrap-and-bounded-evaluation",

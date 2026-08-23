@@ -17,6 +17,7 @@ pub(super) fn handle_publish(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    refs_authority: Option<&mut RefsAuthority>,
     authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
     bridge_runtime: &mut HostBridgeRuntime,
@@ -62,7 +63,7 @@ pub(super) fn handle_publish(
 
     let commit_hash = match commit_override {
         Some(hash) => hash,
-        None => match refs.get(&refname) {
+        None => match RefsAuthority::consumer_get(refs_authority, refs, &refname) {
             Ok(Some(hash)) => hash,
             Ok(None) => {
                 return Ok(mk_error(

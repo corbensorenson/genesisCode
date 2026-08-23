@@ -24,6 +24,7 @@ pub(super) fn execute_workflow(
     model: &gc_pkg::GenesisLock,
     store: &ArtifactStore,
     refs: &RefsDb,
+    mut refs_authority: Option<&mut RefsAuthority>,
     policy: &CapsPolicy,
     pol: Option<&OpPolicy>,
     budget: &mut ArtifactBudgetState,
@@ -105,6 +106,7 @@ pub(super) fn execute_workflow(
                 let entry = resolve_requirement(
                     store,
                     refs,
+                    refs_authority.as_deref_mut(),
                     &model.registries,
                     policy,
                     pol,
@@ -146,6 +148,7 @@ pub(super) fn execute_workflow(
                     let entry = resolve_requirement(
                         store,
                         refs,
+                        refs_authority.as_deref_mut(),
                         &model.registries,
                         policy,
                         pol,

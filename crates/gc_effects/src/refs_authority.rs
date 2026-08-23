@@ -25,6 +25,26 @@ pub(crate) struct RefsAuthority {
 }
 
 impl RefsAuthority {
+    pub(crate) fn required_for_request(op: &str) -> bool {
+        matches!(
+            op,
+            "core/refs::get"
+                | "core/refs::list"
+                | "core/refs::set"
+                | "core/refs::delete"
+                | "core/sync::pull"
+                | "core/gpk-low::export"
+                | "core/gpk-low::import"
+                | "core/pkg-low::publish"
+                | "core/pkg-low::lock"
+                | "core/pkg-low::update"
+                | "core/pkg-low::install"
+                | "core/vcs-low::log"
+                | "core/vcs-low::blame"
+                | "core/vcs-low::why"
+        )
+    }
+
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
         let mut context = EvalCtx::with_step_limit(None);
         context.set_mem_limits(MemLimits {
@@ -83,6 +103,46 @@ impl RefsAuthority {
         ]);
         let term = self.evaluate(":list", payload)?;
         decode_list(term, &snapshot, prefix)
+    }
+
+    pub(crate) fn consumer_get(
+        authority: Option<&mut Self>,
+        refs: &RefsDb,
+        name: &str,
+    ) -> Result<Option<String>, EffectsError> {
+        if let Some(authority) = authority {
+            return authority.get(refs, name);
+        }
+        #[cfg(feature = "parity-oracle")]
+        {
+            return refs.get(name);
+        }
+        #[cfg(not(feature = "parity-oracle"))]
+        {
+            Err(authority_error(
+                "local ref lookup requires the artifact-loaded GenesisCode refs authority",
+            ))
+        }
+    }
+
+    pub(crate) fn consumer_list(
+        authority: Option<&mut Self>,
+        refs: &RefsDb,
+        prefix: Option<&str>,
+    ) -> Result<Vec<RefEntry>, EffectsError> {
+        if let Some(authority) = authority {
+            return authority.list(refs, prefix);
+        }
+        #[cfg(feature = "parity-oracle")]
+        {
+            return refs.list(prefix);
+        }
+        #[cfg(not(feature = "parity-oracle"))]
+        {
+            Err(authority_error(
+                "local ref listing requires the artifact-loaded GenesisCode refs authority",
+            ))
+        }
     }
 
     pub(crate) fn set(
@@ -509,6 +569,24 @@ mod tests {
             refs: None,
             value: None,
         }
+    }
+
+    #[test]
+    fn consumer_routes_have_a_closed_lazy_load_inventory() {
+        for op in [
+            "core/gpk-low::export",
+            "core/gpk-low::import",
+            "core/pkg-low::publish",
+            "core/pkg-low::lock",
+            "core/pkg-low::update",
+            "core/pkg-low::install",
+            "core/vcs-low::log",
+            "core/vcs-low::blame",
+            "core/vcs-low::why",
+        ] {
+            assert!(RefsAuthority::required_for_request(op), "missing {op}");
+        }
+        assert!(!RefsAuthority::required_for_request("core/sync::push"));
     }
 
     #[test]
