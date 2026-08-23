@@ -158,7 +158,7 @@ fn session_obligation_error(error: gc_obligations::ObligationError, session: &st
 }
 
 fn begin(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
-    let paths = resolve_paths(pkg, session)?;
+    let paths = resolve_paths(cli, pkg, session)?;
     if paths.state_path.exists() {
         return Err(session_error(
             "session/already-exists",
@@ -174,7 +174,7 @@ fn begin(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
             session,
         )
     })?;
-    let snapshot = capture_snapshot(&paths, &paths.live_root, &package_manifest, session)?;
+    let snapshot = capture_snapshot(cli, &paths, &paths.live_root, &package_manifest, session)?;
     materialize_snapshot(&paths, &snapshot, &paths.workspace_root, session)?;
     let state = SessionRecord {
         schema: SESSION_SCHEMA.to_string(),
@@ -196,7 +196,7 @@ fn begin(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
 }
 
 fn status(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
-    let paths = resolve_paths(pkg, session)?;
+    let paths = resolve_paths(cli, pkg, session)?;
     let state = load_state(&paths, session)?;
     load_snapshot(&paths, &state.base_snapshot, session)?;
     load_snapshot(&paths, &state.current_snapshot, session)?;
@@ -215,7 +215,7 @@ fn stage(
     patch: &Path,
     caps: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
-    let paths = resolve_paths(pkg, session)?;
+    let paths = resolve_paths(cli, pkg, session)?;
     let mut state = load_state(&paths, session)?;
     require_open(&state)?;
     let before = load_snapshot(&paths, &state.current_snapshot, session)?;
@@ -265,7 +265,7 @@ fn stage(
     )
     .map_err(|error| patch_error(error, session))?;
     let patch_identity = result.semantic_patch_hash.clone();
-    let after = capture_snapshot(&paths, &candidate, &state.package_manifest, session)?;
+    let after = capture_snapshot(cli, &paths, &candidate, &state.package_manifest, session)?;
     if paths.workspace_root.exists() {
         fs::remove_dir_all(&paths.workspace_root).map_err(|error| {
             session_error(
@@ -320,11 +320,12 @@ fn test_session(
     session: &str,
     caps: Option<&Path>,
 ) -> Result<CmdOut, CliError> {
-    let paths = resolve_paths(pkg, session)?;
+    let paths = resolve_paths(cli, pkg, session)?;
     let mut state = load_state(&paths, session)?;
     require_open(&state)?;
     let current = load_snapshot(&paths, &state.current_snapshot, session)?;
     let observed = capture_snapshot(
+        cli,
         &paths,
         &paths.workspace_root,
         &state.package_manifest,
@@ -374,6 +375,7 @@ fn test_session(
 }
 
 fn rollback_to_base(
+    cli: &Cli,
     paths: &storage::SessionPaths,
     current: &WorkspaceSnapshot,
     base: &WorkspaceSnapshot,
@@ -387,8 +389,8 @@ fn rollback_to_base(
             session,
         )
     })?;
-    let restored =
-        capture_snapshot(paths, &paths.live_root, package_manifest, session).map_err(|_| {
+    let restored = capture_snapshot(cli, paths, &paths.live_root, package_manifest, session)
+        .map_err(|_| {
             session_error(
                 "session/rollback-failed",
                 "transaction rollback result could not be verified",
@@ -406,7 +408,7 @@ fn rollback_to_base(
 }
 
 fn apply(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
-    let paths = resolve_paths(pkg, session)?;
+    let paths = resolve_paths(cli, pkg, session)?;
     let _lock = acquire_apply_lock(&paths, session)?;
     let mut state = load_state(&paths, session)?;
     require_open(&state)?;
@@ -427,6 +429,7 @@ fn apply(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
     let base = load_snapshot(&paths, &state.base_snapshot, session)?;
     let current = load_snapshot(&paths, &state.current_snapshot, session)?;
     let isolated = capture_snapshot(
+        cli,
         &paths,
         &paths.workspace_root,
         &state.package_manifest,
@@ -439,7 +442,13 @@ fn apply(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
             session,
         ));
     }
-    let live = capture_snapshot(&paths, &paths.live_root, &state.package_manifest, session)?;
+    let live = capture_snapshot(
+        cli,
+        &paths,
+        &paths.live_root,
+        &state.package_manifest,
+        session,
+    )?;
     if live.identity != base.identity {
         return Err(session_error(
             "session/stale-base",
@@ -448,16 +457,35 @@ fn apply(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
         ));
     }
     apply_snapshot(&paths, &base, &current, session)?;
-    let applied = match capture_snapshot(&paths, &paths.live_root, &state.package_manifest, session)
-    {
+    let applied = match capture_snapshot(
+        cli,
+        &paths,
+        &paths.live_root,
+        &state.package_manifest,
+        session,
+    ) {
         Ok(applied) => applied,
         Err(error) => {
-            rollback_to_base(&paths, &current, &base, &state.package_manifest, session)?;
+            rollback_to_base(
+                cli,
+                &paths,
+                &current,
+                &base,
+                &state.package_manifest,
+                session,
+            )?;
             return Err(error);
         }
     };
     if applied.identity != current.identity {
-        rollback_to_base(&paths, &current, &base, &state.package_manifest, session)?;
+        rollback_to_base(
+            cli,
+            &paths,
+            &current,
+            &base,
+            &state.package_manifest,
+            session,
+        )?;
         return Err(session_error(
             "session/apply-mismatch",
             "live package does not match the verified transaction snapshot after apply",
@@ -466,7 +494,14 @@ fn apply(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
     }
     state.status = SessionStatus::Applied;
     if let Err(error) = save_state(&paths, &state) {
-        rollback_to_base(&paths, &current, &base, &state.package_manifest, session)?;
+        rollback_to_base(
+            cli,
+            &paths,
+            &current,
+            &base,
+            &state.package_manifest,
+            session,
+        )?;
         return Err(error);
     }
     output(
@@ -478,7 +513,7 @@ fn apply(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
 }
 
 fn abort(cli: &Cli, pkg: &Path, session: &str) -> Result<CmdOut, CliError> {
-    let paths = resolve_paths(pkg, session)?;
+    let paths = resolve_paths(cli, pkg, session)?;
     let mut state = load_state(&paths, session)?;
     require_open(&state)?;
     state.status = SessionStatus::Aborted;

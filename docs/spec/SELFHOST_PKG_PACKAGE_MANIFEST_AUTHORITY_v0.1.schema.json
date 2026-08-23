@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact": { "const": "selfhost/toolchain.gc" },
+    "auditDate": { "format": "date", "type": "string" },
+    "binding": { "const": "core/pkg::package-manifest-authority" },
+    "contentIdentitySha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+    "decisionInventory": {
+      "items": { "type": "string" },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "hostMechanisms": {
+      "items": { "type": "string" },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "hostOracle": {
+      "additionalProperties": false,
+      "properties": {
+        "productionRequired": { "const": true },
+        "productionResidualPaths": {
+          "prefixItems": [
+            { "const": "crates/gc_effects/src/runner_editor_tasks.rs" },
+            { "const": "crates/gc_effects/src/runner_editor_task_workflows.rs" },
+            { "const": "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs" }
+          ],
+          "items": false,
+          "minItems": 3,
+          "type": "array"
+        },
+        "reachability": { "const": "effects-residual-and-test-or-parity" },
+        "removalTask": { "const": "R4.2.e" }
+      },
+      "required": [
+        "productionRequired", "productionResidualPaths", "reachability", "removalTask"
+      ],
+      "type": "object"
+    },
+    "independentVerifier": {
+      "const": "scripts/lib/selfhost_pkg_package_manifest_authority.py"
+    },
+    "kind": { "const": "genesis/selfhost-pkg-package-manifest-authority-v0.1" },
+    "nonclaims": {
+      "items": { "type": "string" },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "productionEntrypoints": {
+      "items": { "enum": ["gc_obligations", "gc_patches", "genesis"] },
+      "minItems": 3,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "requestKind": {
+      "const": "genesis/pkg-package-manifest-authority-request-v0.1"
+    },
+    "resultKind": {
+      "const": "genesis/pkg-package-manifest-authority-result-v0.1"
+    },
+    "schema": {
+      "const": "docs/spec/SELFHOST_PKG_PACKAGE_MANIFEST_AUTHORITY_v0.1.schema.json"
+    },
+    "sourceModules": {
+      "prefixItems": [
+        { "const": "selfhost/pkg_package_manifest_core_v1.gc" },
+        { "const": "selfhost/pkg_package_manifest_config_v1.gc" },
+        { "const": "selfhost/pkg_package_manifest_authority_v1.gc" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "type": "array"
+    },
+    "sourceSha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+    "spec": { "const": "docs/spec/PACKAGE_TOML.md" },
+    "version": { "const": "0.1.0" }
+  },
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "hostMechanisms", "hostOracle", "independentVerifier", "kind", "nonclaims",
+    "productionEntrypoints", "requestKind", "resultKind", "schema", "sourceModules",
+    "sourceSha256", "spec", "version"
+  ],
+  "type": "object"
+}

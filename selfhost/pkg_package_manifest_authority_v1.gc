@@ -1,0 +1,77 @@
+; Request-bound production authority for package manifests.
+
+(def selfhost/pkg-package-manifest::request-kind
+  "genesis/pkg-package-manifest-authority-request-v0.1")
+
+(def selfhost/pkg-package-manifest::result-kind
+  "genesis/pkg-package-manifest-authority-result-v0.1")
+
+(def selfhost/pkg-package-manifest::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind selfhost/pkg-package-manifest::result-kind
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-package-manifest::reject
+  (fn (request-h)
+    (fn (message)
+      (((((selfhost/pkg-package-manifest::result request-h) false)
+          "core/pkg/bad-package-manifest")
+        message)
+      nil))))
+
+(def selfhost/pkg-package-manifest::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-package-manifest::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-package-manifest::request-valid?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [:document :kind :source-h :v])
+      (if
+        (if (selfhost/pkg-lock-read::str? ((core/map::get request) (quote :kind)))
+          ((core/eq? ((core/map::get request) (quote :kind)))
+            selfhost/pkg-package-manifest::request-kind)
+          false)
+        (if
+          (if (selfhost/pkg-lock-read::int? ((core/map::get request) (quote :v)))
+            ((core/int::eq? ((core/map::get request) (quote :v))) 1)
+            false)
+          (selfhost/pkg-lock-ops::lower-hex64?
+            ((core/map::get request) (quote :source-h)))
+          false)
+        false)
+      false)))
+
+(def core/pkg::package-manifest-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (if (selfhost/pkg-package-manifest::request-valid? request)
+          (let
+            ((normalized
+              (selfhost/pkg-package-manifest::normalize
+                ((core/map::get request) (quote :document)))))
+            (if ((core/map::get normalized) (quote :ok))
+              ((selfhost/pkg-package-manifest::accept request-h)
+                (((core/map::put
+                    ((core/map::get normalized) (quote :value)))
+                  (quote :source-h))
+                  ((core/map::get request) (quote :source-h))))
+              ((selfhost/pkg-package-manifest::reject request-h)
+                ((core/map::get normalized) (quote :message)))))
+          ((selfhost/pkg-package-manifest::reject request-h)
+            "package manifest request fields are invalid"))
+        ((selfhost/pkg-package-manifest::reject request-h)
+          "package manifest request must be map")))))

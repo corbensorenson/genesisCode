@@ -39,7 +39,8 @@ pub fn apply_patch_with_step_limit_and_frontend(
     }
 
     let (_manifest, pkg_dir) =
-        PackageManifest::load(pkg_toml).map_err(|e| PatchError::Validate(format!("{e}")))?;
+        gc_obligations::load_package_manifest_with_frontend(pkg_toml, &frontend)
+            .map_err(|e| PatchError::Validate(format!("{e}")))?;
     if let Some(sh) = selfhost.as_mut() {
         selfhost_preflight_patch(&patch, &pkg_dir, sh, step_limit)?;
     }
@@ -63,7 +64,7 @@ pub fn apply_patch_with_step_limit_and_frontend(
             }
         }
 
-        let package_artifact = pack(pkg_toml)?;
+        let package_artifact = pack_with_frontend(pkg_toml, frontend.clone())?;
         let acceptance = test_package_with_step_limit_and_frontend(
             pkg_toml,
             caps_override,

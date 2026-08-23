@@ -264,6 +264,7 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md` - shared normative partial R4.2.e workspace-new, workspace-remove, workspace-migrate, workspace-environment-selection, and workspace-task parsing, mutation, selection, canonical writer, identity, preflight, and write authority boundary; the stable filename predates the later profiles.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package workspace-new profile.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_MANIFEST_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked structural workspace-manifest authority profile.
+- `docs/spec/SELFHOST_PKG_PACKAGE_MANIFEST_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked structural package-manifest authority profile and its explicit effects residual.
 - `policies/selfhost_pkg_workspace_new_authority_v0.1.json` - content-addressed workspace-new decisions, bounded host mechanisms, retained oracle, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_workspace_new_authority.py` - independent workspace-new source/artifact/route/preflight/oracle/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_REMOVE_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked package workspace-remove profile.

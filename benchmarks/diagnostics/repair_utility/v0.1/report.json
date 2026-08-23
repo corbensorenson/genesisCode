@@ -71,7 +71,7 @@
     "baselineAgentId": "diagnostic-blind-v0.1",
     "primaryAgentId": "catalog-guided-v0.1",
     "recoveryRateDeltaBasisPoints": 6000,
-    "tokenCostDelta": 32183
+    "tokenCostDelta": 32269
   },
   "resultCount": 36,
   "results": [
@@ -949,7 +949,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 2115,
+          "inputTokens": 2173,
           "outputTokens": 388,
           "patchPaths": [
             "package.toml"
@@ -993,10 +993,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 2115,
+        "input": 2173,
         "output": 388,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2503
+        "total": 2561
       },
       "verificationOk": true
     },
@@ -1007,7 +1007,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 2115,
+          "inputTokens": 2173,
           "outputTokens": 388,
           "patchPaths": [
             "package.toml"
@@ -1051,10 +1051,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 2115,
+        "input": 2173,
         "output": 388,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2503
+        "total": 2561
       },
       "verificationOk": true
     },
@@ -1065,7 +1065,7 @@
         {
           "commandOkAfterTurn": true,
           "decision": "patch",
-          "inputTokens": 2119,
+          "inputTokens": 2175,
           "outputTokens": 389,
           "patchPaths": [
             "package.toml"
@@ -1109,10 +1109,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 2119,
+        "input": 2175,
         "output": 389,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 2508
+        "total": 2564
       },
       "verificationOk": true
     },
@@ -1966,7 +1966,7 @@
         {
           "commandOkAfterTurn": false,
           "decision": "abstain",
-          "inputTokens": 496,
+          "inputTokens": 525,
           "outputTokens": 155,
           "patchPaths": [],
           "reason": "human-only baseline found no unambiguous delimiter repair",
@@ -2006,10 +2006,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 496,
+        "input": 525,
         "output": 155,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 651
+        "total": 680
       },
       "verificationOk": false
     },
@@ -2020,7 +2020,7 @@
         {
           "commandOkAfterTurn": false,
           "decision": "abstain",
-          "inputTokens": 496,
+          "inputTokens": 525,
           "outputTokens": 155,
           "patchPaths": [],
           "reason": "human-only baseline found no unambiguous delimiter repair",
@@ -2060,10 +2060,10 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 496,
+        "input": 525,
         "output": 155,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 651
+        "total": 680
       },
       "verificationOk": false
     },
@@ -2074,7 +2074,7 @@
         {
           "commandOkAfterTurn": false,
           "decision": "abstain",
-          "inputTokens": 499,
+          "inputTokens": 527,
           "outputTokens": 155,
           "patchPaths": [],
           "reason": "human-only baseline found no unambiguous delimiter repair",
@@ -2114,19 +2114,19 @@
       "repairability": "automatic",
       "safeAbstention": false,
       "tokenCost": {
-        "input": 499,
+        "input": 527,
         "output": 155,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 654
+        "total": 682
       },
       "verificationOk": false
     }
   ],
   "runtime": {
-    "diagnosticCatalogIdentitySha256": "08a93f6f649ce4a87a6d1995d68ea923fc3b85808928588a878ea5ccf179b1f4",
+    "diagnosticCatalogIdentitySha256": "9524fa0032324603d0b27fb7e7961e0b25aee439b15344be41c6fe5466092ae0",
     "name": "genesis",
     "profile": "host-cli/selfhost-artifact",
-    "selfhostArtifactSha256": "9635790634d55cff817aa04baf2ae4f75324a25871bd2f37157940a11382fec1",
+    "selfhostArtifactSha256": "440db1fd150984e7b00d353b93dba0fd2855b5c76895dd0f3fa5c2c45625202b",
     "version": "genesis 0.2.0"
   },
   "summaries": [
@@ -2144,10 +2144,10 @@
       "safeAbstentionCount": 3,
       "safeAbstentionRateBasisPoints": 10000,
       "tokenCost": {
-        "input": 37498,
+        "input": 37670,
         "output": 4883,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 42381
+        "total": 42553
       }
     },
     {
@@ -2164,10 +2164,10 @@
       "safeAbstentionCount": 3,
       "safeAbstentionRateBasisPoints": 10000,
       "tokenCost": {
-        "input": 6765,
+        "input": 6851,
         "output": 3433,
         "profile": "genesis/utf8-byte-token-v0.1",
-        "total": 10198
+        "total": 10284
       }
     }
   ],

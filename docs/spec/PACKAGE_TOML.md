@@ -14,6 +14,13 @@ This file defines a package, its modules, dependencies, and required obligations
 
 ## Optional Keys
 
+For compatibility with the documented pre-schema form, an omitted `dependencies`
+key is normalized to an empty array. Current writers still emit the key. Omitted
+`tests`, `property_tests`, `limits`, `budgets`, `property`, and `gfx` values use
+their documented empty or false defaults. Unknown TOML keys are ignored by the
+v0.2 structural admission boundary; they grant no capability and have no package
+identity or execution meaning unless a later schema version assigns one.
+
 - `tests` (array of strings): suite symbols to execute as unit tests
 - Coverage obligations over these unit tests:
   - `core/obligation::coverage` (symbol profile)
@@ -76,7 +83,7 @@ This file defines a package, its modules, dependencies, and required obligations
 ## Module Table
 
 Each entry:
-- `path` (string): module file path (relative to the manifest directory, using `/` separators; must not contain `.` or `..`)
+- `path` (string): Unicode-NFC module file path relative to the manifest directory, using `/` separators; it must not be empty or contain a leading slash, drive prefix, backslash, repeated slash, `.` component, or `..` component
 - `hash` (string): BLAKE3 hex of the module *canonical printed bytes* with the `GCv0.2` tag
 
 `genesis pack --pkg package.toml` computes and writes module hashes.
@@ -85,10 +92,23 @@ Each entry:
 
 Each entry:
 - `name` (string)
-- `path` (string): local path to dependency package directory (relative, using `/` separators; must not contain `.` or `..`)
+- `path` (string): Unicode-NFC local path to the dependency package directory, with the same portable package-relative constraints as module paths
 - `hash` (string): BLAKE3 hex of the dependency package artifact hash (as produced by `genesis pack`)
 
 ## Normative Behavior
+
+- Artifact-loaded `core/pkg::package-manifest-authority` exclusively decides
+  structural package-manifest admission and normalization for production CLI,
+  obligation, recursive dependency, and patch routes. Its request and result are
+  bound to the exact BLAKE3 hash of the source bytes. Rust may perform a bounded
+  file read, UTF-8 validation, generic TOML syntax decoding into a neutral term,
+  bounded artifact evaluation, strict closed result decoding, and typed structure
+  materialization; those mechanisms do not decide manifest semantics.
+- The retained Rust `PackageManifest::load` implementation is a compatibility
+  oracle for tests and the explicit parity profile, plus a named temporary
+  production residual in package-low and editor effect routes. Those effect routes
+  remain host-authoritative until their separate R4.2.e lifecycle transaction;
+  this partial cutover does not claim H2 or aggregate R4.2.e closure.
 
 - `genesis test` must verify that each module’s current hash matches the pinned `hash` field.
 - Dependencies must be hash-checked before use (local path deps are allowed but must match pinned hashes).

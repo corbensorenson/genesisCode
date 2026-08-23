@@ -1,0 +1,173 @@
+; Structural package-manifest admission from neutral TOML terms.
+
+(def selfhost/pkg-package-manifest::ok
+  (fn (value) {:message nil :ok true :value value}))
+
+(def selfhost/pkg-package-manifest::bad
+  (fn (message) {:message message :ok false :value nil}))
+
+(def selfhost/pkg-package-manifest::bounded-string
+  (fn (value)
+    (fn (label)
+      (if (((selfhost/pkg-scaffold::bounded-str? value) 16777216))
+        (selfhost/pkg-package-manifest::ok value)
+        (selfhost/pkg-package-manifest::bad label)))))
+
+(def selfhost/pkg-package-manifest::optional-string
+  (fn (value)
+    (fn (label)
+      (if (core/list::is-nil? value)
+        (selfhost/pkg-package-manifest::ok nil)
+        ((selfhost/pkg-package-manifest::bounded-string value) label)))))
+
+(def selfhost/pkg-package-manifest::optional-u64
+  (fn (value)
+    (fn (label)
+      (if (core/list::is-nil? value)
+        (selfhost/pkg-package-manifest::ok nil)
+        (if (selfhost/pkg-lock-read::int? value)
+          (if ((core/int::lt? value) 0)
+            (selfhost/pkg-package-manifest::bad label)
+            (selfhost/pkg-package-manifest::ok value))
+          (selfhost/pkg-package-manifest::bad label))))))
+
+(def selfhost/pkg-package-manifest::portable-path
+  (fn (value)
+    (fn (label)
+      (let ((string ((selfhost/pkg-package-manifest::bounded-string value) label)))
+        (if ((core/map::get string) (quote :ok))
+          (let
+            ((portable
+              (selfhost/typecheck::validate-portable-module-path
+                ((core/map::get string) (quote :value)))))
+            (if ((core/map::get portable) (quote :ok))
+              string
+              (selfhost/pkg-package-manifest::bad label)))
+          string)))))
+
+(def selfhost/pkg-package-manifest::optional-portable-path
+  (fn (value)
+    (fn (label)
+      (if (core/list::is-nil? value)
+        (selfhost/pkg-package-manifest::ok nil)
+        ((selfhost/pkg-package-manifest::portable-path value) label)))))
+
+(def selfhost/pkg-package-manifest::string-vector-loop
+  (fn (values)
+    (fn (index)
+      (fn (label)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len values))
+            (selfhost/pkg-package-manifest::ok out)
+            (let
+              ((item
+                ((selfhost/pkg-package-manifest::bounded-string
+                    ((core/vec::get values) index))
+                  label)))
+              (if ((core/map::get item) (quote :ok))
+                ((((selfhost/pkg-package-manifest::string-vector-loop values)
+                     ((core/int::add index) 1))
+                    label)
+                  ((core/vec::push out) ((core/map::get item) (quote :value))))
+                item))))))))
+
+(def selfhost/pkg-package-manifest::string-vector
+  (fn (value)
+    (fn (default-empty)
+      (fn (label)
+        (let ((values (if (if default-empty (core/list::is-nil? value) false) [] value)))
+          (if (selfhost/pkg-lock-read::vec? values)
+            (if ((core/int::lt? 4096) (core/vec::len values))
+              (selfhost/pkg-package-manifest::bad "package manifest vector is too large")
+              ((((selfhost/pkg-package-manifest::string-vector-loop values) 0) label) []))
+            (selfhost/pkg-package-manifest::bad label)))))))
+
+(def selfhost/pkg-package-manifest::module
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      (let
+        ((path
+          ((selfhost/pkg-package-manifest::portable-path
+              ((core/map::get value) "path"))
+            "module path must be a portable package-relative string"))
+          (hash
+            ((selfhost/pkg-package-manifest::optional-string
+                ((core/map::get value) "hash"))
+              "module hash must be a string when present")))
+        (if ((core/map::get path) (quote :ok))
+          (if ((core/map::get hash) (quote :ok))
+            (selfhost/pkg-package-manifest::ok
+              {
+                :hash ((core/map::get hash) (quote :value))
+                :path ((core/map::get path) (quote :value))})
+            hash)
+          path))
+      (selfhost/pkg-package-manifest::bad "module entry must be a table"))))
+
+(def selfhost/pkg-package-manifest::dependency
+  (fn (value)
+    (if (selfhost/pkg-lock-read::map? value)
+      (let
+        ((name
+          ((selfhost/pkg-package-manifest::bounded-string
+              ((core/map::get value) "name"))
+            "dependency name must be a string"))
+          (path
+            ((selfhost/pkg-package-manifest::portable-path
+                ((core/map::get value) "path"))
+              "dependency path must be a portable package-relative string"))
+          (hash
+            ((selfhost/pkg-package-manifest::optional-string
+                ((core/map::get value) "hash"))
+              "dependency hash must be a string when present")))
+        (if ((core/map::get name) (quote :ok))
+          (if ((core/map::get path) (quote :ok))
+            (if ((core/map::get hash) (quote :ok))
+              (selfhost/pkg-package-manifest::ok
+                {
+                  :hash ((core/map::get hash) (quote :value))
+                  :name ((core/map::get name) (quote :value))
+                  :path ((core/map::get path) (quote :value))})
+              hash)
+            path)
+          name))
+      (selfhost/pkg-package-manifest::bad "dependency entry must be a table"))))
+
+(def selfhost/pkg-package-manifest::entry-vector-loop
+  (fn (values)
+    (fn (index)
+      (fn (entry-fn)
+        (fn (out)
+          (if ((core/int::eq? index) (core/vec::len values))
+            (selfhost/pkg-package-manifest::ok out)
+            (let ((item (entry-fn ((core/vec::get values) index))))
+              (if ((core/map::get item) (quote :ok))
+                ((((selfhost/pkg-package-manifest::entry-vector-loop values)
+                     ((core/int::add index) 1))
+                    entry-fn)
+                  ((core/vec::push out) ((core/map::get item) (quote :value))))
+                item))))))))
+
+(def selfhost/pkg-package-manifest::entry-vector
+  (fn (value)
+    (fn (default-empty)
+      (fn (entry-fn)
+        (fn (label)
+          (let ((values (if (if default-empty (core/list::is-nil? value) false) [] value)))
+            (if (selfhost/pkg-lock-read::vec? values)
+              (if ((core/int::lt? 4096) (core/vec::len values))
+                (selfhost/pkg-package-manifest::bad "package manifest vector is too large")
+                ((((selfhost/pkg-package-manifest::entry-vector-loop values) 0) entry-fn) []))
+              (selfhost/pkg-package-manifest::bad label))))))))
+
+(def selfhost/pkg-package-manifest::modules
+  (fn (value)
+    ((((selfhost/pkg-package-manifest::entry-vector value) false)
+        selfhost/pkg-package-manifest::module)
+      "modules must be an array")))
+
+(def selfhost/pkg-package-manifest::dependencies
+  (fn (value)
+    ((((selfhost/pkg-package-manifest::entry-vector value) true)
+        selfhost/pkg-package-manifest::dependency)
+      "dependencies must be an array")))

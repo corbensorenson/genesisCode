@@ -174,11 +174,7 @@ pub(crate) fn observe_dep_hashes(
         };
         let observed =
             compute_package_artifact_hash(&dep_pkg, false, &mut visited, frontend, limits)?;
-        observations.push((
-            dependency.name.clone(),
-            dependency.hash.clone(),
-            observed,
-        ));
+        observations.push((dependency.name.clone(), dependency.hash.clone(), observed));
     }
     Ok(observations)
 }
@@ -198,8 +194,7 @@ fn compute_package_artifact_hash(
         )));
     }
 
-    let (manifest, pkg_dir) =
-        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let (manifest, pkg_dir) = load_package_manifest_with_frontend(pkg_toml, frontend)?;
     let modules = load_modules(&pkg_dir, &manifest.modules, frontend, limits)?;
     if require_pinned {
         for m in &modules {

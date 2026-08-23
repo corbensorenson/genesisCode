@@ -7,8 +7,8 @@ pub(super) fn analyze_workspace(
     pkg: &Path,
     frontend: &gc_obligations::CoreformFrontend,
 ) -> Result<WorkspaceAnalysis, CliError> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg)
-        .map_err(|e| cli_err(EX_PARSE, "package/invalid", format!("{e}")))?;
+    let (manifest, pkg_dir) = crate::pkg_manifest_authority::load_with_frontend(pkg, frontend)
+        .map_err(|e| cli_err(EX_PARSE, "package/invalid", e))?;
     let mut modules = Vec::new();
     let module_paths = manifest
         .modules

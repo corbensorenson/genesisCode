@@ -98,6 +98,9 @@
     "selfhost/pkg_workspace_env_select_authority_v1.gc"
     "selfhost/pkg_workspace_manifest_core_v1.gc"
     "selfhost/pkg_workspace_manifest_authority_v1.gc"
+    "selfhost/pkg_package_manifest_core_v1.gc"
+    "selfhost/pkg_package_manifest_config_v1.gc"
+    "selfhost/pkg_package_manifest_authority_v1.gc"
     "selfhost/pkg_workspace_env_core_v1.gc"
     "selfhost/pkg_workspace_env_finalize_v1.gc"
     "selfhost/pkg_workspace_env_authority_v1.gc"
@@ -193,6 +196,7 @@
     core/pkg::workspace-migrate-authority
     core/pkg::workspace-env-select-authority
     core/pkg::workspace-manifest-authority
+    core/pkg::package-manifest-authority
     core/pkg::workspace-env-authority
     core/pkg::workspace-task-authority
     core/pkg::semver-select-authority

@@ -3,6 +3,7 @@ use gc_coreform::{TermOrdKey, canonicalize_module, parse_module};
 use gc_kernel::eval_module;
 
 mod frontend_contracts;
+mod package_manifest_authority;
 mod selfhost_literal_op;
 mod typecheck_authority;
 

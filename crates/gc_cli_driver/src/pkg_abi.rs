@@ -7,7 +7,6 @@ use gc_obligations::{
     CoreformFrontend, TypecheckModuleInput, hash_module_forms_with_frontend,
     parse_canonicalize_module_source_with_frontend, typecheck_modules_with_authority,
 };
-use gc_pkg::PackageManifest;
 
 use crate::pkg_workspace_ops::LocalPkgResult;
 
@@ -30,7 +29,8 @@ pub(crate) fn handle_abi(
     step_limit: StepLimit,
     mem_limits: MemLimits,
 ) -> Result<LocalPkgResult, String> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg_toml).map_err(|e| e.to_string())?;
+    let (manifest, pkg_dir) =
+        crate::pkg_manifest_authority::load_with_frontend(pkg_toml, frontend)?;
 
     let mut loaded_modules = Vec::new();
     let mut typecheck_modules = Vec::new();

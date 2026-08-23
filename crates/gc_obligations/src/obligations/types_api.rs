@@ -171,8 +171,7 @@ pub fn pack_with_limits_and_frontend(
     mem_limits: MemLimits,
     frontend: CoreformFrontend,
 ) -> Result<String, ObligationError> {
-    let (manifest, pkg_dir) =
-        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let (manifest, pkg_dir) = load_package_manifest_with_frontend(pkg_toml, &frontend)?;
     let step_limit = effective_step_limit(&manifest, step_limit)?;
     let mem_limits = effective_mem_limits(&manifest, mem_limits);
     let limits = KernelLimits {
@@ -253,8 +252,7 @@ pub fn test_package_with_step_limit_and_frontend(
     mem_limits: MemLimits,
     frontend: CoreformFrontend,
 ) -> Result<PackageTestResult, ObligationError> {
-    let (manifest, pkg_dir) =
-        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let (manifest, pkg_dir) = load_package_manifest_with_frontend(pkg_toml, &frontend)?;
     let step_limit = effective_step_limit(&manifest, step_limit)?;
     let mem_limits = effective_mem_limits(&manifest, mem_limits);
     let limits = KernelLimits {
@@ -315,13 +313,7 @@ pub fn test_package_with_step_limit_and_frontend(
         )
     }) {
         Some(replay_observations(
-            &store,
-            &pkg_dir,
-            &manifest,
-            &modules,
-            &test_runs,
-            &frontend,
-            limits,
+            &store, &pkg_dir, &manifest, &modules, &test_runs, &frontend, limits,
         )?)
     } else {
         None
@@ -375,20 +367,16 @@ pub fn test_package_with_step_limit_and_frontend(
                 obligation_determinism(&store, &manifest, &modules, &test_runs, &frontend, limits)
             }
             "core/obligation::capabilities-declared" => {
-                obligation_caps_declared(
-                    &store, &manifest, &modules, &test_runs, &frontend, limits,
-                )
+                obligation_caps_declared(&store, &manifest, &modules, &test_runs, &frontend, limits)
             }
-            "core/obligation::replayable-tests" => {
-                run_replay_authority(
-                    ObligationAuthorityOperation::ReplayableTests,
-                    &store,
-                    &manifest,
-                    replay_observations.as_deref().unwrap_or_default(),
-                    &frontend,
-                    limits,
-                )
-            }
+            "core/obligation::replayable-tests" => run_replay_authority(
+                ObligationAuthorityOperation::ReplayableTests,
+                &store,
+                &manifest,
+                replay_observations.as_deref().unwrap_or_default(),
+                &frontend,
+                limits,
+            ),
             "core/obligation::concurrency-replay" => run_replay_authority(
                 ObligationAuthorityOperation::ConcurrencyReplay,
                 &store,
@@ -453,8 +441,7 @@ pub fn typecheck_package_with_step_limit_and_frontend(
     frontend: CoreformFrontend,
     strict_sound: bool,
 ) -> Result<PackageTypecheckResult, ObligationError> {
-    let (manifest, pkg_dir) =
-        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let (manifest, pkg_dir) = load_package_manifest_with_frontend(pkg_toml, &frontend)?;
     let limits = KernelLimits {
         step_limit,
         mem_limits,

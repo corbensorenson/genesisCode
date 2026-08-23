@@ -1,5 +1,6 @@
 mod lock;
 mod manifest;
+mod manifest_authority;
 mod workspace;
 
 pub const PACKAGE_PROFILE_ID: &str = "genesis/package-profile/v0.2";
@@ -7,6 +8,12 @@ pub const PACKAGE_PROFILE_ID: &str = "genesis/package-profile/v0.2";
 pub use crate::manifest::{
     Budgets, DepEntry, Limits, ManifestError, ModuleEntry, PACKAGE_MANIFEST_SCHEMA_VERSION,
     PackageManifest, PropertyConfig,
+};
+pub use crate::manifest_authority::{
+    PACKAGE_MANIFEST_AUTHORITY_BINDING, PACKAGE_MANIFEST_AUTHORITY_REQUEST_KIND,
+    PACKAGE_MANIFEST_AUTHORITY_RESULT_KIND, PackageManifestTransport,
+    decode_authorized_package_manifest, package_manifest_authority_request,
+    read_package_manifest_transport,
 };
 
 pub use crate::lock::{

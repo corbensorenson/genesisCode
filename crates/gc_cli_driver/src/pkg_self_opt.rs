@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use gc_coreform::{Term, TermOrdKey, hash_module, print_module};
 use gc_kernel::{MemLimits, StepLimit};
 use gc_obligations::{
-    CoreformFrontend, EvidenceStore, PackageManifest, pack_with_frontend,
+    CoreformFrontend, EvidenceStore, pack_with_frontend,
     parse_canonicalize_module_source_with_frontend, test_package_with_step_limit_and_frontend,
 };
 
@@ -29,7 +29,8 @@ pub(crate) fn handle_self_optimize(
     mem_limits: MemLimits,
     dry_run: bool,
 ) -> Result<LocalPkgResult, String> {
-    let (manifest, pkg_dir) = PackageManifest::load(pkg_toml).map_err(|e| e.to_string())?;
+    let (manifest, pkg_dir) =
+        crate::pkg_manifest_authority::load_with_frontend(pkg_toml, frontend)?;
     let store = EvidenceStore::open(&pkg_dir).map_err(|e| e.to_string())?;
     let original_pkg_toml = std::fs::read(pkg_toml).map_err(|e| e.to_string())?;
 

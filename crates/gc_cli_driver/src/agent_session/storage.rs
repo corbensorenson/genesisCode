@@ -29,20 +29,6 @@ fn session_error(code: &'static str, message: impl Into<String>, session: &str) 
     )
 }
 
-fn manifest_error_detail(error: gc_pkg::ManifestError) -> String {
-    match error {
-        gc_pkg::ManifestError::Io(error) => {
-            format!("package manifest I/O failed with {:?}", error.kind())
-        }
-        gc_pkg::ManifestError::Parse { msg, .. } => {
-            format!("package manifest parsing failed: {msg}")
-        }
-        gc_pkg::ManifestError::Invalid { msg, .. } => {
-            format!("package manifest validation failed: {msg}")
-        }
-    }
-}
-
 pub(super) fn validate_session_id(session: &str) -> Result<(), CliError> {
     let valid = !session.is_empty()
         && session.len() <= 64
@@ -60,15 +46,14 @@ pub(super) fn validate_session_id(session: &str) -> Result<(), CliError> {
     }
 }
 
-pub(super) fn resolve_paths(pkg: &Path, session: &str) -> Result<SessionPaths, CliError> {
+pub(super) fn resolve_paths(
+    cli: &Cli,
+    pkg: &Path,
+    session: &str,
+) -> Result<SessionPaths, CliError> {
     validate_session_id(session)?;
-    let (_manifest, package_root) = PackageManifest::load(pkg).map_err(|error| {
-        session_error(
-            "session/package-invalid",
-            manifest_error_detail(error),
-            session,
-        )
-    })?;
+    let (_manifest, package_root) = crate::pkg_manifest_authority::load(cli, pkg)
+        .map_err(|error| session_error("session/package-invalid", error, session))?;
     let package_root = if package_root.as_os_str().is_empty() {
         PathBuf::from(".")
     } else {
@@ -207,6 +192,7 @@ fn validated_snapshot_input(
 }
 
 fn add_manifest_closure(
+    cli: &Cli,
     manifest_path: &Path,
     root: &Path,
     session: &str,
@@ -230,13 +216,8 @@ fn add_manifest_closure(
     if !visited.insert(canonical_manifest.clone()) {
         return Ok(());
     }
-    let (manifest, package_root) = PackageManifest::load(&canonical_manifest).map_err(|error| {
-        session_error(
-            "session/package-invalid",
-            manifest_error_detail(error),
-            session,
-        )
-    })?;
+    let (manifest, package_root) = crate::pkg_manifest_authority::load(cli, &canonical_manifest)
+        .map_err(|error| session_error("session/package-invalid", error, session))?;
     files.insert(canonical_manifest);
     for module in manifest.modules {
         files.insert(package_root.join(module.path));
@@ -251,7 +232,7 @@ fn add_manifest_closure(
         } else {
             candidate
         };
-        add_manifest_closure(&dependency_manifest, root, session, visited, files)?;
+        add_manifest_closure(cli, &dependency_manifest, root, session, visited, files)?;
     }
     Ok(())
 }
@@ -310,6 +291,7 @@ pub(super) fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 }
 
 pub(super) fn capture_snapshot(
+    cli: &Cli,
     paths: &SessionPaths,
     source_root: &Path,
     package_manifest: &str,
@@ -324,6 +306,7 @@ pub(super) fn capture_snapshot(
     })?;
     let mut inputs = BTreeSet::new();
     add_manifest_closure(
+        cli,
         &source_root.join(package_manifest),
         &source_root,
         session,

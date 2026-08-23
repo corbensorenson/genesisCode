@@ -27,8 +27,9 @@ pub(super) fn cmd_transparency_verify(cli: &Cli, pkg: &Path) -> Result<CmdOut, C
     };
     let pkg = pkg_buf.as_path();
 
-    let (_manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| {
-        let context = structured_failures::manifest_context("package/transparency-verify", &e);
+    let (_manifest, pkg_dir) = crate::pkg_manifest_authority::load(cli, pkg).map_err(|e| {
+        let context =
+            structured_failures::manifest_authority_context("package/transparency-verify", pkg, &e);
         cli_err_with_context(EX_PARSE, "manifest/parse", format!("{e}"), context)
     })?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;
@@ -283,8 +284,8 @@ pub(super) fn cmd_semantic_edit_index(
 ) -> Result<CmdOut, CliError> {
     let frontend = resolved_coreform_frontend(cli)?;
     let frontend_info = coreform_frontend_json(&frontend);
-    let (_manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| {
-        let context = structured_failures::manifest_context("package/load", &e);
+    let (_manifest, pkg_dir) = crate::pkg_manifest_authority::load(cli, pkg).map_err(|e| {
+        let context = structured_failures::manifest_authority_context("package/load", pkg, &e);
         cli_err_with_context(EX_PARSE, "package/invalid", format!("{e}"), context)
     })?;
     let module_abs = pkg_dir.join(module_path);

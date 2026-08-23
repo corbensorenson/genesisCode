@@ -14,7 +14,6 @@ use gc_coreform::{
 };
 use gc_effects::{CapsPolicy, Decision, EffectLog};
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value, eval_module, eval_term};
-use gc_obligations::PackageManifest;
 use gc_prelude::{
     SelfhostBootstrapMode, build_prelude, embedded_bootstrap_available,
     load_selfhost_coreform_toolchain_v1_with_mode, selfhost_coreform_toolchain_v1_sources,
@@ -84,6 +83,7 @@ mod pkg_assurance_pack_ops;
 mod pkg_caps_templates;
 mod pkg_contract;
 mod pkg_doctor;
+mod pkg_manifest_authority;
 mod pkg_reports;
 mod pkg_runtime_profile;
 mod pkg_scaffold;

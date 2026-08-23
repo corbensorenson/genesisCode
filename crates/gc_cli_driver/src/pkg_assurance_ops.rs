@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 
 use gc_coreform::{Term, TermOrdKey, hash_term, parse_term, print_term};
 use gc_effects::ArtifactStore;
-use gc_pkg::PackageManifest;
 use gc_vcs::validate_hex_hash;
 
 use crate::pkg_workspace_ops::LocalPkgResult;
@@ -25,6 +24,7 @@ pub(crate) struct ToolQualificationArgs<'a> {
 }
 
 pub(crate) fn handle_trace(
+    cli: &crate::Cli,
     pkg: &Path,
     requirements: &Path,
     commit: Option<&str>,
@@ -45,7 +45,7 @@ pub(crate) fn handle_trace(
         validate_hex_hash(p).map_err(|e| format!("invalid --policy hash: {e}"))?;
     }
 
-    let (manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| e.to_string())?;
+    let (manifest, pkg_dir) = crate::pkg_manifest_authority::load(cli, pkg)?;
     let req_path = if requirements.is_absolute() {
         requirements.to_path_buf()
     } else {

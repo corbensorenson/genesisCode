@@ -36,8 +36,7 @@ pub(super) fn eval_dependencies_with_frontend(
         } else {
             dep_path
         };
-        let (dep_manifest, dep_dir) = PackageManifest::load(&dep_pkg)
-            .map_err(|e| ObligationError::Manifest(e.to_string()))?;
+        let (dep_manifest, dep_dir) = load_package_manifest_with_frontend(&dep_pkg, frontend)?;
         let dep_modules = load_modules(&dep_dir, &dep_manifest.modules, frontend, limits)?;
 
         // Evaluate dependency modules and merge their exports into env.

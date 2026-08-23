@@ -28,8 +28,7 @@ pub(super) fn handle_migrate(
     workspace_override: Option<&str>,
     registry_default: Option<&str>,
 ) -> Result<LocalPkgResult, String> {
-    let (manifest, package_dir) =
-        PackageManifest::load(package_path).map_err(|error| error.to_string())?;
+    let (manifest, package_dir) = crate::pkg_manifest_authority::load(cli, package_path)?;
     let member_path = relative_to_cwd_or_literal(&package_dir);
     let request = migration_request(
         &manifest,

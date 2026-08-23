@@ -23,7 +23,7 @@ pub(super) fn handle_build(
     let target_label = normalize_build_target(target)?;
     let target_profile = build_target_profile(target_label)?;
     let artifact_layout = build_artifacts::artifact_layout_for_target(target_label)?;
-    let (manifest, pkg_dir) = PackageManifest::load(pkg)
+    let (manifest, pkg_dir) = crate::pkg_manifest_authority::load_with_frontend(pkg, &frontend)
         .map_err(|e| format!("load package manifest `{}`: {e}", pkg.display()))?;
     let package_src = std::fs::read(pkg)
         .map_err(|e| format!("read package manifest `{}`: {e}", pkg.display()))?;

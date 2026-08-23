@@ -1,0 +1,312 @@
+; Nested package limits, budgets, properties, graphics, and final normalization.
+
+(def selfhost/pkg-package-manifest::limits
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let
+          ((step
+            ((selfhost/pkg-package-manifest::optional-u64
+                ((core/map::get table) "step_limit"))
+              "limits.step_limit must be an unsigned integer"))
+            (alloc
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_alloc_units"))
+                "limits.max_alloc_units must be an unsigned integer"))
+            (live
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_live_units"))
+                "limits.max_live_units must be an unsigned integer"))
+            (pairs
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_pair_cells"))
+                "limits.max_pair_cells must be an unsigned integer"))
+            (vec-len
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_vec_len"))
+                "limits.max_vec_len must be an unsigned integer"))
+            (map-len
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_map_len"))
+                "limits.max_map_len must be an unsigned integer"))
+            (bytes-len
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_bytes_len"))
+                "limits.max_bytes_len must be an unsigned integer"))
+            (string-len
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_string_len"))
+                "limits.max_string_len must be an unsigned integer"))
+            (allow ((core/map::get table) "allow_unlimited")))
+          (if ((core/map::get step) (quote :ok))
+            (if ((core/map::get alloc) (quote :ok))
+              (if ((core/map::get live) (quote :ok))
+                (if ((core/map::get pairs) (quote :ok))
+                  (if ((core/map::get vec-len) (quote :ok))
+                    (if ((core/map::get map-len) (quote :ok))
+                      (if ((core/map::get bytes-len) (quote :ok))
+                        (if ((core/map::get string-len) (quote :ok))
+                          (if
+                            (if (core/list::is-nil? allow)
+                              true
+                              (selfhost/pkg-workspace-manifest::bool? allow))
+                            (selfhost/pkg-package-manifest::ok
+                              {
+                                :allow-unlimited
+                                  (if (core/list::is-nil? allow) false allow)
+                                :max-alloc-units ((core/map::get alloc) (quote :value))
+                                :max-bytes-len ((core/map::get bytes-len) (quote :value))
+                                :max-live-units ((core/map::get live) (quote :value))
+                                :max-map-len ((core/map::get map-len) (quote :value))
+                                :max-pair-cells ((core/map::get pairs) (quote :value))
+                                :max-string-len ((core/map::get string-len) (quote :value))
+                                :max-vec-len ((core/map::get vec-len) (quote :value))
+                                :step-limit ((core/map::get step) (quote :value))})
+                            (selfhost/pkg-package-manifest::bad
+                              "limits.allow_unlimited must be bool"))
+                          string-len)
+                        bytes-len)
+                      map-len)
+                    vec-len)
+                  pairs)
+                live)
+              alloc)
+            step))
+        (selfhost/pkg-package-manifest::bad "limits must be a table")))))
+
+(def selfhost/pkg-package-manifest::budgets
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let
+          ((steps
+            ((selfhost/pkg-package-manifest::optional-u64
+                ((core/map::get table) "max_steps_per_test"))
+              "budgets.max_steps_per_test must be an unsigned integer"))
+            (entries
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_effect_entries_per_test"))
+                "budgets.max_effect_entries_per_test must be an unsigned integer"))
+            (bytes
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_effect_log_bytes_per_test"))
+                "budgets.max_effect_log_bytes_per_test must be an unsigned integer")))
+          (if ((core/map::get steps) (quote :ok))
+            (if ((core/map::get entries) (quote :ok))
+              (if ((core/map::get bytes) (quote :ok))
+                (selfhost/pkg-package-manifest::ok
+                  {
+                    :max-effect-entries-per-test
+                      ((core/map::get entries) (quote :value))
+                    :max-effect-log-bytes-per-test
+                      ((core/map::get bytes) (quote :value))
+                    :max-steps-per-test ((core/map::get steps) (quote :value))})
+                bytes)
+              entries)
+            steps))
+        (selfhost/pkg-package-manifest::bad "budgets must be a table")))))
+
+(def selfhost/pkg-package-manifest::property
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let
+          ((cases
+            ((selfhost/pkg-package-manifest::optional-u64
+                ((core/map::get table) "cases_per_test"))
+              "property.cases_per_test must be an unsigned integer")))
+          (if ((core/map::get cases) (quote :ok))
+            (selfhost/pkg-package-manifest::ok
+              {:cases-per-test ((core/map::get cases) (quote :value))})
+            cases))
+        (selfhost/pkg-package-manifest::bad "property must be a table")))))
+
+(def selfhost/pkg-package-manifest::gfx
+  (fn (value)
+    (let ((table (if (core/list::is-nil? value) {} value)))
+      (if (selfhost/pkg-lock-read::map? table)
+        (let
+          ((golden
+            (((selfhost/pkg-package-manifest::string-vector
+                 ((core/map::get table) "golden_tests"))
+                true)
+              "gfx.golden_tests must be an array of strings"))
+            (frames
+              (((selfhost/pkg-package-manifest::string-vector
+                   ((core/map::get table) "frame_budget_tests"))
+                  true)
+                "gfx.frame_budget_tests must be an array of strings"))
+            (exports
+              (((selfhost/pkg-package-manifest::string-vector
+                   ((core/map::get table) "api_exports"))
+                  true)
+                "gfx.api_exports must be an array of strings"))
+            (surface
+              ((selfhost/pkg-package-manifest::optional-string
+                  ((core/map::get table) "api_surface_hash"))
+                "gfx.api_surface_hash must be a string"))
+            (render
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_render_passes_per_frame"))
+                "gfx.max_render_passes_per_frame must be an unsigned integer"))
+            (compute-pass
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_compute_passes_per_frame"))
+                "gfx.max_compute_passes_per_frame must be an unsigned integer"))
+            (draw
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_draw_commands_per_frame"))
+                "gfx.max_draw_commands_per_frame must be an unsigned integer"))
+            (compute-command
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_compute_commands_per_frame"))
+                "gfx.max_compute_commands_per_frame must be an unsigned integer"))
+            (graph-bytes
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_frame_graph_bytes"))
+                "gfx.max_frame_graph_bytes must be an unsigned integer"))
+            (frame-time
+              ((selfhost/pkg-package-manifest::optional-u64
+                  ((core/map::get table) "max_frame_time_ms"))
+                "gfx.max_frame_time_ms must be an unsigned integer")))
+          (if ((core/map::get golden) (quote :ok))
+            (if ((core/map::get frames) (quote :ok))
+              (if ((core/map::get exports) (quote :ok))
+                (if ((core/map::get surface) (quote :ok))
+                  (if ((core/map::get render) (quote :ok))
+                    (if ((core/map::get compute-pass) (quote :ok))
+                      (if ((core/map::get draw) (quote :ok))
+                        (if ((core/map::get compute-command) (quote :ok))
+                          (if ((core/map::get graph-bytes) (quote :ok))
+                            (if ((core/map::get frame-time) (quote :ok))
+                              (selfhost/pkg-package-manifest::ok
+                                {
+                                  :api-exports ((core/map::get exports) (quote :value))
+                                  :api-surface-hash ((core/map::get surface) (quote :value))
+                                  :frame-budget-tests ((core/map::get frames) (quote :value))
+                                  :golden-tests ((core/map::get golden) (quote :value))
+                                  :max-compute-commands-per-frame
+                                    ((core/map::get compute-command) (quote :value))
+                                  :max-compute-passes-per-frame
+                                    ((core/map::get compute-pass) (quote :value))
+                                  :max-draw-commands-per-frame
+                                    ((core/map::get draw) (quote :value))
+                                  :max-frame-graph-bytes
+                                    ((core/map::get graph-bytes) (quote :value))
+                                  :max-frame-time-ms
+                                    ((core/map::get frame-time) (quote :value))
+                                  :max-render-passes-per-frame
+                                    ((core/map::get render) (quote :value))})
+                              frame-time)
+                            graph-bytes)
+                          compute-command)
+                        draw)
+                      compute-pass)
+                    render)
+                  surface)
+                exports)
+              frames)
+            golden))
+        (selfhost/pkg-package-manifest::bad "gfx must be a table")))))
+
+(def selfhost/pkg-package-manifest::normalize
+  (fn (document)
+    (if (selfhost/pkg-lock-read::map? document)
+      (let
+        ((schema-raw ((core/map::get document) "schema"))
+          (schema
+            (if (core/list::is-nil? schema-raw) 1 schema-raw))
+          (name
+            ((selfhost/pkg-package-manifest::bounded-string
+                ((core/map::get document) "name"))
+              "package name must be a string"))
+          (version
+            ((selfhost/pkg-package-manifest::bounded-string
+                ((core/map::get document) "version"))
+              "package version must be a string"))
+          (modules
+            (selfhost/pkg-package-manifest::modules
+              ((core/map::get document) "modules")))
+          (dependencies
+            (selfhost/pkg-package-manifest::dependencies
+              ((core/map::get document) "dependencies")))
+          (obligations
+            (((selfhost/pkg-package-manifest::string-vector
+                 ((core/map::get document) "obligations"))
+                false)
+              "obligations must be an array of strings"))
+          (tests
+            (((selfhost/pkg-package-manifest::string-vector
+                 ((core/map::get document) "tests"))
+                true)
+              "tests must be an array of strings"))
+          (properties
+            (((selfhost/pkg-package-manifest::string-vector
+                 ((core/map::get document) "property_tests"))
+                true)
+              "property_tests must be an array of strings"))
+          (caps
+            ((selfhost/pkg-package-manifest::optional-portable-path
+                ((core/map::get document) "caps_policy"))
+              "caps_policy must be a portable package-relative string"))
+          (limits
+            (selfhost/pkg-package-manifest::limits
+              ((core/map::get document) "limits")))
+          (budgets
+            (selfhost/pkg-package-manifest::budgets
+              ((core/map::get document) "budgets")))
+          (property
+            (selfhost/pkg-package-manifest::property
+              ((core/map::get document) "property")))
+          (gfx
+            (selfhost/pkg-package-manifest::gfx
+              ((core/map::get document) "gfx"))))
+        (if
+          (if (selfhost/pkg-lock-read::int? schema)
+            ((core/int::eq? schema) 1)
+            false)
+          (if ((core/map::get name) (quote :ok))
+            (if ((core/map::get version) (quote :ok))
+              (if ((core/map::get modules) (quote :ok))
+                (if ((core/map::get dependencies) (quote :ok))
+                  (if ((core/map::get obligations) (quote :ok))
+                    (if ((core/map::get tests) (quote :ok))
+                      (if ((core/map::get properties) (quote :ok))
+                        (if ((core/map::get caps) (quote :ok))
+                          (if ((core/map::get limits) (quote :ok))
+                            (if ((core/map::get budgets) (quote :ok))
+                              (if ((core/map::get property) (quote :ok))
+                                (if ((core/map::get gfx) (quote :ok))
+                                  (selfhost/pkg-package-manifest::ok
+                                    {
+                                      :budgets ((core/map::get budgets) (quote :value))
+                                      :caps-policy ((core/map::get caps) (quote :value))
+                                      :dependencies
+                                        ((core/map::get dependencies) (quote :value))
+                                      :gfx ((core/map::get gfx) (quote :value))
+                                      :limits ((core/map::get limits) (quote :value))
+                                      :modules ((core/map::get modules) (quote :value))
+                                      :name ((core/map::get name) (quote :value))
+                                      :obligations
+                                        ((core/map::get obligations) (quote :value))
+                                      :property ((core/map::get property) (quote :value))
+                                      :property-tests
+                                        ((core/map::get properties) (quote :value))
+                                      :schema 1
+                                      :tests ((core/map::get tests) (quote :value))
+                                      :version ((core/map::get version) (quote :value))})
+                                  gfx)
+                                property)
+                              budgets)
+                            limits)
+                          caps)
+                        properties)
+                      tests)
+                    obligations)
+                  dependencies)
+                modules)
+              version)
+            name)
+          (selfhost/pkg-package-manifest::bad
+            "unsupported package manifest schema (expected 1)")))
+      (selfhost/pkg-package-manifest::bad "package manifest document must be a table"))))

@@ -8,9 +8,8 @@ use gc_coreform::{
 use gc_kernel::{Apply, EvalCtx, MemLimits, SealId, StepLimit, Value};
 use gc_obligations::{
     CoreformFrontend, EvidenceStore, ObligationError, PackageTestResult, coreform_frontend_is_rust,
-    default_coreform_frontend, pack, test_package_with_step_limit_and_frontend,
+    default_coreform_frontend, pack_with_frontend, test_package_with_step_limit_and_frontend,
 };
-use gc_pkg::PackageManifest;
 use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use num_traits::ToPrimitive;
 use thiserror::Error;

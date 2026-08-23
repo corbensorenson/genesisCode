@@ -118,8 +118,8 @@ pub(super) fn cmd_sign(
     let acceptance = acceptance_buf.as_deref();
     let signatures = signatures_buf.as_deref();
 
-    let (_manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| {
-        let context = structured_failures::manifest_context("package/sign", &e);
+    let (_manifest, pkg_dir) = crate::pkg_manifest_authority::load(cli, pkg).map_err(|e| {
+        let context = structured_failures::manifest_authority_context("package/sign", pkg, &e);
         cli_err_with_context(EX_PARSE, "manifest/parse", format!("{e}"), context)
     })?;
     let store = gc_obligations::EvidenceStore::open(&pkg_dir).map_err(obligation_err)?;

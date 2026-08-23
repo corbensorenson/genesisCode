@@ -12,6 +12,7 @@ mod obligation_gfx_api;
 mod obligation_lint;
 mod obligation_stage;
 mod obligation_translation;
+mod package_manifest_authority;
 mod registry_policy;
 mod signing;
 mod signing_authority;
@@ -61,6 +62,7 @@ use crate::obligation_gfx_api::obligation_gfx_api_stability;
 use crate::obligation_lint::{obligation_ai_style, obligation_lint};
 use crate::obligation_stage::{PackageEval, obligation_stage1_validation};
 use crate::obligation_translation::obligation_translation_validation;
+pub use crate::package_manifest_authority::load_package_manifest_with_frontend;
 pub use crate::registry_policy::{RegistryPolicy, RegistryPolicyError};
 pub use crate::signing::{
     AcceptanceSignature, KeyFile, SigningError, load_signature_set, parse_hash32,

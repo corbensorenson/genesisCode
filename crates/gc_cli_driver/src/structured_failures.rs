@@ -361,24 +361,15 @@ pub(super) fn effects_context(operation: &'static str, error: &gc_effects::Effec
     }
 }
 
-pub(super) fn manifest_context(operation: &'static str, error: &gc_pkg::ManifestError) -> Value {
-    match error {
-        gc_pkg::ManifestError::Io(error) => FailureContext::new("package", "io", operation)
-            .fact("io_kind", format!("{:?}", error.kind()))
-            .into_value(),
-        gc_pkg::ManifestError::Parse { path, msg } => {
-            FailureContext::new("package", "manifest-parse", operation)
-                .fact("path", stable_path(path))
-                .fact("reason", msg.clone())
-                .into_value()
-        }
-        gc_pkg::ManifestError::Invalid { path, msg } => {
-            FailureContext::new("package", "manifest-invalid", operation)
-                .fact("path", stable_path(path))
-                .fact("reason", msg.clone())
-                .into_value()
-        }
-    }
+pub(super) fn manifest_authority_context(
+    operation: &'static str,
+    path: &Path,
+    error: &str,
+) -> Value {
+    FailureContext::new("package", "manifest-authority", operation)
+        .fact("path", stable_path(&path.display().to_string()))
+        .fact("reason", error.to_string())
+        .into_value()
 }
 
 pub(super) fn patch_context(operation: &'static str, error: &gc_patches::PatchError) -> Value {

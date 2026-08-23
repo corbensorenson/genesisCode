@@ -3,8 +3,9 @@ use std::path::Path;
 use gc_coreform::{Term, parse_term};
 use gc_kernel::{MemLimits, StepLimit};
 
+use crate::load_package_manifest_with_frontend;
 use crate::{
-    EvidenceFact, EvidenceStore, EvidenceVerifyAuthority, ObligationError, PackageManifest,
+    EvidenceFact, EvidenceStore, EvidenceVerifyAuthority, ObligationError,
     PackageVerificationRequest, PolicyKeyObservation, RegistryPolicy, RegistryPolicyObservation,
     SignatureObservation, StoreHashObservation, signatures_file_path,
     verify_acceptance_signature_mechanism,
@@ -63,8 +64,8 @@ pub fn verify_package_with_policy_and_authority(
     signatures: Option<&Path>,
     authority_artifact: &Path,
 ) -> Result<PackageVerifyResult, ObligationError> {
-    let (manifest, pkg_dir) =
-        PackageManifest::load(pkg_toml).map_err(|e| ObligationError::Manifest(e.to_string()))?;
+    let frontend = super::default_coreform_frontend();
+    let (manifest, pkg_dir) = load_package_manifest_with_frontend(pkg_toml, &frontend)?;
     let store = EvidenceStore::open(&pkg_dir)?;
 
     let mut facts: Vec<EvidenceFact> = Vec::new();
@@ -79,7 +80,6 @@ pub fn verify_package_with_policy_and_authority(
         step_limit: StepLimit::Default,
         mem_limits: MemLimits::default(),
     };
-    let frontend = super::default_coreform_frontend();
     match super::load_modules(&pkg_dir, &manifest.modules, &frontend, limits) {
         Ok(modules) => {
             for m in &modules {

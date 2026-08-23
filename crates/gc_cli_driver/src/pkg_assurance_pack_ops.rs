@@ -1,6 +1,5 @@
 use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
 use gc_effects::ArtifactStore;
-use gc_pkg::PackageManifest;
 use gc_vcs::{
     RequirementsTraceGateContext, ToolQualificationGateContext, validate_hex_hash,
     validate_requirements_trace_evidence, validate_tool_qualification_evidence,
@@ -28,7 +27,10 @@ use resolve::load_term_from_spec;
 use term_helpers::{coverage_rank, extract_release_binding, extract_vector_field};
 pub(crate) use types::AssurancePackArgs;
 
-pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<LocalPkgResult, String> {
+pub(crate) fn handle_assurance_pack(
+    cli: &crate::Cli,
+    args: AssurancePackArgs<'_>,
+) -> Result<LocalPkgResult, String> {
     let assurance_profile = AssuranceProfile::parse(args.assurance_profile)?;
     let requirements = assurance_profile.requirements();
 
@@ -40,7 +42,7 @@ pub(crate) fn handle_assurance_pack(args: AssurancePackArgs<'_>) -> Result<Local
         validate_hex_hash(policy_h).map_err(|e| format!("invalid --policy hash: {e}"))?;
     }
 
-    let (manifest, pkg_dir) = PackageManifest::load(args.pkg).map_err(|e| e.to_string())?;
+    let (manifest, pkg_dir) = crate::pkg_manifest_authority::load(cli, args.pkg)?;
     let store_dir = pkg_dir.join(".genesis").join("store");
 
     let trace = load_term_from_spec(args.trace_spec, &pkg_dir, &store_dir, "trace")?;

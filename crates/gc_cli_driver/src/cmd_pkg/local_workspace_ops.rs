@@ -302,6 +302,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             no_store,
         } => Some(
             pkg_assurance_ops::handle_trace(
+                cli,
                 pkg,
                 requirements,
                 commit.as_deref(),
@@ -355,6 +356,7 @@ pub(super) fn cmd_pkg_local_workspace_ops(
             no_store,
         } => Some(
             pkg_assurance_pack_ops::handle_assurance_pack(
+                cli,
                 pkg_assurance_pack_ops::AssurancePackArgs {
                     pkg,
                     assurance_profile,

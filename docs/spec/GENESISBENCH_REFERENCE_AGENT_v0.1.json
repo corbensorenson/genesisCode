@@ -36,35 +36,35 @@
       "id": "gc-agent-core-card",
       "path": "docs/spec/GC_AGENT_CORE_CARD_v0.3.md",
       "role": "card",
-      "sha256": "27150fba630a4776b45611afd48e8574c50a68b4bb71f1b72446cd2192539228"
+      "sha256": "e6374ed7d74f4a440dece9e946e0b20edc1e3da658a1eb4a4f2e484ddff4f10c"
     },
     {
       "bytes": 42032,
       "id": "gc-agent-profile",
       "path": "docs/spec/GC_AGENT_PROFILE_v0.3.json",
       "role": "grammar",
-      "sha256": "f297dd50011983ef9c407e19a288449bca86518b501defd657d4cbeaa5d8e8b7"
+      "sha256": "39ac5c6077630f4639f0ec2e91e068fef37b3bd2ca23ab86ae4a3ca8fbcc10c7"
     },
     {
       "bytes": 308673,
       "id": "gc-agent-symbol-index",
       "path": "docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json",
       "role": "profile",
-      "sha256": "4852268ee27dfdfebdfaf1eae18623d2a19b0046b54a6197fa3fcb642eabc150"
+      "sha256": "5170adce0a74de4d9a4052bc17622efece26f9d8026ff408a44527de3fcfadc7"
     },
     {
       "bytes": 5886,
       "id": "gc-agent-task-cards",
       "path": "docs/spec/GC_AGENT_TASK_CARDS_v0.3.md",
       "role": "card",
-      "sha256": "75071f35a3a5f1d54e76fc7e04d2400dd2bb79cea0fd5c92e67204676dd90967"
+      "sha256": "1d58b63df28d64d01ff5318a02e53cb9de5e3925544b630c923f1ea7ff8e4be0"
     },
     {
-      "bytes": 360137,
+      "bytes": 360255,
       "id": "gc-diagnostic-catalog",
       "path": "docs/spec/GC_DIAGNOSTIC_CATALOG_v0.1.json",
       "role": "diagnostics",
-      "sha256": "f0dbe19b27b29f9b5153e28bf7d3714545ae238f6985c5464cbd3d092719a153"
+      "sha256": "d5efc1390d6f6fb8affa1f7f71482962977ed39729b1913af45dc9dfad575cb9"
     },
     {
       "bytes": 3618,
@@ -145,7 +145,7 @@
     "providerMutableFactsTreatment": "recorded-but-not-semantic-input",
     "scaffoldChangePolicy": "new-profile-and-cohort-required"
   },
-  "contentIdentitySha256": "e1b51b6a4673357904f9b874febdc4e3d1772d4eb080356169eac0603fe9e016",
+  "contentIdentitySha256": "e067773d06fd532607f8821f148b5db0e725591e2df21957ac20c8b5196bb991",
   "grammar": {
     "acceptanceAuthority": "production-parser-and-obligations",
     "authorityArtifactId": "gc-agent-profile",
