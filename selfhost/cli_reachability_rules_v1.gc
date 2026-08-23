@@ -85,32 +85,44 @@
 
 (def core/cli::vcs-validate-commit
   (fn (commit)
-    (if (core/cli::map? commit)
-      (let
-        ((ty ((core/map::get commit) (quote :type))) (v ((core/map::get commit) (quote :v)))
-          (parents ((core/map::get commit) (quote :parents)))
-          (base ((core/map::get commit) (quote :base)))
-          (patch ((core/map::get commit) (quote :patch)))
-          (result ((core/map::get commit) (quote :result)))
-          (evidence ((core/map::get commit) (quote :evidence)))
-          (attestations ((core/map::get commit) (quote :attestations))))
+    (let
+      ((request
+          {
+            :kind "genesis/commit-authority-request-v0.1"
+            :op (quote :validate)
+            :payload {:artifact commit}
+            :v 1}))
+      (let ((result (core/commit::authority request)))
         (if
-          (if (if (core/cli::sym? ty) ((core/sym::eq? ty) (quote :vcs/commit)) false)
-            (if (core/cli::reach-int? v) ((core/int::eq? v) 1) false)
-            false)
-          (if (if (core/cli::hash-hex? patch) (core/cli::hash-hex? result) false)
-            (if (if (core/list::is-nil? base) true (core/cli::hash-hex? base))
-              (if (if (core/cli::hash-vec? parents) (core/cli::hash-vec? evidence) false)
-                (if (core/cli::hash-vec? attestations)
-                  commit
-                  ((core/error::make2 "core/vcs/bad-commit")
-                    "commit :attestations must be vector of 64-hex hashes"))
-                ((core/error::make2 "core/vcs/bad-commit")
-                  "commit parents/evidence must be vectors of 64-hex hashes"))
-              ((core/error::make2 "core/vcs/bad-commit") "commit :base must be nil or 64-hex hash"))
-            ((core/error::make2 "core/vcs/bad-commit") "commit :patch/:result must be 64-hex hashes"))
-          ((core/error::make2 "core/vcs/bad-commit") "commit :type/:v mismatch")))
-      ((core/error::make2 "core/type-error") "core/cli::vcs-validate-commit expects map"))))
+          ((selfhost/store-authority::exact-map? result)
+            [:artifact :code :kind :message :ok :request-h :v])
+          (if
+            (if
+              ((core/eq? ((core/map::get result) (quote :kind)))
+                "genesis/commit-authority-result-v0.1")
+              (if
+                ((core/eq? ((core/map::get result) (quote :v))) 1)
+                ((core/eq? ((core/map::get result) (quote :request-h)))
+                  (selfhost/hash::hash-term request))
+                false)
+              false)
+            (if ((core/eq? ((core/map::get result) (quote :ok))) true)
+              (let ((artifact ((core/map::get result) (quote :artifact))))
+                (if ((core/eq? artifact) commit)
+                  artifact
+                  ((core/error::make2 "core/vcs/bad-authority")
+                    "commit authority substituted the submitted artifact")))
+              (let
+                ((code ((core/map::get result) (quote :code)))
+                  (message ((core/map::get result) (quote :message))))
+                (if (if (core/cli::str? code) (core/cli::str? message) false)
+                  ((core/error::make2 code) message)
+                  ((core/error::make2 "core/vcs/bad-authority")
+                    "commit authority returned malformed rejection"))))
+            ((core/error::make2 "core/vcs/bad-authority")
+              "commit authority returned an unbound result"))
+          ((core/error::make2 "core/vcs/bad-authority")
+            "commit authority returned an open or malformed result"))))))
 
 (def core/cli::vcs-validate-evidence
   (fn (evidence)

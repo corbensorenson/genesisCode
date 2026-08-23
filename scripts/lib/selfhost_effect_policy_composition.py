@@ -815,8 +815,13 @@ def static_check(root: Path, profile):
         fail("private max-byte policy leaked into the logged capability descriptor")
 
     driver = (root / "crates/gc_cli_driver/src/lib.rs").read_text()
-    if driver.count("CapsPolicy::load(path)") != 1 or driver.count("load_with_selfhost_authority(") != 1:
+    if driver.count("CapsPolicy::load(path)") != 1 or driver.count("load_with_selfhost_authority(") != 2:
         fail("CLI policy authority loader inventory drift")
+    if (
+        '#[cfg(feature = "parity-harness")]\n        gc_obligations::CoreformFrontend::Rust\n            if resolved_explicit_selfhost_artifact(cli).is_some() =>' not in driver
+        or "resolve_selfhost_toolchain_bootstrap(cli)?" not in driver
+    ):
+        fail("CLI explicit-artifact parity policy authority route drift")
     if '#[cfg(feature = "parity-harness")]\n        gc_obligations::CoreformFrontend::Rust => CapsPolicy::load(path)' not in driver:
         fail("CLI Rust compatibility loader is not compile-time gated")
     if 'Rust effect-policy authority is not compiled into production' not in driver:

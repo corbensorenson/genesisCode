@@ -100,6 +100,11 @@ NONCLAIMS = {
     "package-registry-vcs-authority", "r4-2-e-closure", "release-qualification",
     "sh-c-closure",
 }
+PRODUCTION_CLI_LOADER = """CapsPolicy::load_with_selfhost_authority(
+                path,
+                config.bootstrap_mode,
+                config.artifact.as_deref(),
+            )"""
 
 
 def canonical_identity(profile) -> str:
@@ -360,8 +365,7 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     cli_path = "crates/gc_cli_driver/src/lib.rs"
     cli = text(root, cli_path, overrides)
     require_all(cli, [
-        "CapsPolicy::load_with_selfhost_authority(", "config.bootstrap_mode",
-        "config.artifact.as_deref()", "Rust effect-policy authority is not compiled into production",
+        PRODUCTION_CLI_LOADER, "Rust effect-policy authority is not compiled into production",
     ], "production CLI policy route")
 
     tests_path = "crates/gc_effects/tests/store_caps.rs"
@@ -482,7 +486,7 @@ def mutation_controls(root: Path, profile) -> int:
         ({"crates/gc_effects/src/store.rs": paths["crates/gc_effects/src/store.rs"].replace("hasher.update(&chunk[..count]);", "", 1)}, "verify streaming hash"),
         ({"crates/gc_effects/src/runner_capability_dispatch.rs": paths["crates/gc_effects/src/runner_capability_dispatch.rs"].replace('"core/store::verify" => runner_cap_store_verify::cap_store_verify(', '"core/store::verify" => runner_cap_store::cap_store_verify_parity(', 1)}, "verify dispatch"),
         ({"crates/gc_effects/src/runner_cap_store.rs": paths["crates/gc_effects/src/runner_cap_store.rs"].replace('#[cfg(any(test, feature = "parity-oracle"))]\npub(super) fn cap_store_verify_parity', "pub(super) fn cap_store_verify_parity", 1)}, "verify parity isolation"),
-        ({"crates/gc_cli_driver/src/lib.rs": paths["crates/gc_cli_driver/src/lib.rs"].replace("CapsPolicy::load_with_selfhost_authority(", "CapsPolicy::load_without_authority(", 1)}, "CLI custody"),
+        ({"crates/gc_cli_driver/src/lib.rs": paths["crates/gc_cli_driver/src/lib.rs"].replace(PRODUCTION_CLI_LOADER, PRODUCTION_CLI_LOADER.replace("load_with_selfhost_authority", "load_without_authority"), 1)}, "CLI custody"),
         ({"crates/gc_effects/tests/store_caps.rs": paths["crates/gc_effects/tests/store_caps.rs"].replace("store_put_without_artifact_authority_fails_closed", "removed_fail_closed_control", 1)}, "negative control"),
         ({"crates/gc_effects/tests/store_caps.rs": paths["crates/gc_effects/tests/store_caps.rs"].replace("store_verify_without_artifact_authority_fails_closed", "removed_verify_fail_closed_control", 1)}, "verify negative control"),
         ({"crates/gc_cli/tests/cli_store_verify_authority.rs": paths["crates/gc_cli/tests/cli_store_verify_authority.rs"].replace("production_store_verify_supports_specific_and_filtered_scan_modes", "removed_verify_cli_control", 1)}, "verify native CLI control"),

@@ -1,3 +1,4 @@
+mod commit_authority;
 mod error;
 mod gc_authority;
 mod lock;
@@ -36,6 +37,7 @@ mod runner_xr_host;
 mod store;
 mod store_authority;
 
+pub use crate::commit_authority::{CommitAuthority, CommitAuthorityError};
 pub use crate::error::EffectsError;
 pub use crate::log::{
     Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, GCLOG_LEGACY_VERSION,

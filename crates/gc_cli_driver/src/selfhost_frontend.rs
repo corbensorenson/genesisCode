@@ -412,6 +412,14 @@ pub(super) fn load_selfhost_toolchain(
     ctx: &mut EvalCtx,
     env: &mut gc_kernel::Env,
 ) -> Result<(), CliError> {
+    let (mode, artifact) = resolve_selfhost_toolchain_bootstrap(cli)?;
+    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
+        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+}
+
+pub(super) fn resolve_selfhost_toolchain_bootstrap(
+    cli: &Cli,
+) -> Result<(SelfhostBootstrapMode, Option<PathBuf>), CliError> {
     let mode = resolved_selfhost_bootstrap_mode(cli);
     enforce_bootstrap_mode_allowed(mode, "selfhost runtime")?;
     if selfhost_only_enabled(cli) && mode != SelfhostBootstrapMode::ArtifactOnly {
@@ -426,8 +434,7 @@ pub(super) fn load_selfhost_toolchain(
     } else {
         Some(require_explicit_selfhost_artifact(cli, "selfhost runtime")?)
     };
-    load_selfhost_coreform_toolchain_v1_with_mode(ctx, env, mode, artifact.as_deref())
-        .map_err(|e| cli_err(EX_INTERNAL, "selfhost/init", format!("{e}")))
+    Ok((mode, artifact))
 }
 
 pub(super) fn load_runtime_selfhost_toolchain(

@@ -639,6 +639,13 @@ fn load_caps_policy(cli: &Cli, path: &Path) -> Result<CapsPolicy, CliError> {
             )
         }
         #[cfg(feature = "parity-harness")]
+        gc_obligations::CoreformFrontend::Rust
+            if resolved_explicit_selfhost_artifact(cli).is_some() =>
+        {
+            let (mode, artifact) = resolve_selfhost_toolchain_bootstrap(cli)?;
+            CapsPolicy::load_with_selfhost_authority(path, mode, artifact.as_deref())
+        }
+        #[cfg(feature = "parity-harness")]
         gc_obligations::CoreformFrontend::Rust => CapsPolicy::load(path),
         #[cfg(not(feature = "parity-harness"))]
         gc_obligations::CoreformFrontend::Rust => Err(gc_effects::EffectsError::Log(

@@ -7,6 +7,7 @@ use num_traits::ToPrimitive;
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use crate::commit_authority::CommitAuthority;
 use crate::error::EffectsError;
 use crate::gc_authority::GcAuthority;
 use crate::lock::ExclusiveLock;

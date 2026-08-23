@@ -51,7 +51,8 @@ CONSTANTS = {
     "decisionInventory": [
         "native-commit-object-construction", "native-commit-object-field-closure",
         "native-commit-object-identity-admission", "native-commit-object-inspection-admission",
-        "native-commit-author-metadata-construction", "request-bound-result-verdict",
+        "native-commit-author-metadata-construction", "vcs-history-commit-object-admission",
+        "request-bound-result-verdict",
     ],
     "hostMechanisms": [
         "artifact-only-authority-bootstrap-and-bounded-evaluation", "cli-argument-transport",
@@ -71,7 +72,7 @@ CONSTANTS = {
 }
 NONCLAIMS = {
     "bootstrap-fixpoint", "h2-sd-canon-identity", "h2-sd-commit",
-    "internal-package-registry-vcs-commit-authority", "r4-2-e-closure",
+    "package-registry-gpk-sync-commit-authority", "r4-2-e-closure",
     "release-qualification", "sh-c-closure", "wasi-commit-cli-authority",
 }
 
@@ -147,20 +148,30 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     if manifest.count(f'"{source_relative}"') != 1 or manifest.count(profile["binding"]) != 1:
         fail("toolchain manifest custody drift")
 
-    bridge_path = "crates/gc_cli_driver/src/commit_authority.rs"
+    bridge_path = "crates/gc_effects/src/commit_authority.rs"
     bridge = read_text(root, bridge_path, overrides)
     require_all(bridge, [
         f'const BINDING: &str = "{profile["binding"]}"',
         f'const REQUEST_KIND: &str = "{profile["requestKind"]}"',
         f'const RESULT_KIND: &str = "{profile["resultKind"]}"',
-        "load_selfhost_toolchain(cli, &mut context, &mut environment)?",
-        "hex32(gc_coreform::hash_term(&request))", "decode_result(value, &request_hash, command)",
+        "pub struct CommitAuthority", "load_selfhost_coreform_toolchain_v1_with_mode(",
+        "hex32(hash_term(&request))", "decode_result(value, &request_hash, expected_artifact)",
         "value.to_plain_term()", "result field set mismatch", "successful result artifact must be a map",
-        "strict_decoder_rejects_open_and_unbound_results", "strict_decoder_accepts_runtime_map_results",
+        "validation result substituted the submitted artifact",
+        "strict_decoder_rejects_open_unbound_and_substituted_results",
+        "strict_decoder_accepts_runtime_map_results",
     ], "Rust commit authority bridge")
     for default in ("unwrap_or_default()", "unwrap_or(true)", "unwrap_or(Term::Map"):
         if default in bridge:
             fail(f"commit authority bridge contains success-capable default {default!r}")
+
+    adapter_path = "crates/gc_cli_driver/src/commit_authority.rs"
+    adapter = read_text(root, adapter_path, overrides)
+    require_all(adapter, [
+        "resolve_selfhost_toolchain_bootstrap(cli)?", "gc_effects::CommitAuthority::load(",
+        "load(cli)?.make(payload)", ".validate(artifact)",
+        "CommitAuthorityError::Rejected", "CommitAuthorityError::Protocol",
+    ], "native commit authority adapter")
 
     cmd_path = "crates/gc_cli_driver/src/cmd_commit.rs"
     cmd = read_text(root, cmd_path, overrides)
@@ -178,6 +189,30 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     if cmd.index("commit_authority::make(") > cmd.index("mk_store_put_program(&artifact)"):
         fail("commit artifact is stored before authority construction")
 
+    selfhost_consumer_path = "selfhost/cli_reachability_rules_v1.gc"
+    selfhost_consumer = read_text(root, selfhost_consumer_path, overrides)
+    require_all(selfhost_consumer, [
+        "(def core/cli::vcs-validate-commit", "(core/commit::authority request)",
+        "selfhost/store-authority::exact-map? result", "selfhost/hash::hash-term request",
+        "commit authority substituted the submitted artifact",
+    ], "self-hosted VCS history commit admission")
+
+    dispatch_path = "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs"
+    dispatch = read_text(root, dispatch_path, overrides)
+    history_path = "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs"
+    history = read_text(root, history_path, overrides)
+    require_all(dispatch, [
+        "let mut commit_authority = load_commit_authority(policy)?;",
+        "vcs_load_commit(store, &mut commit_authority", "CommitAuthority::load_config(config)",
+    ], "low-level VCS history commit route")
+    if dispatch.count("let mut commit_authority = load_commit_authority(policy)?;") != 3:
+        fail("low-level VCS history must load commit authority for log, blame, and why")
+    require_all(history, [
+        "commit_authority: &mut CommitAuthority", ".validate_commit(t.clone())",
+    ], "VCS history traversal adapter")
+    if "gc_vcs::Commit::from_term" in dispatch or "gc_vcs::Commit::from_term" in history:
+        fail("VCS history retains native commit acceptance")
+
     tests_path = "crates/gc_cli/tests/cli_commit.rs"
     tests = read_text(root, tests_path, overrides)
     require_all(tests, [
@@ -185,6 +220,13 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         "exercise self-hosted construction", "commit_show_rejects_open_commit_objects",
         'contains("core/vcs/bad-commit")',
     ], "native commit authority tests")
+    vcs_tests_path = "crates/gc_cli/tests/cli_vcs_engine.rs"
+    vcs_tests = read_text(root, vcs_tests_path, overrides)
+    require_all(vcs_tests, [
+        "vcs_log_rejects_open_commit_before_history_projection",
+        '.stdout(predicate::str::contains("core/vcs/bad-commit"))',
+        '.args(["--selfhost-artifact", artifact.to_str().unwrap()])',
+    ], "VCS history commit authority tests")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-COMMIT"]
@@ -197,13 +239,13 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
             or bridge_path not in row.get("productionAuthorityPaths", [])
             or profile["spec"] not in row.get("specAuthorityPaths", [])
             or profile["independentVerifier"] not in row.get("verifierPaths", [])
-            or "internal package/registry/VCS" not in limitations):
+            or "package/registry/GPK/sync" not in limitations):
         fail("SD-COMMIT partial H0 custody drift")
 
     spec = read_text(root, profile["spec"], overrides)
     require_all(spec, [
         "This slice remains H0", "sole producer of canonical v1 commit construction",
-        "Package, registry, and internal VCS paths", "cannot substitute an artifact",
+        "Package, registry, GPK, and sync paths", "substitute a different artifact",
         "does not close `SD-COMMIT`", "permanent source/route mutations",
     ], "commit authority specification")
 
@@ -217,15 +259,24 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
 def mutation_controls(root: Path, profile) -> int:
     names = [
         profile["sourceModule"], "selfhost/toolchain_manifest.gc",
+        "crates/gc_effects/src/commit_authority.rs",
+        "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs",
         "crates/gc_cli_driver/src/commit_authority.rs", "crates/gc_cli_driver/src/cmd_commit.rs",
-        "crates/gc_cli/tests/cli_commit.rs",
+        "selfhost/cli_reachability_rules_v1.gc", "crates/gc_cli/tests/cli_commit.rs",
+        "crates/gc_cli/tests/cli_vcs_engine.rs",
     ]
     paths = {name: (root / name).read_text() for name in names}
     source = paths[profile["sourceModule"]]
     manifest = paths["selfhost/toolchain_manifest.gc"]
-    bridge = paths["crates/gc_cli_driver/src/commit_authority.rs"]
+    bridge = paths["crates/gc_effects/src/commit_authority.rs"]
+    adapter = paths["crates/gc_cli_driver/src/commit_authority.rs"]
     cmd = paths["crates/gc_cli_driver/src/cmd_commit.rs"]
+    dispatch = paths["crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs"]
+    history = paths["crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs"]
+    selfhost_consumer = paths["selfhost/cli_reachability_rules_v1.gc"]
     tests = paths["crates/gc_cli/tests/cli_commit.rs"]
+    vcs_tests = paths["crates/gc_cli/tests/cli_vcs_engine.rs"]
     mutations = [
         ({profile["sourceModule"]: source.replace("(quote :make)", "(quote :removed)", 1)}, "make operation"),
         ({profile["sourceModule"]: source.replace("(quote :validate)", "(quote :removed)", 1)}, "validate operation"),
@@ -234,12 +285,18 @@ def mutation_controls(root: Path, profile) -> int:
         ({profile["sourceModule"]: source.replace(":request-h (selfhost/hash::hash-term request)", ":request-h nil", 1)}, "request binding"),
         ({"selfhost/toolchain_manifest.gc": manifest.replace(f'    "{profile["sourceModule"]}"\n', "", 1)}, "module custody"),
         ({"selfhost/toolchain_manifest.gc": manifest.replace(f"    {profile['binding']}\n", "", 1)}, "binding custody"),
-        ({"crates/gc_cli_driver/src/commit_authority.rs": bridge.replace("value.to_plain_term()", "value.as_data().cloned()", 1)}, "runtime collection decoder"),
-        ({"crates/gc_cli_driver/src/commit_authority.rs": bridge.replace("result field set mismatch", "removed field closure", 1)}, "result closure"),
+        ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("value.to_plain_term()", "value.as_data().cloned()", 1)}, "runtime collection decoder"),
+        ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("result field set mismatch", "removed field closure", 1)}, "result closure"),
+        ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("validation result substituted the submitted artifact", "validation accepted substitution", 1)}, "artifact substitution"),
+        ({"crates/gc_cli_driver/src/commit_authority.rs": adapter.replace("load(cli)?.make(payload)", "removed_authority_make(payload)", 1)}, "shared native adapter"),
         ({"crates/gc_cli_driver/src/cmd_commit.rs": cmd.replace("commit_authority::make(", "removed_authority::make(", 1)}, "construction route"),
         ({"crates/gc_cli_driver/src/cmd_commit.rs": cmd.replace('commit_authority::validate(cli, artifact, "commit/show")', "Ok(artifact)", 1)}, "inspection route"),
         ({"crates/gc_cli_driver/src/cmd_commit.rs": cmd.replace("Ok((base.to_string(), Vec::new()))", "Ok((base.to_ascii_lowercase(), Vec::new()))", 1)}, "host normalization"),
+        ({"selfhost/cli_reachability_rules_v1.gc": selfhost_consumer.replace("(core/commit::authority request)", "commit", 1)}, "self-hosted VCS admission route"),
+        ({"crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs": dispatch.replace("let mut commit_authority = load_commit_authority(policy)?;", "let mut commit_authority = removed_authority(policy)?;")}, "low-level VCS authority load"),
+        ({"crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs": history.replace(".validate_commit(t.clone())", ".removed_validate(t.clone())", 1)}, "VCS traversal validation"),
         ({"crates/gc_cli/tests/cli_commit.rs": tests.replace("commit_show_rejects_open_commit_objects", "removed_open_commit_control", 1)}, "negative control"),
+        ({"crates/gc_cli/tests/cli_vcs_engine.rs": vcs_tests.replace("vcs_log_rejects_open_commit_before_history_projection", "removed_vcs_open_commit_control", 1)}, "VCS negative control"),
     ]
     passed = 0
     for overrides, name in mutations:

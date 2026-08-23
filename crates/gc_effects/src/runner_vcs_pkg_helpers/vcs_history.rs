@@ -2,10 +2,13 @@ use super::*;
 
 pub(crate) fn vcs_load_commit(
     store: &ArtifactStore,
+    commit_authority: &mut CommitAuthority,
     commit_h: &str,
-) -> Result<(gc_vcs::Commit, Term), String> {
+) -> Result<(crate::commit_authority::ValidatedCommit, Term), String> {
     let t = store_get_term(store, commit_h).map_err(|e| e.to_string())?;
-    let c = gc_vcs::Commit::from_term(&t).map_err(|e| format!("bad commit {commit_h}: {e}"))?;
+    let c = commit_authority
+        .validate_commit(t.clone())
+        .map_err(|e| format!("bad commit {commit_h}: {e}"))?;
     Ok((c, t))
 }
 
@@ -36,6 +39,7 @@ pub(crate) fn vcs_find_commit_for_snapshot(
     store: &ArtifactStore,
     refs: &RefsDb,
     refs_authority: Option<&mut RefsAuthority>,
+    commit_authority: &mut CommitAuthority,
     snapshot_h: &str,
 ) -> Result<Option<String>, String> {
     use std::collections::HashSet;
@@ -56,7 +60,7 @@ pub(crate) fn vcs_find_commit_for_snapshot(
         if !visited.insert(h.clone()) {
             continue;
         }
-        let (c, _) = vcs_load_commit(store, &h)?;
+        let (c, _) = vcs_load_commit(store, commit_authority, &h)?;
         if c.result == snapshot_h {
             return Ok(Some(h));
         }
@@ -69,6 +73,7 @@ pub(crate) fn vcs_find_commit_for_snapshot(
 
 pub(crate) fn vcs_blame_commit_for_symbol(
     store: &ArtifactStore,
+    commit_authority: &mut CommitAuthority,
     start_commit_h: &str,
     sym: &str,
     value_h: &str,
@@ -81,10 +86,10 @@ pub(crate) fn vcs_blame_commit_for_symbol(
         if !seen.insert(cur.clone()) {
             return Ok(cur);
         }
-        let (c, _) = vcs_load_commit(store, &cur)?;
+        let (c, _) = vcs_load_commit(store, commit_authority, &cur)?;
         let mut next_parent: Option<String> = None;
         for p in &c.parents {
-            let (pc, _) = vcs_load_commit(store, p)?;
+            let (pc, _) = vcs_load_commit(store, commit_authority, p)?;
             let pref = vcs_snapshot_symbol_ref(store, &pc.result, sym)?;
             if pref.as_deref() == Some(value_h) {
                 next_parent = Some(p.clone());

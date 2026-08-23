@@ -665,7 +665,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "3a4ff8e97025917169dafbc1b6f3129bc2cc9330f903716da6a1f81a81b09551",
+  "contentIdentitySha256": "129a367d5a864c9f4f6da28fb07c01348a40963d70867883e3923644c5686f91",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1908,13 +1908,14 @@
       "currentLevel": "H0",
       "fallbackReachability": "reachable-parity-harness",
       "hostBindingPaths": [
-        "crates/gc_cli_driver/src"
+        "crates/gc_cli_driver/src",
+        "crates/gc_effects/src"
       ],
       "id": "SD-COMMIT",
       "internalOnly": false,
       "limitations": [
-        "Artifact-loaded GenesisCode exclusively constructs and validates canonical v1 commit objects for native commit new/show under genesis/selfhost-commit-authority-v0.1",
-        "Ref resolution, patch/store/signing mechanisms, command orchestration, WASI commit CLI support, and internal package/registry/VCS commit construction and decoding remain host-authoritative, so SD-COMMIT remains H0"
+        "Artifact-loaded GenesisCode exclusively constructs and validates canonical v1 commit objects for native commit new/show and admits every stored commit consumed by self-hosted or low-level VCS log/blame/why under genesis/selfhost-commit-authority-v0.1",
+        "Ref resolution, patch/store/signing mechanisms, VCS traversal/projection, command orchestration, WASI commit CLI support, and package/registry/GPK/sync commit construction and decoding remain host-authoritative or outside this authority, so SD-COMMIT remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -1922,11 +1923,19 @@
       "producingImplementationPaths": [
         "selfhost/toolchain.gc",
         "selfhost/commit_authority_v1.gc",
+        "selfhost/cli_reachability_rules_v1.gc",
+        "crates/gc_effects/src/commit_authority.rs",
+        "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs",
         "crates/gc_cli_driver/src/commit_authority.rs",
         "crates/gc_cli_driver/src/cmd_commit.rs"
       ],
       "productionAuthorityPaths": [
         "selfhost/commit_authority_v1.gc",
+        "selfhost/cli_reachability_rules_v1.gc",
+        "crates/gc_effects/src/commit_authority.rs",
+        "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs",
         "crates/gc_cli_driver/src/commit_authority.rs",
         "crates/gc_cli_driver/src/cmd_commit.rs"
       ],
@@ -1939,11 +1948,13 @@
         "S0-A"
       ],
       "testPaths": [
-        "crates/gc_cli/tests/cli_commit.rs"
+        "crates/gc_cli/tests/cli_commit.rs",
+        "crates/gc_cli/tests/cli_vcs_engine.rs"
       ],
       "title": "Commit object construction and inspection",
       "verifierPaths": [
         "crates/gc_cli/tests/cli_commit.rs",
+        "crates/gc_cli/tests/cli_vcs_engine.rs",
         "scripts/lib/selfhost_commit_authority.py"
       ]
     },
@@ -1960,7 +1971,7 @@
       "id": "SD-VCS",
       "internalOnly": false,
       "limitations": [
-        "GenesisCode programs are routed but Rust VCS libraries retain production authority"
+        "GenesisCode owns commit-object admission for self-hosted and low-level log/blame/why, but snapshot, patch, traversal/projection, and remaining VCS semantics retain mixed or Rust production authority"
       ],
       "migrationTasks": [
         "R4.2.e"

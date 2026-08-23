@@ -17,7 +17,8 @@
     "decisionInventory": {"const": [
       "native-commit-object-construction", "native-commit-object-field-closure",
       "native-commit-object-identity-admission", "native-commit-object-inspection-admission",
-      "native-commit-author-metadata-construction", "request-bound-result-verdict"
+      "native-commit-author-metadata-construction", "vcs-history-commit-object-admission",
+      "request-bound-result-verdict"
     ]},
     "hostMechanisms": {"const": [
       "artifact-only-authority-bootstrap-and-bounded-evaluation", "cli-argument-transport",

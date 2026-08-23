@@ -23,6 +23,7 @@ pub(super) fn dispatch_meta(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs-low::log".to_string())
             })?;
+            let mut commit_authority = load_commit_authority(policy)?;
 
             let root_s = match payload_vcs_root(payload) {
                 Ok(s) => s,
@@ -105,18 +106,7 @@ pub(super) fn dispatch_meta(
                         Some(op),
                     ));
                 }
-                let t = match store_get_term(store, &h) {
-                    Ok(t) => t,
-                    Err(e) => {
-                        return Ok(mk_error(
-                            error_tok,
-                            "core/vcs/store-error",
-                            e.to_string(),
-                            Some(op),
-                        ));
-                    }
-                };
-                let c = match gc_vcs::Commit::from_term(&t) {
+                let (c, _) = match vcs_load_commit(store, &mut commit_authority, &h) {
                     Ok(c) => c,
                     Err(e) => {
                         return Ok(mk_error(
@@ -150,7 +140,7 @@ pub(super) fn dispatch_meta(
                 cm.insert(TermOrdKey(Term::symbol(":result")), Term::Str(c.result));
                 cm.insert(
                     TermOrdKey(Term::symbol(":obligations")),
-                    Term::Vector(c.obligations.iter().cloned().map(Term::Str).collect()),
+                    Term::Vector(c.obligations.clone()),
                 );
                 cm.insert(
                     TermOrdKey(Term::symbol(":evidence")),
@@ -178,6 +168,7 @@ pub(super) fn dispatch_meta(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs-low::blame".to_string())
             })?;
+            let mut commit_authority = load_commit_authority(policy)?;
 
             let sym = match payload_vcs_sym(payload, ":sym") {
                 Ok(s) => s,
@@ -256,6 +247,7 @@ pub(super) fn dispatch_meta(
                     store,
                     rdb,
                     refs_authority.as_deref_mut(),
+                    &mut commit_authority,
                     &sh,
                 ) {
                     Ok(x) => x,
@@ -274,10 +266,11 @@ pub(super) fn dispatch_meta(
                 h
             };
 
-            let (start_commit_obj, _) = match vcs_load_commit(store, &start_commit) {
-                Ok(x) => x,
-                Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
-            };
+            let (start_commit_obj, _) =
+                match vcs_load_commit(store, &mut commit_authority, &start_commit) {
+                    Ok(x) => x,
+                    Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
+                };
 
             if let Some(sh) = &snapshot_h
                 && &start_commit_obj.result != sh
@@ -304,11 +297,17 @@ pub(super) fn dispatch_meta(
                 Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
             };
 
-            let blame_h = match vcs_blame_commit_for_symbol(store, &start_commit, &sym, &value_h) {
+            let blame_h = match vcs_blame_commit_for_symbol(
+                store,
+                &mut commit_authority,
+                &start_commit,
+                &sym,
+                &value_h,
+            ) {
                 Ok(h) => h,
                 Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
             };
-            let (blame_commit, _) = match vcs_load_commit(store, &blame_h) {
+            let (blame_commit, _) = match vcs_load_commit(store, &mut commit_authority, &blame_h) {
                 Ok(x) => x,
                 Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
             };
@@ -336,6 +335,7 @@ pub(super) fn dispatch_meta(
             let store = store.ok_or_else(|| {
                 EffectsError::Log("missing artifact store for core/vcs-low::why".to_string())
             })?;
+            let mut commit_authority = load_commit_authority(policy)?;
 
             let sym = match payload_vcs_sym(payload, ":sym") {
                 Ok(s) => s,
@@ -425,6 +425,7 @@ pub(super) fn dispatch_meta(
                     store,
                     rdb,
                     refs_authority.as_deref_mut(),
+                    &mut commit_authority,
                     &sh,
                 ) {
                     Ok(x) => x,
@@ -443,10 +444,11 @@ pub(super) fn dispatch_meta(
                 h
             };
 
-            let (start_commit_obj, _) = match vcs_load_commit(store, &start_commit) {
-                Ok(x) => x,
-                Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
-            };
+            let (start_commit_obj, _) =
+                match vcs_load_commit(store, &mut commit_authority, &start_commit) {
+                    Ok(x) => x,
+                    Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
+                };
             if let Some(sh) = &snapshot_h
                 && &start_commit_obj.result != sh
             {
@@ -471,29 +473,24 @@ pub(super) fn dispatch_meta(
                 }
                 Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
             };
-            let blame_h = match vcs_blame_commit_for_symbol(store, &start_commit, &sym, &value_h) {
+            let blame_h = match vcs_blame_commit_for_symbol(
+                store,
+                &mut commit_authority,
+                &start_commit,
+                &sym,
+                &value_h,
+            ) {
                 Ok(h) => h,
                 Err(e) => return Ok(mk_error(error_tok, "core/vcs/store-error", e, Some(op))),
             };
 
-            let (blame_commit, blame_term) = match vcs_load_commit(store, &blame_h) {
+            let (blame_commit, _) = match vcs_load_commit(store, &mut commit_authority, &blame_h) {
                 Ok(x) => x,
                 Err(e) => return Ok(mk_error(error_tok, "core/vcs/bad-commit", e, Some(op))),
             };
-            let (target, author, why) = match &blame_term {
-                Term::Map(mm) => (
-                    mm.get(&TermOrdKey(Term::symbol(":target")))
-                        .cloned()
-                        .unwrap_or(Term::Nil),
-                    mm.get(&TermOrdKey(Term::symbol(":author")))
-                        .cloned()
-                        .unwrap_or(Term::Nil),
-                    mm.get(&TermOrdKey(Term::symbol(":why")))
-                        .cloned()
-                        .unwrap_or(Term::Nil),
-                ),
-                _ => (Term::Nil, Term::Nil, Term::Nil),
-            };
+            let target = blame_commit.target.clone();
+            let author = blame_commit.author.clone();
+            let why = blame_commit.why.clone();
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -514,13 +511,7 @@ pub(super) fn dispatch_meta(
             );
             m.insert(
                 TermOrdKey(Term::symbol(":obligations")),
-                Term::Vector(
-                    blame_commit
-                        .obligations
-                        .into_iter()
-                        .map(Term::Str)
-                        .collect(),
-                ),
+                Term::Vector(blame_commit.obligations),
             );
             m.insert(
                 TermOrdKey(Term::symbol(":evidence")),
@@ -556,6 +547,16 @@ pub(super) fn dispatch_meta(
             Some(op),
         )),
     }
+}
+
+fn load_commit_authority(policy: &CapsPolicy) -> Result<CommitAuthority, EffectsError> {
+    let config = policy.selfhost_authority_config().ok_or_else(|| {
+        EffectsError::Log(
+            "VCS history requires the artifact-loaded GenesisCode commit authority".to_string(),
+        )
+    })?;
+    CommitAuthority::load_config(config)
+        .map_err(|error| EffectsError::Log(format!("commit authority unavailable: {error}")))
 }
 
 #[cfg(test)]

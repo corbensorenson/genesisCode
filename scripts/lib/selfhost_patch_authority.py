@@ -123,7 +123,7 @@ def verify_parity_test_custody(root):
   source=path.read_text()
   if "genesis_parity" not in source: continue
   files+=1; gates+=analyze_parity_source(source,str(path.relative_to(root)))
- if (files,gates)!=(33,104): fail(f"parity test custody inventory drift: files={files} gates={gates}")
+ if (files,gates)!=(33,105): fail(f"parity test custody inventory drift: files={files} gates={gates}")
  return {"parityTestFiles":files,"parityTests":gates}
 def parity_custody_self_tests():
  good='fn parity() { genesis_parity(); }\n#[cfg(feature = "parity-harness")]\n#[test]\nfn uses_parity() { parity(); }\n#[test]\nfn production() {}\n'

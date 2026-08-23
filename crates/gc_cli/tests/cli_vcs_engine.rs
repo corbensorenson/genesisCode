@@ -171,6 +171,7 @@ fn vcs_log_value_matches_between_frontends() {
         .current_dir(dir)
         .arg("--json")
         .args(["--coreform-frontend", "rust"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
         .args(["vcs", "--caps"])
         .arg(&caps)
         .args(["--log"])
@@ -203,6 +204,41 @@ fn vcs_log_value_matches_between_frontends() {
     let self_v = json_value(&self_out);
 
     assert_eq!(rust_v, self_v);
+}
+
+#[cfg(feature = "parity-harness")]
+#[test]
+fn vcs_log_rejects_open_commit_before_history_projection() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(
+        dir,
+        &["core/store::put", "core/store::get", "core/vcs-low::log"],
+    );
+    let artifact = build_selfhost_artifact(dir);
+    let hash = "a".repeat(64);
+    let open_commit = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit :v 1 :parents [] :base nil :patch "{hash}" :result "{hash}"
+  :obligations [] :evidence [] :attestations [] :message "open" :extra true
+}}"#
+        ),
+        "open-commit.gc",
+    );
+
+    cmd()
+        .current_dir(dir)
+        .args(["--coreform-frontend", "selfhost"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
+        .args(["vcs", "--caps"])
+        .arg(&caps)
+        .args(["log", &open_commit, "--max", "1"])
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("core/vcs/bad-commit"));
 }
 
 #[cfg(feature = "parity-harness")]
@@ -414,6 +450,7 @@ fn vcs_blame_and_why_values_match_between_frontends() {
         .current_dir(dir)
         .arg("--json")
         .args(["--coreform-frontend", "rust"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
         .args(["vcs", "--caps"])
         .arg(&caps)
         .args(["blame", "--snapshot", &snap2, "--sym", "pkg/mod::x"])
@@ -443,6 +480,7 @@ fn vcs_blame_and_why_values_match_between_frontends() {
         .current_dir(dir)
         .arg("--json")
         .args(["--coreform-frontend", "rust"])
+        .args(["--selfhost-artifact", artifact.to_str().unwrap()])
         .args(["vcs", "--caps"])
         .arg(&caps)
         .args(["why", "--snapshot", &snap2, "--sym", "pkg/mod::x"])

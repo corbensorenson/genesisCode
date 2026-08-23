@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `76dce1de961b74364eb31eb6d4cba154eb987d888a9c644d7cafb5fafe3ca6b6`
-- Freshness artifact hash: `76dce1de961b74364eb31eb6d4cba154eb987d888a9c644d7cafb5fafe3ca6b6`
-- Freshness source hash: `3d024fe6a0b7b7dec3d0c2e256c696d65c0c67ccf62bfe1256a978e3d1992961`
-- Source aggregate hash (module path + module sha256): `ea6ae20560e18c5e4b61719e11da3c4d995ace31b1e9552d97bb6f9be2d22b6e`
+- Artifact sha256: `8d0dbb53c22a420ce0dadebd22b6fe369bcc9bd0da292bad3b197499f6c09c2c`
+- Freshness artifact hash: `8d0dbb53c22a420ce0dadebd22b6fe369bcc9bd0da292bad3b197499f6c09c2c`
+- Freshness source hash: `5b3a5588c95aa6d830363c820cc878376cc673e5ff68fb65c10286fbf1f2d283`
+- Source aggregate hash (module path + module sha256): `f280f233ddbbcc9b3a014520c43eafeebdedc51c4568272ae360398572a18df1`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `142`
 
@@ -34,7 +34,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/cli_pkg_runtime_verify_v1.gc` | 243 | 11706 | 14 | `5267629fe45699a5` |
 | `selfhost/cli_pkg_ops_v1.gc` | 421 | 21222 | 21 | `7bd3d718d554a167` |
 | `selfhost/cli_reachability_v1.gc` | 398 | 14168 | 24 | `2dae442240dbd8b8` |
-| `selfhost/cli_reachability_rules_v1.gc` | 218 | 9499 | 17 | `bfc421a3bc682517` |
+| `selfhost/cli_reachability_rules_v1.gc` | 230 | 9632 | 17 | `18003a768c902a7d` |
 | `selfhost/cli_reachability_closure_v1.gc` | 297 | 13959 | 21 | `0c82e8d660c258b3` |
 | `selfhost/typecheck_core_v1.gc` | 241 | 8119 | 43 | `5b2830c81fd26f4b` |
 | `selfhost/typecheck_types_v1.gc` | 403 | 19013 | 39 | `b7a8e2d27a56f1c6` |
@@ -138,7 +138,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_publish_authority_finalize_crypto_v1.gc` | 81 | 4044 | 5 | `4bbdc02f44f9c4a2` |
 | `selfhost/pkg_publish_authority_finalize_policy_v1.gc` | 126 | 5525 | 7 | `0850bc2781395ebb` |
 | `selfhost/pkg_publish_authority_finalize_v1.gc` | 206 | 9685 | 12 | `97f8ff8acd9ca587` |
-| `selfhost/pkg_publish_authority_v1.gc` | 14 | 859 | 1 | `b382e64aa90883b9` |
+| `selfhost/pkg_publish_authority_v1.gc` | 212 | 9910 | 13 | `91c50efda8a59cb3` |
 | `selfhost/signing_authority_v1.gc` | 397 | 17635 | 37 | `01af228a5d3c7c36` |
 | `selfhost/evidence_verify_package_v1.gc` | 616 | 30056 | 46 | `44d2268dc28e0606` |
 | `selfhost/evidence_verify_authority_v1.gc` | 395 | 17487 | 33 | `6ae3aab3489efbee` |
@@ -283,7 +283,7 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_publish_authority_finalize_crypto_v1.gc`: `selfhost/pkg-publish-authority::crypto-fact-valid?`, `selfhost/pkg-publish-authority::attestation-role`, `selfhost/pkg-publish-authority::role-signers-add`, `selfhost/pkg-publish-authority::crypto-tally-loop`, `selfhost/pkg-publish-authority::crypto-tally`
 - `selfhost/pkg_publish_authority_finalize_policy_v1.gc`: `selfhost/pkg-publish-authority::role-signer-count`, `selfhost/pkg-publish-authority::required-role-code-loop`, `selfhost/pkg-publish-authority::role-minimum-code-loop`, `selfhost/pkg-publish-authority::set-overlap-loop?`, `selfhost/pkg-publish-authority::sets-overlap?`, `selfhost/pkg-publish-authority::independence-code-loop`, `selfhost/pkg-publish-authority::signature-policy-code`
 - `selfhost/pkg_publish_authority_finalize_v1.gc`: `selfhost/pkg-publish-authority::finalize-request-shape?`, `selfhost/pkg-publish-authority::finalize-mechanism-valid?`, `selfhost/pkg-publish-authority::finalize-prepare-mechanism`, `selfhost/pkg-publish-authority::finalize-prepare-request`, `selfhost/pkg-publish-authority::rebind-rejection`, `selfhost/pkg-publish-authority::publication-provenance`, `selfhost/pkg-publish-authority::publication-set-ref`, `selfhost/pkg-publish-authority::publication-sync`
-- `selfhost/pkg_publish_authority_v1.gc`: `core/pkg::publish-authority`
+- `selfhost/pkg_publish_authority_v1.gc`: `core/pkg::publish-authority`, `selfhost/refs-policy::field`, `selfhost/refs-policy::result`, `selfhost/refs-policy::accept`, `selfhost/refs-policy::reject`, `selfhost/refs-policy::code`, `selfhost/refs-policy::selection-code`, `selfhost/refs-policy::rebind`
 - `selfhost/signing_authority_v1.gc`: `selfhost/signing::tag`, `selfhost/signing::nil?`, `selfhost/signing::not`, `selfhost/signing::map?`, `selfhost/signing::str?`, `selfhost/signing::sym?`, `selfhost/signing::bytes?`, `selfhost/signing::bool?`
 - `selfhost/evidence_verify_package_v1.gc`: `selfhost/evidence-verify-package::tag`, `selfhost/evidence-verify-package::nil?`, `selfhost/evidence-verify-package::not`, `selfhost/evidence-verify-package::map?`, `selfhost/evidence-verify-package::vec?`, `selfhost/evidence-verify-package::str?`, `selfhost/evidence-verify-package::sym?`, `selfhost/evidence-verify-package::bytes?`
 - `selfhost/evidence_verify_authority_v1.gc`: `selfhost/evidence-verify::tag`, `selfhost/evidence-verify::nil?`, `selfhost/evidence-verify::not`, `selfhost/evidence-verify::and`, `selfhost/evidence-verify::map?`, `selfhost/evidence-verify::vec?`, `selfhost/evidence-verify::str?`, `selfhost/evidence-verify::sym?`
