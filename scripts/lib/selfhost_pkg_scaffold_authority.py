@@ -308,7 +308,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", "genesis/selfhost-pkg-scaffold-authority-v0.1", "native-scaffold", "ledger")
     source_mutation(
         "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json",
-        "Workspace environment descriptor, projection, hashing, and materialization and manifest decisions remain host-authoritative",
+        "Manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, cross-root crash-atomic commit and recovery, backend bridge binary semantics, and WASI workspace command support remain unproven, so SD-PACKAGE-WORKSPACE remains H0",
         "Workspace residual authority removed",
         "residual ledger",
     )

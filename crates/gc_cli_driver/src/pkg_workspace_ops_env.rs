@@ -1,4 +1,11 @@
+use std::path::{Path, PathBuf};
+
+use gc_coreform::{Term, TermOrdKey};
+use gc_pkg::{GenesisLock, UpdatePolicy, WorkspaceConfig};
+
 use super::*;
+
+const BODY_LIMIT: usize = 16 * 1024 * 1024;
 
 pub(crate) fn handle_env(
     cli: &crate::Cli,
@@ -9,351 +16,170 @@ pub(crate) fn handle_env(
     out_dir: &Path,
 ) -> Result<LocalPkgResult, String> {
     let env_workspace = super::pkg_workspace_env_select::load_workspace(workspace_file, profile)?;
-    let ws = env_workspace.config;
-    let l = gc_pkg::GenesisLock::load(lock).map_err(|e| e.to_string())?;
-    let prof = ws
+    let workspace = env_workspace.config;
+    let lock_model = GenesisLock::load(lock).map_err(|error| error.to_string())?;
+    let selected_profile = workspace
         .profiles
         .get(profile)
         .ok_or_else(|| format!("workspace profile `{profile}` not found"))?;
-    let active_runtime_backend = crate::active_runtime_backend_profile().to_string();
-    let selection = super::pkg_workspace_env_select::select_runtime_backend(
-        cli,
-        profile,
-        runtime_backend_override,
-        env_workspace.profile_runtime_backend.as_deref(),
-        env_workspace.default_runtime_backend.as_deref(),
-        &active_runtime_backend,
-    )?;
-    let selected_runtime_backend = selection.selected;
-    let runtime_backend_compatible = selection.compatible;
-    if !runtime_backend_compatible {
-        return Err(format!(
-            "profile `{profile}` runtime_backend `{selected_runtime_backend}` is incompatible with active runtime backend profile `{active_runtime_backend}`"
-        ));
-    }
+    let workspace_bytes = workspace.to_toml_canonical().into_bytes();
+    let lock_bytes = lock_model.to_toml_canonical().into_bytes();
+    bounded_bytes(&workspace_bytes, "canonical workspace")?;
+    bounded_bytes(&lock_bytes, "canonical lock")?;
 
-    let ws_body = ws.to_toml_canonical();
-    let lock_body = l.to_toml_canonical();
-    let ws_h = blake3::hash(ws_body.as_bytes()).to_hex().to_string();
-    let lock_h = blake3::hash(lock_body.as_bytes()).to_hex().to_string();
+    let workspace_root = workspace_file.parent().unwrap_or_else(|| Path::new("."));
+    let wasi_root = workspace_root
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge");
+    let path_separator = std::path::MAIN_SEPARATOR.to_string();
+    let plan_request = map([
+        (
+            ":active",
+            Term::Str(crate::active_runtime_backend_profile().to_string()),
+        ),
+        (
+            ":default-backend",
+            optional(env_workspace.default_runtime_backend.as_deref()),
+        ),
+        (
+            ":defaults",
+            map([
+                (":policy", optional(workspace.defaults.policy.as_deref())),
+                (
+                    ":registry",
+                    optional(workspace.defaults.registry.as_deref()),
+                ),
+                (
+                    ":toolchain",
+                    optional(workspace.defaults.toolchain.as_deref()),
+                ),
+            ]),
+        ),
+        (
+            ":generated-by",
+            Term::Str(format!("genesis {}", env!("CARGO_PKG_VERSION"))),
+        ),
+        (
+            ":kind",
+            Term::Str(super::pkg_workspace_env_authority::PLAN_KIND.to_string()),
+        ),
+        (":lock", lock_observation(workspace_file, &lock_model)),
+        (":lock-bytes", Term::Bytes(lock_bytes.into())),
+        (":members", members_observation(workspace_file, &workspace)?),
+        (
+            ":out-root-prefix",
+            Term::Str(path_prefix(out_dir, &path_separator)),
+        ),
+        (":override", optional(runtime_backend_override)),
+        (":path-separator", Term::Str(path_separator)),
+        (
+            ":paths",
+            map([
+                (":lock-file", path_term(lock)),
+                (
+                    ":store-root",
+                    path_term(&super::workspace_store_dir(workspace_file)),
+                ),
+                (":wasi-http-dir", path_term(&wasi_root.join("http"))),
+                (":wasi-https-dir", path_term(&wasi_root.join("https"))),
+                (":wasi-root", path_term(&wasi_root)),
+                (
+                    ":wasi-runtime-file",
+                    path_term(&wasi_root.join("runtime.gc")),
+                ),
+                (":workspace-file", path_term(workspace_file)),
+            ]),
+        ),
+        (":profile", Term::Str(profile.to_string())),
+        (
+            ":profile-backend",
+            optional(env_workspace.profile_runtime_backend.as_deref()),
+        ),
+        (
+            ":profile-values",
+            map([
+                (
+                    ":caps-policy",
+                    optional(selected_profile.caps_policy.as_deref()),
+                ),
+                (":policy", optional(selected_profile.policy.as_deref())),
+                (":registry", optional(selected_profile.registry.as_deref())),
+                (
+                    ":toolchain",
+                    optional(selected_profile.toolchain.as_deref()),
+                ),
+            ]),
+        ),
+        (":v", Term::Int(1.into())),
+        (":workspace", Term::Str(workspace.workspace.clone())),
+        (":workspace-bytes", Term::Bytes(workspace_bytes.into())),
+    ]);
 
-    let caps_policy = prof
-        .caps_policy
-        .clone()
-        .unwrap_or_else(|| "caps.toml".to_string());
-    let caps_policy_path = if Path::new(&caps_policy).is_absolute() {
-        Path::new(&caps_policy).to_path_buf()
-    } else {
-        workspace_file
-            .parent()
-            .unwrap_or_else(|| Path::new("."))
-            .join(&caps_policy)
-    };
-    if !caps_policy_path.is_file() {
-        return Err(format!(
-            "profile `{profile}` caps policy file not found: {}",
-            caps_policy_path.display()
-        ));
-    }
+    let mut backend_plan = None;
+    let authorized =
+        super::pkg_workspace_env_authority::authorize(cli, plan_request, out_dir, |plan| {
+            let caps_path = resolve_workspace_path(workspace_file, &plan.caps_policy_raw);
+            let caps_bytes = read_required_file(&caps_path, "caps policy")?;
+            let toolchain = plan
+                .effective_toolchain
+                .as_deref()
+                .map(|raw| {
+                    let path = resolve_workspace_path(workspace_file, raw);
+                    let bytes = read_required_file(&path, "toolchain")?;
+                    Ok::<Term, String>(file_observation(&path, bytes))
+                })
+                .transpose()?;
+            let remote_root = match plan.effective_registry.as_deref() {
+                Some(remote) if remote.starts_with("http://") || remote.starts_with("https://") => {
+                    Some(
+                        gc_registry::wasi_http_bridge_resolve_remote_root(&wasi_root, remote)
+                            .map_err(|error| {
+                                format!(
+                                    "resolve wasi http bridge root for registry `{remote}`: {error}"
+                                )
+                            })?,
+                    )
+                }
+                _ => None,
+            };
+            let backend = if plan.backend_required {
+                let planned =
+                    super::pkg_workspace_ops_backend::plan_backend_env_bundle(workspace_file)?;
+                let observation = map([
+                    (":bridge-cmd", path_term(&planned.bridge_cmd)),
+                    (":bridge-ready", Term::Bool(true)),
+                    (":bridge-sha256", Term::Str(planned.bridge_sha256.clone())),
+                    (
+                        ":effective-caps-bytes",
+                        Term::Bytes(planned.effective_caps_body.clone().into()),
+                    ),
+                    (
+                        ":effective-caps-h",
+                        Term::Str(planned.effective_caps_hash.clone()),
+                    ),
+                ]);
+                backend_plan = Some(planned);
+                observation
+            } else {
+                Term::Nil
+            };
+            Ok(map([
+                (":backend", backend),
+                (":caps-policy", file_observation(&caps_path, caps_bytes)),
+                (":toolchain", toolchain.unwrap_or(Term::Nil)),
+                (
+                    ":wasi",
+                    map([
+                        (":remote-root", optional_path(remote_root.as_deref())),
+                        (":root", path_term(&wasi_root)),
+                    ]),
+                ),
+            ]))
+        })?;
 
-    let toolchain_path = resolve_workspace_path(
-        workspace_file,
-        prof.toolchain
-            .as_deref()
-            .or(ws.defaults.toolchain.as_deref()),
-    );
-    if let Some(tp) = &toolchain_path
-        && !tp.is_file()
-    {
-        return Err(format!(
-            "profile `{profile}` toolchain file not found: {}",
-            tp.display()
-        ));
-    }
-
-    let members_term = build_env_members_term(workspace_file, &ws.members)?;
-    let members_body = gc_coreform::print_term(&members_term) + "\n";
-    let members_h = blake3::hash(members_body.as_bytes()).to_hex().to_string();
-
-    let deps_term = build_env_deps_term(workspace_file, &l)?;
-    let deps_body = gc_coreform::print_term(&deps_term) + "\n";
-    let deps_h = blake3::hash(deps_body.as_bytes()).to_hex().to_string();
-    let wasi_http_bridge_plan = build_wasi_http_bridge_plan(workspace_file, &ws, prof)?;
-
-    let env_term = Term::Map(
-        [
-            (TermOrdKey(Term::symbol(":type")), Term::symbol(":gcpm/env")),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(2.into())),
-            (
-                TermOrdKey(Term::symbol(":workspace")),
-                Term::Str(ws.workspace.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":workspace-h")),
-                Term::Str(ws_h.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":lock-h")),
-                Term::Str(lock_h.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":profile")),
-                Term::Str(profile.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-profile")),
-                Term::Str(selected_runtime_backend.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":active-runtime-backend-profile")),
-                Term::Str(active_runtime_backend.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-compatible")),
-                Term::Bool(runtime_backend_compatible),
-            ),
-            (
-                TermOrdKey(Term::symbol(":policy")),
-                prof.policy
-                    .clone()
-                    .map(Term::Str)
-                    .unwrap_or(Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":registry")),
-                prof.registry
-                    .clone()
-                    .map(Term::Str)
-                    .unwrap_or(Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":toolchain")),
-                prof.toolchain
-                    .clone()
-                    .map(Term::Str)
-                    .unwrap_or(Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":caps-policy")),
-                Term::Str(caps_policy_path.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-root")),
-                Term::Str(wasi_http_bridge_plan.root.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-remote")),
-                wasi_http_bridge_plan
-                    .remote
-                    .as_ref()
-                    .map(|s| Term::Str(s.clone()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-remote-root")),
-                wasi_http_bridge_plan
-                    .remote_root
-                    .as_ref()
-                    .map(|p| Term::Str(p.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (TermOrdKey(Term::symbol(":members-h")), Term::Str(members_h)),
-            (TermOrdKey(Term::symbol(":deps-h")), Term::Str(deps_h)),
-            (
-                TermOrdKey(Term::symbol(":toolchain-h")),
-                toolchain_path
-                    .as_ref()
-                    .map(|p| hash_file_hex(p))
-                    .transpose()?
-                    .map(Term::Str)
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-    let env_body = gc_coreform::print_term(&env_term) + "\n";
-    let env_h = blake3::hash(env_body.as_bytes()).to_hex().to_string();
-    let env_root = out_dir.join(&env_h);
-    std::fs::create_dir_all(&env_root).map_err(|e| e.to_string())?;
-    materialize_wasi_http_bridge_plan(
-        &wasi_http_bridge_plan,
-        &env_root,
-        profile,
-        &selected_runtime_backend,
-    )?;
-
-    write_if_same_or_new(&env_root.join("env.gcenv"), env_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-    write_if_same_or_new(&env_root.join("members.gc"), members_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-    write_if_same_or_new(&env_root.join("deps.gc"), deps_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-    write_if_same_or_new(&env_root.join("workspace.toml"), ws_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-    write_if_same_or_new(&env_root.join("genesis.lock"), lock_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-
-    let caps_policy_bytes = std::fs::read(&caps_policy_path).map_err(|e| e.to_string())?;
-    let caps_policy_h = blake3::hash(&caps_policy_bytes).to_hex().to_string();
-    write_if_same_or_new(&env_root.join("caps-policy.toml"), &caps_policy_bytes)
-        .map_err(|e| e.to_string())?;
-    let backend_bundle = if profile.eq_ignore_ascii_case("backend")
-        || selected_runtime_backend == gc_pkg::RUNTIME_BACKEND_BACKEND
-    {
-        Some(
-            super::pkg_workspace_ops_backend::materialize_backend_env_bundle(
-                workspace_file,
-                &env_root,
-            )?,
-        )
-    } else {
-        None
-    };
-
-    if let Some(tp) = &toolchain_path {
-        let bytes = std::fs::read(tp).map_err(|e| e.to_string())?;
-        write_if_same_or_new(&env_root.join("toolchain.gc"), &bytes).map_err(|e| e.to_string())?;
-    }
-
-    let runtime_backend_contract = RuntimeBackendContract {
-        selected: &selected_runtime_backend,
-        active: &active_runtime_backend,
-        compatible: runtime_backend_compatible,
-    };
-    let profile_term = build_env_profile_term(
-        profile,
-        &ws,
-        prof,
-        &caps_policy_path,
-        &toolchain_path,
-        runtime_backend_contract,
-        &wasi_http_bridge_plan,
-    );
-    let profile_body = gc_coreform::print_term(&profile_term) + "\n";
-    let profile_h = blake3::hash(profile_body.as_bytes()).to_hex().to_string();
-    write_if_same_or_new(&env_root.join("profile.gc"), profile_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-
-    let provenance_term = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":type")),
-                Term::symbol(":gcpm/env-provenance"),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            (TermOrdKey(Term::symbol(":env-h")), Term::Str(env_h.clone())),
-            (
-                TermOrdKey(Term::symbol(":workspace-file")),
-                Term::Str(workspace_file.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":lock-file")),
-                Term::Str(lock.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":generated-by")),
-                Term::Str(format!("genesis {}", env!("CARGO_PKG_VERSION"))),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-    let provenance_body = gc_coreform::print_term(&provenance_term) + "\n";
-    write_if_same_or_new(&env_root.join("provenance.gc"), provenance_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-
-    let value = Term::Map(
-        [
-            (TermOrdKey(Term::symbol(":ok")), Term::Bool(true)),
-            (
-                TermOrdKey(Term::symbol(":profile")),
-                Term::Str(profile.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":caps-policy")),
-                Term::Str(caps_policy_path.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-root")),
-                Term::Str(wasi_http_bridge_plan.root.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-remote")),
-                wasi_http_bridge_plan
-                    .remote
-                    .as_ref()
-                    .map(|s| Term::Str(s.clone()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-remote-root")),
-                wasi_http_bridge_plan
-                    .remote_root
-                    .as_ref()
-                    .map(|p| Term::Str(p.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-profile")),
-                Term::Str(selected_runtime_backend),
-            ),
-            (
-                TermOrdKey(Term::symbol(":active-runtime-backend-profile")),
-                Term::Str(active_runtime_backend),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-compatible")),
-                Term::Bool(runtime_backend_compatible),
-            ),
-            (
-                TermOrdKey(Term::symbol(":caps-policy-h")),
-                Term::Str(caps_policy_h),
-            ),
-            (
-                TermOrdKey(Term::symbol(":caps-policy-effective")),
-                backend_bundle
-                    .as_ref()
-                    .map(|b| Term::Str(b.effective_caps_path.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":caps-policy-effective-h")),
-                backend_bundle
-                    .as_ref()
-                    .map(|b| Term::Str(b.effective_caps_hash.clone()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":backend-bridge-cmd")),
-                backend_bundle
-                    .as_ref()
-                    .and_then(|b| b.bridge_cmd.as_ref())
-                    .map(|p| Term::Str(p.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":backend-bridge-sha256")),
-                backend_bundle
-                    .as_ref()
-                    .and_then(|b| b.bridge_sha256.as_ref())
-                    .map(|s| Term::Str(format!("sha256:{s}")))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":backend-bridge-ready")),
-                Term::Bool(backend_bundle.as_ref().is_some_and(|b| b.bridge_ready)),
-            ),
-            (TermOrdKey(Term::symbol(":env-h")), Term::Str(env_h)),
-            (TermOrdKey(Term::symbol(":profile-h")), Term::Str(profile_h)),
-            (
-                TermOrdKey(Term::symbol(":env-root")),
-                Term::Str(env_root.display().to_string()),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
+    super::pkg_workspace_env_materialize::commit(&authorized, backend_plan.as_ref())?;
+    let value = authorized.public;
     Ok(LocalPkgResult {
         kind: "genesis/pkg-env-v0.1",
         log_op: "pkg-env",
@@ -362,219 +188,181 @@ pub(crate) fn handle_env(
     })
 }
 
-fn resolve_workspace_path(workspace_file: &Path, raw: Option<&str>) -> Option<PathBuf> {
-    let raw = raw?;
-    let p = PathBuf::from(raw);
-    if p.is_absolute() {
-        Some(p)
+fn members_observation(workspace_file: &Path, workspace: &WorkspaceConfig) -> Result<Term, String> {
+    let workspace_root = workspace_file.parent().unwrap_or_else(|| Path::new("."));
+    let mut members = Vec::with_capacity(workspace.members.len());
+    for member in &workspace.members {
+        let package_file = workspace_root.join(&member.path).join("package.toml");
+        let (package_path, package_hash) = match std::fs::read(&package_file) {
+            Ok(bytes) => {
+                bounded_bytes(&bytes, "member package manifest")?;
+                (
+                    Term::Str(package_file.display().to_string()),
+                    Term::Str(blake3_hex(&bytes)),
+                )
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (Term::Nil, Term::Nil),
+            Err(error) => {
+                return Err(format!(
+                    "read member package manifest `{}`: {error}",
+                    package_file.display()
+                ));
+            }
+        };
+        members.push(map([
+            (":name", Term::Str(member.name.clone())),
+            (":package-file", package_path),
+            (":package-h", package_hash),
+            (":path", Term::Str(member.path.clone())),
+            (":role", optional(member.role.as_deref())),
+        ]));
+    }
+    Ok(Term::Vector(members))
+}
+
+fn lock_observation(workspace_file: &Path, lock: &GenesisLock) -> Term {
+    let requirements = lock
+        .requirements
+        .iter()
+        .map(|(name, requirement)| {
+            map([
+                (":name", Term::Str(name.clone())),
+                (":registry", optional(requirement.registry.as_deref())),
+                (":selector", Term::Str(requirement.selector.clone())),
+                (
+                    ":strategy",
+                    Term::Str(requirement.strategy.as_str().to_string()),
+                ),
+                (":tag-policy", optional(requirement.tag_policy.as_deref())),
+                (
+                    ":update-policy",
+                    Term::Str(
+                        match requirement.update_policy {
+                            UpdatePolicy::Manual => "manual",
+                            UpdatePolicy::Auto => "auto",
+                        }
+                        .to_string(),
+                    ),
+                ),
+            ])
+        })
+        .collect();
+    let store = super::workspace_store_dir(workspace_file);
+    let locked = lock
+        .locked
+        .iter()
+        .map(|(name, entry)| {
+            let snapshot_path = store.join(&entry.snapshot);
+            let (commit_path, commit_present) = entry
+                .commit
+                .as_deref()
+                .map(|commit| {
+                    let path = store.join(commit);
+                    let present = path.is_file();
+                    (Term::Str(path.display().to_string()), present)
+                })
+                .unwrap_or((Term::Nil, true));
+            map([
+                (":commit", optional(entry.commit.as_deref())),
+                (":commit-path", commit_path),
+                (":commit-present", Term::Bool(commit_present)),
+                (
+                    ":environment-fingerprint",
+                    optional(entry.environment_fingerprint.as_deref()),
+                ),
+                (":exports-h", optional(entry.exports_hash.as_deref())),
+                (":name", Term::Str(name.clone())),
+                (":registry", optional(entry.registry.as_deref())),
+                (":resolved-ref", optional(entry.resolved_ref.as_deref())),
+                (":snapshot", Term::Str(entry.snapshot.clone())),
+                (":snapshot-path", path_term(&snapshot_path)),
+                (":snapshot-present", Term::Bool(snapshot_path.is_file())),
+                (":source-selector", Term::Str(entry.source_selector.clone())),
+            ])
+        })
+        .collect();
+    map([
+        (":locked", Term::Vector(locked)),
+        (":requirements", Term::Vector(requirements)),
+    ])
+}
+
+fn file_observation(path: &Path, bytes: Vec<u8>) -> Term {
+    map([
+        (":bytes", Term::Bytes(bytes.clone().into())),
+        (":h", Term::Str(blake3_hex(&bytes))),
+        (":path", path_term(path)),
+    ])
+}
+
+fn read_required_file(path: &Path, label: &str) -> Result<Vec<u8>, String> {
+    let metadata = std::fs::symlink_metadata(path)
+        .map_err(|error| format!("{label} file not found `{}`: {error}", path.display()))?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(format!(
+            "{label} must be a regular non-symlink file: {}",
+            path.display()
+        ));
+    }
+    let bytes = std::fs::read(path)
+        .map_err(|error| format!("read {label} `{}`: {error}", path.display()))?;
+    bounded_bytes(&bytes, label)?;
+    Ok(bytes)
+}
+
+fn resolve_workspace_path(workspace_file: &Path, raw: &str) -> PathBuf {
+    let path = PathBuf::from(raw);
+    if path.is_absolute() {
+        path
     } else {
-        Some(
-            workspace_file
-                .parent()
-                .unwrap_or_else(|| Path::new("."))
-                .join(p),
-        )
+        workspace_file
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .join(path)
     }
 }
 
-fn hash_file_hex(path: &Path) -> Result<String, String> {
-    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
-    Ok(blake3::hash(&bytes).to_hex().to_string())
+fn path_prefix(path: &Path, separator: &str) -> String {
+    let mut value = path.display().to_string();
+    if !value.ends_with(separator) {
+        value.push_str(separator);
+    }
+    value
 }
 
-#[derive(Clone, Copy)]
-struct RuntimeBackendContract<'a> {
-    selected: &'a str,
-    active: &'a str,
-    compatible: bool,
-}
-
-fn build_env_profile_term(
-    profile_name: &str,
-    ws: &WorkspaceConfig,
-    prof: &gc_pkg::WorkspaceProfile,
-    caps_policy_path: &Path,
-    toolchain_path: &Option<PathBuf>,
-    runtime_backend: RuntimeBackendContract<'_>,
-    wasi_http_bridge_plan: &WasiHttpBridgePlan,
-) -> Term {
+fn map(entries: impl IntoIterator<Item = (&'static str, Term)>) -> Term {
     Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":type")),
-                Term::symbol(":gcpm/profile"),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            (
-                TermOrdKey(Term::symbol(":workspace")),
-                Term::Str(ws.workspace.clone()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":profile")),
-                Term::Str(profile_name.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":policy")),
-                prof.policy
-                    .clone()
-                    .or(ws.defaults.policy.clone())
-                    .map(Term::Str)
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":registry")),
-                prof.registry
-                    .clone()
-                    .or(ws.defaults.registry.clone())
-                    .map(Term::Str)
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":caps-policy")),
-                Term::Str(caps_policy_path.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-root")),
-                Term::Str(wasi_http_bridge_plan.root.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-remote")),
-                wasi_http_bridge_plan
-                    .remote
-                    .as_ref()
-                    .map(|s| Term::Str(s.clone()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":wasi-http-bridge-remote-root")),
-                wasi_http_bridge_plan
-                    .remote_root
-                    .as_ref()
-                    .map(|p| Term::Str(p.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-profile")),
-                Term::Str(runtime_backend.selected.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":active-runtime-backend-profile")),
-                Term::Str(runtime_backend.active.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-compatible")),
-                Term::Bool(runtime_backend.compatible),
-            ),
-            (
-                TermOrdKey(Term::symbol(":toolchain")),
-                toolchain_path
-                    .as_ref()
-                    .map(|p| Term::Str(p.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-        ]
-        .into_iter()
-        .collect(),
+        entries
+            .into_iter()
+            .map(|(name, value)| (TermOrdKey(Term::symbol(name)), value))
+            .collect(),
     )
 }
 
-struct WasiHttpBridgePlan {
-    root: PathBuf,
-    remote: Option<String>,
-    remote_root: Option<PathBuf>,
+fn optional(value: Option<&str>) -> Term {
+    super::pkg_workspace_env_authority::optional(value)
 }
 
-fn build_wasi_http_bridge_plan(
-    workspace_file: &Path,
-    ws: &WorkspaceConfig,
-    prof: &gc_pkg::WorkspaceProfile,
-) -> Result<WasiHttpBridgePlan, String> {
-    let workspace_root = workspace_file
-        .parent()
-        .unwrap_or_else(|| Path::new("."))
-        .to_path_buf();
-    let root = workspace_root
-        .join(".genesis")
-        .join("runtime")
-        .join("wasi-http-bridge");
-    let remote = prof
-        .registry
-        .clone()
-        .or_else(|| ws.defaults.registry.clone());
-
-    let remote_root = match remote.as_deref() {
-        Some(r) if r.starts_with("http://") || r.starts_with("https://") => Some(
-            gc_registry::wasi_http_bridge_resolve_remote_root(&root, r)
-                .map_err(|e| format!("resolve wasi http bridge root for registry `{r}`: {e}"))?,
-        ),
-        _ => None,
-    };
-
-    Ok(WasiHttpBridgePlan {
-        root,
-        remote,
-        remote_root,
-    })
+fn optional_path(value: Option<&Path>) -> Term {
+    value.map(path_term).unwrap_or(Term::Nil)
 }
 
-fn materialize_wasi_http_bridge_plan(
-    plan: &WasiHttpBridgePlan,
-    env_root: &Path,
-    profile: &str,
-    runtime_backend: &str,
-) -> Result<(), String> {
-    std::fs::create_dir_all(plan.root.join("http")).map_err(|e| e.to_string())?;
-    std::fs::create_dir_all(plan.root.join("https")).map_err(|e| e.to_string())?;
-    if let Some(remote_root) = &plan.remote_root {
-        std::fs::create_dir_all(remote_root).map_err(|e| e.to_string())?;
+fn path_term(path: &Path) -> Term {
+    Term::Str(path.display().to_string())
+}
+
+fn bounded_bytes(bytes: &[u8], label: &str) -> Result<(), String> {
+    if bytes.len() <= BODY_LIMIT {
+        Ok(())
+    } else {
+        Err(format!(
+            "{label} exceeds {BODY_LIMIT}-byte workspace environment limit"
+        ))
     }
+}
 
-    let descriptor = Term::Map(
-        [
-            (
-                TermOrdKey(Term::symbol(":type")),
-                Term::symbol(":gcpm/wasi-http-bridge-runtime"),
-            ),
-            (TermOrdKey(Term::symbol(":v")), Term::Int(1.into())),
-            (
-                TermOrdKey(Term::symbol(":profile")),
-                Term::Str(profile.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":runtime-backend-profile")),
-                Term::Str(runtime_backend.to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":root")),
-                Term::Str(plan.root.display().to_string()),
-            ),
-            (
-                TermOrdKey(Term::symbol(":remote")),
-                plan.remote
-                    .as_ref()
-                    .map(|s| Term::Str(s.clone()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-            (
-                TermOrdKey(Term::symbol(":remote-root")),
-                plan.remote_root
-                    .as_ref()
-                    .map(|p| Term::Str(p.display().to_string()))
-                    .unwrap_or_else(|| Term::symbol(":none")),
-            ),
-        ]
-        .into_iter()
-        .collect(),
-    );
-    let descriptor_body = gc_coreform::print_term(&descriptor) + "\n";
-    write_if_same_or_new(
-        &env_root.join("wasi-http-bridge.gc"),
-        descriptor_body.as_bytes(),
-    )
-    .map_err(|e| e.to_string())?;
-    atomic_write_text(&plan.root.join("runtime.gc"), descriptor_body.as_bytes())
-        .map_err(|e| e.to_string())?;
-    Ok(())
+fn blake3_hex(bytes: &[u8]) -> String {
+    blake3::hash(bytes).to_hex().to_string()
 }
 
 pub(super) fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
@@ -591,5 +379,8 @@ pub(super) fn write_if_same_or_new(path: &Path, bytes: &[u8]) -> std::io::Result
             ),
         ));
     }
-    atomic_write_text(path, bytes)
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    crate::pkg_scaffold::atomic_write_text(path, bytes)
 }

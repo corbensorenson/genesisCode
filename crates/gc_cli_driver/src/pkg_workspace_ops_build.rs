@@ -23,13 +23,15 @@ pub(super) fn handle_build(
     let target_label = normalize_build_target(target)?;
     let target_profile = build_target_profile(target_label)?;
     let artifact_layout = build_artifacts::artifact_layout_for_target(target_label)?;
-    let (manifest, pkg_dir) = PackageManifest::load(pkg).map_err(|e| e.to_string())?;
-    let package_src = std::fs::read(pkg).map_err(|e| e.to_string())?;
+    let (manifest, pkg_dir) = PackageManifest::load(pkg)
+        .map_err(|e| format!("load package manifest `{}`: {e}", pkg.display()))?;
+    let package_src = std::fs::read(pkg)
+        .map_err(|e| format!("read package manifest `{}`: {e}", pkg.display()))?;
     let package_h = blake3::hash(&package_src).to_hex().to_string();
     let package_artifact = gc_obligations::package_artifact_hash_with_limits_and_frontend(
         pkg, step_limit, mem_limits, frontend,
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| format!("compute package artifact `{}`: {e}", pkg.display()))?;
     let entrypoint_src = build_target_entrypoint_source(&pkg_dir, &manifest)?;
 
     let build_manifest = Term::Map(
@@ -139,7 +141,8 @@ pub(super) fn handle_build(
         .to_hex()
         .to_string();
     let bundle_root = out_dir.join(target_label).join(&bundle_h);
-    std::fs::create_dir_all(&bundle_root).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&bundle_root)
+        .map_err(|e| format!("create bundle root `{}`: {e}", bundle_root.display()))?;
 
     write_if_same_or_new(
         &bundle_root.join("build_manifest.gc"),

@@ -1,0 +1,562 @@
+; Pure workspace environment projection and materialization-plan construction.
+
+(def selfhost/pkg-workspace-env::none (quote :none))
+
+(def selfhost/pkg-workspace-env::bool?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :bool))))
+
+(def selfhost/pkg-workspace-env::bytes?
+  (fn (value) ((core/sym::eq? (core/data::tag value)) (quote :bytes))))
+
+(def selfhost/pkg-workspace-env::optional
+  (fn (value) (if (core/list::is-nil? value) selfhost/pkg-workspace-env::none value)))
+
+(def selfhost/pkg-workspace-env::choose
+  (fn (primary) (fn (fallback) (if (core/list::is-nil? primary) fallback primary))))
+
+(def selfhost/pkg-workspace-env::digest
+  (fn (bytes) (core/bytes::to-hex (core/crypto::blake3 bytes))))
+
+(def selfhost/pkg-workspace-env::term-bytes
+  (fn (term)
+    (core/str::to-utf8 ((core/str::concat (core/coreform::print-term term)) "\n"))))
+
+(def selfhost/pkg-workspace-env::file
+  (fn (scope)
+    (fn (path)
+      (fn (body)
+        {:body body :h (selfhost/pkg-workspace-env::digest body) :path path :scope scope}))))
+
+(def selfhost/pkg-workspace-env::bounded-path?
+  (fn (value) ((selfhost/pkg-scaffold::bounded-str? value) 16384)))
+
+(def selfhost/pkg-workspace-env::optional-path?
+  (fn (value)
+    (if (core/list::is-nil? value)
+      true
+      (selfhost/pkg-workspace-env::bounded-path? value))))
+
+(def selfhost/pkg-workspace-env::optional-str?
+  (fn (value)
+    (if (core/list::is-nil? value)
+      true
+      ((selfhost/pkg-scaffold::bounded-str? value) 16384))))
+
+(def selfhost/pkg-workspace-env::hex64?
+  (fn (value) (selfhost/pkg-lock-ops::lower-hex64? value)))
+
+(def selfhost/pkg-workspace-env::byte-body?
+  (fn (value)
+    (if (selfhost/pkg-workspace-env::bytes? value)
+      (if ((core/int::lt? 16777216) (core/bytes::len value)) false true)
+      false)))
+
+(def selfhost/pkg-workspace-env::member-valid?
+  (fn (member)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? member)
+        [:name :package-file :package-h :path :role])
+      (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get member) (quote :name))) 4096)
+        (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get member) (quote :path))) 16384)
+          (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get member) (quote :role)))
+            (let
+              ((package-file ((core/map::get member) (quote :package-file)))
+                (package-h ((core/map::get member) (quote :package-h))))
+              (if (core/list::is-nil? package-file)
+                (core/list::is-nil? package-h)
+                (if (selfhost/pkg-workspace-env::bounded-path? package-file)
+                  (selfhost/pkg-workspace-env::hex64? package-h)
+                  false)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-env::members-valid-loop?
+  (fn (members)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len members))
+        true
+        (if (selfhost/pkg-workspace-env::member-valid? ((core/vec::get members) index))
+          ((selfhost/pkg-workspace-env::members-valid-loop? members) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-workspace-env::members-valid?
+  (fn (members)
+    (if (selfhost/pkg-lock-read::vec? members)
+      (if ((core/int::lt? 4096) (core/vec::len members))
+        false
+        ((selfhost/pkg-workspace-env::members-valid-loop? members) 0))
+      false)))
+
+(def selfhost/pkg-workspace-env::requirement-valid?
+  (fn (requirement)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? requirement)
+        [:name :registry :selector :strategy :tag-policy :update-policy])
+      (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get requirement) (quote :name))) 4096)
+        (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get requirement) (quote :selector))) 16384)
+          (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get requirement) (quote :strategy))) 64)
+            (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get requirement) (quote :update-policy))) 64)
+              (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get requirement) (quote :registry)))
+                (selfhost/pkg-workspace-env::optional-str? ((core/map::get requirement) (quote :tag-policy)))
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-env::requirements-valid-loop?
+  (fn (requirements)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len requirements))
+        true
+        (if (selfhost/pkg-workspace-env::requirement-valid? ((core/vec::get requirements) index))
+          ((selfhost/pkg-workspace-env::requirements-valid-loop? requirements)
+            ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-workspace-env::locked-valid?
+  (fn (locked)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? locked)
+        [
+          :commit
+          :commit-path
+          :commit-present
+          :environment-fingerprint
+          :exports-h
+          :name
+          :registry
+          :resolved-ref
+          :snapshot
+          :snapshot-path
+          :snapshot-present
+          :source-selector])
+      (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get locked) (quote :name))) 4096)
+        (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get locked) (quote :snapshot))) 16384)
+          (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get locked) (quote :snapshot-path)))
+            (if (selfhost/pkg-workspace-env::bool? ((core/map::get locked) (quote :snapshot-present)))
+              (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get locked) (quote :commit)))
+                (if (selfhost/pkg-workspace-env::optional-path? ((core/map::get locked) (quote :commit-path)))
+                  (if (selfhost/pkg-workspace-env::bool? ((core/map::get locked) (quote :commit-present)))
+                    (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get locked) (quote :registry)))
+                      (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get locked) (quote :source-selector))) 16384)
+                        (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get locked) (quote :resolved-ref)))
+                          (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get locked) (quote :exports-h)))
+                            (selfhost/pkg-workspace-env::optional-str?
+                              ((core/map::get locked) (quote :environment-fingerprint)))
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-env::locked-valid-loop?
+  (fn (locked)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len locked))
+        true
+        (if (selfhost/pkg-workspace-env::locked-valid? ((core/vec::get locked) index))
+          ((selfhost/pkg-workspace-env::locked-valid-loop? locked) ((core/int::add index) 1))
+          false)))))
+
+(def selfhost/pkg-workspace-env::lock-valid?
+  (fn (lock)
+    (if ((selfhost/pkg-lock-read::exact-map? lock) [:locked :requirements])
+      (let
+        ((requirements ((core/map::get lock) (quote :requirements)))
+          (locked ((core/map::get lock) (quote :locked))))
+        (if (selfhost/pkg-lock-read::vec? requirements)
+          (if (selfhost/pkg-lock-read::vec? locked)
+            (if ((core/int::lt? 4096) (core/vec::len requirements))
+              false
+              (if ((core/int::lt? 4096) (core/vec::len locked))
+                false
+                (if ((selfhost/pkg-workspace-env::requirements-valid-loop? requirements) 0)
+                  ((selfhost/pkg-workspace-env::locked-valid-loop? locked) 0)
+                  false)))
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-workspace-env::request-valid?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [
+          :active
+          :default-backend
+          :defaults
+          :generated-by
+          :kind
+          :lock
+          :lock-bytes
+          :members
+          :out-root-prefix
+          :override
+          :path-separator
+          :paths
+          :profile
+          :profile-backend
+          :profile-values
+          :v
+          :workspace
+          :workspace-bytes])
+      (let
+        ((defaults ((core/map::get request) (quote :defaults)))
+          (profile-values ((core/map::get request) (quote :profile-values)))
+          (paths ((core/map::get request) (quote :paths))))
+        (if ((selfhost/pkg-lock-read::exact-map? defaults) [:policy :registry :toolchain])
+          (if
+            ((selfhost/pkg-lock-read::exact-map? profile-values)
+              [:caps-policy :policy :registry :toolchain])
+            (if
+              ((selfhost/pkg-lock-read::exact-map? paths)
+                [
+                  :lock-file
+                  :store-root
+                  :wasi-http-dir
+                  :wasi-https-dir
+                  :wasi-root
+                  :wasi-runtime-file
+                  :workspace-file])
+              (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :active))) 64)
+                (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get request) (quote :default-backend)))
+                  (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get request) (quote :override)))
+                    (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get request) (quote :profile-backend)))
+                      (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :profile))) 256)
+                        (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :workspace))) 4096)
+                          (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :generated-by))) 4096)
+                            (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :out-root-prefix))) 16384)
+                              (if ((selfhost/pkg-scaffold::bounded-str? ((core/map::get request) (quote :path-separator))) 4)
+                                (if (selfhost/pkg-workspace-env::byte-body? ((core/map::get request) (quote :workspace-bytes)))
+                                  (if (selfhost/pkg-workspace-env::byte-body? ((core/map::get request) (quote :lock-bytes)))
+                                    (if (selfhost/pkg-workspace-env::members-valid? ((core/map::get request) (quote :members)))
+                                      (if (selfhost/pkg-workspace-env::lock-valid? ((core/map::get request) (quote :lock)))
+                                        (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get defaults) (quote :policy)))
+                                          (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get defaults) (quote :registry)))
+                                            (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get defaults) (quote :toolchain)))
+                                              (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get profile-values) (quote :caps-policy)))
+                                                (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get profile-values) (quote :policy)))
+                                                  (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get profile-values) (quote :registry)))
+                                                    (if (selfhost/pkg-workspace-env::optional-str? ((core/map::get profile-values) (quote :toolchain)))
+                                                      (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :workspace-file)))
+                                                        (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :lock-file)))
+                                                          (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :store-root)))
+                                                            (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :wasi-root)))
+                                                              (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :wasi-http-dir)))
+                                                                (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :wasi-https-dir)))
+                                                                  (selfhost/pkg-workspace-env::bounded-path? ((core/map::get paths) (quote :wasi-runtime-file)))
+                                                                  false)
+                                                                false)
+                                                              false)
+                                                            false)
+                                                          false)
+                                                        false)
+                                                      false)
+                                                    false)
+                                                  false)
+                                                false)
+                                              false)
+                                            false)
+                                          false)
+                                        false)
+                                      false)
+                                    false)
+                                  false)
+                                false)
+                              false)
+                            false)
+                          false)
+                        false)
+                      false)
+                    false)
+                  false)
+                false)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-workspace-env::member-term
+  (fn (member)
+    {
+      :name ((core/map::get member) (quote :name))
+      :package-file (selfhost/pkg-workspace-env::optional ((core/map::get member) (quote :package-file)))
+      :package-h (selfhost/pkg-workspace-env::optional ((core/map::get member) (quote :package-h)))
+      :path ((core/map::get member) (quote :path))
+      :role (selfhost/pkg-workspace-env::optional ((core/map::get member) (quote :role)))}))
+
+(def selfhost/pkg-workspace-env::members-loop
+  (fn (members)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len members))
+          out
+          (((selfhost/pkg-workspace-env::members-loop members) ((core/int::add index) 1))
+            ((core/vec::push out)
+              (selfhost/pkg-workspace-env::member-term ((core/vec::get members) index)))))))))
+
+(def selfhost/pkg-workspace-env::requirement-term
+  (fn (requirement)
+    {
+      :name ((core/map::get requirement) (quote :name))
+      :registry (selfhost/pkg-workspace-env::optional ((core/map::get requirement) (quote :registry)))
+      :selector ((core/map::get requirement) (quote :selector))
+      :strategy ((core/map::get requirement) (quote :strategy))
+      :tag-policy (selfhost/pkg-workspace-env::optional ((core/map::get requirement) (quote :tag-policy)))
+      :update-policy ((core/map::get requirement) (quote :update-policy))}))
+
+(def selfhost/pkg-workspace-env::requirements-loop
+  (fn (requirements)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len requirements))
+          out
+          (((selfhost/pkg-workspace-env::requirements-loop requirements) ((core/int::add index) 1))
+            ((core/vec::push out)
+              (selfhost/pkg-workspace-env::requirement-term ((core/vec::get requirements) index)))))))))
+
+(def selfhost/pkg-workspace-env::locked-term
+  (fn (locked)
+    {
+      :commit (selfhost/pkg-workspace-env::optional ((core/map::get locked) (quote :commit)))
+      :environment-fingerprint
+        (selfhost/pkg-workspace-env::optional
+          ((core/map::get locked) (quote :environment-fingerprint)))
+      :exports-h (selfhost/pkg-workspace-env::optional ((core/map::get locked) (quote :exports-h)))
+      :name ((core/map::get locked) (quote :name))
+      :registry (selfhost/pkg-workspace-env::optional ((core/map::get locked) (quote :registry)))
+      :resolved-ref (selfhost/pkg-workspace-env::optional ((core/map::get locked) (quote :resolved-ref)))
+      :snapshot ((core/map::get locked) (quote :snapshot))
+      :source-selector ((core/map::get locked) (quote :source-selector))}))
+
+(def selfhost/pkg-workspace-env::locked-loop
+  (fn (locked)
+    (fn (index)
+      (fn (out)
+        (if ((core/int::eq? index) (core/vec::len locked))
+          out
+          (((selfhost/pkg-workspace-env::locked-loop locked) ((core/int::add index) 1))
+            ((core/vec::push out)
+              (selfhost/pkg-workspace-env::locked-term ((core/vec::get locked) index)))))))))
+
+(def selfhost/pkg-workspace-env::locked-present-loop?
+  (fn (locked)
+    (fn (index)
+      (if ((core/int::eq? index) (core/vec::len locked))
+        true
+        (let ((entry ((core/vec::get locked) index)))
+          (if ((core/map::get entry) (quote :snapshot-present))
+            (if ((core/map::get entry) (quote :commit-present))
+              ((selfhost/pkg-workspace-env::locked-present-loop? locked) ((core/int::add index) 1))
+              false)
+            false))))))
+
+(def selfhost/pkg-workspace-env::selection-request
+  (fn (request)
+    {
+      :active ((core/map::get request) (quote :active))
+      :default ((core/map::get request) (quote :default-backend))
+      :kind selfhost/pkg-workspace-env-select::request-kind
+      :override ((core/map::get request) (quote :override))
+      :profile ((core/map::get request) (quote :profile))
+      :profile-backend ((core/map::get request) (quote :profile-backend))
+      :v 1}))
+
+(def selfhost/pkg-workspace-env::make-plan
+  (fn (request)
+    (let ((selection (core/pkg::workspace-env-select-authority
+                       (selfhost/pkg-workspace-env::selection-request request))))
+      (if ((core/map::get selection) (quote :ok))
+        (let ((selected ((core/map::get selection) (quote :value))))
+          (if ((core/map::get selected) (quote :compatible))
+            (let
+              ((profile-values ((core/map::get request) (quote :profile-values)))
+                (defaults ((core/map::get request) (quote :defaults)))
+                (lock ((core/map::get request) (quote :lock))))
+              (if
+                ((selfhost/pkg-workspace-env::locked-present-loop?
+                    ((core/map::get lock) (quote :locked))) 0)
+                (let
+                  ((members-term
+                    (((selfhost/pkg-workspace-env::members-loop
+                        ((core/map::get request) (quote :members))) 0) []))
+                    (requirements
+                      (((selfhost/pkg-workspace-env::requirements-loop
+                          ((core/map::get lock) (quote :requirements))) 0) []))
+                    (locked
+                      (((selfhost/pkg-workspace-env::locked-loop
+                          ((core/map::get lock) (quote :locked))) 0) [])))
+                  (let
+                    ((deps-term
+                      {
+                        :locked locked
+                        :requirements requirements
+                        :store
+                          ((core/map::get ((core/map::get request) (quote :paths)))
+                            (quote :store-root))})
+                      (profile-policy
+                        ((core/map::get profile-values) (quote :policy)))
+                      (profile-registry
+                        ((core/map::get profile-values) (quote :registry)))
+                      (profile-toolchain
+                        ((core/map::get profile-values) (quote :toolchain))))
+                    (let
+                      ((members-body (selfhost/pkg-workspace-env::term-bytes members-term))
+                        (deps-body (selfhost/pkg-workspace-env::term-bytes deps-term))
+                        (effective-policy
+                          ((selfhost/pkg-workspace-env::choose profile-policy)
+                            ((core/map::get defaults) (quote :policy))))
+                        (effective-registry
+                          ((selfhost/pkg-workspace-env::choose profile-registry)
+                            ((core/map::get defaults) (quote :registry))))
+                        (effective-toolchain
+                          ((selfhost/pkg-workspace-env::choose profile-toolchain)
+                            ((core/map::get defaults) (quote :toolchain))))
+                        (caps-policy
+                          ((selfhost/pkg-workspace-env::choose
+                              ((core/map::get profile-values) (quote :caps-policy)))
+                            "caps.toml")))
+                      {
+                        :code nil
+                        :message nil
+                        :ok true
+                        :value {
+                        :active ((core/map::get selected) (quote :active))
+                        :backend-required
+                          (if
+                            ((core/eq?
+                                (selfhost/effect-crypto::ascii-lower
+                                  ((core/map::get request) (quote :profile)))) "backend")
+                            true
+                            ((core/eq? ((core/map::get selected) (quote :selected))) "backend"))
+                        :caps-policy-raw caps-policy
+                        :deps-body deps-body
+                        :deps-h (selfhost/pkg-workspace-env::digest deps-body)
+                        :effective-policy effective-policy
+                        :effective-registry effective-registry
+                        :effective-toolchain effective-toolchain
+                        :lock-h
+                          (selfhost/pkg-workspace-env::digest
+                            ((core/map::get request) (quote :lock-bytes)))
+                        :members-body members-body
+                        :members-h (selfhost/pkg-workspace-env::digest members-body)
+                        :profile ((core/map::get request) (quote :profile))
+                        :profile-policy profile-policy
+                        :profile-registry profile-registry
+                        :profile-toolchain profile-toolchain
+                        :selected ((core/map::get selected) (quote :selected))
+                        :source ((core/map::get selected) (quote :source))
+                        :workspace-h
+                          (selfhost/pkg-workspace-env::digest
+                            ((core/map::get request) (quote :workspace-bytes)))}})))
+                {:code "core/pkg/bad-workspace-env" :message "locked dependency object is missing"
+                  :ok false :value nil}))
+            {:code "core/pkg/bad-workspace-env-selection"
+              :message "workspace runtime backend is incompatible with active runtime backend profile"
+              :ok false :value nil}))
+        {:code "core/pkg/bad-workspace-env-selection"
+          :message ((core/map::get selection) (quote :message)) :ok false :value nil}))))
+
+(def selfhost/pkg-workspace-env::file-observation-valid?
+  (fn (observation)
+    (if ((selfhost/pkg-lock-read::exact-map? observation) [:bytes :h :path])
+      (let
+        ((bytes ((core/map::get observation) (quote :bytes)))
+          (h ((core/map::get observation) (quote :h)))
+          (path ((core/map::get observation) (quote :path))))
+        (if (selfhost/pkg-workspace-env::byte-body? bytes)
+          (if (selfhost/pkg-workspace-env::hex64? h)
+            (if (selfhost/pkg-workspace-env::bounded-path? path)
+              ((core/eq? (selfhost/pkg-workspace-env::digest bytes)) h)
+              false)
+            false)
+          false))
+      false)))
+
+(def selfhost/pkg-workspace-env::backend-observation-valid?
+  (fn (required)
+    (fn (observation)
+      (if required
+        (if
+          ((selfhost/pkg-lock-read::exact-map? observation)
+            [:bridge-cmd :bridge-ready :bridge-sha256 :effective-caps-bytes :effective-caps-h])
+          (if (selfhost/pkg-workspace-env::bounded-path? ((core/map::get observation) (quote :bridge-cmd)))
+            (if (selfhost/pkg-workspace-env::hex64? ((core/map::get observation) (quote :bridge-sha256)))
+              (if ((core/map::get observation) (quote :bridge-ready))
+                (let
+                  ((bytes ((core/map::get observation) (quote :effective-caps-bytes)))
+                    (h ((core/map::get observation) (quote :effective-caps-h))))
+                  (if (selfhost/pkg-workspace-env::byte-body? bytes)
+                    (if (selfhost/pkg-workspace-env::hex64? h)
+                      ((core/eq? (selfhost/pkg-workspace-env::digest bytes)) h)
+                      false)
+                    false))
+                false)
+              false)
+            false)
+          false)
+        (core/list::is-nil? observation)))))
+
+(def selfhost/pkg-workspace-env::wasi-observation-valid?
+  (fn (remote)
+    (fn (observation)
+      (if ((selfhost/pkg-lock-read::exact-map? observation) [:remote-root :root])
+        (let
+          ((root ((core/map::get observation) (quote :root)))
+            (remote-root ((core/map::get observation) (quote :remote-root))))
+          (if (selfhost/pkg-workspace-env::bounded-path? root)
+            (if
+              (if (core/list::is-nil? remote)
+                false
+                (if ((selfhost/pkg-lock-read::starts-with? remote) "http://")
+                  true
+                  ((selfhost/pkg-lock-read::starts-with? remote) "https://")))
+              (selfhost/pkg-workspace-env::bounded-path? remote-root)
+              (core/list::is-nil? remote-root))
+            false))
+        false))))
+
+(def selfhost/pkg-workspace-env::observations-valid?
+  (fn (plan)
+    (fn (observations)
+      (if
+        ((selfhost/pkg-lock-read::exact-map? observations)
+          [:backend :caps-policy :toolchain :wasi])
+        (if
+          (selfhost/pkg-workspace-env::file-observation-valid?
+            ((core/map::get observations) (quote :caps-policy)))
+          (let
+            ((toolchain ((core/map::get observations) (quote :toolchain)))
+              (effective-toolchain ((core/map::get plan) (quote :effective-toolchain))))
+            (if
+              (if (core/list::is-nil? effective-toolchain)
+                (core/list::is-nil? toolchain)
+                (selfhost/pkg-workspace-env::file-observation-valid? toolchain))
+              (if
+                ((selfhost/pkg-workspace-env::backend-observation-valid?
+                    ((core/map::get plan) (quote :backend-required)))
+                  ((core/map::get observations) (quote :backend)))
+                ((selfhost/pkg-workspace-env::wasi-observation-valid?
+                    ((core/map::get plan) (quote :effective-registry)))
+                  ((core/map::get observations) (quote :wasi)))
+                false)
+              false))
+          false)
+        false))))
+
+(def selfhost/pkg-workspace-env::append-env-file
+  (fn (files)
+    (fn (path)
+      (fn (body)
+        ((core/vec::push files) (((selfhost/pkg-workspace-env::file (quote :env)) path) body))))))

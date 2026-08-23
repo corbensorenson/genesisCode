@@ -1504,6 +1504,197 @@ fn gcpm_env_materializes_deterministic_profile_record() {
 }
 
 #[test]
+fn gcpm_env_identity_binds_capability_policy_bytes() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("caps.ci.toml"), "allow = []\n").unwrap();
+    fs::write(dir.join("caps.release.toml"), "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--policy",
+            "policy:default-v0.1",
+            "--registry-default",
+            "gen://registry",
+        ])
+        .assert()
+        .success();
+
+    let first = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let first = parse_coreform_value_map(&first);
+    let first_h = map_string(&first, ":env-h");
+    let first_root = PathBuf::from(map_string(&first, ":env-root"));
+    let first_root = if first_root.is_absolute() {
+        first_root
+    } else {
+        dir.join(first_root)
+    };
+
+    fs::write(&caps, "allow = []\n# distinct admitted policy bytes\n").unwrap();
+    let second = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let second = parse_coreform_value_map(&second);
+    let second_h = map_string(&second, ":env-h");
+    let second_root = PathBuf::from(map_string(&second, ":env-root"));
+    let second_root = if second_root.is_absolute() {
+        second_root
+    } else {
+        dir.join(second_root)
+    };
+
+    assert_ne!(first_h, second_h);
+    assert_ne!(first_root, second_root);
+    assert!(first_root.is_dir());
+    assert!(second_root.is_dir());
+    assert_eq!(
+        fs::read(first_root.join("caps-policy.toml")).unwrap(),
+        b"allow = []\n"
+    );
+    assert_eq!(
+        fs::read(second_root.join("caps-policy.toml")).unwrap(),
+        b"allow = []\n# distinct admitted policy bytes\n"
+    );
+}
+
+#[test]
+fn gcpm_env_corrupt_immutable_root_rejects_before_external_write() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("caps.ci.toml"), "allow = []\n").unwrap();
+    fs::write(dir.join("caps.release.toml"), "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--policy",
+            "policy:default-v0.1",
+            "--registry-default",
+            "gen://registry",
+        ])
+        .assert()
+        .success();
+
+    let first = cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let first = parse_coreform_value_map(&first);
+    let env_root = PathBuf::from(map_string(&first, ":env-root"));
+    let env_root = if env_root.is_absolute() {
+        env_root
+    } else {
+        dir.join(env_root)
+    };
+    let external_runtime = dir
+        .join(".genesis")
+        .join("runtime")
+        .join("wasi-http-bridge")
+        .join("runtime.gc");
+    fs::write(env_root.join("env.gcenv"), b"corrupt\n").unwrap();
+    fs::write(&external_runtime, b"sentinel\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains(
+            "immutable environment artifact differs",
+        ));
+
+    assert_eq!(fs::read(external_runtime).unwrap(), b"sentinel\n");
+}
+
+#[cfg(unix)]
+#[test]
+fn gcpm_env_symlinked_capability_policy_rejects_before_materialization() {
+    use std::os::unix::fs::symlink;
+
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    fs::write(dir.join("caps.ci.toml"), "allow = []\n").unwrap();
+    fs::write(dir.join("caps.release.toml"), "allow = []\n").unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&caps)
+        .args([
+            "new",
+            "--workspace",
+            "ws",
+            "--policy",
+            "policy:default-v0.1",
+            "--registry-default",
+            "gen://registry",
+        ])
+        .assert()
+        .success();
+
+    let real_caps = dir.join("caps.real.toml");
+    fs::rename(&caps, &real_caps).unwrap();
+    symlink(&real_caps, &caps).unwrap();
+
+    cargo_bin_cmd!("genesis")
+        .current_dir(dir)
+        .args(["--json", "gcpm", "--caps"])
+        .arg(&real_caps)
+        .args(["env", "--profile", "dev"])
+        .assert()
+        .failure()
+        .stdout(predicates::str::contains(
+            "caps policy must be a regular non-symlink file",
+        ));
+
+    assert!(!dir.join(".genesis").join("env").exists());
+    assert!(
+        !dir.join(".genesis")
+            .join("runtime")
+            .join("wasi-http-bridge")
+            .exists()
+    );
+}
+
+#[test]
 fn gcpm_env_hydrate_fetches_missing_locked_artifacts_via_store_get() {
     let td = tempfile::tempdir().unwrap();
     let dir = td.path();

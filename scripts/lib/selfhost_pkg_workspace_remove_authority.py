@@ -209,7 +209,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     require_markers(joined, [
         profile["kind"], profile["spec"], profile["independentVerifier"], *SOURCE_MODULES,
         "crates/gc_cli_driver/src/pkg_workspace_remove.rs",
-        "Workspace environment descriptor, projection, hashing, and materialization and manifest decisions remain host-authoritative",
+        "Manifest decisions remain host-authoritative; generic TOML and path authority, filesystem policy, cross-root crash-atomic commit and recovery, backend bridge binary semantics, and WASI workspace command support remain unproven, so SD-PACKAGE-WORKSPACE remains H0",
     ], "workspace ownership ledger")
 
 

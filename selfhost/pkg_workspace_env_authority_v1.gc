@@ -1,0 +1,134 @@
+; Request-bound two-phase authority for gcpm environment projection and materialization.
+
+(def selfhost/pkg-workspace-env-authority::plan-kind
+  "genesis/pkg-workspace-env-plan-authority-request-v0.1")
+(def selfhost/pkg-workspace-env-authority::finalize-kind
+  "genesis/pkg-workspace-env-finalize-authority-request-v0.1")
+(def selfhost/pkg-workspace-env-authority::result-kind
+  "genesis/pkg-workspace-env-authority-result-v0.1")
+
+(def selfhost/pkg-workspace-env-authority::result
+  (fn (request-h)
+    (fn (ok)
+      (fn (code)
+        (fn (message)
+          (fn (value)
+            {
+              :code code
+              :kind selfhost/pkg-workspace-env-authority::result-kind
+              :message message
+              :ok ok
+              :request-h request-h
+              :v 1
+              :value value}))))))
+
+(def selfhost/pkg-workspace-env-authority::reject-code
+  (fn (request-h)
+    (fn (code)
+      (fn (message)
+        (((((selfhost/pkg-workspace-env-authority::result request-h) false) code) message) nil)))))
+
+(def selfhost/pkg-workspace-env-authority::reject
+  (fn (request-h)
+    (fn (message)
+      (((selfhost/pkg-workspace-env-authority::reject-code request-h)
+          "core/pkg/bad-workspace-env") message))))
+
+(def selfhost/pkg-workspace-env-authority::accept
+  (fn (request-h)
+    (fn (value)
+      (((((selfhost/pkg-workspace-env-authority::result request-h) true) nil) nil) value))))
+
+(def selfhost/pkg-workspace-env-authority::plan
+  (fn (request-h)
+    (fn (request)
+      (if (selfhost/pkg-workspace-env::request-valid? request)
+        (let ((outcome (selfhost/pkg-workspace-env::make-plan request)))
+          (if ((core/map::get outcome) (quote :ok))
+            (let ((plan ((core/map::get outcome) (quote :value))))
+              ((selfhost/pkg-workspace-env-authority::accept request-h)
+                {:plan plan :plan-h (selfhost/hash::hash-term plan)}))
+            (((selfhost/pkg-workspace-env-authority::reject-code request-h)
+                ((core/map::get outcome) (quote :code)))
+              ((core/map::get outcome) (quote :message)))))
+        ((selfhost/pkg-workspace-env-authority::reject request-h)
+          "workspace environment plan request values are invalid")))))
+
+(def selfhost/pkg-workspace-env-authority::finalize-valid?
+  (fn (request)
+    (if
+      ((selfhost/pkg-lock-read::exact-map? request)
+        [:kind :observations :plan :plan-h :plan-request :v])
+      (if (selfhost/pkg-lock-read::map? ((core/map::get request) (quote :plan)))
+        (if (selfhost/pkg-workspace-env::hex64? ((core/map::get request) (quote :plan-h)))
+          (if (selfhost/pkg-lock-read::map? ((core/map::get request) (quote :plan-request)))
+            (selfhost/pkg-lock-read::map? ((core/map::get request) (quote :observations)))
+            false)
+          false)
+        false)
+      false)))
+
+(def selfhost/pkg-workspace-env-authority::finalize
+  (fn (request-h)
+    (fn (request)
+      (if (selfhost/pkg-workspace-env-authority::finalize-valid? request)
+        (let
+          ((plan ((core/map::get request) (quote :plan)))
+            (plan-h ((core/map::get request) (quote :plan-h)))
+            (plan-request ((core/map::get request) (quote :plan-request)))
+            (observations ((core/map::get request) (quote :observations))))
+          (if ((core/eq? (selfhost/hash::hash-term plan)) plan-h)
+            (if (selfhost/pkg-workspace-env::request-valid? plan-request)
+              (if
+                ((core/eq? ((core/map::get plan-request) (quote :kind)))
+                  selfhost/pkg-workspace-env-authority::plan-kind)
+                (let ((recomputed (selfhost/pkg-workspace-env::make-plan plan-request)))
+                  (if ((core/map::get recomputed) (quote :ok))
+                    (if
+                      ((core/eq?
+                          (selfhost/hash::hash-term
+                            ((core/map::get recomputed) (quote :value)))) plan-h)
+                      (if
+                        ((selfhost/pkg-workspace-env::observations-valid? plan) observations)
+                        ((selfhost/pkg-workspace-env-authority::accept request-h)
+                          (((selfhost/pkg-workspace-env::make-final plan-request) plan) observations))
+                        ((selfhost/pkg-workspace-env-authority::reject request-h)
+                          "workspace environment observations are invalid or contradictory"))
+                      ((selfhost/pkg-workspace-env-authority::reject request-h)
+                        "workspace environment plan substitution detected"))
+                    (((selfhost/pkg-workspace-env-authority::reject-code request-h)
+                        ((core/map::get recomputed) (quote :code)))
+                      ((core/map::get recomputed) (quote :message)))))
+                ((selfhost/pkg-workspace-env-authority::reject request-h)
+                  "workspace environment embedded plan kind mismatch"))
+              ((selfhost/pkg-workspace-env-authority::reject request-h)
+                "workspace environment embedded plan request is invalid"))
+            ((selfhost/pkg-workspace-env-authority::reject request-h)
+              "workspace environment plan hash mismatch")))
+        ((selfhost/pkg-workspace-env-authority::reject request-h)
+          "workspace environment finalize request fields are invalid")))))
+
+(def core/pkg::workspace-env-authority
+  (fn (request)
+    (let ((request-h (selfhost/hash::hash-term request)))
+      (if (selfhost/pkg-lock-read::map? request)
+        (let
+          ((kind ((core/map::get request) (quote :kind)))
+            (version ((core/map::get request) (quote :v))))
+          (if (selfhost/pkg-lock-read::str? kind)
+            (if (selfhost/pkg-lock-read::int? version)
+              (if ((core/int::eq? version) 1)
+                (if ((core/eq? kind) selfhost/pkg-workspace-env-authority::plan-kind)
+                  ((selfhost/pkg-workspace-env-authority::plan request-h) request)
+                  (if ((core/eq? kind) selfhost/pkg-workspace-env-authority::finalize-kind)
+                    ((selfhost/pkg-workspace-env-authority::finalize request-h) request)
+                    ((selfhost/pkg-workspace-env-authority::reject request-h)
+                      "workspace environment request kind mismatch")))
+                ((selfhost/pkg-workspace-env-authority::reject request-h)
+                  "workspace environment request version mismatch"))
+              ((selfhost/pkg-workspace-env-authority::reject request-h)
+                "workspace environment request version must be integer"))
+            ((selfhost/pkg-workspace-env-authority::reject request-h)
+              "workspace environment request kind must be string")))
+        ((selfhost/pkg-workspace-env-authority::reject request-h)
+          "workspace environment request must be map")))))

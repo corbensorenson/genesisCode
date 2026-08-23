@@ -3,10 +3,16 @@ use std::path::{Path, PathBuf};
 use gc_coreform::{Term, TermOrdKey, hash_term};
 use gc_effects::EffectLog;
 use gc_kernel::{MemLimits, StepLimit};
-use gc_pkg::{PackageManifest, UpdatePolicy, WorkspaceConfig, WorkspaceMember};
+use gc_pkg::PackageManifest;
 #[cfg(any(test, feature = "parity-harness"))]
-use gc_pkg::{RUNTIME_BACKEND_HEADLESS, WorkspaceTask};
+use gc_pkg::{
+    RUNTIME_BACKEND_HEADLESS, UpdatePolicy, WorkspaceConfig, WorkspaceMember, WorkspaceTask,
+};
 
+#[path = "pkg_workspace_env_authority.rs"]
+mod pkg_workspace_env_authority;
+#[path = "pkg_workspace_env_materialize.rs"]
+mod pkg_workspace_env_materialize;
 #[path = "pkg_workspace_env_select.rs"]
 mod pkg_workspace_env_select;
 #[path = "pkg_workspace_migrate.rs"]
@@ -19,12 +25,8 @@ mod pkg_workspace_ops_backend;
 mod pkg_workspace_ops_build;
 #[path = "pkg_workspace_ops_env.rs"]
 mod pkg_workspace_ops_env;
-#[path = "pkg_workspace_ops_manifest_helpers.rs"]
-mod pkg_workspace_ops_manifest_helpers;
 #[path = "pkg_workspace_remove.rs"]
 mod pkg_workspace_remove;
-
-use pkg_workspace_ops_manifest_helpers::{build_env_deps_term, build_env_members_term};
 
 pub(crate) struct LocalPkgResult {
     pub(crate) kind: &'static str,
@@ -453,6 +455,7 @@ fn is_hash_hex_64(s: &str) -> bool {
     s.len() == 64 && s.as_bytes().iter().all(|b| b.is_ascii_hexdigit())
 }
 
+#[cfg(any(test, feature = "parity-harness"))]
 fn atomic_write_text(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;

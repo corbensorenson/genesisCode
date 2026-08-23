@@ -315,6 +315,15 @@ python3 scripts/lib/selfhost_pkg_workspace_env_select_authority.py \
   --schema docs/spec/SELFHOST_PKG_WORKSPACE_ENV_SELECT_AUTHORITY_v0.1.schema.json \
   --self-test
 
+# R4.2.e workspace-environment authority is partial: GenesisCode owns exact
+# projection, effective inputs, descriptor bodies, identities, and write plan;
+# bounded observations, preflight, and atomic persistence remain host mechanisms.
+python3 scripts/lib/selfhost_pkg_workspace_env_authority.py \
+  --root "$ROOT_DIR" \
+  --profile policies/selfhost_pkg_workspace_env_authority_v0.1.json \
+  --schema docs/spec/SELFHOST_PKG_WORKSPACE_ENV_AUTHORITY_v0.1.schema.json \
+  --self-test
+
 # R4.2.e workspace-task authority is partial: GenesisCode owns composed backend
 # admission, task lookup, command/argument grammar, and canonical action facts.
 python3 scripts/lib/selfhost_pkg_workspace_task_authority.py \

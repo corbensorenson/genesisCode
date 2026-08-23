@@ -186,6 +186,60 @@ resolution. The adapter
 independently checks the closed selected and active inventory but does not recompute precedence,
 normalization, source, or compatibility.
 
+## Workspace environment authority contract
+
+Production `genesis gcpm env` evaluates `core/pkg::workspace-env-authority` from the exact admitted
+self-host toolchain artifact. This is a request-bound two-phase authority so filesystem-dependent
+facts are observations rather than ambient GenesisCode effects. The plan request kind is
+`genesis/pkg-workspace-env-plan-authority-request-v0.1`; it contains closed, bounded structural
+workspace and lock facts, exact admitted workspace/lock bytes, raw profile/default values, active
+backend and command override observations, member package-manifest presence and hashes, the output
+root prefix and platform separator, and explicit workspace, lock, store, and WASI bridge paths.
+GenesisCode first composes `core/pkg::workspace-env-select-authority`, rejects missing locked
+objects, and returns a request-bound canonical plan plus its canonical term hash.
+
+GenesisCode exclusively owns member and dependency projection; profile/default precedence for
+policy, registry, toolchain, and capability-policy source; backend-required status; canonical
+member/dependency bodies; workspace, lock, member, and dependency hashes; and the complete closed
+plan. Only after strict host decoding may Rust observe the exact plan-selected capability policy
+and optional toolchain as regular non-symlink files, resolve a bounded optional registry bridge
+root, and plan the active backend launcher and effective capability bytes. Those observations are
+closed, bounded, path- and hash-bearing facts; they grant no semantic authority.
+
+Finalization uses kind `genesis/pkg-workspace-env-finalize-authority-request-v0.1` and embeds the
+exact original plan request, plan, plan hash, and observations. The authority revalidates the
+request, recomputes the plan, compares its canonical identity, and rejects substitution or any
+contradictory observation. Both phases return the closed request-hash-bound result kind
+`genesis/pkg-workspace-env-authority-result-v0.1`. Rejections use only
+`core/pkg/bad-workspace-env` or the composed `core/pkg/bad-workspace-env-selection`.
+
+The final GenesisCode decision owns the canonical `:gcpm/env` v2 identity term and body. Its
+environment hash binds workspace, lock, members, dependencies, capability-policy bytes,
+effective policy, selected and active backend, toolchain path and bytes, backend effective-policy
+bytes, backend launcher digest, registry/WASI roots, and every profile fact that can change the
+materialized environment. It also owns canonical profile, provenance, and WASI runtime descriptor
+bodies; every body hash; exact ordered immutable filenames and bytes; the separately scoped
+external runtime descriptor; required directory inventory; immutable root path; and the complete
+public result. Different admitted capability-policy bytes, effective policies, toolchain paths, or
+backend artifacts MUST produce different environment identities.
+
+Rust remains a bounded mechanism. It strictly decodes every envelope, plan, file scope, filename,
+body, hash, path, mkdir, and public field; independently recomputes canonical term and byte hashes;
+cross-checks admitted observations; rejects unsafe relative filenames and substituted absolute
+paths; and performs no environment projection, canonical body construction, identity choice, file
+ordering, or report construction. Before any write, one preflight rejects symlinked/nonregular
+inputs and destinations, an existing immutable root with any missing, extra, or changed file, and
+all invalid external or backend destinations. Backend launcher and external descriptors use atomic
+same-directory file replacement. A new immutable environment root is staged completely in a
+sibling directory and published with one atomic directory rename. A corrupt existing root must
+therefore fail before an external descriptor or backend launcher is changed.
+
+Atomic immutable-root publication is not a cross-root crash transaction: backend and external
+runtime paths can live outside the environment root, and the profile provides no rollback journal
+across those separately atomic destinations. Generic TOML interpretation, filesystem/path policy,
+backend bridge binary semantics, WASI command support, bootstrap fixpoint, and H2 workspace closure
+remain outside this profile.
+
 ## Workspace task authority contract
 
 Production `genesis gcpm run <task>` evaluates `core/pkg::workspace-task-authority` from the exact
@@ -238,8 +292,7 @@ It is not a production fallback, verifier, or promotion authority.
 
 ## Nonclaims
 
-These profiles do not claim generic TOML or path semantics; workspace environment descriptor,
-projection, hashing, or materialization authority; package task-command implementation authority;
-manifest or remaining scaffold authority; filesystem policy; pairwise crash-atomic two-file commit
-or recovery; WASI support; H2 workspace closure; `R4.2.e` or SH-C closure; bootstrap fixpoint; or
-release qualification.
+These profiles do not claim generic TOML or path semantics; package task-command implementation
+authority; manifest or remaining scaffold authority; filesystem policy; cross-root crash-atomic
+commit or recovery; backend bridge binary semantics; WASI command support; H2 workspace closure;
+`R4.2.e` or SH-C closure; bootstrap fixpoint; or release qualification.

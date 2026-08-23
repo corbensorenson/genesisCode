@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact": { "const": "selfhost/toolchain.gc" },
+    "auditDate": { "format": "date", "type": "string" },
+    "binding": { "const": "core/pkg::workspace-env-authority" },
+    "contentIdentitySha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+    "decisionInventory": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "finalizeRequestKind": { "const": "genesis/pkg-workspace-env-finalize-authority-request-v0.1" },
+    "hostMechanisms": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "hostOracle": {
+      "additionalProperties": false,
+      "properties": {
+        "productionRequired": { "const": false },
+        "reachability": { "const": "none-proven" },
+        "removalTask": { "const": "R4.2.e" }
+      },
+      "required": ["productionRequired", "reachability", "removalTask"],
+      "type": "object"
+    },
+    "independentVerifier": { "const": "scripts/lib/selfhost_pkg_workspace_env_authority.py" },
+    "kind": { "const": "genesis/selfhost-pkg-workspace-env-authority-v0.1" },
+    "nonclaims": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "planRequestKind": { "const": "genesis/pkg-workspace-env-plan-authority-request-v0.1" },
+    "productionEntrypoints": { "items": { "const": "genesis" }, "minItems": 1, "type": "array", "uniqueItems": true },
+    "resultKind": { "const": "genesis/pkg-workspace-env-authority-result-v0.1" },
+    "schema": { "const": "docs/spec/SELFHOST_PKG_WORKSPACE_ENV_AUTHORITY_v0.1.schema.json" },
+    "sourceModules": {
+      "prefixItems": [
+        { "const": "selfhost/pkg_workspace_env_core_v1.gc" },
+        { "const": "selfhost/pkg_workspace_env_finalize_v1.gc" },
+        { "const": "selfhost/pkg_workspace_env_authority_v1.gc" }
+      ],
+      "items": false,
+      "minItems": 3,
+      "type": "array"
+    },
+    "sourceSha256": { "pattern": "^[0-9a-f]{64}$", "type": "string" },
+    "spec": { "const": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md" },
+    "version": { "const": "0.1.0" }
+  },
+  "required": [
+    "artifact", "auditDate", "binding", "contentIdentitySha256", "decisionInventory",
+    "finalizeRequestKind", "hostMechanisms", "hostOracle", "independentVerifier", "kind",
+    "nonclaims", "planRequestKind", "productionEntrypoints", "resultKind", "schema",
+    "sourceModules", "sourceSha256", "spec", "version"
+  ],
+  "type": "object"
+}

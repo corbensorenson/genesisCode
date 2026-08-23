@@ -1,0 +1,216 @@
+; Finalize request-bound workspace observations into canonical environment artifacts.
+
+(def selfhost/pkg-workspace-env::make-final
+  (fn (plan-request)
+    (fn (plan)
+      (fn (observations)
+        (let
+          ((caps ((core/map::get observations) (quote :caps-policy)))
+            (toolchain ((core/map::get observations) (quote :toolchain)))
+            (backend ((core/map::get observations) (quote :backend)))
+            (wasi ((core/map::get observations) (quote :wasi)))
+            (paths ((core/map::get plan-request) (quote :paths))))
+          (let
+            ((toolchain-h
+              (if (core/list::is-nil? toolchain)
+                selfhost/pkg-workspace-env::none
+                ((core/map::get toolchain) (quote :h))))
+              (remote ((core/map::get plan) (quote :effective-registry)))
+              (remote-root ((core/map::get wasi) (quote :remote-root)))
+              (wasi-root ((core/map::get wasi) (quote :root))))
+            (let
+              ((env-term
+                {
+                  :active-runtime-backend-profile ((core/map::get plan) (quote :active))
+                  :backend-bridge-sha256
+                    (if ((core/map::get plan) (quote :backend-required))
+                      ((core/map::get backend) (quote :bridge-sha256))
+                      selfhost/pkg-workspace-env::none)
+                  :backend-effective-caps-h
+                    (if ((core/map::get plan) (quote :backend-required))
+                      ((core/map::get backend) (quote :effective-caps-h))
+                      selfhost/pkg-workspace-env::none)
+                  :caps-policy ((core/map::get caps) (quote :path))
+                  :caps-policy-h ((core/map::get caps) (quote :h))
+                  :deps-h ((core/map::get plan) (quote :deps-h))
+                  :effective-policy
+                    (selfhost/pkg-workspace-env::optional
+                      ((core/map::get plan) (quote :effective-policy)))
+                  :lock-h ((core/map::get plan) (quote :lock-h))
+                  :members-h ((core/map::get plan) (quote :members-h))
+                  :policy (selfhost/pkg-workspace-env::optional ((core/map::get plan) (quote :profile-policy)))
+                  :profile ((core/map::get plan) (quote :profile))
+                  :registry (selfhost/pkg-workspace-env::optional ((core/map::get plan) (quote :profile-registry)))
+                  :runtime-backend-compatible true
+                  :runtime-backend-profile ((core/map::get plan) (quote :selected))
+                  :toolchain (selfhost/pkg-workspace-env::optional ((core/map::get plan) (quote :profile-toolchain)))
+                  :toolchain-h toolchain-h
+                  :toolchain-path
+                    (if (core/list::is-nil? toolchain)
+                      selfhost/pkg-workspace-env::none
+                      ((core/map::get toolchain) (quote :path)))
+                  :type (quote :gcpm/env)
+                  :v 2
+                  :wasi-http-bridge-remote (selfhost/pkg-workspace-env::optional remote)
+                  :wasi-http-bridge-remote-root (selfhost/pkg-workspace-env::optional remote-root)
+                  :wasi-http-bridge-root wasi-root
+                  :workspace ((core/map::get plan-request) (quote :workspace))
+                  :workspace-h ((core/map::get plan) (quote :workspace-h))}))
+              (let ((env-body (selfhost/pkg-workspace-env::term-bytes env-term)))
+                (let
+                  ((env-h (selfhost/pkg-workspace-env::digest env-body))
+                    (separator ((core/map::get plan-request) (quote :path-separator))))
+                  (let
+                    ((env-root
+                      ((core/str::concat
+                          ((core/map::get plan-request) (quote :out-root-prefix))) env-h)))
+                    (let
+                      ((profile-term
+                        {
+                          :active-runtime-backend-profile ((core/map::get plan) (quote :active))
+                          :caps-policy ((core/map::get caps) (quote :path))
+                          :policy (selfhost/pkg-workspace-env::optional ((core/map::get plan) (quote :effective-policy)))
+                          :profile ((core/map::get plan) (quote :profile))
+                          :registry (selfhost/pkg-workspace-env::optional remote)
+                          :runtime-backend-compatible true
+                          :runtime-backend-profile ((core/map::get plan) (quote :selected))
+                          :toolchain
+                            (if (core/list::is-nil? toolchain)
+                              selfhost/pkg-workspace-env::none
+                              ((core/map::get toolchain) (quote :path)))
+                          :type (quote :gcpm/profile)
+                          :v 1
+                          :wasi-http-bridge-remote (selfhost/pkg-workspace-env::optional remote)
+                          :wasi-http-bridge-remote-root (selfhost/pkg-workspace-env::optional remote-root)
+                          :wasi-http-bridge-root wasi-root
+                          :workspace ((core/map::get plan-request) (quote :workspace))})
+                        (wasi-term
+                          {
+                            :profile ((core/map::get plan) (quote :profile))
+                            :remote (selfhost/pkg-workspace-env::optional remote)
+                            :remote-root (selfhost/pkg-workspace-env::optional remote-root)
+                            :root wasi-root
+                            :runtime-backend-profile ((core/map::get plan) (quote :selected))
+                            :type (quote :gcpm/wasi-http-bridge-runtime)
+                            :v 1}))
+                      (let
+                        ((profile-body (selfhost/pkg-workspace-env::term-bytes profile-term))
+                          (wasi-body (selfhost/pkg-workspace-env::term-bytes wasi-term)))
+                        (let
+                          ((profile-h (selfhost/pkg-workspace-env::digest profile-body))
+                            (provenance-body
+                              (selfhost/pkg-workspace-env::term-bytes
+                                {
+                                  :env-h env-h
+                                  :generated-by ((core/map::get plan-request) (quote :generated-by))
+                                  :lock-file ((core/map::get paths) (quote :lock-file))
+                                  :type (quote :gcpm/env-provenance)
+                                  :v 1
+                                  :workspace-file ((core/map::get paths) (quote :workspace-file))})))
+                          (let
+                            ((files0 [])
+                              (effective-path
+                                (if ((core/map::get plan) (quote :backend-required))
+                                  ((core/str::concat ((core/str::concat env-root) separator))
+                                    "caps-policy.backend.effective.toml")
+                                  selfhost/pkg-workspace-env::none)))
+                            (let
+                              ((files1 (((selfhost/pkg-workspace-env::append-env-file files0) "env.gcenv") env-body)))
+                              (let
+                                ((files2
+                                  (((selfhost/pkg-workspace-env::append-env-file files1) "members.gc")
+                                    ((core/map::get plan) (quote :members-body)))))
+                                (let
+                                  ((files3
+                                    (((selfhost/pkg-workspace-env::append-env-file files2) "deps.gc")
+                                      ((core/map::get plan) (quote :deps-body)))))
+                                  (let
+                                    ((files4
+                                      (((selfhost/pkg-workspace-env::append-env-file files3) "workspace.toml")
+                                        ((core/map::get plan-request) (quote :workspace-bytes)))))
+                                    (let
+                                      ((files5
+                                        (((selfhost/pkg-workspace-env::append-env-file files4) "genesis.lock")
+                                          ((core/map::get plan-request) (quote :lock-bytes)))))
+                                      (let
+                                        ((files6
+                                          (((selfhost/pkg-workspace-env::append-env-file files5) "caps-policy.toml")
+                                            ((core/map::get caps) (quote :bytes)))))
+                                        (let
+                                          ((files7
+                                            (if ((core/map::get plan) (quote :backend-required))
+                                              (((selfhost/pkg-workspace-env::append-env-file files6)
+                                                  "caps-policy.backend.effective.toml")
+                                                ((core/map::get backend) (quote :effective-caps-bytes)))
+                                              files6)))
+                                          (let
+                                            ((files8
+                                              (if (core/list::is-nil? toolchain)
+                                                files7
+                                                (((selfhost/pkg-workspace-env::append-env-file files7) "toolchain.gc")
+                                                  ((core/map::get toolchain) (quote :bytes))))))
+                                            (let
+                                              ((files9
+                                                (((selfhost/pkg-workspace-env::append-env-file files8) "profile.gc")
+                                                  profile-body)))
+                                              (let
+                                                ((files10
+                                                  (((selfhost/pkg-workspace-env::append-env-file files9) "provenance.gc")
+                                                    provenance-body)))
+                                                (let
+                                                  ((files11
+                                                    (((selfhost/pkg-workspace-env::append-env-file files10)
+                                                        "wasi-http-bridge.gc") wasi-body)))
+                                                  (let
+                                                    ((files
+                                                      ((core/vec::push files11)
+                                                        (((selfhost/pkg-workspace-env::file (quote :external))
+                                                            ((core/map::get paths) (quote :wasi-runtime-file)))
+                                                          wasi-body)))
+                                                      (mkdirs0
+                                                        ((core/vec::push
+                                                            ((core/vec::push [])
+                                                              ((core/map::get paths) (quote :wasi-http-dir))))
+                                                          ((core/map::get paths) (quote :wasi-https-dir))))
+                                                      (public
+                                                        {
+                                                          :active-runtime-backend-profile ((core/map::get plan) (quote :active))
+                                                          :backend-bridge-cmd
+                                                            (if ((core/map::get plan) (quote :backend-required))
+                                                              ((core/map::get backend) (quote :bridge-cmd))
+                                                              selfhost/pkg-workspace-env::none)
+                                                          :backend-bridge-ready
+                                                            (if ((core/map::get plan) (quote :backend-required))
+                                                              ((core/map::get backend) (quote :bridge-ready)) false)
+                                                          :backend-bridge-sha256
+                                                            (if ((core/map::get plan) (quote :backend-required))
+                                                              ((core/str::concat "sha256:")
+                                                                ((core/map::get backend) (quote :bridge-sha256)))
+                                                              selfhost/pkg-workspace-env::none)
+                                                          :caps-policy ((core/map::get caps) (quote :path))
+                                                          :caps-policy-effective effective-path
+                                                          :caps-policy-effective-h
+                                                            (if ((core/map::get plan) (quote :backend-required))
+                                                              ((core/map::get backend) (quote :effective-caps-h))
+                                                              selfhost/pkg-workspace-env::none)
+                                                          :caps-policy-h ((core/map::get caps) (quote :h))
+                                                          :env-h env-h
+                                                          :env-root env-root
+                                                          :ok true
+                                                          :profile ((core/map::get plan) (quote :profile))
+                                                          :profile-h profile-h
+                                                          :runtime-backend-compatible true
+                                                          :runtime-backend-profile ((core/map::get plan) (quote :selected))
+                                                          :wasi-http-bridge-remote (selfhost/pkg-workspace-env::optional remote)
+                                                          :wasi-http-bridge-remote-root (selfhost/pkg-workspace-env::optional remote-root)
+                                                          :wasi-http-bridge-root wasi-root}))
+                                                    {
+                                                      :env-h env-h
+                                                      :env-root env-root
+                                                      :files files
+                                                      :mkdirs
+                                                        (if (core/list::is-nil? remote-root)
+                                                          mkdirs0
+                                                          ((core/vec::push mkdirs0) remote-root))
+                                                      :profile-h profile-h
+                                                      :public public}))))))))))))))))))))))))))

@@ -1,14 +1,23 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
+#[cfg(feature = "parity-harness")]
+use std::collections::BTreeSet;
 use std::path::Path;
 
+#[cfg(feature = "parity-harness")]
 use gc_coreform::{Term, TermOrdKey, hash_term};
+#[cfg(feature = "parity-harness")]
 use gc_kernel::{Apply, Value};
 use gc_pkg::WorkspaceConfig;
 
+#[cfg(feature = "parity-harness")]
 const AUTHORITY_BINDING: &str = "core/pkg::workspace-env-select-authority";
+#[cfg(feature = "parity-harness")]
 const REQUEST_KIND: &str = "genesis/pkg-workspace-env-select-authority-request-v0.1";
+#[cfg(feature = "parity-harness")]
 const RESULT_KIND: &str = "genesis/pkg-workspace-env-select-authority-result-v0.1";
 
+#[cfg(feature = "parity-harness")]
+#[allow(dead_code)]
 pub(super) struct AuthorizedRuntimeBackend {
     pub(super) selected: String,
     pub(super) compatible: bool,
@@ -80,6 +89,8 @@ fn take_runtime_backend(
         .ok_or_else(|| format!("workspace {location} runtime_backend must be a string"))
 }
 
+#[cfg(feature = "parity-harness")]
+#[allow(dead_code)]
 pub(super) fn select_runtime_backend(
     cli: &crate::Cli,
     profile: &str,
@@ -117,6 +128,7 @@ pub(super) fn select_runtime_backend(
     decode_authorized(value, &request_hash, active_runtime_backend)
 }
 
+#[cfg(feature = "parity-harness")]
 fn decode_authorized(
     value: Value,
     request_hash: &str,
@@ -187,12 +199,14 @@ fn decode_authorized(
     })
 }
 
+#[cfg(feature = "parity-harness")]
 fn optional_string(value: Option<&str>) -> Term {
     value
         .map(|value| Term::Str(value.to_string()))
         .unwrap_or(Term::Nil)
 }
 
+#[cfg(feature = "parity-harness")]
 fn map(entries: impl IntoIterator<Item = (&'static str, Term)>) -> Term {
     Term::Map(
         entries
@@ -202,6 +216,7 @@ fn map(entries: impl IntoIterator<Item = (&'static str, Term)>) -> Term {
     )
 }
 
+#[cfg(feature = "parity-harness")]
 fn require_exact_fields(
     fields: &BTreeMap<TermOrdKey, Term>,
     names: &[&str],
@@ -218,12 +233,14 @@ fn require_exact_fields(
     }
 }
 
+#[cfg(feature = "parity-harness")]
 fn field<'a>(fields: &'a BTreeMap<TermOrdKey, Term>, name: &str) -> Result<&'a Term, String> {
     fields
         .get(&TermOrdKey(Term::symbol(name)))
         .ok_or_else(|| format!("workspace-env-select result missing {name}"))
 }
 
+#[cfg(feature = "parity-harness")]
 fn required_string<'a>(
     fields: &'a BTreeMap<TermOrdKey, Term>,
     name: &str,
@@ -234,6 +251,7 @@ fn required_string<'a>(
     }
 }
 
+#[cfg(feature = "parity-harness")]
 fn require_string(
     fields: &BTreeMap<TermOrdKey, Term>,
     name: &str,
@@ -246,6 +264,7 @@ fn require_string(
     }
 }
 
+#[cfg(feature = "parity-harness")]
 fn require_int(
     fields: &BTreeMap<TermOrdKey, Term>,
     name: &str,
@@ -257,6 +276,7 @@ fn require_int(
     }
 }
 
+#[cfg(feature = "parity-harness")]
 fn require_nil(fields: &BTreeMap<TermOrdKey, Term>, name: &str) -> Result<(), String> {
     if field(fields, name)? == &Term::Nil {
         Ok(())
@@ -265,6 +285,7 @@ fn require_nil(fields: &BTreeMap<TermOrdKey, Term>, name: &str) -> Result<(), St
     }
 }
 
+#[cfg(feature = "parity-harness")]
 fn hex32(bytes: [u8; 32]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }

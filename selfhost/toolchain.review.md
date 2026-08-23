@@ -5,12 +5,12 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `cf2029d1407a40f539d428a57e1dc363e8931ed599a016e4fe5d11dd8adf4df4`
-- Freshness artifact hash: `cf2029d1407a40f539d428a57e1dc363e8931ed599a016e4fe5d11dd8adf4df4`
-- Freshness source hash: `bdfd85b1bf2f1ade34caf56b61c997262d9be181eeada6a30822762bff33199d`
-- Source aggregate hash (module path + module sha256): `03f5ed00cbf5020c516e45b561e1991b14294893808c0c1fcda9b7574dcbf3be`
+- Artifact sha256: `fbb85e8229024ac2255f390e2c4d14dbbb7a1ed178249070be6b8b013a39ab0f`
+- Freshness artifact hash: `fbb85e8229024ac2255f390e2c4d14dbbb7a1ed178249070be6b8b013a39ab0f`
+- Freshness source hash: `cf63af8fd890b32e43b43b9e093cc8f3993793aaa0f8e71afb76a27b0352c5ab`
+- Source aggregate hash (module path + module sha256): `5982e847160544f0ba5240f41575ab88e45a408afe83069320bfb30f6253a85d`
 - Manifest path: `selfhost/toolchain_manifest.gc`
-- Module count: `133`
+- Module count: `136`
 
 ## Module Summary
 
@@ -110,6 +110,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/pkg_workspace_remove_authority_v1.gc` | 172 | 6825 | 12 | `ceb198ed6e8afc23` |
 | `selfhost/pkg_workspace_migrate_authority_v1.gc` | 281 | 12305 | 16 | `aaeaf0a9dbceb9ce` |
 | `selfhost/pkg_workspace_env_select_authority_v1.gc` | 176 | 7073 | 12 | `bad43ec9879fcf8f` |
+| `selfhost/pkg_workspace_env_core_v1.gc` | 563 | 27654 | 36 | `c6fe7fd7cabff4be` |
+| `selfhost/pkg_workspace_env_finalize_v1.gc` | 216 | 15378 | 1 | `b9bd4b945ddb10a7` |
+| `selfhost/pkg_workspace_env_authority_v1.gc` | 134 | 6862 | 11 | `c653eb8532bee0cd` |
 | `selfhost/pkg_workspace_task_core_v1.gc` | 409 | 19958 | 26 | `88bf6f9001003544` |
 | `selfhost/pkg_workspace_task_authority_v1.gc` | 148 | 6301 | 10 | `6417a7a5dd19681f` |
 | `selfhost/pkg_semver_select_authority_v1.gc` | 176 | 7400 | 11 | `9b3fc573e02fb224` |
@@ -246,6 +249,9 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 - `selfhost/pkg_workspace_remove_authority_v1.gc`: `selfhost/pkg-workspace-remove::request-kind`, `selfhost/pkg-workspace-remove::result-kind`, `selfhost/pkg-workspace-remove::bytes-equal-loop`, `selfhost/pkg-workspace-remove::string-equal?`, `selfhost/pkg-workspace-remove::remove-loop`, `selfhost/pkg-workspace-remove::remove-name`, `selfhost/pkg-workspace-remove::result`, `selfhost/pkg-workspace-remove::reject`
 - `selfhost/pkg_workspace_migrate_authority_v1.gc`: `selfhost/pkg-workspace-migrate::request-kind`, `selfhost/pkg-workspace-migrate::result-kind`, `selfhost/pkg-workspace-migrate::result`, `selfhost/pkg-workspace-migrate::reject`, `selfhost/pkg-workspace-migrate::accept`, `selfhost/pkg-workspace-migrate::dependency?`, `selfhost/pkg-workspace-migrate::requirement`, `selfhost/pkg-workspace-migrate::requirements-loop`
 - `selfhost/pkg_workspace_env_select_authority_v1.gc`: `selfhost/pkg-workspace-env-select::request-kind`, `selfhost/pkg-workspace-env-select::result-kind`, `selfhost/pkg-workspace-env-select::result`, `selfhost/pkg-workspace-env-select::reject`, `selfhost/pkg-workspace-env-select::accept`, `selfhost/pkg-workspace-env-select::normalize`, `selfhost/pkg-workspace-env-select::optional-string?`, `selfhost/pkg-workspace-env-select::compatible?`
+- `selfhost/pkg_workspace_env_core_v1.gc`: `selfhost/pkg-workspace-env::none`, `selfhost/pkg-workspace-env::bool?`, `selfhost/pkg-workspace-env::bytes?`, `selfhost/pkg-workspace-env::optional`, `selfhost/pkg-workspace-env::choose`, `selfhost/pkg-workspace-env::digest`, `selfhost/pkg-workspace-env::term-bytes`, `selfhost/pkg-workspace-env::file`
+- `selfhost/pkg_workspace_env_finalize_v1.gc`: `selfhost/pkg-workspace-env::make-final`
+- `selfhost/pkg_workspace_env_authority_v1.gc`: `selfhost/pkg-workspace-env-authority::plan-kind`, `selfhost/pkg-workspace-env-authority::finalize-kind`, `selfhost/pkg-workspace-env-authority::result-kind`, `selfhost/pkg-workspace-env-authority::result`, `selfhost/pkg-workspace-env-authority::reject-code`, `selfhost/pkg-workspace-env-authority::reject`, `selfhost/pkg-workspace-env-authority::accept`, `selfhost/pkg-workspace-env-authority::plan`
 - `selfhost/pkg_workspace_task_core_v1.gc`: `selfhost/pkg-workspace-task::optional-bounded-str?`, `selfhost/pkg-workspace-task::string-vector-loop?`, `selfhost/pkg-workspace-task::string-vector?`, `selfhost/pkg-workspace-task::task?`, `selfhost/pkg-workspace-task::tasks-loop?`, `selfhost/pkg-workspace-task::tasks?`, `selfhost/pkg-workspace-task::engine-inventory?`, `selfhost/pkg-workspace-task::member-loop?`
 - `selfhost/pkg_workspace_task_authority_v1.gc`: `selfhost/pkg-workspace-task-authority::request-kind`, `selfhost/pkg-workspace-task-authority::result-kind`, `selfhost/pkg-workspace-task-authority::result`, `selfhost/pkg-workspace-task-authority::reject-code`, `selfhost/pkg-workspace-task-authority::reject`, `selfhost/pkg-workspace-task-authority::accept`, `selfhost/pkg-workspace-task-authority::selection-request`, `selfhost/pkg-workspace-task-authority::finish`
 - `selfhost/pkg_semver_select_authority_v1.gc`: `selfhost/pkg-semver-select::vec?`, `selfhost/pkg-semver-select::int?`, `selfhost/pkg-semver-select::candidate?`, `selfhost/pkg-semver-select::candidates-valid?`, `selfhost/pkg-semver-select::bytes-lex-lt?`, `selfhost/pkg-semver-select::str-lex-lt?`, `selfhost/pkg-semver-select::better?`, `selfhost/pkg-semver-select::select-loop`

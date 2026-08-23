@@ -1,0 +1,60 @@
+{
+  "artifact": "selfhost/toolchain.gc",
+  "auditDate": "2026-08-23",
+  "binding": "core/pkg::workspace-env-authority",
+  "contentIdentitySha256": "91de401693386b98497876529b8ec0f9f2fa7b5c7c3af47ee8d9514fac3f1254",
+  "decisionInventory": [
+    "closed-workspace-lock-member-and-dependency-projection",
+    "effective-policy-registry-toolchain-and-capability-selection",
+    "canonical-environment-profile-provenance-and-wasi-descriptors",
+    "complete-authority-bearing-environment-identity",
+    "backend-bridge-and-effective-capability-binding",
+    "ordered-environment-and-external-write-plan",
+    "immutable-environment-root-and-public-result",
+    "request-bound-two-phase-observation-validation"
+  ],
+  "hostMechanisms": [
+    "bounded-workspace-lock-package-capability-and-toolchain-observation",
+    "active-backend-store-and-path-prefix-observation",
+    "artifact-only-bounded-two-phase-evaluation",
+    "strict-request-bound-plan-result-and-body-decoding",
+    "safe-path-joining-regular-file-checks-and-cryptographic-rechecks",
+    "backend-launcher-planning-and-atomic-file-persistence",
+    "filesystem-preflight-and-atomic-environment-directory-publication"
+  ],
+  "hostOracle": {
+    "productionRequired": false,
+    "reachability": "none-proven",
+    "removalTask": "R4.2.e"
+  },
+  "independentVerifier": "scripts/lib/selfhost_pkg_workspace_env_authority.py",
+  "kind": "genesis/selfhost-pkg-workspace-env-authority-v0.1",
+  "nonclaims": [
+    "backend-bridge-binary-semantic-authority",
+    "bootstrap-fixpoint",
+    "cross-root-crash-atomic-transaction-or-recovery",
+    "filesystem-or-generic-path-policy-authority",
+    "generic-toml-authority",
+    "h2-workspace-closure",
+    "manifest-authority",
+    "r4-2-e-closure",
+    "release-qualification",
+    "sh-c-closure",
+    "wasi-workspace-env-support"
+  ],
+  "planRequestKind": "genesis/pkg-workspace-env-plan-authority-request-v0.1",
+  "finalizeRequestKind": "genesis/pkg-workspace-env-finalize-authority-request-v0.1",
+  "productionEntrypoints": [
+    "genesis"
+  ],
+  "resultKind": "genesis/pkg-workspace-env-authority-result-v0.1",
+  "schema": "docs/spec/SELFHOST_PKG_WORKSPACE_ENV_AUTHORITY_v0.1.schema.json",
+  "sourceModules": [
+    "selfhost/pkg_workspace_env_core_v1.gc",
+    "selfhost/pkg_workspace_env_finalize_v1.gc",
+    "selfhost/pkg_workspace_env_authority_v1.gc"
+  ],
+  "sourceSha256": "cc53fe3fd6512af749f26a2d83ea0ffd2ec6ed76e79acd9ec5b951c550e06733",
+  "spec": "docs/spec/SELFHOST_PKG_WORKSPACE_NEW_AUTHORITY_v0.1.md",
+  "version": "0.1.0"
+}

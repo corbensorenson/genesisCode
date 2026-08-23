@@ -123,10 +123,12 @@ pub(super) fn write_target_executable_bundle(
     let launcher_path = bundle_root.join(layout.launcher_rel);
     let entrypoint_path = bundle_root.join(layout.entrypoint_rel);
 
-    write_if_same_or_new(&package_path, &package_payload.bytes).map_err(|e| e.to_string())?;
+    write_if_same_or_new(&package_path, &package_payload.bytes)
+        .map_err(|e| format!("write target package `{}`: {e}", package_path.display()))?;
     write_if_same_or_new(&signature_path, format!("{package_sha256}\n").as_bytes())
-        .map_err(|e| e.to_string())?;
-    write_if_same_or_new(&entrypoint_path, entrypoint_src.as_bytes()).map_err(|e| e.to_string())?;
+        .map_err(|e| format!("write package signature `{}`: {e}", signature_path.display()))?;
+    write_if_same_or_new(&entrypoint_path, entrypoint_src.as_bytes())
+        .map_err(|e| format!("write target entrypoint `{}`: {e}", entrypoint_path.display()))?;
 
     let launch_adapter = Term::Map(
         [
@@ -210,7 +212,7 @@ pub(super) fn write_target_executable_bundle(
     );
     let launch_adapter_src = gc_coreform::print_term(&launch_adapter) + "\n";
     write_if_same_or_new(&executable_path, launch_adapter_src.as_bytes())
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("write launch adapter `{}`: {e}", executable_path.display()))?;
     let launch_script_src = render_launch_script(
         target_label,
         bundle_h,
@@ -219,7 +221,7 @@ pub(super) fn write_target_executable_bundle(
         &relative_name(layout.entrypoint_rel),
     );
     write_if_same_or_new(&launcher_path, launch_script_src.as_bytes())
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("write launch script `{}`: {e}", launcher_path.display()))?;
 
     #[cfg(unix)]
     {

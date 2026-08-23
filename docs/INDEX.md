@@ -274,6 +274,9 @@ in this index and `docs/spec/DOC_TOPOLOGY_v0.1.md`.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_ENV_SELECT_AUTHORITY_v0.1.schema.json` - closed schema for the independently checked workspace-environment backend-selection profile.
 - `policies/selfhost_pkg_workspace_env_select_authority_v0.1.json` - content-addressed backend precedence, normalization, compatibility, composed task-authority handoff, bounded host mechanisms, and explicit nonclaims.
 - `scripts/lib/selfhost_pkg_workspace_env_select_authority.py` - independent environment-selection source/artifact/loader/route/no-fallback/ledger custody and mutation verifier.
+- `docs/spec/SELFHOST_PKG_WORKSPACE_ENV_AUTHORITY_v0.1.schema.json` - closed schema for the two-phase workspace environment projection, identity, descriptor, and write-plan authority profile.
+- `policies/selfhost_pkg_workspace_env_authority_v0.1.json` - content-addressed workspace/lock projection, effective-input selection, complete environment identity, descriptor, immutable-root, and ordered write-plan ownership profile.
+- `scripts/lib/selfhost_pkg_workspace_env_authority.py` - independent environment source/artifact/adapter/body/preflight/no-fallback/ledger custody and mutation verifier.
 - `docs/spec/SELFHOST_PKG_WORKSPACE_TASK_AUTHORITY_v0.1.schema.json` - closed schema for the composed backend-admission and workspace-task grammar/action authority profile.
 - `policies/selfhost_pkg_workspace_task_authority_v0.1.json` - content-addressed task lookup, command/alias, option, engine, contract-hash, and canonical-action ownership profile.
 - `scripts/lib/selfhost_pkg_workspace_task_authority.py` - independent task source/artifact/adapter/route/parity/ledger custody and mutation verifier.
