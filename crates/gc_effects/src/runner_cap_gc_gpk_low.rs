@@ -14,6 +14,7 @@ pub(super) fn capability_gc_gpk_low(
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs: Option<&RefsDb>,
+    pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>,
     budget: &mut ArtifactBudgetState,
     error_tok: SealId,
     op: &str,
@@ -41,6 +42,7 @@ pub(super) fn capability_gc_gpk_low(
                 &pins_s,
                 include_lock,
                 include_refs,
+                pkg_lock_read_authority,
                 error_tok,
                 op,
             ) {
@@ -140,6 +142,7 @@ pub(super) fn capability_gc_gpk_low(
                 &pins_s,
                 include_lock,
                 include_refs,
+                pkg_lock_read_authority,
                 error_tok,
                 op,
             ) {

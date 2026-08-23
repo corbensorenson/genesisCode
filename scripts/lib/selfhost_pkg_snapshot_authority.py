@@ -174,11 +174,18 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     snapshot_route = route[route.index(snapshot_route_marker):]
     require_markers(snapshot_route, (
         "missing selfhost package snapshot authority", "snapshot_authority.construct_snapshot(facts)?",
+        "manifest_authority: Option<&mut PkgPackageManifestAuthority>",
+        "core/pkg-low::snapshot requires the artifact-loaded GenesisCode package-manifest authority",
+        "manifest_authority.load_manifest(&pkg_path)",
         "for artifact in &plan.artifacts", "store_put_with_budget(",
         "selfhost package snapshot authority/store identity contradiction",
     ), "snapshot mechanism route")
-    if snapshot_route.index("missing selfhost package snapshot authority") > snapshot_route.index("PackageManifest::load"):
+    if snapshot_route.index("missing selfhost package snapshot authority") > snapshot_route.index("sandbox_path_read"):
         fail("snapshot authority is checked after package I/O")
+    if snapshot_route.index("requires the artifact-loaded GenesisCode package-manifest authority") > snapshot_route.index("manifest_authority.load_manifest(&pkg_path)"):
+        fail("package manifest authority is checked after manifest interpretation")
+    if "PackageManifest::load" in snapshot_route:
+        fail("production snapshot route retains native package-manifest semantics")
     retired = (":vcs/snapshot", "snapshot_bytes", "Term::Vector(modules_out)")
     if any(marker in snapshot_route for marker in retired):
         fail("production snapshot route retains retired object construction")
@@ -186,7 +193,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("snapshot authority decomposition exceeds 700 lines")
     require_markers(tests, (
         "pkg_snapshot_authority_constructs_exact_objects_and_is_required_before_storage",
-        "missing selfhost package snapshot authority", "hash_module(&canonical)",
+        "package-manifest consumers require the artifact-loaded GenesisCode authority",
+        "hash_module(&canonical)",
         "read_dir(&missing_store).unwrap().count(), 0",
     ), "snapshot integration controls")
 
@@ -246,6 +254,15 @@ def self_test(root: Path, profile, schema) -> int:
             fail(f"self-test marker absent: {name}")
         mutations.append((profile, {path: sources[path].replace(old, new, 1)}, name))
 
+    def mutate_route_source(path, anchor, old, new, name):
+        source = sources[path]
+        if anchor not in source:
+            fail(f"self-test route anchor absent: {name}")
+        prefix, route = source.split(anchor, 1)
+        if old not in route:
+            fail(f"self-test route marker absent: {name}")
+        mutations.append((profile, {path: prefix + anchor + route.replace(old, new, 1)}, name))
+
     mutate_source(profile["sourceModule"], "selfhost/hash::hash-module forms", "module-h", "module-hash")
     mutate_source(profile["sourceModule"], "core/crypto::blake3 bytes", "bytes", "object-hash")
     mutate_source(profile["sourceModule"], "[:facts :kind :v]", "[:facts :kind]", "request-closure")
@@ -255,6 +272,7 @@ def self_test(root: Path, profile, schema) -> int:
     mutate_source("crates/gc_effects/src/pkg_snapshot_authority.rs", "snapshot result :snapshot contradicts the final artifact", "snapshot accepted", "result-identity")
     mutate_source("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::snapshot"', '"core/pkg-low::legacy-snapshot"', "lazy-route")
     mutate_source("crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs", "snapshot_authority.construct_snapshot(facts)?", "legacy_snapshot(facts)?", "authority-route")
+    mutate_route_source("crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs", "pub(super) fn handle_snapshot", "manifest_authority.load_manifest(&pkg_path)", "PackageManifest::load(&pkg_path)", "manifest-authority-route")
     mutate_source("crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs", "for artifact in &plan.artifacts", "for artifact in &[]", "exact-write")
     mutate_source("crates/gc_effects/tests/sync_registry/cases_a.rs", "pkg_snapshot_authority_constructs_exact_objects_and_is_required_before_storage", "legacy_snapshot_test", "integration-control")
     controls = 0
@@ -265,7 +283,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 17:
+    if controls != 18:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-snapshot-authority: self-test ok (negative_controls={controls})")
     return controls

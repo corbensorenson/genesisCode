@@ -433,7 +433,17 @@ pub(super) fn call_capability_with_runtime(
         ),
         s if s.starts_with("core/gc-low::") || s.starts_with("core/gpk-low::") => {
             capability_gc_gpk_low(
-                s, payload, pol, policy, store, refs, budget, error_tok, op, timeout_ms,
+                s,
+                payload,
+                pol,
+                policy,
+                store,
+                refs,
+                pkg_lock_read_authority,
+                budget,
+                error_tok,
+                op,
+                timeout_ms,
             )
         }
         "core/refs::get" => cap_refs_get(payload, refs, refs_authority),

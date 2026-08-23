@@ -21,7 +21,7 @@
     "independentVerifier": { "const": "scripts/lib/selfhost_pkg_lock_model_authority.py" },
     "kind": { "const": "genesis/selfhost-pkg-lock-model-authority-v0.1" },
     "nonclaims": { "items": { "type": "string" }, "minItems": 1, "type": "array", "uniqueItems": true },
-    "productionOperations": { "items": { "type": "string" }, "minItems": 5, "type": "array", "uniqueItems": true },
+    "productionOperations": { "items": { "type": "string" }, "minItems": 7, "type": "array", "uniqueItems": true },
     "requestKind": { "const": "genesis/pkg-lock-model-authority-request-v0.1" },
     "resultKind": { "const": "genesis/pkg-lock-model-authority-result-v0.1" },
     "schema": { "const": "docs/spec/SELFHOST_PKG_LOCK_MODEL_AUTHORITY_v0.1.schema.json" },

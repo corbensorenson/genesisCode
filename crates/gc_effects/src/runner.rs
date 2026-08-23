@@ -10,7 +10,7 @@ use std::path::Path;
 use crate::error::EffectsError;
 use crate::lock::ExclusiveLock;
 use crate::log::{Decision, EffectLog, EffectLogEntry, GCLOG_CURRENT_VERSION, LoggedResp};
-use crate::pkg_lock_read_authority::PkgLockReadAuthority;
+use crate::pkg_lock_read_authority::{PkgLockModelDecision, PkgLockReadAuthority};
 use crate::pkg_lock_write_authority::PkgLockWriteAuthority;
 use crate::pkg_package_manifest_authority::PkgPackageManifestAuthority;
 use crate::pkg_resolution_identity_authority::*;

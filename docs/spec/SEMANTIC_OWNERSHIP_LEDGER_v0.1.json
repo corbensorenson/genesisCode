@@ -201,6 +201,7 @@
       "selector": "gc/*",
       "semanticDecisionIds": [
         "SD-ROUTE-SELECTION",
+        "SD-PACKAGE-RESOLUTION",
         "SD-ARTIFACT-GC",
         "SD-STORE",
         "SD-REFS",
@@ -664,7 +665,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "d3628466c53386ad8d35fc2a9f73ee2b81ebf94c88d03408c426443576254f7c",
+  "contentIdentitySha256": "0564e463f95050d5bfbc0a308f8b1dcd68d6cecaf2adfc6696be4792da1e9f47",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -2068,7 +2069,8 @@
     {
       "applicability": "applicable",
       "commandSelectors": [
-        "pkg/*"
+        "pkg/*",
+        "gc/*"
       ],
       "currentLevel": "H0",
       "fallbackReachability": "reachable-parity-harness",
@@ -2085,7 +2087,7 @@
       "limitations": [
         "Artifact-loaded GenesisCode exclusively normalizes and serializes core/pkg-low::save-lock payloads and the final typed lock/update models, and decides their canonical BLAKE3 lock identity under genesis/selfhost-pkg-lock-write-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively validates and normalizes the typed public core/pkg-low::load-lock result under genesis/selfhost-pkg-lock-read-authority-v0.1",
-        "Artifact-loaded GenesisCode exclusively validates and normalizes the complete internal typed lock model consumed by core/pkg-low::{info,lock,update,install,verify} under genesis/selfhost-pkg-lock-model-authority-v0.1",
+        "Artifact-loaded GenesisCode exclusively validates and normalizes the complete internal typed lock model consumed by core/pkg-low::{info,lock,update,install,verify} and the lock-root projection consumed before dead-set planning by core/gc-low::{plan,run} under genesis/selfhost-pkg-lock-model-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively initializes direct locks with workspace, policy, and default-registry normalization, mutates and canonically serializes core/pkg-low::add requirements, owns conditional core/pkg-low::bridge lock mutation and dependency artifact-key identity after a bounded pure CoreForm runtime-map freeze, and constructs the closed core/pkg-low::list projection under genesis/selfhost-pkg-lock-ops-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively constructs the core/pkg-low::bridge object graph: provenance, conversion data and evidence, patch, package snapshot, unsigned commit, VCS domain-separated signing message, attestation, final commit, exact object bytes, and content identities under genesis/selfhost-pkg-bridge-authority-v0.1",
         "Artifact-loaded GenesisCode exclusively recomputes canonical module identities and constructs the exact module objects, package snapshot, canonical bytes, raw BLAKE3 identities, and ordered storage plan for direct core/pkg-low::snapshot under genesis/selfhost-pkg-snapshot-authority-v0.1",
@@ -2146,6 +2148,8 @@
         "crates/gc_effects/src/pkg_package_manifest_authority.rs",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
+        "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_lock_ops_authority.rs",
         "crates/gc_effects/src/pkg_bridge_authority.rs",
@@ -2233,6 +2237,8 @@
         "crates/gc_effects/src/runner_cap_pkg_low/module_semantics.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+        "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs",
         "crates/gc_pkg/src"
       ],
       "rollbackPosture": "fail-closed; retain last independently reviewed authority and never silently cross implementation classes",
@@ -2259,8 +2265,10 @@
       "testPaths": [
         "crates/gc_cli/tests/cli_pkg_engine.rs",
         "crates/gc_cli/tests/cli_pkg_workspace.rs",
+        "crates/gc_cli/tests/cli_gc.rs",
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/pkg_lock_model_authority.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs",
         "crates/gc_effects/src/pkg_lock_write_authority.rs",
         "crates/gc_effects/src/pkg_lock_ops_authority.rs",
         "crates/gc_effects/src/pkg_bridge_authority.rs",

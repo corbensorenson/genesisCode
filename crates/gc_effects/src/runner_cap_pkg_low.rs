@@ -110,7 +110,7 @@ pub(super) fn capability_pkg_low(
 
 const MAX_LOCK_BYTES: u64 = 4 * 1024 * 1024;
 
-fn read_bounded_lock(path: &std::path::Path) -> Result<Vec<u8>, String> {
+pub(super) fn read_bounded_lock(path: &std::path::Path) -> Result<Vec<u8>, String> {
     use std::io::Read;
 
     let file = std::fs::File::open(path).map_err(|_| "cannot read lock file".to_string())?;

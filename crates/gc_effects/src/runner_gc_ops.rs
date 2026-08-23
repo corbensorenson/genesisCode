@@ -166,6 +166,7 @@ pub(super) fn gc_build_sources(
     pins_s: &str,
     include_lock: bool,
     include_refs: bool,
+    lock_authority: Option<&mut PkgLockReadAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<(Vec<Term>, Term, Term), Value> {
@@ -196,35 +197,51 @@ pub(super) fn gc_build_sources(
 
     let mut lock_entries_term: Vec<Term> = Vec::new();
     let mut lock_artifacts_term: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
-    if include_lock
-        && let Ok(lock_path) = sandbox_path_read(base_dir, lock_s)
-        && lock_path.exists()
-    {
-        match gc_pkg::GenesisLock::load(&lock_path) {
-            Ok(lk) => {
-                for (_, le) in lk.locked {
-                    let mut m = BTreeMap::new();
-                    m.insert(
-                        TermOrdKey(Term::symbol(":commit")),
-                        le.commit.map(Term::Str).unwrap_or(Term::Nil),
-                    );
-                    m.insert(
-                        TermOrdKey(Term::symbol(":snapshot")),
-                        Term::Str(le.snapshot),
-                    );
-                    lock_entries_term.push(Term::Map(m));
-                }
-                for (k, v) in lk.artifacts {
-                    lock_artifacts_term.insert(TermOrdKey(Term::Str(k)), Term::Str(v));
-                }
-            }
-            Err(e) => {
+    if include_lock {
+        let lock_path = sandbox_path_allow_missing(base_dir, lock_s, false).map_err(|error| {
+            mk_error(error_tok, "core/gc/bad-lock", error.to_string(), Some(op))
+        })?;
+        if lock_path.exists() {
+            let Some(lock_authority) = lock_authority else {
                 return Err(mk_error(
                     error_tok,
-                    "core/gc/bad-lock",
-                    format!("{e}"),
+                    "core/gc/lock-authority-unavailable",
+                    "GC lock roots require the artifact-loaded GenesisCode lock model authority"
+                        .to_string(),
                     Some(op),
                 ));
+            };
+            let bytes = runner_cap_pkg_low::read_bounded_lock(&lock_path)
+                .map_err(|message| mk_error(error_tok, "core/gc/bad-lock", message, Some(op)))?;
+            match lock_authority.read_model_toml(&bytes) {
+                Ok(PkgLockModelDecision::Lock(lk)) => {
+                    for (_, le) in lk.locked {
+                        let mut m = BTreeMap::new();
+                        m.insert(
+                            TermOrdKey(Term::symbol(":commit")),
+                            le.commit.map(Term::Str).unwrap_or(Term::Nil),
+                        );
+                        m.insert(
+                            TermOrdKey(Term::symbol(":snapshot")),
+                            Term::Str(le.snapshot),
+                        );
+                        lock_entries_term.push(Term::Map(m));
+                    }
+                    for (k, v) in lk.artifacts {
+                        lock_artifacts_term.insert(TermOrdKey(Term::Str(k)), Term::Str(v));
+                    }
+                }
+                Ok(PkgLockModelDecision::Error { message, .. }) => {
+                    return Err(mk_error(error_tok, "core/gc/bad-lock", message, Some(op)));
+                }
+                Err(error) => {
+                    return Err(mk_error(
+                        error_tok,
+                        "core/gc/lock-authority-error",
+                        error.to_string(),
+                        Some(op),
+                    ));
+                }
             }
         }
     }
@@ -538,4 +555,102 @@ pub(super) fn gc_store_dead_set(
         largest.truncate(25);
     }
     Ok((dead, dead_bytes, largest))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gc_lock_authority_fails_closed_before_store_mutation_when_missing() {
+        let directory = tempfile::tempdir().expect("temporary GC workspace");
+        std::fs::write(
+            directory.path().join("genesis.lock"),
+            "version = 2\nworkspace = \"fixture\"\n",
+        )
+        .expect("write lock fixture");
+        let base_dir = directory
+            .path()
+            .canonicalize()
+            .expect("canonical temporary GC workspace");
+        let sentinel = directory.path().join("unrelated-store-object");
+        std::fs::write(&sentinel, b"must remain").expect("write mutation sentinel");
+
+        let mut context = EvalCtx::new();
+        let error_token = build_prelude(&mut context).protocol.error;
+        let error = gc_build_sources(
+            None,
+            &base_dir,
+            "genesis.lock",
+            ".genesis/pins.toml",
+            true,
+            false,
+            None,
+            error_token,
+            "core/gc-low::run",
+        )
+        .expect_err("existing lock roots must require artifact authority");
+
+        let Value::Sealed { token, payload } = error else {
+            panic!("expected sealed boundary error");
+        };
+        assert_eq!(token, error_token);
+        let Some(Term::Map(fields)) = payload.as_data() else {
+            panic!("expected sealed boundary error map");
+        };
+        assert_eq!(
+            fields.get(&TermOrdKey(Term::symbol(":error/code"))),
+            Some(&Term::Str("core/gc/lock-authority-unavailable".to_string()))
+        );
+        assert_eq!(
+            fields.get(&TermOrdKey(Term::symbol(":error/op"))),
+            Some(&Term::symbol("core/gc-low::run"))
+        );
+        assert!(
+            sentinel.exists(),
+            "authority failure must not mutate storage"
+        );
+    }
+
+    #[test]
+    fn gc_lock_path_failure_is_sealed_before_store_mutation() {
+        let directory = tempfile::tempdir().expect("temporary GC workspace");
+        let base_dir = directory
+            .path()
+            .canonicalize()
+            .expect("canonical temporary GC workspace");
+        let sentinel = directory.path().join("unrelated-store-object");
+        std::fs::write(&sentinel, b"must remain").expect("write mutation sentinel");
+
+        let mut context = EvalCtx::new();
+        let error_token = build_prelude(&mut context).protocol.error;
+        let error = gc_build_sources(
+            None,
+            &base_dir,
+            "../outside/genesis.lock",
+            ".genesis/pins.toml",
+            true,
+            false,
+            None,
+            error_token,
+            "core/gc-low::run",
+        )
+        .expect_err("invalid lock paths must not be treated as absent locks");
+
+        let Value::Sealed { token, payload } = error else {
+            panic!("expected sealed boundary error");
+        };
+        assert_eq!(token, error_token);
+        let Some(Term::Map(fields)) = payload.as_data() else {
+            panic!("expected sealed boundary error map");
+        };
+        assert_eq!(
+            fields.get(&TermOrdKey(Term::symbol(":error/code"))),
+            Some(&Term::Str("core/gc/bad-lock".to_string()))
+        );
+        assert!(
+            sentinel.exists(),
+            "lock-path failure must not mutate storage"
+        );
+    }
 }

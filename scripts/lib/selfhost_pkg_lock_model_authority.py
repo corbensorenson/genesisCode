@@ -45,10 +45,12 @@ FIELDS = {
     "productionOperations", "requestKind", "resultKind", "schema", "sourceModule",
     "sourceSha256", "spec", "version",
 }
-OPERATIONS = [
+PACKAGE_OPERATIONS = [
     "core/pkg-low::info", "core/pkg-low::lock", "core/pkg-low::update",
     "core/pkg-low::install", "core/pkg-low::verify",
 ]
+GC_OPERATIONS = ["core/gc-low::plan", "core/gc-low::run"]
+OPERATIONS = PACKAGE_OPERATIONS + GC_OPERATIONS
 CONSTANTS = {
     "artifact": "selfhost/toolchain.gc",
     "binding": "core/pkg::lock-model-authority",
@@ -143,6 +145,9 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     resolution = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", overrides)
     install = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", overrides)
     parent = source_text(root, "crates/gc_effects/src/runner_cap_pkg_low.rs", overrides)
+    classifier = source_text(root, "crates/gc_effects/src/pkg_lock_read_authority.rs", overrides)
+    gc_dispatch = source_text(root, "crates/gc_effects/src/runner_cap_gc_gpk_low.rs", overrides)
+    gc_sources = source_text(root, "crates/gc_effects/src/runner_gc_ops.rs", overrides)
     runner = source_text(root, "crates/gc_effects/src/runner.rs", overrides)
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
 
@@ -175,8 +180,11 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         if marker not in parent:
             fail(f"bounded lock transport missing marker: {marker}")
     for operation in OPERATIONS:
-        if operation not in source_text(root, "crates/gc_effects/src/pkg_lock_read_authority.rs", overrides):
+        if operation not in classifier:
             fail(f"runner lazy authority set missing {operation}")
+    if 'matches!(op, "core/gc-low::plan" | "core/gc-low::run")' not in classifier:
+        fail("GC plan/run are not a closed lazy authority classifier")
+    for operation in PACKAGE_OPERATIONS:
         if f'"{operation}" =>' not in resolution:
             fail(f"resolution dispatcher missing {operation}")
     if resolution.count("load_lock_model(") < 4 or install.count("load_lock_model(") != 2:
@@ -195,14 +203,54 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)" not in runner:
         fail("runner does not use the closed lock authority operation set")
 
+    for marker in (
+        "pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>",
+        "gc_build_sources(", "gc_roots_plan_from_sources(",
+    ):
+        if marker not in gc_dispatch:
+            fail(f"GC dispatch missing lock authority marker: {marker}")
+    if gc_dispatch.count("gc_build_sources(") != 2:
+        fail("GC plan and run do not each build authority-backed root sources")
+    for marker in (
+        "lock_authority: Option<&mut PkgLockReadAuthority>",
+        "sandbox_path_allow_missing(base_dir, lock_s, false)",
+        "runner_cap_pkg_low::read_bounded_lock(&lock_path)",
+        "lock_authority.read_model_toml(&bytes)",
+        "core/gc/lock-authority-unavailable",
+        "GC lock roots require the artifact-loaded GenesisCode lock model authority",
+        "gc_lock_authority_fails_closed_before_store_mutation_when_missing",
+        "gc_lock_path_failure_is_sealed_before_store_mutation",
+    ):
+        if marker not in gc_sources:
+            fail(f"GC lock-root source route missing marker: {marker}")
+    if "gc_pkg::GenesisLock::load" in gc_sources:
+        fail("production GC lock-root route retains typed Rust lock parser")
+
+    plan_route = gc_dispatch.split('"core/gc-low::plan" => {', 1)[1].split(
+        '"core/gc-low::run" => {', 1
+    )[0]
+    run_route = gc_dispatch.split('"core/gc-low::run" => {', 1)[1].split(
+        '"core/gc-low::pin" => {', 1
+    )[0]
+    for name, route in (("plan", plan_route), ("run", run_route)):
+        source_index = route.find("gc_build_sources(")
+        roots_index = route.find("gc_roots_plan_from_sources(")
+        dead_index = route.find("gc_store_dead_set(")
+        if not (0 <= source_index < roots_index < dead_index):
+            fail(f"GC {name} does not consume authority-backed roots before dead-set planning")
+
     row = next((item for item in ledger.get("semanticDecisions", [])
                 if item.get("id") == "SD-PACKAGE-RESOLUTION"), None)
     if not row or row.get("currentLevel") != "H0":
         fail("SD-PACKAGE-RESOLUTION must remain truthful H0")
+    if set(row.get("commandSelectors", [])) != {"pkg/*", "gc/*"}:
+        fail("semantic ledger does not bind GC lock consumers to package resolution")
     for path in (
         profile["sourceModule"], "crates/gc_effects/src/pkg_lock_model_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
+        "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs",
     ):
         if path not in row.get("productionAuthorityPaths", []):
             fail(f"semantic ledger missing production authority path: {path}")
@@ -211,7 +259,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if profile["independentVerifier"] not in row.get("verifierPaths", []):
         fail("semantic ledger missing lock model verifier")
     limitations = "\n".join(row.get("limitations", [])).lower()
-    if "internal" not in limitations or "toml" not in limitations or "h0" not in limitations:
+    if ("internal" not in limitations or "toml" not in limitations or "h0" not in limitations
+            or "core/gc-low::{plan,run}" not in limitations):
         fail("semantic ledger does not disclose the partial internal authority and TOML oracle")
     if source_identity(profile["sourceModule"], module.encode()) != profile["sourceSha256"]:
         fail("lock model authority source identity mismatch")
@@ -230,7 +279,9 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/pkg_lock_read_authority.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
-        "crates/gc_effects/src/runner_cap_pkg_low.rs", "crates/gc_effects/src/runner.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low.rs",
+        "crates/gc_effects/src/runner_cap_gc_gpk_low.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs", "crates/gc_effects/src/runner.rs",
     ]
     sources = {path: source_text(root, path, {}) for path in paths}
     mutations = []
@@ -266,6 +317,11 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs", "authority.read_model_toml(&bytes)", "legacy_read(&bytes)", "authority-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", "load_lock_model(", "legacy_lock_model(", "install-route")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::verify"', '"core/pkg-low::legacy-verify"', "lazy-route-set")
+    source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/gc-low::run"', '"core/gc-low::legacy-run"', "gc-lazy-route-set")
+    source_mutation("crates/gc_effects/src/runner_cap_gc_gpk_low.rs", "pkg_lock_read_authority: Option<&mut PkgLockReadAuthority>", "legacy_lock_authority: Option<&mut PkgLockReadAuthority>", "gc-authority-dispatch")
+    source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "lock_authority.read_model_toml(&bytes)", "gc_pkg::GenesisLock::load(&lock_path)", "gc-authority-route")
+    source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "gc_lock_authority_fails_closed_before_store_mutation_when_missing", "gc_missing_authority_is_ignored", "gc-fail-closed-control")
+    source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "sandbox_path_allow_missing(base_dir, lock_s, false)", "base_dir.join(lock_s)", "gc-lock-path-admission")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
 
     controls = 0
@@ -276,8 +332,17 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
+    if controls != 22:
+        fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-model-authority: self-test ok (negative_controls={controls})")
     return controls
+
+
+def write_identities(path: Path, profile, root: Path) -> None:
+    source_path = root / profile["sourceModule"]
+    profile["sourceSha256"] = source_identity(profile["sourceModule"], source_path.read_bytes())
+    profile["contentIdentitySha256"] = canonical_identity(profile)
+    path.write_text(json.dumps(profile, indent=2) + "\n")
 
 
 def main(argv=None) -> int:
@@ -287,11 +352,18 @@ def main(argv=None) -> int:
     parser.add_argument("--schema", type=Path, required=True)
     parser.add_argument("--artifact", type=Path)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--write-identities", action="store_true")
     args = parser.parse_args(argv)
     root = args.root.resolve()
     try:
-        profile = load_json(args.profile)
-        schema = load_json(args.schema)
+        profile_path = args.profile if args.profile.is_absolute() else root / args.profile
+        schema_path = args.schema if args.schema.is_absolute() else root / args.schema
+        profile = load_json(profile_path)
+        schema = load_json(schema_path)
+        if args.write_identities:
+            validate_profile(profile, schema, check_identity=False)
+            write_identities(profile_path, profile, root)
+            profile = load_json(profile_path)
         validate_all(root, profile, schema)
         if args.artifact and args.artifact.resolve() != (root / profile["artifact"]).resolve():
             fail("artifact argument does not match profile")

@@ -63,7 +63,7 @@ pub(crate) enum PkgLockReadDecision {
 }
 
 impl PkgLockReadAuthority {
-    pub(crate) fn required_for_request(op: &str, _payload: &Term) -> bool {
+    pub(crate) fn required_for_request(op: &str, payload: &Term) -> bool {
         matches!(
             op,
             "core/pkg-low::load-lock"
@@ -78,7 +78,8 @@ impl PkgLockReadAuthority {
         ) || matches!(
             op,
             "core/pkg-low::bridge" | "core/pkg-low::snapshot" | "core/pkg-low::publish"
-        )
+        ) || (matches!(op, "core/gc-low::plan" | "core/gc-low::run")
+            && crate::runner_gc_payload::payload_gc_include_lock(payload).unwrap_or(true))
     }
 
     pub(crate) fn load(config: &SelfhostAuthorityConfig) -> Result<Self, EffectsError> {
@@ -564,6 +565,44 @@ rationale = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
         assert!(PkgLockReadAuthority::required_for_request(
             "core/pkg-low::bridge",
             &map([(":lock", Term::Int(1.into()))]),
+        ));
+    }
+}
+
+#[cfg(test)]
+mod gc_request_tests {
+    use super::*;
+
+    fn include_lock_payload(include_lock: bool) -> Term {
+        Term::Map(
+            [(
+                TermOrdKey(Term::symbol(":include-lock")),
+                Term::Bool(include_lock),
+            )]
+            .into_iter()
+            .collect(),
+        )
+    }
+
+    #[test]
+    fn gc_lock_authority_is_required_only_when_lock_roots_are_enabled() {
+        for operation in ["core/gc-low::plan", "core/gc-low::run"] {
+            assert!(PkgLockReadAuthority::required_for_request(
+                operation,
+                &Term::Nil,
+            ));
+            assert!(PkgLockReadAuthority::required_for_request(
+                operation,
+                &include_lock_payload(true),
+            ));
+            assert!(!PkgLockReadAuthority::required_for_request(
+                operation,
+                &include_lock_payload(false),
+            ));
+        }
+        assert!(!PkgLockReadAuthority::required_for_request(
+            "core/gpk-low::export",
+            &Term::Nil,
         ));
     }
 }

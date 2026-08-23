@@ -5,23 +5,28 @@ Status: normative partial authority contract for `R4.2.e`.
 ## Scope
 
 The artifact-loaded `core/pkg::lock-model-authority` binding is the production semantic authority for
-the complete typed lock model consumed by `core/pkg-low::{info,lock,update,install,verify}`. It owns
-supported lock versions, required workspace admission, policy defaults, requirement update-policy
-and resolution-strategy normalization, tag-policy compatibility, locked-entry normalization, and
-retention of every field needed by package resolution.
+the complete typed lock model consumed by `core/pkg-low::{info,lock,update,install,verify}` and for
+the lock-root projection consumed by `core/gc-low::{plan,run}`. It owns supported lock versions,
+required workspace admission, policy defaults, requirement update-policy and resolution-strategy
+normalization, tag-policy compatibility, locked-entry normalization, artifact-root normalization,
+and retention of every field needed by package resolution and GC reachability planning.
 
 The public `core/pkg-low::load-lock` projection remains governed separately by
 `SELFHOST_PKG_LOCK_READ_AUTHORITY_v0.1.md`. Rust retains capability and sandbox admission, bounded
 file transport, UTF-8 validation, generic TOML syntax decoding, artifact bootstrap, strict result
 decoding, typed reification, graph and semver mechanisms, persistence, and diagnostic sealing.
-Generic TOML decoding is production-required, so this slice remains H0.
+Generic TOML decoding is production-required, so this slice remains H0. GC retains store traversal,
+dead-set calculation, locking, quarantine, and deletion as bounded host mechanisms; this contract
+authorizes only interpretation of lock-derived roots, not mutation of the store.
 
 ## Limits and bootstrap
 
 Production evaluation MUST use `SelfhostBootstrapMode::ArtifactOnly` and fail closed if the artifact
 or binding is absent. Input is capped at 4 MiB before UTF-8 or TOML decoding. The authority shares a
 context bounded to 20,000,000 steps, 80,000,000 logical allocation units, 4 MiB strings or bytes,
-and 65,536 map or vector entries.
+and 65,536 map or vector entries. GC rejects invalid, escaping, or otherwise inadmissible lock paths
+as sealed `core/gc/bad-lock` errors before root planning, dead-set construction, or store mutation;
+an admissible but absent lock remains an empty lock-root source.
 
 ## Request
 
@@ -64,9 +69,12 @@ canonical hash of the complete request. Rejection codes are closed to `core/pkg/
 `core/pkg/bad-authority-request`. Rust rejects open, mistyped, request-unbound, noncanonical, or
 unknown-code results and converts the accepted closed model without selecting defaults.
 
-Boundary failures are sealed as `core/pkg/authority-error`; user lock failures are sealed with the
-authority's closed code. Production has no typed-parser fallback. `GenesisLock::load` is reachable
-for these routes only under tests or the explicit `parity-oracle` feature.
+Package boundary failures are sealed as `core/pkg/authority-error`; GC boundary failures use
+`core/gc/lock-authority-error`, and user lock failures remain closed diagnostics. GC `plan` and `run`
+fail as `core/gc/lock-authority-unavailable` before root or dead-set planning when lock roots are
+enabled and the artifact authority is unavailable. Production has no typed-parser fallback for the
+declared operations. `GenesisLock::load` is reachable for the package routes only under tests or the
+explicit `parity-oracle` feature and is absent from the production GC lock-root route.
 
 ## Nonclaims
 
