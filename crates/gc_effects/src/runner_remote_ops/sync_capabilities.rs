@@ -82,6 +82,7 @@ pub(super) fn capability_sync_pull(
     let mut already: u64 = 0;
     let mut heads: Vec<Term> = Vec::new();
     let mut pending_refs: Vec<BulkSetInput> = Vec::with_capacity(refnames.len());
+    let mut commit_authority = None;
 
     for h in &roots {
         let mut stats = SyncPullStats {
@@ -95,7 +96,15 @@ pub(super) fn capability_sync_pull(
             max_artifact_bytes: sp.max_artifact_bytes,
             max_batch_bytes: sp.max_batch_bytes,
         };
-        match sync_pull_closure(&client, store, h, depth, &mut stats) {
+        match sync_pull_closure(
+            &client,
+            store,
+            h,
+            depth,
+            policy,
+            &mut commit_authority,
+            &mut stats,
+        ) {
             Ok(()) => {}
             Err(v) => return Ok(v),
         }
@@ -128,7 +137,15 @@ pub(super) fn capability_sync_pull(
             max_artifact_bytes: sp.max_artifact_bytes,
             max_batch_bytes: sp.max_batch_bytes,
         };
-        match sync_pull_closure(&client, store, &h, depth, &mut stats) {
+        match sync_pull_closure(
+            &client,
+            store,
+            &h,
+            depth,
+            policy,
+            &mut commit_authority,
+            &mut stats,
+        ) {
             Ok(()) => {}
             Err(v) => return Ok(v),
         }
@@ -215,6 +232,7 @@ pub(super) fn capability_sync_pull(
 pub(super) fn capability_sync_push(
     payload: &Term,
     pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs_authority: Option<&mut RefsAuthority>,
     error_tok: SealId,
@@ -292,6 +310,25 @@ pub(super) fn capability_sync_push(
             return Ok(mk_error(error_tok, "core/caps/policy-error", e, Some(op)));
         }
     };
+    let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut commit_authority = None;
+    for h in &roots {
+        match sync_closure_local(
+            store,
+            h,
+            depth,
+            policy,
+            &mut commit_authority,
+            &mut all,
+            error_tok,
+            op,
+        ) {
+            Ok(()) => {}
+            Err(v) => return Ok(v),
+        }
+    }
+    let hashes: Vec<String> = all.into_iter().collect();
+
     let client = match gc_registry::RegistryClient::new_with_auth(
         &base,
         timeout_ms.map(std::time::Duration::from_millis),
@@ -310,15 +347,6 @@ pub(super) fn capability_sync_push(
             .filter(|n| *n > 0),
         Err(_) => None,
     };
-
-    let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
-    for h in &roots {
-        match sync_closure_local(store, h, depth, &mut all, error_tok, op) {
-            Ok(()) => {}
-            Err(v) => return Ok(v),
-        }
-    }
-    let hashes: Vec<String> = all.into_iter().collect();
 
     let mut missing: Vec<String> = Vec::new();
     let mut present: u64 = 0;
@@ -423,6 +451,8 @@ pub(super) fn sync_closure_local(
     store: &ArtifactStore,
     root: &str,
     depth: u64,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     out: &mut std::collections::BTreeSet<String>,
     error_tok: SealId,
     op: &str,
@@ -468,7 +498,18 @@ pub(super) fn sync_closure_local(
             Ok(t) => t,
             Err(_) => continue,
         };
-        if let Ok(c) = gc_vcs::Commit::from_term(&t) {
+        let commit = match CommitAuthority::validate_typed_commit(policy, commit_authority, &t) {
+            Ok(commit) => commit,
+            Err(error) => {
+                return Err(mk_error(
+                    error_tok,
+                    "core/sync/bad-commit",
+                    format!("commit authority rejected {h}: {error}"),
+                    Some(op),
+                ));
+            }
+        };
+        if let Some(c) = commit {
             if let Some(b) = c.base {
                 q.push_back((b, dleft));
             }

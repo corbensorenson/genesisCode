@@ -145,17 +145,35 @@ pub(super) fn handle_gpk_export(
         ));
     }
 
+    let mut commit_authority = None;
+    let root_commit = match mode {
+        GpkMode::Shallow => None,
+        GpkMode::Full => match CommitAuthority::validate_typed_commit(
+            ctx.policy,
+            &mut commit_authority,
+            &root_term,
+        ) {
+            Ok(commit) => commit,
+            Err(error) => {
+                return Ok(mk_error(
+                    error_tok,
+                    "core/gpk/bad-commit",
+                    format!("commit authority rejected {resolved_root}: {error}"),
+                    Some(op),
+                ));
+            }
+        },
+    };
     let root_snapshot_for_locked_deps = match mode {
         GpkMode::Shallow => Some(resolved_root.clone()),
-        GpkMode::Full => {
-            if let Ok(c) = gc_vcs::Commit::from_term(&root_term) {
-                Some(c.result)
-            } else if gc_vcs::Snapshot::from_term(&root_term).is_ok() {
-                Some(resolved_root.clone())
-            } else {
-                None
-            }
-        }
+        GpkMode::Full => root_commit
+            .as_ref()
+            .map(|commit| commit.result.clone())
+            .or_else(|| {
+                gc_vcs::Snapshot::from_term(&root_term)
+                    .is_ok()
+                    .then(|| resolved_root.clone())
+            }),
     };
     let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     match gpk_export_closure_local(
@@ -167,7 +185,10 @@ pub(super) fn handle_gpk_export(
             include_evidence,
             include_deps,
             root_snapshot_for_locked_deps: root_snapshot_for_locked_deps.as_deref(),
+            root_commit_admitted: root_commit.is_some(),
         },
+        ctx.policy,
+        &mut commit_authority,
         &mut all,
         error_tok,
         op,

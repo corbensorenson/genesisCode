@@ -73,4 +73,5 @@ pub(super) struct GpkClosureOptions<'a> {
     pub(super) include_evidence: GpkIncludeEvidence,
     pub(super) include_deps: GpkIncludeDeps,
     pub(super) root_snapshot_for_locked_deps: Option<&'a str>,
+    pub(super) root_commit_admitted: bool,
 }

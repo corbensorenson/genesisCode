@@ -384,6 +384,7 @@ pub(super) fn call_capability_with_runtime(
         "core/sync::push" => capability_sync_push(
             payload,
             pol,
+            policy,
             store,
             refs_authority,
             error_tok,

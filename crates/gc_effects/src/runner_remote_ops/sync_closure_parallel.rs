@@ -15,6 +15,8 @@ pub(super) fn sync_pull_closure(
     store: &ArtifactStore,
     root: &str,
     depth: u64,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     stats: &mut SyncPullStats<'_>,
 ) -> Result<(), Value> {
     use std::collections::{HashSet, VecDeque};
@@ -143,8 +145,20 @@ pub(super) fn sync_pull_closure(
                 Err(_) => continue,
             };
 
-            // Commit closure: commit, base, patch, result snapshot, evidence, attestations, parents.
-            if let Ok(c) = gc_vcs::Commit::from_term(&t) {
+            // Typed commits are admitted by GenesisCode before their references affect traversal.
+            let commit = match CommitAuthority::validate_typed_commit(policy, commit_authority, &t)
+            {
+                Ok(commit) => commit,
+                Err(error) => {
+                    return Err(mk_error(
+                        stats.error_tok,
+                        "core/sync/bad-commit",
+                        format!("commit authority rejected {h}: {error}"),
+                        Some(stats.op),
+                    ));
+                }
+            };
+            if let Some(c) = commit {
                 if let Some(b) = c.base {
                     q.push_back((b, dleft));
                 }

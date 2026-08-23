@@ -52,6 +52,7 @@ CONSTANTS = {
         "native-commit-object-construction", "native-commit-object-field-closure",
         "native-commit-object-identity-admission", "native-commit-object-inspection-admission",
         "native-commit-author-metadata-construction", "vcs-history-commit-object-admission",
+        "gpk-and-sync-closure-commit-admission",
         "request-bound-result-verdict",
     ],
     "hostMechanisms": [
@@ -72,7 +73,7 @@ CONSTANTS = {
 }
 NONCLAIMS = {
     "bootstrap-fixpoint", "h2-sd-canon-identity", "h2-sd-commit",
-    "package-registry-gpk-sync-commit-authority", "r4-2-e-closure",
+    "package-and-registry-commit-authority", "r4-2-e-closure",
     "release-qualification", "sh-c-closure", "wasi-commit-cli-authority",
 }
 
@@ -160,6 +161,8 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         "validation result substituted the submitted artifact",
         "strict_decoder_rejects_open_unbound_and_substituted_results",
         "strict_decoder_accepts_runtime_map_results",
+        "pub(crate) fn validate_typed_commit(", "if !is_typed_commit(artifact)",
+        "typed_commit_classifier_is_exact_and_does_not_capture_other_objects",
     ], "Rust commit authority bridge")
     for default in ("unwrap_or_default()", "unwrap_or(true)", "unwrap_or(Term::Map"):
         if default in bridge:
@@ -213,6 +216,37 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
     if "gc_vcs::Commit::from_term" in dispatch or "gc_vcs::Commit::from_term" in history:
         fail("VCS history retains native commit acceptance")
 
+    gpk_route_path = "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs"
+    gpk_route = read_text(root, gpk_route_path, overrides)
+    gpk_closure_path = "crates/gc_effects/src/runner_gc_ops.rs"
+    gpk_closure = read_text(root, gpk_closure_path, overrides)
+    sync_pull_path = "crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs"
+    sync_pull = read_text(root, sync_pull_path, overrides)
+    sync_route_path = "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs"
+    sync_route = read_text(root, sync_route_path, overrides)
+    require_all(gpk_route, [
+        "CommitAuthority::validate_typed_commit(", "root_commit_admitted: root_commit.is_some()",
+        '"core/gpk/bad-commit"', "&mut commit_authority",
+    ], "GPK root commit admission")
+    require_all(gpk_closure, [
+        "CommitAuthority::validate_typed_commit(policy, commit_authority, &t)",
+        '"core/gpk/bad-commit"',
+    ], "GPK closure commit admission")
+    require_all(sync_pull, [
+        "CommitAuthority::validate_typed_commit(policy, commit_authority, &t)",
+        '"core/sync/bad-commit"',
+    ], "sync pull closure commit admission")
+    require_all(sync_route, [
+        "sync_closure_local(", "CommitAuthority::validate_typed_commit(policy, commit_authority, &t)",
+        '"core/sync/bad-commit"', "let mut commit_authority = None;",
+    ], "sync push closure commit admission")
+    for path, route in (
+        (gpk_route_path, gpk_route), (gpk_closure_path, gpk_closure),
+        (sync_pull_path, sync_pull), (sync_route_path, sync_route),
+    ):
+        if "gc_vcs::Commit::from_term" in route:
+            fail(f"{path} retains native commit acceptance")
+
     tests_path = "crates/gc_cli/tests/cli_commit.rs"
     tests = read_text(root, tests_path, overrides)
     require_all(tests, [
@@ -227,6 +261,20 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         '.stdout(predicate::str::contains("core/vcs/bad-commit"))',
         '.args(["--selfhost-artifact", artifact.to_str().unwrap()])',
     ], "VCS history commit authority tests")
+    sync_tests_a_path = "crates/gc_effects/tests/sync_registry/cases_a.rs"
+    sync_tests_a = read_text(root, sync_tests_a_path, overrides)
+    sync_tests_b_path = "crates/gc_effects/tests/sync_registry/cases_b.rs"
+    sync_tests_b = read_text(root, sync_tests_b_path, overrides)
+    require_all(sync_tests_a, [
+        "sync_push_rejects_open_typed_commit_before_remote_upload",
+        "sync_pull_rejects_open_typed_commit_before_local_ref_update",
+        '"core/sync/bad-commit"', "assert!(!reg.has(&commit_hash))",
+        'assert_eq!(refs.get("refs/heads/open").unwrap(), None)',
+    ], "sync commit authority negative controls")
+    require_all(sync_tests_b, [
+        "gpk_export_rejects_open_typed_commit_before_bundle_write",
+        '"core/gpk/bad-commit"', "assert!(!output.exists())",
+    ], "GPK commit authority negative control")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-COMMIT"]
@@ -239,13 +287,18 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
             or bridge_path not in row.get("productionAuthorityPaths", [])
             or profile["spec"] not in row.get("specAuthorityPaths", [])
             or profile["independentVerifier"] not in row.get("verifierPaths", [])
-            or "package/registry/GPK/sync" not in limitations):
+            or "package/registry commit" not in limitations
+            or gpk_route_path not in row.get("productionAuthorityPaths", [])
+            or gpk_closure_path not in row.get("productionAuthorityPaths", [])
+            or sync_pull_path not in row.get("productionAuthorityPaths", [])
+            or sync_route_path not in row.get("productionAuthorityPaths", [])):
         fail("SD-COMMIT partial H0 custody drift")
 
     spec = read_text(root, profile["spec"], overrides)
     require_all(spec, [
         "This slice remains H0", "sole producer of canonical v1 commit construction",
-        "Package, registry, GPK, and sync paths", "substitute a different artifact",
+        "Package and registry paths", "GPK export and sync push/pull closure traversal",
+        "substitute a different artifact",
         "does not close `SD-COMMIT`", "permanent source/route mutations",
     ], "commit authority specification")
 
@@ -262,9 +315,14 @@ def mutation_controls(root: Path, profile) -> int:
         "crates/gc_effects/src/commit_authority.rs",
         "crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs",
         "crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs",
+        "crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs",
+        "crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs",
+        "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
         "crates/gc_cli_driver/src/commit_authority.rs", "crates/gc_cli_driver/src/cmd_commit.rs",
         "selfhost/cli_reachability_rules_v1.gc", "crates/gc_cli/tests/cli_commit.rs",
-        "crates/gc_cli/tests/cli_vcs_engine.rs",
+        "crates/gc_cli/tests/cli_vcs_engine.rs", "crates/gc_effects/tests/sync_registry/cases_a.rs",
+        "crates/gc_effects/tests/sync_registry/cases_b.rs",
     ]
     paths = {name: (root / name).read_text() for name in names}
     source = paths[profile["sourceModule"]]
@@ -274,9 +332,15 @@ def mutation_controls(root: Path, profile) -> int:
     cmd = paths["crates/gc_cli_driver/src/cmd_commit.rs"]
     dispatch = paths["crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs"]
     history = paths["crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs"]
+    gpk_route = paths["crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs"]
+    gpk_closure = paths["crates/gc_effects/src/runner_gc_ops.rs"]
+    sync_pull = paths["crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs"]
+    sync_route = paths["crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs"]
     selfhost_consumer = paths["selfhost/cli_reachability_rules_v1.gc"]
     tests = paths["crates/gc_cli/tests/cli_commit.rs"]
     vcs_tests = paths["crates/gc_cli/tests/cli_vcs_engine.rs"]
+    sync_tests_a = paths["crates/gc_effects/tests/sync_registry/cases_a.rs"]
+    sync_tests_b = paths["crates/gc_effects/tests/sync_registry/cases_b.rs"]
     mutations = [
         ({profile["sourceModule"]: source.replace("(quote :make)", "(quote :removed)", 1)}, "make operation"),
         ({profile["sourceModule"]: source.replace("(quote :validate)", "(quote :removed)", 1)}, "validate operation"),
@@ -288,6 +352,7 @@ def mutation_controls(root: Path, profile) -> int:
         ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("value.to_plain_term()", "value.as_data().cloned()", 1)}, "runtime collection decoder"),
         ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("result field set mismatch", "removed field closure", 1)}, "result closure"),
         ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("validation result substituted the submitted artifact", "validation accepted substitution", 1)}, "artifact substitution"),
+        ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("if !is_typed_commit(artifact)", "if false")}, "typed commit classifier route"),
         ({"crates/gc_cli_driver/src/commit_authority.rs": adapter.replace("load(cli)?.make(payload)", "removed_authority_make(payload)", 1)}, "shared native adapter"),
         ({"crates/gc_cli_driver/src/cmd_commit.rs": cmd.replace("commit_authority::make(", "removed_authority::make(", 1)}, "construction route"),
         ({"crates/gc_cli_driver/src/cmd_commit.rs": cmd.replace('commit_authority::validate(cli, artifact, "commit/show")', "Ok(artifact)", 1)}, "inspection route"),
@@ -295,8 +360,15 @@ def mutation_controls(root: Path, profile) -> int:
         ({"selfhost/cli_reachability_rules_v1.gc": selfhost_consumer.replace("(core/commit::authority request)", "commit", 1)}, "self-hosted VCS admission route"),
         ({"crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs": dispatch.replace("let mut commit_authority = load_commit_authority(policy)?;", "let mut commit_authority = removed_authority(policy)?;")}, "low-level VCS authority load"),
         ({"crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs": history.replace(".validate_commit(t.clone())", ".removed_validate(t.clone())", 1)}, "VCS traversal validation"),
+        ({"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk_route.replace("CommitAuthority::validate_typed_commit(", "CommitAuthority::removed_typed_commit(", 1)}, "GPK root admission"),
+        ({"crates/gc_effects/src/runner_gc_ops.rs": gpk_closure.replace("CommitAuthority::validate_typed_commit(policy, commit_authority, &t)", "CommitAuthority::removed_typed_commit(policy, commit_authority, &t)", 1)}, "GPK closure admission"),
+        ({"crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs": sync_pull.replace("CommitAuthority::validate_typed_commit(policy, commit_authority, &t)", "CommitAuthority::removed_typed_commit(policy, commit_authority, &t)", 1)}, "sync pull admission"),
+        ({"crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs": sync_route.replace("CommitAuthority::validate_typed_commit(policy, commit_authority, &t)", "CommitAuthority::removed_typed_commit(policy, commit_authority, &t)", 1)}, "sync push admission"),
         ({"crates/gc_cli/tests/cli_commit.rs": tests.replace("commit_show_rejects_open_commit_objects", "removed_open_commit_control", 1)}, "negative control"),
         ({"crates/gc_cli/tests/cli_vcs_engine.rs": vcs_tests.replace("vcs_log_rejects_open_commit_before_history_projection", "removed_vcs_open_commit_control", 1)}, "VCS negative control"),
+        ({"crates/gc_effects/tests/sync_registry/cases_a.rs": sync_tests_a.replace("sync_push_rejects_open_typed_commit_before_remote_upload", "removed_sync_push_open_commit_control", 1)}, "sync push negative control"),
+        ({"crates/gc_effects/tests/sync_registry/cases_a.rs": sync_tests_a.replace("sync_pull_rejects_open_typed_commit_before_local_ref_update", "removed_sync_pull_open_commit_control", 1)}, "sync pull negative control"),
+        ({"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests_b.replace("gpk_export_rejects_open_typed_commit_before_bundle_write", "removed_gpk_open_commit_control", 1)}, "GPK negative control"),
     ]
     passed = 0
     for overrides, name in mutations:

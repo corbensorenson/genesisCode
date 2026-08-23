@@ -2,7 +2,7 @@
   "artifact": "selfhost/toolchain.gc",
   "auditDate": "2026-08-23",
   "binding": "core/commit::authority",
-  "contentIdentitySha256": "93ed29640556722ca525ad0b25aa8c052287d2f3fa4db78c64c263d6950a4dbd",
+  "contentIdentitySha256": "51f526ceec430de9298a84aedc7fe1c7ac0ba0ceeb38e8f71b4523c64e9a36ab",
   "decisionInventory": [
     "native-commit-object-construction",
     "native-commit-object-field-closure",
@@ -10,6 +10,7 @@
     "native-commit-object-inspection-admission",
     "native-commit-author-metadata-construction",
     "vcs-history-commit-object-admission",
+    "gpk-and-sync-closure-commit-admission",
     "request-bound-result-verdict"
   ],
   "hostMechanisms": [
@@ -31,7 +32,7 @@
     "bootstrap-fixpoint",
     "h2-sd-canon-identity",
     "h2-sd-commit",
-    "package-registry-gpk-sync-commit-authority",
+    "package-and-registry-commit-authority",
     "r4-2-e-closure",
     "release-qualification",
     "sh-c-closure",

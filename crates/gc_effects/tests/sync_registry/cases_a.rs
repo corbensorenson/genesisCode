@@ -261,6 +261,108 @@ fn sync_push_then_pull_transfers_full_closure_and_updates_refs() {
 }
 
 #[test]
+fn sync_push_rejects_open_typed_commit_before_remote_upload() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_sync_push_open_commit", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_push_open_commit");
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+    let store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let patch = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hash = store.put_bytes(print_term(&patch).as_bytes()).unwrap();
+    let snapshot = parse_term(
+        r#"{:type :vcs/snapshot :v 1 :kind :module :module/name "open" :defs {} :exports [] :obligations []}"#,
+    )
+    .unwrap();
+    let snapshot_hash = store.put_bytes(print_term(&snapshot).as_bytes()).unwrap();
+    let open_commit = mk_open_commit(&snapshot_hash, &patch_hash);
+    let commit_hash = store
+        .put_bytes(print_term(&open_commit).as_bytes())
+        .unwrap();
+
+    let payload = parse_term(&format!(
+        r#"{{:remote "{remote}" :roots ["{commit_hash}"] :depth 0}}"#
+    ))
+    .unwrap();
+    let (forms, hash) = mk_prog("core/sync::push", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let result = run(
+        &mut context,
+        &caps,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    assert!(is_sealed_error(
+        &context,
+        &result.value,
+        "core/sync/bad-commit"
+    ));
+    assert!(!reg.has(&commit_hash));
+    assert!(!reg.has(&patch_hash));
+    assert!(!reg.has(&snapshot_hash));
+}
+
+#[test]
+fn sync_pull_rejects_open_typed_commit_before_local_ref_update() {
+    let reg = Arc::new(MemRegistry::new());
+    gc_registry::register_inproc("t_sync_pull_open_commit", reg.clone()).expect("register inproc");
+    let (remote, remote_allow) = mk_remote("t_sync_pull_open_commit");
+    let patch = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hash = reg.put_artifact(print_term(&patch).as_bytes());
+    let snapshot = parse_term(
+        r#"{:type :vcs/snapshot :v 1 :kind :module :module/name "open" :defs {} :exports [] :obligations []}"#,
+    )
+    .unwrap();
+    let snapshot_hash = reg.put_artifact(print_term(&snapshot).as_bytes());
+    let open_commit = mk_open_commit(&snapshot_hash, &patch_hash);
+    let commit_hash = reg.put_artifact(print_term(&open_commit).as_bytes());
+    reg.st
+        .lock()
+        .expect("registry state")
+        .refs
+        .insert("refs/heads/open".to_string(), commit_hash);
+
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let caps = mk_caps_for_sync(&store_dir, &refs_path, &remote_allow);
+    let payload = parse_term(&format!(
+        r#"{{:remote "{remote}" :refs ["refs/heads/open"] :depth 0 :force true}}"#
+    ))
+    .unwrap();
+    let (forms, hash) = mk_prog("core/sync::pull", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let result = run(
+        &mut context,
+        &caps,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    assert!(is_sealed_error(
+        &context,
+        &result.value,
+        "core/sync/bad-commit"
+    ));
+    let refs = gc_effects::RefsDb::open(&refs_path).unwrap();
+    assert_eq!(refs.get("refs/heads/open").unwrap(), None);
+}
+
+#[test]
 fn sync_push_uses_chunked_upload_when_remote_advertises_small_chunks() {
     let reg = Arc::new(MemRegistry::new_with_max_chunk_bytes(32));
     gc_registry::register_inproc("t_sync_chunked", reg.clone()).expect("register inproc");

@@ -4,6 +4,8 @@ pub(super) fn gpk_export_closure_local(
     store: &ArtifactStore,
     root: &str,
     opts: GpkClosureOptions<'_>,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     out: &mut std::collections::BTreeSet<String>,
     error_tok: SealId,
     op: &str,
@@ -64,6 +66,16 @@ pub(super) fn gpk_export_closure_local(
             Ok(t) => t,
             Err(_) => continue,
         };
+        if !(is_root && opts.root_commit_admitted)
+            && let Err(error) = CommitAuthority::validate_typed_commit(policy, commit_authority, &t)
+        {
+            return Err(mk_error(
+                error_tok,
+                "core/gpk/bad-commit",
+                format!("commit authority rejected {h}: {error}"),
+                Some(op),
+            ));
+        }
         let is_evidence_artifact = gc_vcs::Evidence::from_term(&t).is_ok();
         let include_commit_evidence = match opts.include_evidence {
             GpkIncludeEvidence::None => false,

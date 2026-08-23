@@ -8,7 +8,7 @@ use gc_prelude::{
 };
 use thiserror::Error;
 
-use crate::policy::SelfhostAuthorityConfig;
+use crate::policy::{CapsPolicy, SelfhostAuthorityConfig};
 
 const BINDING: &str = "core/commit::authority";
 const REQUEST_KIND: &str = "genesis/commit-authority-request-v0.1";
@@ -86,6 +86,32 @@ impl CommitAuthority {
         Self::load(config.bootstrap_mode, config.artifact.as_deref())
     }
 
+    pub(crate) fn load_policy(policy: &CapsPolicy) -> Result<Self, CommitAuthorityError> {
+        let config = policy.selfhost_authority_config().ok_or_else(|| {
+            CommitAuthorityError::Bootstrap(
+                "operation requires the artifact-loaded GenesisCode commit authority".to_string(),
+            )
+        })?;
+        Self::load_config(config)
+    }
+
+    pub(crate) fn validate_typed_commit(
+        policy: &CapsPolicy,
+        authority: &mut Option<Self>,
+        artifact: &Term,
+    ) -> Result<Option<ValidatedCommit>, CommitAuthorityError> {
+        if !is_typed_commit(artifact) {
+            return Ok(None);
+        }
+        if authority.is_none() {
+            *authority = Some(Self::load_policy(policy)?);
+        }
+        let Some(authority) = authority.as_mut() else {
+            return Err(protocol("commit authority cache remained uninitialized"));
+        };
+        authority.validate_commit(artifact.clone()).map(Some)
+    }
+
     pub fn make(&mut self, payload: Term) -> Result<Term, CommitAuthorityError> {
         self.evaluate(":make", payload, None)
     }
@@ -128,6 +154,16 @@ impl CommitAuthority {
             .map_err(|error| CommitAuthorityError::Evaluation(error.to_string()))?;
         decode_result(value, &request_hash, expected_artifact)
     }
+}
+
+fn is_typed_commit(term: &Term) -> bool {
+    let Term::Map(fields) = term else {
+        return false;
+    };
+    matches!(
+        fields.get(&TermOrdKey(Term::symbol(":type"))),
+        Some(Term::Symbol(kind)) if kind == ":vcs/commit"
+    )
 }
 
 fn decode_result(
@@ -474,5 +510,22 @@ mod tests {
         };
         open.insert(TermOrdKey(Term::symbol(":extra")), Term::Nil);
         assert!(reify_commit(&Term::Map(open)).is_err());
+    }
+
+    #[test]
+    fn typed_commit_classifier_is_exact_and_does_not_capture_other_objects() {
+        assert!(is_typed_commit(&map([(
+            ":type",
+            Term::symbol(":vcs/commit")
+        )])));
+        assert!(!is_typed_commit(&map([(
+            ":type",
+            Term::symbol(":vcs/snapshot")
+        )])));
+        assert!(!is_typed_commit(&map([(
+            ":type",
+            Term::Str(":vcs/commit".to_string())
+        )])));
+        assert!(!is_typed_commit(&Term::Nil));
     }
 }

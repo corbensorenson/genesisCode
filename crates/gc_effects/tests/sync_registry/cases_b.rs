@@ -232,6 +232,75 @@ base_dir = "{}"
 }
 
 #[test]
+fn gpk_export_rejects_open_typed_commit_before_bundle_write() {
+    let td = tempfile::tempdir().unwrap();
+    let store_dir = td.path().join("store");
+    let refs_path = td.path().join("refs.gc");
+    let output = td.path().join("open.gpk");
+    let store = gc_effects::ArtifactStore::open(&store_dir).unwrap();
+    let patch = parse_term(r#"{:type :vcs/patch :v 1 :ops []}"#).unwrap();
+    let patch_hash = store.put_bytes(print_term(&patch).as_bytes()).unwrap();
+    let snapshot = parse_term(
+        r#"{:type :vcs/snapshot :v 1 :kind :module :module/name "open" :defs {} :exports [] :obligations []}"#,
+    )
+    .unwrap();
+    let snapshot_hash = store.put_bytes(print_term(&snapshot).as_bytes()).unwrap();
+    let open_commit = mk_open_commit(&snapshot_hash, &patch_hash);
+    let commit_hash = store
+        .put_bytes(print_term(&open_commit).as_bytes())
+        .unwrap();
+    let source = format!(
+        r#"
+allow = ["core/gpk-low::export"]
+
+[store]
+dir = "{}"
+
+[refs]
+path = "{}"
+
+[op."core/gpk-low::export"]
+base_dir = "{}"
+"#,
+        store_dir.display(),
+        refs_path.display(),
+        td.path().display(),
+    );
+    let caps = selfhost_sync_caps(&source);
+    let payload = parse_term(&format!(
+        r#"{{
+          :root "{commit_hash}"
+          :out "open.gpk"
+          :mode ":full"
+          :depth 0
+          :include-evidence "none"
+          :include-deps "none"
+        }}"#
+    ))
+    .unwrap();
+    let (forms, hash) = mk_prog("core/gpk-low::export", &payload);
+    let mut context = EvalCtx::new();
+    let prelude = build_prelude(&mut context);
+    let mut environment = prelude.env;
+    let program = eval_module(&mut context, &mut environment, &forms).unwrap();
+    let result = run(
+        &mut context,
+        &caps,
+        program,
+        hash,
+        "gc_effects-test".to_string(),
+    )
+    .unwrap();
+
+    assert!(is_sealed_error(
+        &context,
+        &result.value,
+        "core/gpk/bad-commit"
+    ));
+    assert!(!output.exists());
+}
+
+#[test]
 fn sync_remote_allowlist_is_enforced() {
     let reg = Arc::new(MemRegistry::new());
     gc_registry::register_inproc("t3", reg).expect("register inproc");

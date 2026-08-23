@@ -1049,6 +1049,26 @@ fn mk_commit(result_hex: &str, patch_hex: &str, evidence_hex: &str) -> Term {
     .expect("commit term")
 }
 
+fn mk_open_commit(result_hex: &str, patch_hex: &str) -> Term {
+    parse_term(&format!(
+        r#"{{
+          :type :vcs/commit
+          :v 1
+          :parents []
+          :target {{ :kind :package :name "my-lib" }}
+          :base nil
+          :patch "{patch_hex}"
+          :result "{result_hex}"
+          :obligations []
+          :evidence []
+          :attestations []
+          :message "open commit must be rejected"
+          :undeclared-field true
+        }}"#
+    ))
+    .expect("open commit term")
+}
+
 fn is_sealed_error(ctx: &EvalCtx, v: &Value, code: &str) -> bool {
     let Some(proto) = ctx.protocol else {
         return false;
