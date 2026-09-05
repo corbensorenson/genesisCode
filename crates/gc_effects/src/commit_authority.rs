@@ -49,6 +49,18 @@ pub(crate) struct ValidatedCommit {
     pub(crate) why: Term,
 }
 
+impl ValidatedCommit {
+    pub(crate) fn obligation_name_terms(&self) -> Result<Vec<Term>, CommitAuthorityError> {
+        self.obligations
+            .iter()
+            .map(|obligation| match obligation {
+                Term::Symbol(name) | Term::Str(name) => Ok(Term::Str(name.clone())),
+                _ => Err(protocol("validated commit contains a non-name obligation")),
+            })
+            .collect()
+    }
+}
+
 impl CommitAuthority {
     pub fn load(
         bootstrap_mode: SelfhostBootstrapMode,
@@ -112,6 +124,20 @@ impl CommitAuthority {
         authority.validate_commit(artifact.clone()).map(Some)
     }
 
+    pub(crate) fn validate_expected_commit(
+        policy: &CapsPolicy,
+        authority: &mut Option<Self>,
+        artifact: &Term,
+    ) -> Result<ValidatedCommit, CommitAuthorityError> {
+        if authority.is_none() {
+            *authority = Some(Self::load_policy(policy)?);
+        }
+        let Some(authority) = authority.as_mut() else {
+            return Err(protocol("commit authority cache remained uninitialized"));
+        };
+        authority.validate_commit(artifact.clone())
+    }
+
     pub fn make(&mut self, payload: Term) -> Result<Term, CommitAuthorityError> {
         self.evaluate(":make", payload, None)
     }
@@ -132,28 +158,58 @@ impl CommitAuthority {
         reify_commit(&artifact)
     }
 
+    pub(crate) fn validate_with_binding(
+        context: &mut EvalCtx,
+        authority: &Value,
+        artifact: &Term,
+    ) -> Result<ValidatedCommit, CommitAuthorityError> {
+        let artifact = evaluate_binding(
+            context,
+            authority,
+            ":validate",
+            map([(":artifact", artifact.clone())]),
+            Some(artifact),
+        )?;
+        reify_commit(&artifact)
+    }
+
     fn evaluate(
         &mut self,
         op: &str,
         payload: Term,
         expected_artifact: Option<&Term>,
     ) -> Result<Term, CommitAuthorityError> {
-        let request = map([
-            (":kind", Term::Str(REQUEST_KIND.to_string())),
-            (":op", Term::symbol(op)),
-            (":payload", payload),
-            (":v", Term::Int(1.into())),
-        ]);
-        let request_hash = hex32(hash_term(&request));
-        self.context.reset_counters();
-        self.context.step_limit = Some(STEP_LIMIT);
-        let value = self
-            .authority
-            .clone()
-            .apply(&mut self.context, Value::data(request))
-            .map_err(|error| CommitAuthorityError::Evaluation(error.to_string()))?;
-        decode_result(value, &request_hash, expected_artifact)
+        evaluate_binding(
+            &mut self.context,
+            &self.authority,
+            op,
+            payload,
+            expected_artifact,
+        )
     }
+}
+
+fn evaluate_binding(
+    context: &mut EvalCtx,
+    authority: &Value,
+    op: &str,
+    payload: Term,
+    expected_artifact: Option<&Term>,
+) -> Result<Term, CommitAuthorityError> {
+    let request = map([
+        (":kind", Term::Str(REQUEST_KIND.to_string())),
+        (":op", Term::symbol(op)),
+        (":payload", payload),
+        (":v", Term::Int(1.into())),
+    ]);
+    let request_hash = hex32(hash_term(&request));
+    context.reset_counters();
+    context.step_limit = Some(STEP_LIMIT);
+    let value = authority
+        .clone()
+        .apply(context, Value::data(request))
+        .map_err(|error| CommitAuthorityError::Evaluation(error.to_string()))?;
+    decode_result(value, &request_hash, expected_artifact)
 }
 
 fn is_typed_commit(term: &Term) -> bool {
@@ -504,6 +560,10 @@ mod tests {
         ]);
         let view = reify_commit(&commit).expect("closed authority artifact should reify");
         assert_eq!(view.obligations, vec![Term::symbol(":proof/required")]);
+        assert_eq!(
+            view.obligation_name_terms().unwrap(),
+            vec![Term::Str(":proof/required".to_string())]
+        );
 
         let Term::Map(mut open) = commit else {
             panic!("commit fixture must be a map");

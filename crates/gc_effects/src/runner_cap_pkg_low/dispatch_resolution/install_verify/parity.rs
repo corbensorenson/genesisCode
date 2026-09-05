@@ -13,6 +13,7 @@ pub(super) fn handle_pkg_install_parity(
     mut refs_authority: Option<&mut RefsAuthority>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
+    commit_authority: &mut Option<CommitAuthority>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
     error_tok: SealId,
@@ -91,6 +92,7 @@ pub(super) fn handle_pkg_install_parity(
                 refs_authority.as_deref_mut(),
                 &l.registries,
                 policy,
+                commit_authority,
                 pol,
                 budget,
                 timeout_ms,
@@ -208,6 +210,7 @@ pub(super) fn handle_pkg_install_parity(
                     &l.registries,
                     registry_alias,
                     policy,
+                    commit_authority,
                     pol,
                     budget,
                     timeout_ms,
@@ -219,6 +222,8 @@ pub(super) fn handle_pkg_install_parity(
                 }
                 match validate_commit_artifact_closure(
                     store,
+                    policy,
+                    commit_authority,
                     name,
                     snapshot_hex,
                     commit_hex,
@@ -233,11 +238,18 @@ pub(super) fn handle_pkg_install_parity(
         }
     }
 
-    let deps_provenance =
-        match locked_dependency_provenance(store, &l.locked, strict, error_tok, op) {
-            Ok(v) => v,
-            Err(v) => return Ok(v),
-        };
+    let deps_provenance = match locked_dependency_provenance(
+        store,
+        policy,
+        commit_authority,
+        &l.locked,
+        strict,
+        error_tok,
+        op,
+    ) {
+        Ok(v) => v,
+        Err(v) => return Ok(v),
+    };
 
     let mut m = BTreeMap::new();
     m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(ok));
@@ -277,8 +289,10 @@ pub(super) fn handle_pkg_install_parity(
 pub(super) fn handle_pkg_verify_parity(
     payload: &Term,
     pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
+    commit_authority: &mut Option<CommitAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
@@ -368,6 +382,8 @@ pub(super) fn handle_pkg_verify_parity(
         if let Some(commit_hex) = &entry.commit {
             match validate_commit_artifact_closure(
                 store,
+                policy,
+                commit_authority,
                 name,
                 snapshot_hex,
                 commit_hex,

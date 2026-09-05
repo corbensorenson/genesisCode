@@ -85,6 +85,8 @@ fn compute_requirement_fingerprint_parity(
 
 pub(crate) fn validate_commit_artifact_closure(
     store: &ArtifactStore,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     dep_name: &str,
     snapshot_hex: &str,
     commit_hex: &str,
@@ -129,7 +131,8 @@ pub(crate) fn validate_commit_artifact_closure(
             ));
         }
     };
-    let c = match gc_vcs::Commit::from_term(&commit_term) {
+    let c = match CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)
+    {
         Ok(c) => c,
         Err(e) => {
             return Err(mk_error(
@@ -213,6 +216,8 @@ pub(crate) fn validate_commit_artifact_closure(
 pub(crate) fn validate_locked_entries_strict(
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     store: &ArtifactStore,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     requirements: &BTreeMap<String, gc_pkg::Requirement>,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
     require_evidence_for_obligations: bool,
@@ -412,6 +417,8 @@ pub(crate) fn validate_locked_entries_strict(
         if let Some(commit_hex) = &le.commit
             && let Err(v) = validate_commit_artifact_closure(
                 store,
+                policy,
+                commit_authority,
                 name,
                 &le.snapshot,
                 commit_hex,
@@ -431,6 +438,8 @@ pub(crate) fn validate_locked_entries_strict(
 #[cfg(any(test, feature = "parity-oracle"))]
 pub(crate) fn locked_dependency_provenance(
     store: &ArtifactStore,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
     strict: bool,
     error_tok: SealId,
@@ -442,12 +451,19 @@ pub(crate) fn locked_dependency_provenance(
         let mut obligations: Vec<Term> = Vec::new();
         if let Some(commit_hex) = &le.commit {
             match store_get_term(store, commit_hex).and_then(|term| {
-                gc_vcs::Commit::from_term(&term)
+                CommitAuthority::validate_expected_commit(policy, commit_authority, &term)
                     .map_err(|error| EffectsError::Log(format!("bad commit: {error}")))
             }) {
                 Ok(commit) => {
+                    obligations.extend(commit.obligation_name_terms().map_err(|error| {
+                        mk_error(
+                            error_tok,
+                            "core/pkg/bad-commit",
+                            format!("{name}: {error}"),
+                            Some(op),
+                        )
+                    })?);
                     evidence.extend(commit.evidence.into_iter().map(Term::Str));
-                    obligations.extend(commit.obligations.into_iter().map(Term::Str));
                 }
                 Err(error) if strict => {
                     return Err(mk_error(

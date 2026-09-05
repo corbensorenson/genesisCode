@@ -665,7 +665,7 @@
     "crates/gc_cli_driver/src/cli_args/pkg_cmd.rs",
     "crates/gc_cli_driver/src/cli_args/policy_gc_vcs_cmd.rs"
   ],
-  "contentIdentitySha256": "1a1c017034eed233a8b44c99b277942a3384ed90be3f13fbc3154be485f4d2ee",
+  "contentIdentitySha256": "244c95102b7386fa6d9d16f1a1fe4cb6b87fb686cf6ee7e60e6946aeb89bd8c4",
   "kind": "genesis/semantic-ownership-ledger-v0.1",
   "nonclaims": [
     "does-not-promote-any-semantic-decision",
@@ -1914,8 +1914,8 @@
       "id": "SD-COMMIT",
       "internalOnly": false,
       "limitations": [
-        "Artifact-loaded GenesisCode exclusively constructs and validates canonical v1 commit objects for native commit new/show; admits every stored commit consumed by self-hosted or low-level VCS log/blame/why; and admits every exact typed commit before it affects GPK export or sync push/pull closure traversal under genesis/selfhost-commit-authority-v0.1",
-        "Ref resolution, patch/store/signing mechanisms, VCS/GPK/sync traversal and projection, command orchestration, WASI commit CLI support, and package/registry commit construction and decoding remain host-authoritative or outside this authority, so SD-COMMIT remains H0"
+        "Artifact-loaded GenesisCode exclusively constructs and validates canonical v1 commit objects for native commit new/show; admits every stored commit consumed by self-hosted or low-level VCS log/blame/why; admits every exact typed commit before it affects GPK export or sync push/pull closure traversal; and admits every package commit before resolution, closure validation, provenance, install, verify, or package-bridge finalization under genesis/selfhost-commit-authority-v0.1",
+        "Ref resolution, patch/store/signing mechanisms, VCS/GPK/sync traversal and projection, package resolution/closure/bridge mechanisms, command orchestration, WASI commit CLI support, and registry commit decoding remain host-authoritative or outside this authority, so SD-COMMIT remains H0"
       ],
       "migrationTasks": [
         "R4.2.e"
@@ -1931,6 +1931,14 @@
         "crates/gc_effects/src/runner_gc_ops.rs",
         "crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs",
         "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs",
+        "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/pkg_bridge_authority.rs",
         "crates/gc_cli_driver/src/commit_authority.rs",
         "crates/gc_cli_driver/src/cmd_commit.rs"
       ],
@@ -1944,6 +1952,14 @@
         "crates/gc_effects/src/runner_gc_ops.rs",
         "crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs",
         "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs",
+        "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/pkg_bridge_authority.rs",
         "crates/gc_cli_driver/src/commit_authority.rs",
         "crates/gc_cli_driver/src/cmd_commit.rs"
       ],
@@ -1958,6 +1974,7 @@
       "testPaths": [
         "crates/gc_cli/tests/cli_commit.rs",
         "crates/gc_cli/tests/cli_vcs_engine.rs",
+        "crates/gc_cli/tests/cli_pkg_lock.rs",
         "crates/gc_effects/tests/sync_registry/cases_a.rs",
         "crates/gc_effects/tests/sync_registry/cases_b.rs"
       ],
@@ -1965,6 +1982,7 @@
       "verifierPaths": [
         "crates/gc_cli/tests/cli_commit.rs",
         "crates/gc_cli/tests/cli_vcs_engine.rs",
+        "crates/gc_cli/tests/cli_pkg_lock.rs",
         "crates/gc_effects/tests/sync_registry/cases_a.rs",
         "crates/gc_effects/tests/sync_registry/cases_b.rs",
         "scripts/lib/selfhost_commit_authority.py"

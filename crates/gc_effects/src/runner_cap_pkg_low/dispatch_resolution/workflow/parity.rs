@@ -76,6 +76,8 @@ pub(super) fn finalize_workflow_parity(
     workflow: PkgResolutionWorkflow,
     executed: &ExecutedWorkflow,
     store: &ArtifactStore,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     strict: bool,
     error_tok: SealId,
     op: &str,
@@ -145,7 +147,15 @@ pub(super) fn finalize_workflow_parity(
             resolved,
         ));
     }
-    let provenance = locked_dependency_provenance(store, &locked, strict, error_tok, op)?;
+    let provenance = locked_dependency_provenance(
+        store,
+        policy,
+        commit_authority,
+        &locked,
+        strict,
+        error_tok,
+        op,
+    )?;
     let rationale_artifact = term_map([
         (
             ":data",

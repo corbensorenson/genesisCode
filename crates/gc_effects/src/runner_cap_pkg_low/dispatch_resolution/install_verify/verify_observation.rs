@@ -15,6 +15,8 @@ fn failure(
 
 pub(super) fn observe_verify_commit_closure(
     store: &ArtifactStore,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     snapshot_hex: &str,
     commit_hex: &str,
 ) -> PkgVerifyClosureObservation {
@@ -53,16 +55,17 @@ pub(super) fn observe_verify_commit_closure(
             );
         }
     };
-    let commit = match gc_vcs::Commit::from_term(&commit_term) {
-        Ok(commit) => commit,
-        Err(error) => {
-            return failure(
-                PkgVerifyClosureStatus::BadCommit,
-                None,
-                Some(error.to_string()),
-            );
-        }
-    };
+    let commit =
+        match CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term) {
+            Ok(commit) => commit,
+            Err(error) => {
+                return failure(
+                    PkgVerifyClosureStatus::BadCommit,
+                    None,
+                    Some(error.to_string()),
+                );
+            }
+        };
     if commit.result != snapshot_hex {
         return failure(PkgVerifyClosureStatus::SnapshotMismatch, None, None);
     }

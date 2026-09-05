@@ -5,6 +5,7 @@ use gc_kernel::{Apply, EvalCtx, MemLimits, Value};
 use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 
 use crate::EffectsError;
+use crate::commit_authority::CommitAuthority;
 use crate::policy::SelfhostAuthorityConfig;
 
 #[path = "pkg_lock_model_authority.rs"]
@@ -50,6 +51,7 @@ const ALLOC_LIMIT: u64 = 80_000_000;
 pub(crate) struct PkgLockReadAuthority {
     context: EvalCtx,
     authority: Value,
+    commit_authority: Value,
     model_authority: Option<Value>,
     ops_authority: Option<Value>,
     bridge_authority: Option<Value>,
@@ -105,6 +107,9 @@ impl PkgLockReadAuthority {
         let authority = environment
             .get(BINDING)
             .ok_or_else(|| authority_error(format!("missing binding {BINDING}")))?;
+        let commit_authority = environment
+            .get("core/commit::authority")
+            .ok_or_else(|| authority_error("missing binding core/commit::authority"))?;
         let model_authority = environment.get(model::MODEL_BINDING);
         let ops_authority = environment.get(ops::OPS_BINDING);
         let bridge_authority = environment.get(bridge::BRIDGE_BINDING);
@@ -115,6 +120,7 @@ impl PkgLockReadAuthority {
         Ok(Self {
             context,
             authority,
+            commit_authority,
             model_authority,
             ops_authority,
             bridge_authority,

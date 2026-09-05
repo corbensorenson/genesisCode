@@ -53,11 +53,13 @@ CONSTANTS = {
         "native-commit-object-identity-admission", "native-commit-object-inspection-admission",
         "native-commit-author-metadata-construction", "vcs-history-commit-object-admission",
         "gpk-and-sync-closure-commit-admission",
+        "package-commit-object-admission",
         "request-bound-result-verdict",
     ],
     "hostMechanisms": [
         "artifact-only-authority-bootstrap-and-bounded-evaluation", "cli-argument-transport",
         "ref-and-store-mechanisms", "patch-application-mechanism",
+        "package-resolution-and-bridge-mechanisms",
         "artifact-hash-contradiction-check", "diagnostic-rendering",
     ],
     "hostOracle": {"parityOnly": True, "productionRequired": False, "removalTask": "R4.2.e"},
@@ -73,7 +75,7 @@ CONSTANTS = {
 }
 NONCLAIMS = {
     "bootstrap-fixpoint", "h2-sd-canon-identity", "h2-sd-commit",
-    "package-and-registry-commit-authority", "r4-2-e-closure",
+    "registry-commit-authority", "r4-2-e-closure",
     "release-qualification", "sh-c-closure", "wasi-commit-cli-authority",
 }
 
@@ -162,6 +164,8 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         "strict_decoder_rejects_open_unbound_and_substituted_results",
         "strict_decoder_accepts_runtime_map_results",
         "pub(crate) fn validate_typed_commit(", "if !is_typed_commit(artifact)",
+        "pub(crate) fn validate_expected_commit(", "pub(crate) fn validate_with_binding(",
+        "obligation_name_terms",
         "typed_commit_classifier_is_exact_and_does_not_capture_other_objects",
     ], "Rust commit authority bridge")
     for default in ("unwrap_or_default()", "unwrap_or(true)", "unwrap_or(Term::Map"):
@@ -247,6 +251,86 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         if "gc_vcs::Commit::from_term" in route:
             fail(f"{path} retains native commit acceptance")
 
+    pkg_resolution_path = "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs"
+    pkg_resolution = read_text(root, pkg_resolution_path, overrides)
+    pkg_lock_validation_path = (
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs"
+    )
+    pkg_lock_validation = read_text(root, pkg_lock_validation_path, overrides)
+    pkg_dispatch_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs"
+    pkg_dispatch = read_text(root, pkg_dispatch_path, overrides)
+    pkg_workflow_path = (
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs"
+    )
+    pkg_workflow = read_text(root, pkg_workflow_path, overrides)
+    pkg_install_path = (
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs"
+    )
+    pkg_install = read_text(root, pkg_install_path, overrides)
+    pkg_verify_observation_path = (
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/"
+        "install_verify/verify_observation.rs"
+    )
+    pkg_verify_observation = read_text(root, pkg_verify_observation_path, overrides)
+    pkg_lock_read_path = "crates/gc_effects/src/pkg_lock_read_authority.rs"
+    pkg_lock_read = read_text(root, pkg_lock_read_path, overrides)
+    pkg_bridge_path = "crates/gc_effects/src/pkg_bridge_authority.rs"
+    pkg_bridge = read_text(root, pkg_bridge_path, overrides)
+    require_all(pkg_resolution, [
+        "commit_authority: &mut Option<CommitAuthority>",
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &t)",
+    ], "package selector commit admission")
+    if pkg_resolution.count(
+            "CommitAuthority::validate_expected_commit(policy, commit_authority, &t)") != 3:
+        fail("commit, ref, and semver package selectors must share commit authority")
+    require_all(pkg_lock_validation, [
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)",
+        "obligation_name_terms()",
+    ], "package strict closure and provenance commit admission")
+    require_all(pkg_dispatch, [
+        "let mut commit_authority = None;", "&mut commit_authority",
+    ], "package operation authority lifetime")
+    require_all(pkg_workflow, [
+        "pub(super) fn commit_observations(", "obligation_name_terms()",
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &term)",
+        "Result<Vec<Term>, Value>",
+    ], "package workflow commit admission")
+    require_all(pkg_install, [
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)",
+        "observe_verify_commit_closure(", "commit_observations(",
+    ], "package install commit admission")
+    require_all(pkg_verify_observation, [
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)",
+        "PkgVerifyClosureStatus::BadCommit",
+    ], "package verify commit admission")
+    require_all(pkg_lock_read, [
+        '.get("core/commit::authority")',
+        "commit_authority: Value",
+    ], "package bridge commit binding custody")
+    require_all(pkg_bridge, [
+        "CommitAuthority::validate_with_binding(",
+        "&self.commit_authority", "gc_vcs::commit_signing_hash(&commit.term)",
+        "verify_commit_attestation(",
+    ], "package bridge final commit admission")
+    if pkg_bridge.count("CommitAuthority::validate_with_binding(") != 2:
+        fail("package bridge production and positive control must both use commit authority")
+    for path, route in (
+        (pkg_resolution_path, pkg_resolution),
+        (pkg_lock_validation_path, pkg_lock_validation),
+        (pkg_workflow_path, pkg_workflow),
+        (pkg_install_path, pkg_install),
+        (pkg_verify_observation_path, pkg_verify_observation),
+        (pkg_bridge_path, pkg_bridge),
+    ):
+        if "gc_vcs::Commit::from_term" in route:
+            fail(f"{path} retains native package commit acceptance")
+
+    effects_source_root = root / "crates/gc_effects/src"
+    for source_path in effects_source_root.rglob("*.rs"):
+        relative = source_path.relative_to(root).as_posix()
+        if "gc_vcs::Commit::from_term" in read_text(root, relative, overrides):
+            fail(f"{relative} reintroduces native commit acceptance")
+
     tests_path = "crates/gc_cli/tests/cli_commit.rs"
     tests = read_text(root, tests_path, overrides)
     require_all(tests, [
@@ -275,6 +359,18 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         "gpk_export_rejects_open_typed_commit_before_bundle_write",
         '"core/gpk/bad-commit"', "assert!(!output.exists())",
     ], "GPK commit authority negative control")
+    pkg_tests_path = "crates/gc_cli/tests/cli_pkg_lock.rs"
+    pkg_tests = read_text(root, pkg_tests_path, overrides)
+    require_all(pkg_tests, [
+        "pkg_lifecycle_rejects_open_typed_commit_without_lock_mutation",
+        'for operation in ["lock", "update"]',
+        'for operation in ["install", "verify"]',
+        'contains("core/pkg/bad-commit")',
+        "assert_eq!(fs::read(&lock_path).unwrap(), unresolved_lock)",
+        "assert_eq!(fs::read(&lock_path).unwrap(), locked_bytes)",
+        "gcpm_lock_and_install_emit_workspace_and_dependency_provenance",
+        '.args(["verify"])',
+    ], "package commit authority lifecycle controls")
 
     ledger = load_json(root / "docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json")
     rows = [row for row in ledger.get("semanticDecisions", []) if row.get("id") == "SD-COMMIT"]
@@ -287,17 +383,25 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
             or bridge_path not in row.get("productionAuthorityPaths", [])
             or profile["spec"] not in row.get("specAuthorityPaths", [])
             or profile["independentVerifier"] not in row.get("verifierPaths", [])
-            or "package/registry commit" not in limitations
+            or "registry commit" not in limitations
+            or "package commit" not in limitations
             or gpk_route_path not in row.get("productionAuthorityPaths", [])
             or gpk_closure_path not in row.get("productionAuthorityPaths", [])
             or sync_pull_path not in row.get("productionAuthorityPaths", [])
-            or sync_route_path not in row.get("productionAuthorityPaths", [])):
+            or sync_route_path not in row.get("productionAuthorityPaths", [])
+            or pkg_resolution_path not in row.get("productionAuthorityPaths", [])
+            or pkg_lock_validation_path not in row.get("productionAuthorityPaths", [])
+            or pkg_workflow_path not in row.get("productionAuthorityPaths", [])
+            or pkg_install_path not in row.get("productionAuthorityPaths", [])
+            or pkg_verify_observation_path not in row.get("productionAuthorityPaths", [])
+            or pkg_bridge_path not in row.get("productionAuthorityPaths", [])
+            or pkg_tests_path not in row.get("testPaths", [])):
         fail("SD-COMMIT partial H0 custody drift")
 
     spec = read_text(root, profile["spec"], overrides)
     require_all(spec, [
         "This slice remains H0", "sole producer of canonical v1 commit construction",
-        "Package and registry paths", "GPK export and sync push/pull closure traversal",
+        "Registry paths", "package resolution", "GPK export and sync push/pull closure traversal",
         "substitute a different artifact",
         "does not close `SD-COMMIT`", "permanent source/route mutations",
     ], "commit authority specification")
@@ -319,10 +423,19 @@ def mutation_controls(root: Path, profile) -> int:
         "crates/gc_effects/src/runner_gc_ops.rs",
         "crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs",
         "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs",
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs",
+        "crates/gc_effects/src/pkg_lock_read_authority.rs",
+        "crates/gc_effects/src/pkg_bridge_authority.rs",
         "crates/gc_cli_driver/src/commit_authority.rs", "crates/gc_cli_driver/src/cmd_commit.rs",
         "selfhost/cli_reachability_rules_v1.gc", "crates/gc_cli/tests/cli_commit.rs",
         "crates/gc_cli/tests/cli_vcs_engine.rs", "crates/gc_effects/tests/sync_registry/cases_a.rs",
         "crates/gc_effects/tests/sync_registry/cases_b.rs",
+        "crates/gc_cli/tests/cli_pkg_lock.rs",
     ]
     paths = {name: (root / name).read_text() for name in names}
     source = paths[profile["sourceModule"]]
@@ -336,11 +449,24 @@ def mutation_controls(root: Path, profile) -> int:
     gpk_closure = paths["crates/gc_effects/src/runner_gc_ops.rs"]
     sync_pull = paths["crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs"]
     sync_route = paths["crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs"]
+    pkg_resolution = paths["crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs"]
+    pkg_lock_validation = paths[
+        "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs"]
+    pkg_dispatch = paths["crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs"]
+    pkg_workflow = paths[
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs"]
+    pkg_install = paths[
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs"]
+    pkg_verify_observation = paths[
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs"]
+    pkg_lock_read = paths["crates/gc_effects/src/pkg_lock_read_authority.rs"]
+    pkg_bridge = paths["crates/gc_effects/src/pkg_bridge_authority.rs"]
     selfhost_consumer = paths["selfhost/cli_reachability_rules_v1.gc"]
     tests = paths["crates/gc_cli/tests/cli_commit.rs"]
     vcs_tests = paths["crates/gc_cli/tests/cli_vcs_engine.rs"]
     sync_tests_a = paths["crates/gc_effects/tests/sync_registry/cases_a.rs"]
     sync_tests_b = paths["crates/gc_effects/tests/sync_registry/cases_b.rs"]
+    pkg_tests = paths["crates/gc_cli/tests/cli_pkg_lock.rs"]
     mutations = [
         ({profile["sourceModule"]: source.replace("(quote :make)", "(quote :removed)", 1)}, "make operation"),
         ({profile["sourceModule"]: source.replace("(quote :validate)", "(quote :removed)", 1)}, "validate operation"),
@@ -364,11 +490,22 @@ def mutation_controls(root: Path, profile) -> int:
         ({"crates/gc_effects/src/runner_gc_ops.rs": gpk_closure.replace("CommitAuthority::validate_typed_commit(policy, commit_authority, &t)", "CommitAuthority::removed_typed_commit(policy, commit_authority, &t)", 1)}, "GPK closure admission"),
         ({"crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs": sync_pull.replace("CommitAuthority::validate_typed_commit(policy, commit_authority, &t)", "CommitAuthority::removed_typed_commit(policy, commit_authority, &t)", 1)}, "sync pull admission"),
         ({"crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs": sync_route.replace("CommitAuthority::validate_typed_commit(policy, commit_authority, &t)", "CommitAuthority::removed_typed_commit(policy, commit_authority, &t)", 1)}, "sync push admission"),
+        ({"crates/gc_effects/src/commit_authority.rs": bridge.replace("pub(crate) fn validate_expected_commit(", "pub(crate) fn removed_expected_commit(", 1)}, "expected commit adapter"),
+        ({"crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs": pkg_resolution.replace("CommitAuthority::validate_expected_commit(policy, commit_authority, &t)", "CommitAuthority::removed_expected_commit(policy, commit_authority, &t)", 1)}, "package selector admission"),
+        ({"crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs": pkg_lock_validation.replace("CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)", "CommitAuthority::removed_expected_commit(policy, commit_authority, &commit_term)", 1)}, "package closure admission"),
+        ({"crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs": pkg_dispatch.replace("let mut commit_authority = None;", "let mut removed_authority = None;", 1)}, "package operation authority lifetime"),
+        ({"crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs": pkg_dispatch + "\n// gc_vcs::Commit::from_term\n"}, "gc_effects native parser exclusion"),
+        ({"crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/workflow.rs": pkg_workflow.replace("CommitAuthority::validate_expected_commit(policy, commit_authority, &term)", "CommitAuthority::removed_expected_commit(policy, commit_authority, &term)", 1)}, "package workflow admission"),
+        ({"crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs": pkg_install.replace("CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)", "CommitAuthority::removed_expected_commit(policy, commit_authority, &commit_term)", 1)}, "package install admission"),
+        ({"crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs": pkg_verify_observation.replace("CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)", "CommitAuthority::removed_expected_commit(policy, commit_authority, &commit_term)", 1)}, "package verify admission"),
+        ({"crates/gc_effects/src/pkg_lock_read_authority.rs": pkg_lock_read.replace('.get("core/commit::authority")', '.get("removed/commit::authority")', 1)}, "package bridge binding custody"),
+        ({"crates/gc_effects/src/pkg_bridge_authority.rs": pkg_bridge.replace("CommitAuthority::validate_with_binding(", "CommitAuthority::removed_validate_with_binding(", 1)}, "package bridge final admission"),
         ({"crates/gc_cli/tests/cli_commit.rs": tests.replace("commit_show_rejects_open_commit_objects", "removed_open_commit_control", 1)}, "negative control"),
         ({"crates/gc_cli/tests/cli_vcs_engine.rs": vcs_tests.replace("vcs_log_rejects_open_commit_before_history_projection", "removed_vcs_open_commit_control", 1)}, "VCS negative control"),
         ({"crates/gc_effects/tests/sync_registry/cases_a.rs": sync_tests_a.replace("sync_push_rejects_open_typed_commit_before_remote_upload", "removed_sync_push_open_commit_control", 1)}, "sync push negative control"),
         ({"crates/gc_effects/tests/sync_registry/cases_a.rs": sync_tests_a.replace("sync_pull_rejects_open_typed_commit_before_local_ref_update", "removed_sync_pull_open_commit_control", 1)}, "sync pull negative control"),
         ({"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests_b.replace("gpk_export_rejects_open_typed_commit_before_bundle_write", "removed_gpk_open_commit_control", 1)}, "GPK negative control"),
+        ({"crates/gc_cli/tests/cli_pkg_lock.rs": pkg_tests.replace("pkg_lifecycle_rejects_open_typed_commit_without_lock_mutation", "removed_pkg_open_commit_control", 1)}, "package lifecycle negative control"),
     ]
     passed = 0
     for overrides, name in mutations:

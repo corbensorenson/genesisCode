@@ -18,6 +18,7 @@ pub(super) struct ExecutedWorkflow {
 )]
 pub(super) fn execute_workflow(
     mut authority: Option<&mut PkgResolutionIdentityAuthority>,
+    commit_authority: &mut Option<CommitAuthority>,
     workflow: PkgResolutionWorkflow,
     only: &[String],
     lock_path: &str,
@@ -109,6 +110,7 @@ pub(super) fn execute_workflow(
                     refs_authority.as_deref_mut(),
                     &model.registries,
                     policy,
+                    commit_authority,
                     pol,
                     budget,
                     timeout_ms,
@@ -151,6 +153,7 @@ pub(super) fn execute_workflow(
                         refs_authority.as_deref_mut(),
                         &model.registries,
                         policy,
+                        commit_authority,
                         pol,
                         budget,
                         timeout_ms,
@@ -200,6 +203,8 @@ pub(super) fn execute_workflow(
 )]
 pub(super) fn finalize_workflow(
     mut authority: Option<&mut PkgResolutionIdentityAuthority>,
+    commit_authority: &mut Option<CommitAuthority>,
+    policy: &CapsPolicy,
     workflow: PkgResolutionWorkflow,
     only: &[String],
     _lock_path: &str,
@@ -211,7 +216,14 @@ pub(super) fn finalize_workflow(
     op: &str,
 ) -> Result<PkgWorkflowFinalized, Value> {
     let finalized = if let Some(workflow_authority) = authority.as_deref_mut() {
-        let commit_observations = commit_observations(store, &executed.resolved);
+        let commit_observations = commit_observations(
+            store,
+            policy,
+            commit_authority,
+            &executed.resolved,
+            error_tok,
+            op,
+        )?;
         match workflow_authority
             .finalize_workflow(
                 workflow,
@@ -237,7 +249,17 @@ pub(super) fn finalize_workflow(
     } else {
         #[cfg(any(test, feature = "parity-oracle"))]
         {
-            finalize_workflow_parity(model, workflow, &executed, store, strict, error_tok, op)?
+            finalize_workflow_parity(
+                model,
+                workflow,
+                &executed,
+                store,
+                policy,
+                commit_authority,
+                strict,
+                error_tok,
+                op,
+            )?
         }
         #[cfg(not(any(test, feature = "parity-oracle")))]
         {
@@ -255,6 +277,8 @@ pub(super) fn finalize_workflow(
         validate_locked_entries_strict(
             authority,
             store,
+            policy,
+            commit_authority,
             &model.requirements,
             &finalized.locked,
             true,
@@ -292,26 +316,52 @@ pub(super) fn finalize_workflow(
 
 pub(super) fn commit_observations(
     store: &ArtifactStore,
+    policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
-) -> Vec<Term> {
+    error_tok: SealId,
+    op: &str,
+) -> Result<Vec<Term>, Value> {
     locked
         .iter()
-        .map(|(name, entry)| {
+        .map(|(name, entry)| -> Result<Term, Value> {
             let (status, evidence, obligations) = match entry.commit.as_deref() {
                 None => (Term::symbol(":absent"), Vec::new(), Vec::new()),
-                Some(commit_hash) => match store_get_term(store, commit_hash).and_then(|term| {
-                    gc_vcs::Commit::from_term(&term)
-                        .map_err(|error| EffectsError::Log(format!("bad commit: {error}")))
-                }) {
-                    Ok(commit) => (
+                Some(commit_hash) => {
+                    let term = store_get_term(store, commit_hash).map_err(|error| {
+                        mk_error(
+                            error_tok,
+                            "core/pkg/bad-commit",
+                            format!("{name}: {error}"),
+                            Some(op),
+                        )
+                    })?;
+                    let commit =
+                        CommitAuthority::validate_expected_commit(policy, commit_authority, &term)
+                            .map_err(|error| {
+                                mk_error(
+                                    error_tok,
+                                    "core/pkg/bad-commit",
+                                    format!("{name}: {error}"),
+                                    Some(op),
+                                )
+                            })?;
+                    let obligations = commit.obligation_name_terms().map_err(|error| {
+                        mk_error(
+                            error_tok,
+                            "core/pkg/bad-commit",
+                            format!("{name}: {error}"),
+                            Some(op),
+                        )
+                    })?;
+                    (
                         Term::symbol(":valid"),
                         commit.evidence.into_iter().map(Term::Str).collect(),
-                        commit.obligations.into_iter().map(Term::Str).collect(),
-                    ),
-                    Err(_) => (Term::symbol(":invalid"), Vec::new(), Vec::new()),
-                },
+                        obligations,
+                    )
+                }
             };
-            Term::Map(
+            Ok(Term::Map(
                 [
                     (
                         TermOrdKey(Term::symbol(":commit")),
@@ -330,7 +380,7 @@ pub(super) fn commit_observations(
                 ]
                 .into_iter()
                 .collect(),
-            )
+            ))
         })
         .collect()
 }

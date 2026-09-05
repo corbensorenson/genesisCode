@@ -600,6 +600,14 @@ fn gcpm_lock_and_install_emit_workspace_and_dependency_provenance() {
         panic!("install deps must be vector");
     };
     assert_eq!(install_deps.len(), 1);
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["--coreform-frontend", "rust", "gcpm", "--caps"])
+        .arg(&caps)
+        .args(["verify"])
+        .assert()
+        .success();
 }
 
 #[cfg(feature = "parity-harness")]
@@ -673,6 +681,105 @@ fn pkg_lock_strict_rejects_commit_without_evidence() {
         .assert()
         .failure()
         .code(20);
+}
+
+#[cfg(feature = "parity-harness")]
+#[test]
+fn pkg_lifecycle_rejects_open_typed_commit_without_lock_mutation() {
+    let td = tempfile::tempdir().unwrap();
+    let dir = td.path();
+    let caps = write_caps(dir);
+    let patch_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/patch :v 1 :ops []}"#,
+        "open_patch.gc",
+    );
+    let snap_h = store_put(
+        dir,
+        &caps,
+        r#"{:type :vcs/snapshot :v 1 :kind :package :pkg/name "open" :pkg/version "0" :modules [] :obligations []}"#,
+        "open_snapshot.gc",
+    );
+    let commit_h = store_put(
+        dir,
+        &caps,
+        &format!(
+            r#"{{
+  :type :vcs/commit
+  :v 1
+  :parents []
+  :target {{ :kind :package :name "open" }}
+  :base nil
+  :patch "{patch_h}"
+  :result "{snap_h}"
+  :obligations []
+  :evidence []
+  :attestations []
+  :message "open"
+  :future-field true
+}}"#
+        ),
+        "open_commit.gc",
+    );
+
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["init", "--workspace", "ws"])
+        .assert()
+        .success();
+    cargo_bin_cmd!("genesis_parity")
+        .current_dir(dir)
+        .args(["pkg", "--caps"])
+        .arg(&caps)
+        .args(["add"])
+        .arg(format!("open@commit:{commit_h}"))
+        .assert()
+        .success();
+
+    let lock_path = dir.join("genesis.lock");
+    let unresolved_lock = fs::read(&lock_path).unwrap();
+    for operation in ["lock", "update"] {
+        cargo_bin_cmd!("genesis_parity")
+            .current_dir(dir)
+            .args(["pkg", "--caps"])
+            .arg(&caps)
+            .arg(operation)
+            .assert()
+            .failure()
+            .stdout(predicate::str::contains("core/pkg/bad-commit"));
+        assert_eq!(fs::read(&lock_path).unwrap(), unresolved_lock);
+    }
+
+    fs::write(
+        &lock_path,
+        format!(
+            r#"version = 2
+workspace = "ws"
+policy = "policy:default-v0.1"
+
+[requirements]
+"open" = {{ selector = "commit:{commit_h}", update_policy = "manual" }}
+
+[locked]
+"open" = {{ commit = "{commit_h}", snapshot = "{snap_h}", source_selector = "commit:{commit_h}" }}
+"#
+        ),
+    )
+    .unwrap();
+    let locked_bytes = fs::read(&lock_path).unwrap();
+    for operation in ["install", "verify"] {
+        cargo_bin_cmd!("genesis_parity")
+            .current_dir(dir)
+            .args(["pkg", "--caps"])
+            .arg(&caps)
+            .arg(operation)
+            .assert()
+            .failure();
+        assert_eq!(fs::read(&lock_path).unwrap(), locked_bytes);
+    }
 }
 
 #[cfg(feature = "parity-harness")]

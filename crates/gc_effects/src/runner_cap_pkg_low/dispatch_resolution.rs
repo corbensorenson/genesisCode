@@ -33,6 +33,7 @@ pub(super) fn dispatch_resolution(
     timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
     let mut refs_authority = refs_authority;
+    let mut commit_authority = None;
     match op_eff {
         "core/pkg-low::info" => {
             let lock_s = match payload_pkg_lock(payload) {
@@ -169,6 +170,7 @@ pub(super) fn dispatch_resolution(
 
             let executed = match execute_workflow(
                 identity_authority.as_deref_mut(),
+                &mut commit_authority,
                 PkgResolutionWorkflow::Lock,
                 &[],
                 &lock_s,
@@ -188,6 +190,8 @@ pub(super) fn dispatch_resolution(
             };
             let finalized = match finalize_workflow(
                 identity_authority.as_deref_mut(),
+                &mut commit_authority,
+                policy,
                 PkgResolutionWorkflow::Lock,
                 &[],
                 &lock_s,
@@ -329,6 +333,7 @@ pub(super) fn dispatch_resolution(
 
             let executed = match execute_workflow(
                 identity_authority.as_deref_mut(),
+                &mut commit_authority,
                 PkgResolutionWorkflow::Update,
                 &only_filter,
                 &lock_s,
@@ -348,6 +353,8 @@ pub(super) fn dispatch_resolution(
             };
             let finalized = match finalize_workflow(
                 identity_authority.as_deref_mut(),
+                &mut commit_authority,
+                policy,
                 PkgResolutionWorkflow::Update,
                 &only_filter,
                 &lock_s,
@@ -465,6 +472,7 @@ pub(super) fn dispatch_resolution(
             refs_authority.as_deref_mut(),
             lock_authority,
             identity_authority,
+            &mut commit_authority,
             budget,
             timeout_ms,
             error_tok,
@@ -474,9 +482,11 @@ pub(super) fn dispatch_resolution(
         "core/pkg-low::verify" => install_verify::handle_pkg_verify(
             payload,
             pol,
+            policy,
             store,
             lock_authority,
             identity_authority,
+            &mut commit_authority,
             error_tok,
             op,
         ),

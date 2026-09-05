@@ -317,6 +317,7 @@ pub(crate) fn resolve_requirement(
     mut refs_authority: Option<&mut RefsAuthority>,
     registries: &BTreeMap<String, String>,
     policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     op_pol: Option<&OpPolicy>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
@@ -380,7 +381,7 @@ pub(crate) fn resolve_requirement(
             )?;
             let t = store_get_term(store, &h)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
-            let c = gc_vcs::Commit::from_term(&t)
+            let c = CommitAuthority::validate_expected_commit(policy, commit_authority, &t)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let snapshot = c.result;
             ensure_artifact_hash_available(
@@ -466,7 +467,7 @@ pub(crate) fn resolve_requirement(
             )?;
             let t = store_get_term(store, &commit_hex)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
-            let c = gc_vcs::Commit::from_term(&t)
+            let c = CommitAuthority::validate_expected_commit(policy, commit_authority, &t)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let snapshot = c.result;
             ensure_artifact_hash_available(
@@ -613,7 +614,7 @@ pub(crate) fn resolve_requirement(
             )?;
             let t = store_get_term(store, &commit_hex)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
-            let c = gc_vcs::Commit::from_term(&t)
+            let c = CommitAuthority::validate_expected_commit(policy, commit_authority, &t)
                 .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
             let snapshot = c.result;
             ensure_artifact_hash_available(

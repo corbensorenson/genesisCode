@@ -141,8 +141,12 @@ impl PkgLockReadAuthority {
             std::slice::from_ref(&verifying_key),
         )
         .map_err(|error| authority_error(format!("bridge attestation contradiction: {error}")))?;
-        let parsed_commit = gc_vcs::Commit::from_term(&commit.term)
-            .map_err(|error| authority_error(format!("bridge commit invalid: {error}")))?;
+        let parsed_commit = CommitAuthority::validate_with_binding(
+            &mut self.context,
+            &self.commit_authority,
+            &commit.term,
+        )
+        .map_err(|error| authority_error(format!("bridge commit invalid: {error}")))?;
         if parsed_commit.attestations != vec![attestation.hash.clone()]
             || gc_vcs::commit_signing_hash(&commit.term)
                 .map_err(|error| authority_error(format!("bridge commit invalid: {error}")))?
@@ -348,7 +352,12 @@ mod tests {
             &[signing_key.verifying_key()],
         )
         .unwrap();
-        let commit = gc_vcs::Commit::from_term(&finalized.commit.term).unwrap();
+        let commit = CommitAuthority::validate_with_binding(
+            &mut authority.context,
+            &authority.commit_authority,
+            &finalized.commit.term,
+        )
+        .unwrap();
         assert_eq!(commit.attestations, vec![finalized.attestation.hash]);
     }
 

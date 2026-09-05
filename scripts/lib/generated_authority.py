@@ -53,6 +53,14 @@ CHECK_WORKERS = 4
 # Compilation checks share one content-addressed Cargo target. Keep them
 # single-writer so independent Cargo processes cannot race generated outputs.
 COMPILATION_CHECK_WORKERS = 1
+CHECK_LANE_LIMITS = {
+    "compilation": COMPILATION_CHECK_WORKERS,
+    "isolated": 1,
+    "parallel": CHECK_WORKERS,
+    # GB-1 is a warm, uncontended envelope. Serial execution prevents the
+    # aggregate validator from manufacturing timing failures through contention.
+    "static-budget": 1,
+}
 SHA_RE_LENGTH = 64
 NODE_FIELDS = {
     "id", "command", "dependencies", "inputs", "outputs", "checks", "mode",
@@ -728,21 +736,31 @@ def validation_environment() -> dict[str, str]:
 
 
 def next_check_position(
-    pending: Sequence[tuple[int, str, int, bool]],
-    active_compilation_lanes: Sequence[bool],
+    pending: Sequence[tuple[int, str, int, str]],
+    active_lanes: Sequence[str],
 ) -> Optional[int]:
     if not pending:
         return None
-    lanes = set(active_compilation_lanes)
-    require(len(lanes) <= 1, "generated checks mixed static and compilation lanes")
+    lanes = set(active_lanes)
+    require(len(lanes) <= 1, "generated checks mixed validation lanes")
     lane = next(iter(lanes)) if lanes else pending[0][3]
-    limit = COMPILATION_CHECK_WORKERS if lane else CHECK_WORKERS
-    if len(active_compilation_lanes) >= limit:
+    require(lane in CHECK_LANE_LIMITS, f"generated check has unknown lane: {lane}")
+    if len(active_lanes) >= CHECK_LANE_LIMITS[lane]:
         return None
     return next(
         (position for position, item in enumerate(pending) if item[3] == lane),
         None,
     )
+
+
+def validation_lane(gate: Mapping[str, Any]) -> str:
+    if gate["compilation"]:
+        return "compilation"
+    if gate["kind"] == "static":
+        return "static-budget"
+    if gate["sharding"]["isolation"] == "isolated-worktree-and-cache":
+        return "isolated"
+    return "parallel"
 
 
 def run_node(
@@ -789,23 +807,27 @@ def run_checks(
         for check in node["checks"]:
             checks[check] = max(checks.get(check, 0), node["timeoutSeconds"])
     gate_manifest = stage / "genesis.gates.json"
-    compilation_by_check: dict[str, bool] = {}
+    lane_by_check: dict[str, str] = {}
     if gate_manifest.is_file():
         manifest = load_json(gate_manifest)
         for gate in manifest.get("gates", []):
             entrypoint = gate.get("entrypoint")
             compilation = gate.get("compilation")
-            if isinstance(entrypoint, str) and isinstance(compilation, bool):
-                compilation_by_check[entrypoint] = compilation
-        unknown = sorted(set(checks) - set(compilation_by_check))
-        require(not unknown, "generated checks missing gate compilation metadata: " + ", ".join(unknown))
+            kind = gate.get("kind")
+            sharding = gate.get("sharding")
+            if (isinstance(entrypoint, str) and isinstance(compilation, bool)
+                    and isinstance(kind, str) and isinstance(sharding, dict)
+                    and isinstance(sharding.get("isolation"), str)):
+                lane_by_check[entrypoint] = validation_lane(gate)
+        unknown = sorted(set(checks) - set(lane_by_check))
+        require(not unknown, "generated checks missing gate scheduling metadata: " + ", ".join(unknown))
     environment, pass_fds = owner.child_environment(validation_environment())
     check_records = [
-        (index, check, timeout, compilation_by_check.get(check, False))
+        (index, check, timeout, lane_by_check.get(check, "parallel"))
         for index, (check, timeout) in enumerate(checks.items())
     ]
     pending = list(check_records)
-    active: dict[int, tuple[str, int, bool, subprocess.Popen[bytes], Any, float, Path]] = {}
+    active: dict[int, tuple[str, int, str, subprocess.Popen[bytes], Any, float, Path]] = {}
     completed_logs: dict[int, Path] = {}
     durations_ms: dict[int, int] = {}
     failure: Optional[BaseException] = None
@@ -830,7 +852,7 @@ def run_checks(
                 )
                 if next_pending is None:
                     break
-                index, check, timeout, compilation = pending.pop(next_pending)
+                index, check, timeout, lane = pending.pop(next_pending)
                 log_path = log_root / f"{index:04d}.log"
                 handle = log_path.open("wb")
                 process = subprocess.Popen(
@@ -843,7 +865,7 @@ def run_checks(
                     **({"pass_fds": pass_fds} if pass_fds else {}),
                 )
                 active[index] = (
-                    check, timeout, compilation, process, handle, time.monotonic(), log_path
+                    check, timeout, lane, process, handle, time.monotonic(), log_path
                 )
 
             now = time.monotonic()
@@ -878,10 +900,9 @@ def run_checks(
             with completed_logs[index].open("rb") as handle:
                 shutil.copyfileobj(handle, sys.stdout.buffer)
         sys.stdout.buffer.flush()
-        for index, check, _, compilation in check_records:
+        for index, check, _, lane in check_records:
             if index not in durations_ms:
                 continue
-            lane = "compilation" if compilation else "static"
             print(
                 f"generated-authority-check: {check} lane={lane} duration_ms={durations_ms[index]}"
             )
@@ -1079,21 +1100,26 @@ def synthetic_graph(root: Path, graph: Mapping[str, Any], mutation: callable) ->
 def self_test(root: Path, graph: Mapping[str, Any]) -> None:
     controls = 0
 
-    static = (0, "scripts/static.sh", 1, False)
-    compilation = (1, "scripts/compilation.sh", 1, True)
+    static = (0, "scripts/static.sh", 1, "static-budget")
+    parallel = (1, "scripts/parallel.sh", 1, "parallel")
+    compilation = (2, "scripts/compilation.sh", 1, "compilation")
+    isolated = (3, "scripts/isolated.sh", 1, "isolated")
     require(
-        next_check_position([static, compilation], []) == 0
-        and next_check_position([compilation], [False]) is None
-        and next_check_position([static], [True]) is None
+        next_check_position([static, parallel, compilation, isolated], []) == 0
+        and next_check_position([parallel], ["static-budget"]) is None
+        and next_check_position([static], ["parallel"]) is None
+        and next_check_position([parallel], ["parallel"] * (CHECK_WORKERS - 1)) == 0
+        and next_check_position([parallel], ["parallel"] * CHECK_WORKERS) is None
         and next_check_position(
-            [compilation], [True] * (COMPILATION_CHECK_WORKERS - 1)
+            [compilation], ["compilation"] * (COMPILATION_CHECK_WORKERS - 1)
         )
         == 0
         and next_check_position(
-            [compilation], [True] * COMPILATION_CHECK_WORKERS
+            [compilation], ["compilation"] * COMPILATION_CHECK_WORKERS
         )
-        is None,
-        "generated check scheduler mixed lanes or exceeded its compiler bound",
+        is None
+        and next_check_position([isolated], ["isolated"]) is None,
+        "generated check scheduler mixed lanes or exceeded a lane bound",
     )
     controls += 1
 

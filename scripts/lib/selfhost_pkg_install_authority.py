@@ -215,7 +215,7 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         "package install requires the artifact-loaded GenesisCode install authority",
         '#[cfg(any(test, feature = "parity-oracle"))]', "mod parity;",
         "PkgInstallPlanDecision::FrozenMissing", "for step in &plan.steps",
-        "step.registry.as_deref()", "commit_observations(store, &lock.locked)",
+        "step.registry.as_deref()", "super::workflow::commit_observations(\n        store,\n        policy,\n        commit_authority,\n        &lock.locked,",
     ):
         if marker not in install:
             fail(f"install production/parity boundary missing marker: {marker}")
@@ -317,6 +317,12 @@ def self_test(root, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/pkg_resolution_identity_authority.rs", ".get(INSTALL_BINDING)", ".get(PLAN_BINDING)", "loader")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", ".plan_install(", ".legacy_plan(", "causal plan")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", ".finalize_install(", ".legacy_finalize(", "causal finalize")
+    source_mutation(
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
+        "super::workflow::commit_observations(\n        store,\n        policy,\n        commit_authority,\n        &lock.locked,",
+        "super::workflow::commit_observations(store, &lock.locked)",
+        "commit authority route",
+    )
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/parity.rs", "pub(super) fn handle_pkg_install_parity(", "pub(super) fn legacy_install(", "parity custody")
     source_mutation(
         "crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution/lock_validation.rs",
@@ -334,7 +340,7 @@ def self_test(root, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 18:
+    if controls != 19:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

@@ -23,6 +23,7 @@ pub(super) fn handle_pkg_install(
     mut refs_authority: Option<&mut RefsAuthority>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
+    commit_authority: &mut Option<CommitAuthority>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
     error_tok: SealId,
@@ -40,6 +41,7 @@ pub(super) fn handle_pkg_install(
                 refs_authority.as_deref_mut(),
                 lock_authority,
                 None,
+                commit_authority,
                 budget,
                 timeout_ms,
                 error_tok,
@@ -140,6 +142,7 @@ pub(super) fn handle_pkg_install(
                 refs_authority.as_deref_mut(),
                 &lock.registries,
                 policy,
+                commit_authority,
                 pol,
                 budget,
                 timeout_ms,
@@ -261,6 +264,7 @@ pub(super) fn handle_pkg_install(
                     &lock.registries,
                     step.registry.as_deref(),
                     policy,
+                    commit_authority,
                     pol,
                     budget,
                     timeout_ms,
@@ -272,6 +276,8 @@ pub(super) fn handle_pkg_install(
                 }
                 closure_checked = match validate_commit_artifact_closure(
                     store,
+                    policy,
+                    commit_authority,
                     &step.name,
                     &step.snapshot,
                     commit,
@@ -297,7 +303,17 @@ pub(super) fn handle_pkg_install(
         });
     }
 
-    let commit_observations = super::workflow::commit_observations(store, &lock.locked);
+    let commit_observations = match super::workflow::commit_observations(
+        store,
+        policy,
+        commit_authority,
+        &lock.locked,
+        error_tok,
+        op,
+    ) {
+        Ok(observations) => observations,
+        Err(value) => return Ok(value),
+    };
     match authority
         .finalize_install(&plan, &observations, commit_observations)
         .map_err(|error| EffectsError::Log(error.to_string()))?
@@ -363,6 +379,7 @@ fn hydrate_commit_closure(
     registries: &BTreeMap<String, String>,
     registry_alias: Option<&str>,
     policy: &CapsPolicy,
+    commit_authority: &mut Option<CommitAuthority>,
     op_pol: Option<&OpPolicy>,
     budget: &mut ArtifactBudgetState,
     timeout_ms: Option<u64>,
@@ -390,7 +407,7 @@ fn hydrate_commit_closure(
             Some(op),
         )
     })?;
-    let commit = gc_vcs::Commit::from_term(&commit_term)
+    let commit = CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)
         .map_err(|e| mk_error(error_tok, "core/pkg/bad-commit", e.to_string(), Some(op)))?;
     if let Some(base_h) = commit.base.as_deref() {
         ensure_artifact_hash_available(
@@ -480,16 +497,27 @@ fn is_not_found_error(v: &Value) -> bool {
 pub(super) fn handle_pkg_verify(
     payload: &Term,
     pol: Option<&OpPolicy>,
+    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
+    commit_authority: &mut Option<CommitAuthority>,
     error_tok: SealId,
     op: &str,
 ) -> Result<Value, EffectsError> {
     let Some(authority) = identity_authority else {
         #[cfg(any(test, feature = "parity-oracle"))]
         {
-            return handle_pkg_verify_parity(payload, pol, store, lock_authority, error_tok, op);
+            return handle_pkg_verify_parity(
+                payload,
+                pol,
+                policy,
+                store,
+                lock_authority,
+                commit_authority,
+                error_tok,
+                op,
+            );
         }
         #[cfg(not(any(test, feature = "parity-oracle")))]
         {
@@ -612,7 +640,13 @@ pub(super) fn handle_pkg_verify(
         let closure = if terminal {
             None
         } else if let Some(commit_hex) = &step.commit {
-            let observation = observe_verify_commit_closure(store, snapshot_hex, commit_hex);
+            let observation = observe_verify_commit_closure(
+                store,
+                policy,
+                commit_authority,
+                snapshot_hex,
+                commit_hex,
+            );
             terminal = observation.status != PkgVerifyClosureStatus::Ok;
             Some(observation)
         } else {
