@@ -592,10 +592,49 @@ materializing repository-local state. Admission accounts for the larger of a
 size-class reservation and observed allocated bytes, reclaims inactive entries
 in `(reclaim-order, last-use-sequence, entry-id)` order at the soft quota, and
 denies admission when active or requested state cannot fit under the hard quota
-or the minimum-free-space reserve. An inactive requested entry already above
-the hard quota may be transactionally evicted and recreated; an active entry
-is never reclaimed. Process identity includes operating-system boot/session
-and process-start identity so PID reuse cannot preserve a stale lease.
+or its physical-space requirement. That requirement currently includes the
+existing build reserve, the sum of remaining growth for every distinct live and
+new requested materialization, and the recovery-journal allocation estimate
+derived from its measured payload.
+Multiple leases on one materialization share its reservation; distinct writers
+cannot spend the same free bytes. Admission refreshes live allocated sizes and
+counts `max(0, reservation - observed)` once per materialization.
+
+The journal estimate measures the prospective serialized registry including the
+next lease, sequence growth and largest quarantine record. It reserves two
+filesystem-block-rounded registry copies and four directory-entry allocation
+units for atomic replacement and recovery. Filesystem metadata overhead remains
+platform-dependent; this is an allocation estimate, not a hard filesystem-wide
+write guarantee, and execution growth supervision remains required. Insufficient
+journal headroom denies admission before starting reclamation. After each
+completed reclaim, admission
+MUST re-read available filesystem bytes; allocated file sizes never substitute
+for actual physical space recovery. Clones, shared extents and open handles
+therefore cannot authorize fictitious headroom. A fitting warm requested cache
+is preserved. An inactive requested entry already above the hard quota may be
+transactionally evicted and recreated; an active entry is never reclaimed.
+
+The standalone disk precheck observes free space by default; an explicit
+`--min-kb` or `GENESIS_MIN_FREE_KB` is a caller-declared requirement. Read-only
+observations acquire no writer reservation and can proceed below build budgets.
+The existing build `minFreeBytes` policy is retained pending replacement by
+per-command peak-write admission: a warm cache can still require temporary
+replacement files or copy-on-write allocation without growing its final size.
+Final cache size alone MUST NOT justify removing a writer's peak-space reserve.
+The current physical-space backend requires `statvfs` with positive allocation
+units and nonnegative caller-available blocks. Missing backends or invalid units
+return explicit lifecycle errors instead of guessed sizes or host exceptions.
+Windows mutex support alone does not qualify its resource-admission backend;
+only the declared Darwin/Linux guard profiles are covered by this transaction.
+
+These reservations coordinate this repository-local registry. They do not
+claim a host-wide scheduler, prevent unrelated applications from writing, or
+replace the existing bounded gate/aggregate growth supervision and process-group
+cancellation. Ordinary unsupervised Cargo invocations, the build reserve and
+remaining explicit heavy-profile estimates require separate operation-specific
+integration before claiming universal resource-admission closure. Process
+identity includes operating-system boot/session and process-start identity so
+PID reuse cannot preserve a stale lease.
 
 The disposable registry conforms to
 `docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json`. Its mutex is resolved

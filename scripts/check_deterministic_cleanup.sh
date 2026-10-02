@@ -19,6 +19,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from unittest.mock import patch
 
 source_root = Path(sys.argv[1]).resolve()
 temp = Path(sys.argv[2]).resolve()
@@ -541,6 +542,158 @@ require(
 state.release(priority, verifier["leaseToken"])
 controls.append("generated-state-size-class-reclaim-priority")
 
+# Admission costs are measured from the actual journal and all live writers.
+# Use a separate finite fixture so the low-space controls cannot reclaim history.
+cost_root = temp / "operation-cost"
+(cost_root / "policies").mkdir(parents=True)
+shutil.copyfile(source_root / cleanup.POLICY_REL, cost_root / cleanup.POLICY_REL)
+cost_policy = copy.deepcopy(bounded_policy)
+cost_policy["limits"].update(softBytes=262144, hardBytes=262144, minFreeBytes=0)
+for item in cost_policy["sizeClasses"]:
+    if item["id"] == "cargo-host":
+        item["reservationBytes"] = 65536
+(cost_root / state.POLICY_REL).write_bytes(state.pretty_bytes(cost_policy))
+(cost_root / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
+(cost_root / "source.gc").write_text("fixture\n", encoding="utf-8")
+subprocess.run(["git", "init", "-q"], cwd=cost_root, check=True)
+subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=cost_root, check=True)
+(cost_root / ".genesis/build").mkdir(parents=True)
+cleanup.initialize_root_marker(cost_root, ".genesis/build", "cost-fixture")
+cost_a_path = ".genesis/build/cargo-cache/v1/root/host/cost-a"
+cost_b_path = ".genesis/build/cargo-cache/v1/root/host/cost-b"
+cost_a = state.admit(cost_root, "cargo-cache", "a" * 64, cost_a_path,
+                     "cargo-host", free_bytes_override=1 << 30)
+cost_loaded, _, cost_sha = state.load_policy(cost_root)
+with state.state_lock(cost_root, cost_loaded) as cost_state:
+    cost_registry = state._load_registry(cost_state, cost_loaded, cost_sha)
+journal_cost = state._journal_growth_bytes(cost_root, cost_registry)
+# Enough for the new writer alone; insufficient for both outstanding writers.
+state_rejected(
+    "generated-state-combined-pending-growth-denial",
+    lambda: state.admit(cost_root, "cargo-cache", "b" * 64, cost_b_path,
+                       "cargo-host", free_bytes_override=journal_cost + 65536 + 16384),
+    "low-disk admission denied",
+)
+(cost_root / cost_a_path).mkdir(parents=True)
+(cost_root / cost_a_path / "payload.bin").write_bytes(b"a" * 65536)
+cost_b = state.admit(cost_root, "cargo-cache", "b" * 64, cost_b_path,
+                     "cargo-host", free_bytes_override=journal_cost + 65536 + 16384)
+require(cost_b["pendingGrowthBytes"] == 65536,
+        "live target allocation was not refreshed before admission")
+controls.append("generated-state-live-allocation-refresh")
+shared_b = state.admit(cost_root, "cargo-cache", "b" * 64, cost_b_path,
+                      "cargo-host", free_bytes_override=journal_cost + 65536 + 16384)
+require(shared_b["pendingGrowthBytes"] == 65536,
+        "leases on the same materialization double-counted its growth")
+state.release(cost_root, shared_b["leaseToken"])
+state.release(cost_root, cost_a["leaseToken"])
+controls.append("generated-state-shared-target-growth-deduplication")
+warm_bytes = (cost_root / cost_a_path / "payload.bin").read_bytes()
+warm_a = state.admit(cost_root, "cargo-cache", "a" * 64, cost_a_path,
+                    "cargo-host", free_bytes_override=journal_cost + 65536 + 16384)
+require(not warm_a["reclaimedEntryIds"] and
+        (cost_root / cost_a_path / "payload.bin").read_bytes() == warm_bytes,
+        "a fitting warm target was deleted to satisfy an unrelated floor")
+state.release(cost_root, warm_a["leaseToken"])
+controls.append("generated-state-warm-cache-low-space-preservation")
+with state.state_lock(cost_root, cost_loaded) as cost_state:
+    probe_registry = state._load_registry(cost_state, cost_loaded, cost_sha)
+# A retained clone/open handle can make allocated bytes disappear without making
+# those bytes available to this writer. Model that filesystem observation.
+original_reclaim = state._reclaim_entry
+original_free = state._free_bytes
+probe_journal = state._journal_growth_bytes(cost_root, probe_registry)
+probe_free = probe_journal + 16384
+reclaim_calls = []
+def reclaim_without_physical_recovery(root, state_root, policy, registry, entry):
+    reclaim_calls.append(entry["id"])
+    registry["entries"] = [e for e in registry["entries"] if e["id"] != entry["id"]]
+    return 2 * 1024 * 1024
+state._reclaim_entry = reclaim_without_physical_recovery
+state._free_bytes = lambda _root: probe_free
+try:
+    state_rejected(
+        "generated-state-reclaim-requires-physical-space-recovery",
+        lambda: state._enforce_limits(cost_root, cost_state, cost_loaded,
+            probe_registry, cost_b["entryId"], 65536, cost_loaded["limits"], probe_free),
+        "low-disk admission denied",
+    )
+    require(len(reclaim_calls) == 1, "physical-space control did not exercise reclamation")
+finally:
+    state._reclaim_entry = original_reclaim
+    state._free_bytes = original_free
+with state.state_lock(cost_root, cost_loaded) as cost_state:
+    recovered_probe = state._load_registry(cost_state, cost_loaded, cost_sha)
+reclaim_calls.clear()
+state._reclaim_entry = reclaim_without_physical_recovery
+try:
+    recovered_ids = state._enforce_limits(cost_root, cost_state, cost_loaded,
+        recovered_probe, cost_b["entryId"], 65536, cost_loaded["limits"],
+        probe_free, free_bytes_fn=lambda: 262144)
+    require(len(reclaim_calls) == 1 and recovered_ids == reclaim_calls,
+            "genuine physical-space recovery did not admit the fitting writer")
+    controls.append("generated-state-physical-space-recovery-admission")
+finally:
+    state._reclaim_entry = original_reclaim
+# Escaped Unicode paths can be larger than longer ASCII paths in the journal.
+# Check the estimate against every possible serialized recovery record.
+journal_probe = copy.deepcopy(probe_registry)
+ascii_entry = state._entry(cost_loaded, "cargo-cache", "c" * 64,
+    ".genesis/build/cargo-cache/v1/" + "/".join(["a" * 200] * 10), "cargo-host", 1)
+unicode_entry = state._entry(cost_loaded, "cargo-cache", "d" * 64,
+    ".genesis/build/cargo-cache/v1/" + "/".join(["😀" * 50] * 18), "cargo-host", 1)
+# Use the declared cache namespace, without materializing these bounded fixtures.
+journal_probe["entries"] = [ascii_entry, unicode_entry]
+block = state._allocation_unit_bytes(cost_root)
+for source_entry in journal_probe["entries"]:
+    possible = copy.deepcopy(journal_probe)
+    possible["sequence"] += 2
+    possible["leases"].append({"entryId": "0" * 64, "id": "0" * 32,
+                              "pid": 2**63 - 1, "processIdentity": "0" * 64})
+    possible["transaction"] = {"entryId": "0" * 64, "id": "0" * 64,
+        "phase": "quarantined", "sourcePath": source_entry["path"],
+        "quarantinePath": ".genesis/build/.generated-state-v0.1/quarantine/" + "0" * 64}
+    serialized_bytes = len(state.pretty_bytes(possible))
+    required_journal = 2 * ((serialized_bytes + block - 1) // block) * block + 4 * block
+    require(state._journal_growth_bytes(cost_root, journal_probe) >= required_journal,
+            "journal estimate missed the largest escaped recovery path")
+controls.append("generated-state-escaped-journal-size-accounting")
+with patch.object(state.os, "statvfs", None):
+    state_rejected("generated-state-unsupported-space-backend-rejection",
+                   lambda: state._journal_growth_bytes(cost_root, journal_probe),
+                   "physical-space backend unsupported")
+with patch.object(state.os, "statvfs", lambda _root: type("Stats", (), {
+        "f_frsize": 0, "f_bavail": 100,
+})()):
+    state_rejected("generated-state-invalid-space-unit-rejection",
+                   lambda: state._free_bytes(cost_root), "invalid units")
+
+state.release(cost_root, cost_b["leaseToken"])
+state_rejected(
+    "generated-state-recovery-journal-space-denial",
+    lambda: state.admit(cost_root, "cargo-cache", "a" * 64, cost_a_path,
+                       "cargo-host", free_bytes_override=1),
+    "recovery journal cannot fit",
+)
+# Read-only work does not acquire a writer reservation or impose a universal floor.
+mock_bin = temp / "disk-observation-bin"
+mock_bin.mkdir()
+mock_df = mock_bin / "df"
+mock_df.write_text("#!/bin/sh\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted\nfixture 100 99 1 99%% /\n'\n", encoding="utf-8")
+mock_df.chmod(0o700)
+observation_env = dict(os.environ, PATH=str(mock_bin) + os.pathsep + os.environ["PATH"],
+                       GENESIS_GATE_TELEMETRY_DISABLE="1", CI="true")
+observation_env.pop("GENESIS_MIN_FREE_KB", None)
+observation_cmd = ["bash", str(source_root / "scripts/check_disk_headroom.sh"),
+                   "--path", str(cost_root), "--strict", "1"]
+observed = subprocess.run(observation_cmd, env=observation_env, capture_output=True, text=True)
+require(observed.returncode == 0 and "required_kb=0" in observed.stdout,
+        "read-only observation was blocked by a blanket floor")
+explicit = subprocess.run([*observation_cmd, "--min-kb", "2"], env=observation_env,
+                          capture_output=True, text=True)
+require(explicit.returncode == 2, "explicit operation requirement was ignored")
+controls.append("generated-state-read-only-low-space-observation")
+
 state_rejected(
     "generated-state-unknown-owner-rejection",
     lambda: state.admit(lifecycle, "unknown", "3" * 64, ".genesis/build/unknown", "cargo-host"),
@@ -622,7 +775,7 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 42 and len(set(controls)) == 42, f"control coverage drift: {controls}")
+require(len(controls) == 53 and len(set(controls)) == 53, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",

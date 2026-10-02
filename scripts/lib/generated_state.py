@@ -806,9 +806,70 @@ def _effective_limits(policy: Mapping[str, Any], environ: Mapping[str, str]) -> 
     return limits
 
 
+def _filesystem_stats(root: Path) -> Any:
+    query = getattr(os, "statvfs", None)
+    if not callable(query):
+        raise GeneratedStateError("generated-state physical-space backend unsupported on this host")
+    stats = query(root)
+    if int(stats.f_frsize) <= 0 or int(stats.f_bavail) < 0:
+        raise GeneratedStateError("generated-state physical-space query returned invalid units")
+    return stats
+
+
+def _allocation_unit_bytes(root: Path) -> int:
+    return int(_filesystem_stats(root).f_frsize)
+
+
 def _free_bytes(root: Path) -> int:
-    stats = os.statvfs(root)
+    stats = _filesystem_stats(root)
     return int(stats.f_bavail) * int(stats.f_frsize)
+
+
+def _pending_growth_bytes(
+    registry: Mapping[str, Any], requested_id: str | None, requested_growth: int = 0,
+) -> int:
+    """Count each shared materialization once, including every live writer."""
+    active = _active_entry_ids(registry)
+    if requested_id is not None:
+        active.add(requested_id)
+    return sum(
+        max(
+            0,
+            int(entry["reservationBytes"]) - int(entry["observedAllocatedBytes"]),
+            requested_growth if entry["id"] == requested_id else 0,
+        )
+        for entry in registry["entries"] if entry["id"] in active
+    )
+
+
+def _journal_growth_bytes(root: Path, registry: Mapping[str, Any]) -> int:
+    """Estimate next atomic registry allocation from its largest recovery record.
+
+    The payload is measured, not a global free-space floor. Include a prospective
+    lease, a quarantine record and sequence growth, two rounded registry copies,
+    and the four directory entries used by staging/quarantine. Filesystem blocks
+    are allocation units, not predictions of physical bytes reclaimed on APFS.
+    """
+    projected = dict(registry)
+    projected["sequence"] = int(registry["sequence"]) + 2
+    projected["leases"] = [*registry["leases"], {
+        "entryId": "0" * 64, "id": "0" * 32, "pid": 2**63 - 1,
+        "processIdentity": "0" * 64,
+    }]
+    source = max((str(entry["path"]) for entry in registry["entries"]),
+                 key=lambda value: len(json.dumps(value, ensure_ascii=True)),
+                 default=".genesis/build")
+    projected["transaction"] = {
+        "entryId": "0" * 64, "id": "0" * 64, "phase": "quarantined",
+        "sourcePath": source,
+        "quarantinePath": ".genesis/build/.generated-state-v0.1/quarantine/" + "0" * 64,
+    }
+    payload_bytes = len(pretty_bytes(projected))
+    if payload_bytes > MAX_JSON_BYTES:
+        raise GeneratedStateError("generated-state recovery journal exceeds JSON bound")
+    block_bytes = _allocation_unit_bytes(root)
+    rounded = ((payload_bytes + block_bytes - 1) // block_bytes) * block_bytes
+    return 2 * rounded + 4 * block_bytes
 
 
 def _enforce_limits(
@@ -820,6 +881,7 @@ def _enforce_limits(
     needed_growth: int,
     limits: Mapping[str, int],
     free_bytes: int,
+    free_bytes_fn: Callable[[], int] | None = None,
 ) -> list[str]:
     reclaimed: list[str] = []
 
@@ -848,23 +910,38 @@ def _enforce_limits(
             ),
         )
 
-    projected_free = free_bytes
+    measured_free = free_bytes
+    if measured_free < _journal_growth_bytes(root, registry):
+        raise GeneratedStateError("generated-state low-disk admission denied: recovery journal cannot fit")
+    read_free = free_bytes_fn or (lambda: _free_bytes(root))
+
+    def required_free() -> int:
+        return (limits["minFreeBytes"] + _journal_growth_bytes(root, registry)
+                + _pending_growth_bytes(registry, protected_entry_id, needed_growth))
     while (
         accounting() > limits["softBytes"]
         or accounting() > limits["hardBytes"]
-        or projected_free < limits["minFreeBytes"] + needed_growth
+        or measured_free < required_free()
     ):
         available = candidates()
         if not available:
             break
         selected = available[0]
-        freed = _reclaim_entry(root, state_root, policy, registry, selected)
-        projected_free += freed
+        _reclaim_entry(root, state_root, policy, registry, selected)
+        # Deleting cloned/shared/open files need not release their st_blocks.
+        # Re-read the filesystem after every completed reclaim transaction.
+        measured_free = read_free()
         reclaimed.append(selected["id"])
     if accounting() > limits["hardBytes"]:
         raise GeneratedStateError("generated-state hard quota admission denied")
-    if projected_free < limits["minFreeBytes"] + needed_growth:
-        raise GeneratedStateError("generated-state low-disk admission denied")
+    required = required_free()
+    if measured_free < required:
+        raise GeneratedStateError(
+            "generated-state low-disk admission denied: "
+            f"freeBytes={measured_free} requiredBytes={required} "
+            f"pendingGrowthBytes={_pending_growth_bytes(registry, protected_entry_id, needed_growth)} "
+            f"journalGrowthBytes={_journal_growth_bytes(root, registry)}"
+        )
     return reclaimed
 
 
@@ -899,20 +976,23 @@ def admit(
         _recover_transaction(root, state_root, policy, registry)
         _recover_leases(root, registry, identity_fn)
         _discover_legacy_build_entries(root, policy, registry)
-        available_free = _free_bytes(root) if free_bytes_override is None else free_bytes_override
+        # Refresh every active shared target before computing remaining growth.
+        active_ids = _active_entry_ids(registry)
+        for entry in registry["entries"]:
+            if entry["id"] in active_ids:
+                entry["observedAllocatedBytes"] = allocated_bytes(
+                    _safe_absolute(root, entry["path"])
+                )
+        read_free = (lambda: _free_bytes(root)) if free_bytes_override is None else (
+            lambda: free_bytes_override
+        )
+        available_free = read_free()
         reclaimed: list[str] = []
         existing = _entry_by_path(registry, path)
         if existing is not None and existing["id"] not in _active_entry_ids(registry):
-            requested_reservation = _size_reservation(policy, size_class)
-            requested_growth = max(
-                0, requested_reservation - int(existing["observedAllocatedBytes"])
-            )
-            if (
-                _accounting_bytes(existing) > limits["hardBytes"]
-                or available_free < limits["minFreeBytes"] + requested_growth
-            ):
-                freed = _reclaim_entry(root, state_root, policy, registry, existing)
-                available_free += freed
+            if _accounting_bytes(existing) > limits["hardBytes"]:
+                _reclaim_entry(root, state_root, policy, registry, existing)
+                available_free = read_free()
                 reclaimed.append(existing["id"])
                 existing = None
         registry["sequence"] += 1
@@ -928,6 +1008,7 @@ def admit(
         was_new = existing is None
         current = _register_entry(registry, candidate)
         current["lastUseSequence"] = registry["sequence"]
+        current["observedAllocatedBytes"] = candidate["observedAllocatedBytes"]
         needed_growth = max(
             0, int(current["reservationBytes"]) - int(current["observedAllocatedBytes"])
         )
@@ -941,6 +1022,7 @@ def admit(
                 needed_growth,
                 limits,
                 available_free,
+                read_free,
             ))
         except GeneratedStateError:
             if was_new:
@@ -978,6 +1060,8 @@ def admit(
         )
         return {
             "accountingBytes": accounting,
+            "pendingGrowthBytes": _pending_growth_bytes(registry, current["id"]),
+            "journalGrowthBytes": _journal_growth_bytes(root, registry),
             "entryId": current["id"],
             "hardBytes": limits["hardBytes"],
             "leasePid": lease_pid,
