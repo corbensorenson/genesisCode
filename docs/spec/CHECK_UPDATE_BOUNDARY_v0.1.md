@@ -195,6 +195,33 @@ presence is an error, so ordinary callers cannot select an observation-only
 passing mode. Failed generation never authorizes or partially retains a
 publication.
 
+The aggregate disk ceiling charges sampled allocated growth in declared owned
+paths, with filesystem/device/inode deduplication. Those paths include the
+private staging tree and its Git registration, controlled child temporary
+directories and validation logs, publication backups and exclusive temporary
+copies, and net growth of replaced canonical outputs. A preexisting hard-link
+alias cannot create a second baseline deduction. Child `TMPDIR`, `TMP`, and
+`TEMP` point into the owned temporary scope. Whole-volume free-space decline is
+an observation, not attribution: unrelated writers must not spend this
+transaction's quota, and unrelated deletion must not conceal an owned overrun.
+Unavailable allocation metadata and unreadable owned paths fail closed; they
+cannot be reported as zero or used to qualify an unsupported host.
+Continuous allocation scans use the validated telemetry policy's aggregate
+sampling interval; node completion and publication boundaries force fresh
+allocation measurements. Wall, exhaustion, and event checks run on every poll.
+Actual filesystem exhaustion still fails closed. Operation-specific admission
+and shared-volume reservations remain separate from this sampled growth guard;
+a sampled quota pass does not establish complete supervision of arbitrary
+callbacks or writes outside declared paths.
+
+Publication validates owned allocation and drains its final event record while
+the rollback journal remains available. A quota, pressure, or incomplete-event
+failure restores previous replacements and removes exclusive temporary copies.
+Once that validation commits publication, cleanup does not retrospectively
+invalidate it because another writer changes volume pressure. Terminal logs
+retain sampled owned peak allocation and whole-volume decline as distinct local
+observations; neither metric alone is release qualification.
+
 Cache hits and network attempts cross a closed append-only event channel owned
 by the parent observer. Repository Cargo cache materialization emits a cache
 hit only after a matching content-addressed cache is reused. A gate emits a

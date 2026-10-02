@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "92942f242998d0a25a3c38b21559b35de82e1182f14c18425def7f8b46383c17",
+  "contentIdentitySha256": "8bc1a376a28f3efd2ecf791a5d0a0c331fa079631ab7d3ee072dc8a7bfe9dec0",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -2658,7 +2658,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_evidence_adversarial_matrix.sh",
-          "executionIdentitySha256": "8cff602dbf244463fb827f70fc6ce31257fb76b4541100508567d3f1fd7ba641",
+          "executionIdentitySha256": "b686c1153348d35c232edc811e28deb68ad36d48a8382f7a39f18ade7f415596",
           "gateId": "gate/evidence-adversarial-matrix",
           "kind": "test",
           "networkMode": "deny",

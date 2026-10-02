@@ -19,6 +19,7 @@ import tempfile
 import time
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
+from gate_telemetry import TelemetryError, load_policy as load_telemetry_policy
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_REL = "policies/check_update_boundary_v0.1.json"
@@ -520,26 +521,35 @@ def filesystem_free_bytes(path: Path) -> int:
 
 
 def allocated_tree_bytes(path: Path) -> int:
+    return allocated_paths_bytes([path])
+
+
+def allocated_paths_bytes(paths: Sequence[Path]) -> int:
     total = 0
     seen: set[tuple[int, int]] = set()
-    stack = [path]
+    stack = list(paths)
     while stack:
         current = stack.pop()
         try:
             metadata = current.lstat()
-        except OSError:
+        except FileNotFoundError:
             continue
+        except OSError as exc:
+            raise AuthorityError(f"owned allocation metadata is unreadable (errno={exc.errno})") from exc
         identity = (metadata.st_dev, metadata.st_ino)
         if identity in seen:
             continue
         seen.add(identity)
-        total += max(0, int(getattr(metadata, "st_blocks", 0))) * 512
+        require(hasattr(metadata, "st_blocks"), "owned allocation accounting is unavailable on this host")
+        total += max(0, int(metadata.st_blocks)) * 512
         if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
             try:
                 with os.scandir(current) as entries:
                     stack.extend(Path(entry.path) for entry in entries)
-            except OSError:
+            except FileNotFoundError:
                 continue
+            except OSError as exc:
+                raise AuthorityError(f"owned allocation directory is unreadable (errno={exc.errno})") from exc
     return total
 
 
@@ -558,12 +568,26 @@ def kill_and_reap(process: subprocess.Popen[Any]) -> None:
 class AggregateResourceOwner:
     """Own complete-transaction wall, disk, event, and child cancellation limits."""
 
-    def __init__(self, root: Path, event_root: Path, limits: Mapping[str, Any]):
+    def __init__(self, root: Path, event_root: Path, limits: Mapping[str, Any], *, sampling_root: Path = ROOT):
         self.root = root
+        try:
+            self.owned_sample_interval = load_telemetry_policy(sampling_root)["aggregateSampleIntervalMs"] / 1000
+        except TelemetryError as exc:
+            raise AuthorityError("aggregate sampling policy is invalid") from exc
         self.started = time.monotonic()
         self.timeout_seconds = int(limits["maxTimeoutSeconds"])
         self.disk_limit_bytes = int(limits["maxDiskMiB"]) * 1024 * 1024
         self.free_baseline = filesystem_free_bytes(root)
+        require(event_root.is_dir() and not event_root.is_symlink(), "aggregate owned root must be a regular directory")
+        self.owned_roots = {event_root.resolve()}
+        self.allocated_baseline = allocated_paths_bytes(list(self.owned_roots))
+        self.last_owned_sample = time.monotonic()
+        self.owned_delta = 0
+        self.peak_owned_delta = 0
+        self.peak_volume_decline = 0
+        self.temporary_root = event_root / "resource-temporaries"
+        self.temporary_root.mkdir(mode=0o700, exist_ok=True)
+        require(not self.temporary_root.is_symlink(), "aggregate temporary root must not be a symlink")
         self.event_path = event_root / (
             f"aggregate-resource-events-{os.getpid()}-{time.monotonic_ns()}.jsonl"
         )
@@ -585,6 +609,8 @@ class AggregateResourceOwner:
     ) -> tuple[dict[str, str], tuple[int, ...]]:
         result = dict(environment)
         result.pop("GENESIS_GATE_BUDGET_ENFORCE", None)
+        for name in ("TMPDIR", "TMP", "TEMP"):
+            result[name] = str(self.temporary_root)
         if self.event_fd is None:
             result.pop("GENESIS_GATE_AGGREGATE_OWNER_FD", None)
             result.pop("GENESIS_GATE_TELEMETRY_EVENT_FILE", None)
@@ -592,6 +618,26 @@ class AggregateResourceOwner:
         result["GENESIS_GATE_AGGREGATE_OWNER_FD"] = str(self.event_fd)
         result["GENESIS_GATE_TELEMETRY_EVENT_FILE"] = str(self.event_path)
         return result, (self.event_fd,)
+
+    def track_scope(self, path: Path, *, preexisting: bool = False) -> None:
+        path = path.absolute()
+        if any(path == root or root in path.parents for root in self.owned_roots):
+            return
+        before = allocated_paths_bytes(list(self.owned_roots)) if preexisting else 0
+        self.owned_roots.add(path)
+        self.last_owned_sample = float("-inf")
+        if preexisting:
+            self.allocated_baseline += max(0, allocated_paths_bytes(list(self.owned_roots)) - before)
+
+    def resource_observation(self) -> dict[str, Any]:
+        return {
+            "kind": "genesis/generated-authority-resource-observation-v0.1",
+            "measurement": "sampled-owned-allocation-delta; volume-decline-is-observation-only",
+            "diskBudgetBytes": self.disk_limit_bytes,
+            "ownedSampleIntervalMs": self.owned_sample_interval * 1000,
+            "peakOwnedAllocatedDeltaBytes": self.peak_owned_delta,
+            "peakVolumeFreeDeclineBytes": self.peak_volume_decline,
+        }
 
     def consume_events(self, *, final: bool = False) -> None:
         if self.event_fd is None:
@@ -642,6 +688,7 @@ class AggregateResourceOwner:
         scope_allocated_bytes: Optional[int] = None,
         scope_root: Optional[Path] = None,
         scope_disk_mib: Optional[int] = None,
+        force_owned_sample: bool = True,
     ) -> None:
         elapsed = time.monotonic() - self.started
         require(
@@ -650,10 +697,16 @@ class AggregateResourceOwner:
             f"{elapsed:.3f}s>{self.timeout_seconds}s",
         )
         free_now = filesystem_free_bytes(self.root)
-        aggregate_delta = max(0, self.free_baseline - free_now)
+        self.peak_volume_decline = max(self.peak_volume_decline, self.free_baseline - free_now)
+        if force_owned_sample or time.monotonic() - self.last_owned_sample >= self.owned_sample_interval:
+            self.owned_delta = max(0, allocated_paths_bytes(list(self.owned_roots)) - self.allocated_baseline)
+            self.last_owned_sample = time.monotonic()
+        aggregate_delta = self.owned_delta
+        self.peak_owned_delta = max(self.peak_owned_delta, aggregate_delta)
+        require(free_now > 0, f"aggregate resource owner observed filesystem exhaustion during {label}")
         require(
             aggregate_delta <= self.disk_limit_bytes,
-            f"aggregate resource owner exceeded disk limit during {label}: "
+            f"aggregate resource owner exceeded owned disk limit during {label}: "
             f"{aggregate_delta}B>{self.disk_limit_bytes}B",
         )
         if (
@@ -703,7 +756,7 @@ def run_bounded(
             if time.monotonic() - started > timeout:
                 raise subprocess.TimeoutExpired(list(command), timeout)
             if owner is not None:
-                owner.check("child execution")
+                owner.check("child execution", force_owned_sample=False)
             time.sleep(0.05)
         return_code = process.returncode
         if owner is not None:
@@ -838,11 +891,11 @@ def run_checks(
         f"compilation_workers={COMPILATION_CHECK_WORKERS}",
         flush=True,
     )
-    with tempfile.TemporaryDirectory(prefix="generated-authority-checks-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="generated-authority-checks-", dir=owner.temporary_root) as temporary:
         log_root = Path(temporary)
         while pending or active:
             try:
-                owner.check("parallel validation")
+                owner.check("parallel validation", force_owned_sample=False)
             except BaseException as exc:
                 failure = exc
             while failure is None and pending and len(active) < CHECK_WORKERS:
@@ -941,6 +994,7 @@ def promote(
     *,
     expected_input_snapshot: Optional[str] = None,
     expected_output_identities: Optional[Mapping[str, str]] = None,
+    owner: Optional[AggregateResourceOwner] = None,
 ) -> list[str]:
     for rel in outputs:
         require(
@@ -972,7 +1026,10 @@ def promote(
         raise
     backups = transaction / "backups"
     backups.mkdir()
+    if owner is not None:
+        owner.track_scope(transaction)
     promoted: list[str] = []
+    temporary_paths: list[Path] = []
     old_mask = None
     try:
         if hasattr(signal, "pthread_sigmask"):
@@ -988,6 +1045,8 @@ def promote(
                 observed == expected_output_identities,
                 "canonical outputs changed before generated publication lock",
             )
+        if owner is not None:
+            owner.check("generated publication admission")
         for rel in changed:
             source = stage / rel
             destination = root / rel
@@ -998,9 +1057,20 @@ def promote(
             )
             backup = backups / rel
             backup.parent.mkdir(parents=True, exist_ok=True)
+            if owner is not None:
+                owner.track_scope(destination, preexisting=True)
             shutil.copy2(destination, backup)
-            temporary = destination.with_name(f".{destination.name}.generated-authority-{os.getpid()}")
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=f".{destination.name}.generated-authority-", dir=destination.parent
+            )
+            os.close(descriptor)
+            temporary = Path(temporary_name)
+            temporary_paths.append(temporary)
+            if owner is not None:
+                owner.track_scope(temporary)
             shutil.copy2(source, temporary)
+            if owner is not None:
+                owner.check("generated publication staged copy")
             os.replace(temporary, destination)
             promoted.append(rel)
             fail_after = os.environ.get("GENESIS_GENERATED_AUTHORITY_FAIL_AFTER_PROMOTIONS")
@@ -1017,6 +1087,9 @@ def promote(
             observed_published == expected_published,
             "canonical outputs changed during generated publication",
         )
+        if owner is not None:
+            owner.check("generated publication verification")
+            owner.consume_events(final=True)
     except BaseException:
         for rel in reversed(promoted):
             os.replace(backups / rel, root / rel)
@@ -1024,6 +1097,8 @@ def promote(
     finally:
         if old_mask is not None:
             signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
+        for temporary in temporary_paths:
+            temporary.unlink(missing_ok=True)
         shutil.rmtree(transaction, ignore_errors=True)
         lock.unlink(missing_ok=True)
     return changed
@@ -1045,7 +1120,12 @@ def stage_closure(
     baseline_outputs = {output: file_identity(root / output) for output in outputs}
     temporary_root = Path(tempfile.mkdtemp(prefix="generated-authority-stage-"))
     stage = temporary_root / "worktree"
-    owner = AggregateResourceOwner(root, temporary_root, limits)
+    try:
+        owner = AggregateResourceOwner(root, temporary_root, limits, sampling_root=root)
+    except BaseException:
+        shutil.rmtree(temporary_root, ignore_errors=True)
+        raise
+    publication_committed = False
     try:
         owner.check("worktree setup")
         run_bounded(
@@ -1054,6 +1134,10 @@ def stage_closure(
             timeout=min(300, owner.timeout_seconds),
             owner=owner,
         )
+        metadata = Path(git(stage, "rev-parse", "--git-dir"))
+        metadata = (metadata if metadata.is_absolute() else stage / metadata).resolve()
+        require(metadata.parent == (common_git_dir(root) / "worktrees").resolve(), "staging Git metadata escaped its owned namespace")
+        owner.track_scope(metadata)
         owner.check("worktree checkout")
         copy_overlay(root, stage)
         owner.check("worktree overlay")
@@ -1061,6 +1145,7 @@ def stage_closure(
             run_node(stage, node, owner)
         run_checks(stage, nodes, owner)
         owner.check("staged closure validation")
+        owner.consume_events(final=True)
         require(tree_snapshot(root, set(outputs)) == baseline, "canonical inputs changed while generated closure was staged")
         stale = [
             output for output in outputs
@@ -1073,8 +1158,9 @@ def stage_closure(
             root, stage, outputs,
             expected_input_snapshot=baseline,
             expected_output_identities=baseline_outputs,
+            owner=owner,
         )
-        owner.check("generated publication")
+        publication_committed = True
         return promoted
     finally:
         if stage.exists():
@@ -1086,8 +1172,10 @@ def stage_closure(
                 timeout=60,
             )
         try:
-            owner.close()
+            # Final publication validation occurs while rollback is still available.
+            owner.close(validate=not publication_committed)
         finally:
+            print("generated-authority-resource-observation: " + json.dumps(owner.resource_observation(), sort_keys=True))
             shutil.rmtree(temporary_root, ignore_errors=True)
 
 
@@ -1095,6 +1183,220 @@ def synthetic_graph(root: Path, graph: Mapping[str, Any], mutation: callable) ->
     candidate = copy.deepcopy(graph)
     mutation(candidate)
     validate_graph(root, candidate)
+
+
+def resource_attribution_self_test() -> int:
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    controls = 0
+    with tempfile.TemporaryDirectory(prefix="generated-authority-attribution-") as temporary:
+        fixture = Path(temporary)
+        owned = fixture / "owned"
+        owned.mkdir()
+        with patch(__name__ + ".filesystem_free_bytes", side_effect=[1024**3, 900 * 1024**2]):
+            owner = AggregateResourceOwner(fixture, owned, {"maxTimeoutSeconds": 30, "maxDiskMiB": 1})
+            try:
+                owner.check("foreign volume decline")
+                require(owner.peak_owned_delta < owner.disk_limit_bytes, "foreign activity became owned allocation")
+                require(owner.peak_volume_decline > owner.disk_limit_bytes, "foreign decline control did not exercise attribution")
+                controls += 1
+            finally:
+                owner.close(validate=False)
+
+        with patch(__name__ + ".filesystem_free_bytes", return_value=1024**3):
+            owner = AggregateResourceOwner(fixture, owned, {"maxTimeoutSeconds": 30, "maxDiskMiB": 1})
+            marker = owned / "escaped"
+            program = (
+                "import os,tempfile,time; "
+                "f=tempfile.NamedTemporaryFile(delete=False); "
+                "f.write(b'x'*(2*1024*1024)); f.flush(); os.fsync(f.fileno()); f.close(); "
+                "time.sleep(2); open('escaped','w').write('escaped')"
+            )
+            try:
+                try:
+                    run_bounded([sys.executable, "-c", program], cwd=owned, timeout=5, owner=owner)
+                except AuthorityError as exc:
+                    require("owned disk limit" in str(exc), "owned overrun failed for another reason")
+                    require(not marker.exists(), "owned overrun failed to cancel its child")
+                    require(owner.peak_volume_decline == 0, "owned control depended on volume decline")
+                    require(any(owner.temporary_root.iterdir()), "child temporary output escaped its owned scope")
+                    controls += 1
+                else:
+                    raise AuthorityError("self-test accepted an aggregate owned-disk overrun")
+            finally:
+                owner.close(validate=False)
+
+        pressure = fixture / "pressure"
+        pressure.mkdir()
+        with patch(__name__ + ".filesystem_free_bytes", side_effect=[1024**3, 0]):
+            owner = AggregateResourceOwner(fixture, pressure, {"maxTimeoutSeconds": 30, "maxDiskMiB": 64})
+            try:
+                try:
+                    owner.check("exhausted filesystem")
+                except AuthorityError as exc:
+                    require("filesystem exhaustion" in str(exc), "filesystem pressure diagnostic drift")
+                    controls += 1
+                else:
+                    raise AuthorityError("self-test accepted an exhausted filesystem")
+            finally:
+                owner.close(validate=False)
+
+        links = fixture / "links"
+        links.mkdir()
+        first = links / "first"
+        first.write_bytes(b"x" * 4096)
+        alias = fixture / "alias"
+        os.link(first, alias)
+        with patch(__name__ + ".filesystem_free_bytes", return_value=1024**3):
+            owner = AggregateResourceOwner(fixture, links, {"maxTimeoutSeconds": 30, "maxDiskMiB": 1})
+            try:
+                baseline = owner.allocated_baseline
+                owner.track_scope(alias, preexisting=True)
+                require(owner.allocated_baseline == baseline, "hard-link alias duplicated the baseline deduction")
+                require(allocated_paths_bytes([links, alias]) == allocated_tree_bytes(links), "owned hard-link allocation was counted twice")
+                controls += 1
+            finally:
+                owner.close(validate=False)
+
+        repository = fixture / "repository"
+        repository.mkdir()
+        git(repository, "init", "-q")
+        publication = fixture / "publication"
+        publication.mkdir()
+        with patch(__name__ + ".filesystem_free_bytes", return_value=1024**3):
+            owner = AggregateResourceOwner(repository, publication, {"maxTimeoutSeconds": 30, "maxDiskMiB": 4})
+            stage = publication / "worktree"
+            stage.mkdir()
+            for name in ("a", "b"):
+                (repository / name).write_bytes(b"retained")
+                (stage / name).write_bytes(b"x" * 1024**2)
+            retained_temporary = repository / f".a.generated-authority-{os.getpid()}"
+            retained_temporary.write_bytes(b"retained unrelated file")
+            try:
+                try:
+                    promote(repository, stage, ["a", "b"], owner=owner)
+                except AuthorityError as exc:
+                    require("owned disk limit" in str(exc), "publication control failed for another reason")
+                    require(all((repository / name).read_bytes() == b"retained" for name in ("a", "b")), "publication quota failure changed canonical outputs")
+                    require(retained_temporary.read_bytes() == b"retained unrelated file", "publication overwrote an existing temporary name")
+                    require(list(repository.glob(".*.generated-authority-*")) == [retained_temporary], "publication quota failure leaked temporary files")
+                    require(not list(common_git_dir(repository).glob("generated-authority-transaction-*")), "publication quota failure leaked its backup transaction")
+                    controls += 1
+                else:
+                    raise AuthorityError("self-test accepted publication beyond its owned quota")
+            finally:
+                owner.close(validate=False)
+
+        commit_scope = fixture / "commit-scope"
+        commit_scope.mkdir()
+        with patch(__name__ + ".filesystem_free_bytes", return_value=1024**3):
+            owner = AggregateResourceOwner(repository, commit_scope, {"maxTimeoutSeconds": 30, "maxDiskMiB": 64})
+            stage = commit_scope / "worktree"
+            stage.mkdir()
+            (repository / "c").write_bytes(b"retained")
+            (stage / "c").write_bytes(b"changed")
+            if owner.event_fd is None:
+                owner.event_fd = os.open(owner.event_path, os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
+            os.write(owner.event_fd, b'{"count":1')
+            try:
+                try:
+                    promote(repository, stage, ["c"], owner=owner)
+                except AuthorityError as exc:
+                    require("mid-record" in str(exc), "publication final-event control failed for another reason")
+                    require((repository / "c").read_bytes() == b"retained", "final-event failure occurred after publication committed")
+                    require(not list(repository.glob(".c.generated-authority-*")), "final-event rollback leaked temporary files")
+                    controls += 1
+                else:
+                    raise AuthorityError("self-test committed publication with an incomplete final event")
+            finally:
+                owner.close(validate=False)
+        cadence = fixture / "cadence"
+        cadence.mkdir()
+        with patch(__name__ + ".filesystem_free_bytes", return_value=1024**3):
+            owner = AggregateResourceOwner(fixture, cadence, {"maxTimeoutSeconds": 30, "maxDiskMiB": 1})
+            scans: list[float] = []
+            labels: list[str] = []
+            original_check = owner.check
+            def observed_check(label: str, **kwargs: Any) -> None:
+                labels.append(label)
+                original_check(label, **kwargs)
+            def observed_allocation(paths: Sequence[Path]) -> int:
+                scans.append(time.monotonic())
+                return 0
+            try:
+                with patch.object(owner, "check", side_effect=observed_check), patch(
+                    __name__ + ".allocated_paths_bytes", side_effect=observed_allocation
+                ):
+                    run_bounded([sys.executable, "-c", "import time; time.sleep(0.6)"], cwd=cadence, timeout=5, owner=owner)
+                require(len(scans) >= 2 and labels[-1] == "child completion", "heartbeat sampling/terminal control did not execute")
+                require(all(b - a >= owner.owned_sample_interval for a, b in zip(scans[:-1], scans[1:-1])), "continuous scans exceeded the declared cadence")
+                require(len(scans) < len(labels), "continuous heartbeat scanned on every poll")
+                controls += 1
+                (cadence / "short-burst").write_bytes(b"x" * (2 * 1024 * 1024))
+                owner.last_owned_sample = time.monotonic()
+                try:
+                    owner.check("boundary within sampling interval")
+                except AuthorityError as exc:
+                    require("owned disk limit" in str(exc), "boundary burst failed for another reason")
+                    controls += 1
+                else:
+                    raise AuthorityError("self-test deferred a boundary allocation check")
+            finally:
+                owner.close(validate=False)
+
+        for reason in ("pressure", "network"):
+            immediate = fixture / ("immediate-" + reason)
+            immediate.mkdir()
+            with patch(__name__ + ".filesystem_free_bytes", return_value=1024**3):
+                owner = AggregateResourceOwner(fixture, immediate, {"maxTimeoutSeconds": 30, "maxDiskMiB": 64})
+                try:
+                    if reason == "network":
+                        require(owner.event_fd is not None, "network control requires the event channel")
+                        os.write(owner.event_fd, b'{"count":1,"kind":"network-attempt"}\n')
+                    with patch(__name__ + ".filesystem_free_bytes", return_value=0 if reason == "pressure" else 1024**3), patch(
+                        __name__ + ".allocated_paths_bytes", side_effect=AssertionError("continuous allocation was resampled early")
+                    ):
+                        try:
+                            owner.check("immediate " + reason, force_owned_sample=False)
+                        except AuthorityError as exc:
+                            require(("filesystem exhaustion" if reason == "pressure" else "network attempts") in str(exc), "immediate rejection diagnostic drift")
+                            controls += 1
+                        else:
+                            raise AuthorityError("self-test deferred an immediate resource rejection")
+                finally:
+                    owner.close(validate=False)
+
+        try:
+            AggregateResourceOwner(fixture, cadence, {"maxTimeoutSeconds": 30, "maxDiskMiB": 1}, sampling_root=fixture)
+        except AuthorityError as exc:
+            require("sampling policy is invalid" in str(exc), "invalid sampling policy diagnostic drift")
+            controls += 1
+        else:
+            raise AuthorityError("self-test accepted an absent sampling policy")
+
+        metadata_scope = fixture / "metadata"
+        metadata_scope.mkdir()
+        for reason in ("unavailable", "metadata-unreadable", "directory-unreadable"):
+            if reason == "unavailable":
+                observation = patch.object(Path, "lstat", return_value=SimpleNamespace(st_dev=1, st_ino=1))
+                diagnostic = "accounting is unavailable"
+            elif reason == "metadata-unreadable":
+                observation = patch.object(Path, "lstat", side_effect=PermissionError(13, "denied"))
+                diagnostic = "metadata is unreadable"
+            else:
+                observation = patch.object(os, "scandir", side_effect=PermissionError(13, "denied"))
+                diagnostic = "directory is unreadable"
+            with observation:
+                try:
+                    allocated_tree_bytes(metadata_scope)
+                except AuthorityError as exc:
+                    require(diagnostic in str(exc), "unobservable allocation diagnostic drift")
+                    controls += 1
+                else:
+                    raise AuthorityError("self-test treated unobservable allocation as zero")
+    require(controls == 14, "resource-attribution control inventory drift")
+    return controls
 
 
 def self_test(root: Path, graph: Mapping[str, Any]) -> None:
@@ -1481,7 +1783,8 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             controls += 1
         else:
             raise AuthorityError("self-test accepted concurrent output drift")
-    require(controls == 26, "generated-authority self-test inventory drift")
+    controls += resource_attribution_self_test()
+    require(controls == 40, "generated-authority self-test inventory drift")
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 

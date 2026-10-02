@@ -1,6 +1,6 @@
 {
   "coldAcquisitionAdapterProfileUnchanged": true,
-  "contentIdentitySha256": "1484ec49f9be6db6d0cb355e3ca202e241dcbc88ba19a276a83e7ed3f14f6b6a",
+  "contentIdentitySha256": "13996dd68a4e067395dae235e8cc620e2edb48abaed885fdad97bbe61c5f2e6c",
   "implementation": {
     "entrypoints": [
       "scripts/lib/genesisbench_open_agent.py",
@@ -13,9 +13,9 @@
         "sha256": "fb183c7ac55601a0673ff1daee33da07dc76926749a07d471e6b1cccd26f266f"
       },
       {
-        "bytes": 37591,
+        "bytes": 40531,
         "path": "scripts/lib/gc_agent_scoring.py",
-        "sha256": "62f05ec74235c9b705a140ececafc0ea147eb2867e56f6f4209d1e82aef4265b"
+        "sha256": "dcd11598b9394ec69600dd733da5e2c4b1456391629cb5086afb943d0d7ef822"
       },
       {
         "bytes": 19020,
@@ -88,7 +88,7 @@
         "sha256": "b84990e4b57cd7ef097dec5055f9c49e84434c6ae356396c7345f1df0f23183e"
       }
     ],
-    "identitySha256": "8e0ce880d6ccd35daf4bbc30aa4fdcf8ac4fcf4eeb2d95523d1be950d668230b"
+    "identitySha256": "4b4c6181a261dc7d7b4f2ec3fc8e172e458613b36d540c0377920a8ba471bc66"
   },
   "invocationProfiles": {
     "codex-cli-hosted": {
@@ -156,7 +156,7 @@
     "streamRetries": 0
   },
   "purpose": "Execute transitively bound hosted campaigns and credential-free local MLX campaigns under an independently tested outer read/write/network sandbox with exact custody, single-request-per-turn transport, retained wire evidence, and hard server teardown.",
-  "scaffoldIdentitySha256": "a4b38e331e287aea8881e2946021eb88fd6a83e90852b8ef951d922e097e1823",
+  "scaffoldIdentitySha256": "9d8270e01f2c37c60dcb354d1028730fca10f2886b4351421a7fbe72ab44b73f",
   "securityControls": [
     "agent-and-model-never-accessed-during-replay",
     "all-environment-values-redacted",
