@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-from contextlib import contextmanager
 import fnmatch
 from hashlib import sha256
 import json
@@ -21,6 +20,9 @@ import time
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
 from gate_telemetry import TelemetryError, load_policy as load_telemetry_policy
+from supervisor_cancellation import (
+    SupervisorCancelled as AuthorityCancelled, cancellation_scope, deferred_cancellation,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_REL = "policies/check_update_boundary_v0.1.json"
@@ -41,6 +43,8 @@ STAGE_SCOPED_ENVIRONMENT = (
     "GENESIS_GENERATED_STATE_LEASE_TOKEN",
     "GENESIS_GATE_BUDGET_ENFORCE",
     "GENESIS_GATE_AGGREGATE_OWNER_FD",
+    "GENESIS_GATE_PROCESS_GROUP_OWNER_FD",
+    "GENESIS_GATE_EVENT_ROOT",
     "GENESIS_GATE_TELEMETRY_EVENT_FILE",
     "GENESIS_SELFHOST_TOOLCHAIN_ARTIFACT",
     "GENESIS_SELFHOST_TOOLCHAIN_FRESHNESS",
@@ -88,72 +92,6 @@ REQUIRED_IDENTITY_EXCLUSIONS = {
 
 class AuthorityError(ValueError):
     pass
-
-
-class AuthorityCancelled(BaseException):
-    def __init__(self, signum: int):
-        self.signum = signum
-
-
-class CancellationScope:
-    """Unwind once; repeated termination must not interrupt owned cleanup."""
-
-    def __init__(self) -> None:
-        self.depth = 0
-        self.pending: Optional[int] = None
-        self.unwinding = False
-
-    def receive(self, signum: int, _frame: Any) -> None:
-        if self.unwinding:
-            return
-        if self.pending is None:
-            self.pending = signum
-        self.deliver()
-
-    def deliver(self) -> None:
-        if self.pending is not None and self.depth == 0 and not self.unwinding:
-            self.unwinding = True
-            raise AuthorityCancelled(self.pending)
-
-    @contextmanager
-    def defer(self):
-        self.depth += 1
-        try:
-            yield
-        finally:
-            self.depth -= 1
-            self.deliver()
-
-
-_cancellation_scope: Optional[CancellationScope] = None
-
-
-@contextmanager
-def cancellation_scope():
-    global _cancellation_scope
-    previous_scope = _cancellation_scope
-    scope = CancellationScope()
-    handlers = {}
-    try:
-        for name in ("SIGINT", "SIGTERM", "SIGHUP"):
-            signum = getattr(signal, name, None)
-            if signum is not None:
-                handlers[signum] = signal.signal(signum, scope.receive)
-        _cancellation_scope = scope
-        yield
-    finally:
-        _cancellation_scope = previous_scope
-        for signum, handler in handlers.items():
-            signal.signal(signum, handler)
-
-
-@contextmanager
-def deferred_cancellation():
-    if _cancellation_scope is None:
-        yield
-    else:
-        with _cancellation_scope.defer():
-            yield
 
 
 def reject_duplicate_keys(pairs: Sequence[tuple[str, Any]]) -> Dict[str, Any]:
@@ -681,9 +619,13 @@ class AggregateResourceOwner:
             result[name] = str(self.temporary_root)
         if self.event_fd is None:
             result.pop("GENESIS_GATE_AGGREGATE_OWNER_FD", None)
+            result.pop("GENESIS_GATE_PROCESS_GROUP_OWNER_FD", None)
+            result.pop("GENESIS_GATE_EVENT_ROOT", None)
             result.pop("GENESIS_GATE_TELEMETRY_EVENT_FILE", None)
             return result, ()
         result["GENESIS_GATE_AGGREGATE_OWNER_FD"] = str(self.event_fd)
+        result["GENESIS_GATE_PROCESS_GROUP_OWNER_FD"] = str(self.event_fd)
+        result["GENESIS_GATE_EVENT_ROOT"] = str(self.temporary_root)
         result["GENESIS_GATE_TELEMETRY_EVENT_FILE"] = str(self.event_path)
         return result, (self.event_fd,)
 
@@ -1958,7 +1900,7 @@ def main(argv: Sequence[str]) -> int:
         with cancellation_scope():
             return run_main(argv)
     except AuthorityCancelled as exc:
-        print(f"generated-authority: cancelled (signal={exc.signum}); owned cleanup completed", file=sys.stderr)
+        print(f"generated-authority: cancelled (signal={exc.signum}); owned process-group cleanup completed", file=sys.stderr)
         return 128 + exc.signum
 
 

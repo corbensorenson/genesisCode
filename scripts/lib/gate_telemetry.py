@@ -18,9 +18,13 @@ import threading
 import time
 from typing import Any, Optional, Sequence
 
+from supervisor_cancellation import SupervisorCancelled, cancellation_scope, deferred_cancellation
+
 POLICY_REL = "policies/gate_telemetry_v0.1.json"
 MANIFEST_REL = "genesis.gates.json"
 AGGREGATE_OWNER_FD_ENV = "GENESIS_GATE_AGGREGATE_OWNER_FD"
+PROCESS_GROUP_OWNER_FD_ENV = "GENESIS_GATE_PROCESS_GROUP_OWNER_FD"
+EVENT_ROOT_ENV = "GENESIS_GATE_EVENT_ROOT"
 RETIRED_BUDGET_BYPASS_ENV = "GENESIS_GATE_BUDGET_ENFORCE"
 POLICY_FIELDS = {
     "aggregateSampleIntervalMs",
@@ -112,6 +116,18 @@ def exact_disk_enabled(policy: dict, entrypoint: str, override: str | None) -> b
     return override == "1" or entrypoint in policy["exactDiskEntrypoints"]
 
 
+
+def native_descriptor(raw: str, label: str) -> int:
+    # File descriptors cross the host C-int boundary; reject before conversion.
+    if (os.name == "nt" or len(raw) > 10 or not raw.isascii()
+            or not raw.isdigit()):
+        raise TelemetryError(f"{label} descriptor is invalid")
+    descriptor = int(raw)
+    if descriptor < 3 or descriptor > 2**31 - 1:
+        raise TelemetryError(f"{label} descriptor is invalid")
+    return descriptor
+
+
 def aggregate_owner_fd() -> int | None:
     """Return a supervisor-issued disk-attribution capability, if present."""
     retired = os.environ.get(RETIRED_BUDGET_BYPASS_ENV)
@@ -122,9 +138,7 @@ def aggregate_owner_fd() -> int | None:
     raw = os.environ.get(AGGREGATE_OWNER_FD_ENV)
     if raw is None:
         return None
-    if os.name == "nt" or not raw.isascii() or not raw.isdigit() or int(raw) < 3:
-        raise TelemetryError("aggregate resource owner descriptor is invalid")
-    descriptor = int(raw)
+    descriptor = native_descriptor(raw, "aggregate resource owner")
     try:
         metadata = os.fstat(descriptor)
     except OSError as exc:
@@ -145,6 +159,28 @@ def aggregate_owner_fd() -> int | None:
             "aggregate resource owner descriptor is not inherited append-only write capability"
         )
     return descriptor
+
+
+def process_group_owner_fd() -> int | None:
+    """Borrow a parent's inherited group-lifetime descriptor; never signal that group."""
+    raw = os.environ.get(PROCESS_GROUP_OWNER_FD_ENV)
+    if raw is None:
+        return None
+    descriptor = native_descriptor(raw, "process-group owner")
+    try:
+        import fcntl
+        metadata = os.fstat(descriptor)
+        flags = fcntl.fcntl(descriptor, fcntl.F_GETFL)
+        inherited = os.get_inheritable(descriptor)
+    except (ImportError, OSError) as exc:
+        raise TelemetryError("process-group owner descriptor is not inherited") from exc
+    access = flags & os.O_ACCMODE
+    if (not stat.S_ISREG(metadata.st_mode) or not inherited
+            or access not in (os.O_RDWR, os.O_WRONLY)
+            or (access == os.O_WRONLY and not flags & os.O_APPEND)):
+        raise TelemetryError("process-group owner descriptor is not a writable inherited lifetime capability")
+    return descriptor
+
 
 
 def forward_aggregate_events(descriptor: int | None, events: dict[str, int]) -> None:
@@ -321,7 +357,7 @@ def normalize_platform() -> str:
     return value if value in {"darwin", "linux", "windows"} else "unsupported"
 
 
-def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None, emit: str) -> int:
+def observe(root: Path, entrypoint: str, command: Sequence[str], output: Path | None, emit: str) -> int:
     root = root.resolve()
     entrypoint = repo_path(entrypoint, "entrypoint")
     policy = load_policy(root)
@@ -333,59 +369,108 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
     if not command:
         raise TelemetryError("gate command is empty")
     aggregate_fd = aggregate_owner_fd()
+    group_fd = process_group_owner_fd()
+    owns_group = group_fd is None
     exact_disk = exact_disk_enabled(
         policy, entrypoint, os.environ.get("GENESIS_GATE_TELEMETRY_EXACT_DISK")
     )
     before_disk = disk_size(root, policy["diskRoots"]) if exact_disk else filesystem_free_bytes(root)
-    event_fd, event_name = tempfile.mkstemp(prefix="genesis-gate-events.", suffix=".jsonl")
-    os.close(event_fd)
-    event_path = Path(event_name)
-    env = dict(os.environ)
-    env["GENESIS_GATE_TELEMETRY_ACTIVE_ENTRYPOINT"] = entrypoint
-    env["GENESIS_GATE_TELEMETRY_EVENT_FILE"] = str(event_path)
-    started = time.monotonic_ns()
+    event_scope = None
+    event_fd = None
+    event_path = None
+    proc = None
+    sampler = None
+    thread = None
+    cancelled_signal = None
     try:
-        popen_options = {"pass_fds": (aggregate_fd,)} if aggregate_fd is not None else {}
-        proc = subprocess.Popen(
-            command, cwd=root, env=env, start_new_session=True, **popen_options
-        )
-    except OSError:
-        event_path.unlink(missing_ok=True)
-        raise
-    sampler = Sampler(proc.pid, sample_interval_ms(policy, gate))
-    thread = threading.Thread(target=sampler.run, daemon=True)
-    thread.start()
-    previous_handlers = {}
-
-    def forward(signum, _frame):
-        try:
-            os.killpg(proc.pid, signum)
-        except ProcessLookupError:
-            pass
-
-    for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-        previous_handlers[signum] = signal.signal(signum, forward)
-    try:
-        _, status, usage = os.wait4(proc.pid, 0)
-        exit_code = os.waitstatus_to_exitcode(status)
-        proc.returncode = exit_code
+        with deferred_cancellation():
+            if owns_group:
+                if EVENT_ROOT_ENV in os.environ:
+                    raise TelemetryError("event root requires an inherited process-group owner")
+                event_scope = tempfile.TemporaryDirectory(prefix="genesis-gate-event-scope.")
+                event_root = Path(event_scope.name)
+            else:
+                raw_root = os.environ.get(EVENT_ROOT_ENV)
+                if not raw_root:
+                    raise TelemetryError("process-group owner requires its event root")
+                event_root = Path(raw_root)
+                if not event_root.is_absolute() or not event_root.is_dir() or event_root.is_symlink():
+                    raise TelemetryError("process-group event root must be an absolute regular directory")
+            event_fd, event_name = tempfile.mkstemp(prefix="genesis-gate-events.", suffix=".jsonl", dir=event_root)
+            event_path = Path(event_name)
+            os.set_inheritable(event_fd, True)
+        env = dict(os.environ)
+        env["GENESIS_GATE_TELEMETRY_ACTIVE_ENTRYPOINT"] = entrypoint
+        env["GENESIS_GATE_TELEMETRY_EVENT_FILE"] = str(event_path)
+        # A standalone observer issues its own lifetime capability. Nested
+        # observers borrow it and remain inside the one owner's process group.
+        child_group_fd = event_fd if owns_group else group_fd
+        env[PROCESS_GROUP_OWNER_FD_ENV] = str(child_group_fd)
+        env[EVENT_ROOT_ENV] = str(event_root)
+        inherited_fds = tuple(sorted({child_group_fd} | ({aggregate_fd} if aggregate_fd is not None else set())))
+        started = time.monotonic_ns()
+        with deferred_cancellation():
+            proc = subprocess.Popen(
+                command, cwd=root, env=env, start_new_session=owns_group,
+                pass_fds=inherited_fds,
+            )
+            sampler = Sampler(proc.pid, sample_interval_ms(policy, gate))
+            thread = threading.Thread(target=sampler.run, daemon=True)
+            thread.start()
+        while True:
+            pid, status, usage = os.wait4(proc.pid, os.WNOHANG)
+            if pid:
+                exit_code = os.waitstatus_to_exitcode(status)
+                proc.returncode = exit_code
+                break
+            if sampler.error is not None:
+                raise TelemetryError(f"resource sampler failed: {sampler.error}")
+            time.sleep(0.05)
+    except SupervisorCancelled as exc:
+        if proc is None:
+            raise
+        cancelled_signal = exc.signum
     finally:
-        sampler.stop.set()
-        thread.join(timeout=2)
-        for signum, handler in previous_handlers.items():
-            signal.signal(signum, handler)
-    if thread.is_alive():
-        event_path.unlink(missing_ok=True)
-        raise TelemetryError("resource sampler did not stop within 2 seconds")
-    if sampler.error is not None:
-        event_path.unlink(missing_ok=True)
-        raise TelemetryError(f"resource sampler failed: {sampler.error}")
-    duration = time.monotonic_ns() - started
-    after_disk = disk_size(root, policy["diskRoots"]) if exact_disk else filesystem_free_bytes(root)
-    try:
-        events = event_counts(event_path, policy)
-    finally:
-        event_path.unlink(missing_ok=True)
+        with deferred_cancellation():
+            try:
+                if proc is not None:
+                    try:
+                        if owns_group:
+                            # Descendants may outlive their successfully exited leader.
+                            os.killpg(proc.pid, signal.SIGKILL)
+                        elif proc.returncode is None:
+                            # The caller owns the group and will drain it when this
+                            # observer exits; do not signal an inherited caller group.
+                            proc.kill()
+                    except ProcessLookupError:
+                        pass
+                    if proc.returncode is None:
+                        _, status, usage = os.wait4(proc.pid, 0)
+                        proc.returncode = os.waitstatus_to_exitcode(status)
+            finally:
+                try:
+                    if sampler is not None:
+                        sampler.stop.set()
+                    if thread is not None and thread.ident is not None:
+                        thread.join(timeout=2)
+                    if thread is not None and thread.is_alive():
+                        raise TelemetryError("resource sampler did not stop within 2 seconds")
+                    if sampler is not None and sampler.error is not None:
+                        raise TelemetryError(f"resource sampler failed: {sampler.error}")
+                    duration = time.monotonic_ns() - started if proc is not None else 0
+                    after_disk = disk_size(root, policy["diskRoots"]) if exact_disk else filesystem_free_bytes(root)
+                    events = event_counts(event_path, policy) if event_path is not None else {}
+                finally:
+                    try:
+                        if event_fd is not None:
+                            os.close(event_fd)
+                        if event_path is not None:
+                            event_path.unlink(missing_ok=True)
+                    finally:
+                        if event_scope is not None:
+                            event_scope.cleanup()
+    if cancelled_signal is not None:
+        exit_code = -cancelled_signal
     forward_aggregate_events(aggregate_fd, events)
     rusage_rss = int(usage.ru_maxrss if normalize_platform() == "darwin" else usage.ru_maxrss * 1024)
     peak_rss = max(sampler.peak_rss, rusage_rss)
@@ -454,6 +539,14 @@ def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None
     elif emit == "stderr":
         print(f"gate-telemetry: {rendered}", file=sys.stderr)
     return effective_exit_code
+
+
+def run(root: Path, entrypoint: str, command: Sequence[str], output: Path | None, emit: str) -> int:
+    try:
+        with cancellation_scope():
+            return observe(root, entrypoint, command, output, emit)
+    except SupervisorCancelled as exc:
+        return 128 + exc.signum
 
 
 def main(argv=None):

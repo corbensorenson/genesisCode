@@ -66,7 +66,7 @@ def worker(root: Path, scope: Path, case: str) -> int:
                 finally:
                     ga.os.replace = replace
                     os.environ.pop("GENESIS_GENERATED_AUTHORITY_FAIL_AFTER_PROMOTIONS", None)
-            elif case == "stage":
+            elif case.startswith("stage"):
                 live = scope / "live"
                 live.mkdir()
                 (live / "policies").mkdir()
@@ -89,7 +89,11 @@ def worker(root: Path, scope: Path, case: str) -> int:
                     return close(self, **kwargs)
                 ga.AggregateResourceOwner.close = interrupted_cleanup
                 try:
-                    ga.stage_closure(live, [{"id":"fixture", "outputs":["a"], "command":[sys.executable,"-c",linger], "timeoutSeconds":20,"diskMiB":64,"checks":[]}], update=True, limits={"maxTimeoutSeconds":25,"maxDiskMiB":64})
+                    command = [sys.executable,"-c",linger]
+                    if case == "stage-telemetry":
+                        for _ in range(2):
+                            command = [sys.executable, str(root / "scripts/lib/gate_telemetry.py"), "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh", "--emit", "none", "--", *command]
+                    ga.stage_closure(live, [{"id":"fixture", "outputs":["a"], "command":command, "timeoutSeconds":20,"diskMiB":64,"checks":[]}], update=True, limits={"maxTimeoutSeconds":25,"maxDiskMiB":64})
                 finally:
                     ga.tempfile.mkdtemp = mkdtemp
                     ga.AggregateResourceOwner.close = close
@@ -139,7 +143,7 @@ def cancellation_self_test(root: Path) -> int:
     if os.name == "nt":
         print("generated-authority-cancellation: unsupported process-group fixture on Windows")
         return 0
-    cases = [(case, signum) for case in ("bounded", "checks", "stage") for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)]
+    cases = [(case, signum) for case in ("bounded", "checks", "stage", "stage-telemetry") for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)]
     cases += [(case, None) for case in ("registration", "timeout", "spawn-failure", "leader-exit", "publish", "publish-rollback")]
     controls = []
     with tempfile.TemporaryDirectory(prefix="generated-authority-cancellation-controls-") as temporary:
@@ -165,7 +169,7 @@ def cancellation_self_test(root: Path) -> int:
                     if ready.exists():
                         child_pid = json.loads(ready.read_text())["pgid"]
                         wait_for(lambda: not group_alive(child_pid), "child group cleanup")
-                    if case == "stage":
+                    if case.startswith("stage"):
                         ga.require(not list(scope.glob("generated-authority-stage-*")), "staging directory survived termination")
                         worktrees = ga.git(scope / "live", "worktree", "list", "--porcelain")
                         ga.require(worktrees.count("worktree ") == 1, "staging Git registration survived termination")
@@ -184,7 +188,7 @@ def cancellation_self_test(root: Path) -> int:
                         child_pid = json.loads(ready.read_text())["pgid"]
                     if child_pid is not None and group_alive(child_pid):
                         os.killpg(child_pid, signal.SIGKILL)
-    ga.require(len(controls) == 15, "cancellation control inventory drift")
+    ga.require(len(controls) == 18, "cancellation control inventory drift")
     print("generated-authority-cancellation: " + json.dumps(controls, sort_keys=True))
     return len(controls)
 

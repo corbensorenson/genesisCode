@@ -195,6 +195,31 @@ presence is an error, so ordinary callers cannot select an observation-only
 passing mode. Failed generation never authorizes or partially retains a
 publication.
 
+Process-group lifetime is a separate delegation from shared disk attribution.
+The owner supplies `GENESIS_GATE_PROCESS_GROUP_OWNER_FD`, an inherited read/write regular-file descriptor or the aggregate
+owner's append-only write descriptor, and `GENESIS_GATE_EVENT_ROOT`, its absolute regular
+event directory. An environment-only descriptor, a closed/non-inheritable or
+read-only descriptor, or a missing/invalid event root fails before spawning.
+Nested telemetry observers retain the caller's group and forward this lifetime
+descriptor explicitly. They never signal the inherited caller group. The owner
+kills and drains that group when its command or validator terminates, including
+descendants left by an exited leader. Callers that create another Python
+subprocess must explicitly preserve delegated descriptors; stale environment
+claims cannot silently fall back to a new session.
+
+A standalone observer creates one owned command group and private event
+directory, delegates their lifetime to nested observers, and kills/reaps its
+group on signal, launch/observer failure or leader termination. SIGINT, SIGTERM
+and SIGHUP request one unwind; ignoring those signals in a command cannot keep
+that owned group running. Signal cancellation after command admission retains
+the signal-derived exit and `signaled` observation. Sampling errors are polled
+during execution, then propagated after child cleanup. Event descriptors and
+sampler threads close on every exit; group-owned private event files are removed
+by their owner even when nested observers receive SIGKILL. These POSIX controls
+do not contain commands that deliberately escape their group and do not qualify
+Windows, host crashes, SIGKILL of the owning supervisor or independent release
+acceptance.
+
 The aggregate disk ceiling charges sampled allocated growth in declared owned
 paths, with filesystem/device/inode deduplication. Those paths include the
 private staging tree and its Git registration, controlled child temporary

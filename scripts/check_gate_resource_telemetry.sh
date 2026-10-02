@@ -89,7 +89,7 @@ start = time.monotonic()
 event_env = {
     key: value
     for key, value in os.environ.items()
-    if key not in {telemetry.RETIRED_BUDGET_BYPASS_ENV, telemetry.AGGREGATE_OWNER_FD_ENV}
+    if key not in {telemetry.RETIRED_BUDGET_BYPASS_ENV, telemetry.AGGREGATE_OWNER_FD_ENV, telemetry.PROCESS_GROUP_OWNER_FD_ENV, telemetry.EVENT_ROOT_ENV}
 }
 proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
@@ -129,7 +129,7 @@ nested = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_gate_resource_telemetry.sh",
     "--emit", "none", "--", "bash", "scripts/check_doc_hygiene.sh",
-], cwd=root, env={key: value for key, value in os.environ.items() if key != "GENESIS_GATE_TELEMETRY_DISABLE"}, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+], cwd=root, env={key: value for key, value in event_env.items() if key != "GENESIS_GATE_TELEMETRY_DISABLE"}, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 nested_lines = [line for line in nested.stderr.splitlines() if line.startswith("gate-telemetry: ")]
 require(nested.returncode == 0 and len(nested_lines) == 1, "nested governed gate did not emit exactly one observation")
 nested_doc = json.loads(nested_lines[0].removeprefix("gate-telemetry: "), object_pairs_hook=telemetry.unique_pairs)
@@ -153,7 +153,7 @@ proc = subprocess.run([
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
     "--out", str(network_budget_report), "--emit", "none", "--", "bash", "-c",
     'printf \'{"count":1,"kind":"network-attempt"}\\n\' >>"$GENESIS_GATE_TELEMETRY_EVENT_FILE"',
-], cwd=root, env={key: value for key, value in os.environ.items() if key != "GENESIS_GATE_BUDGET_ENFORCE"}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+], cwd=root, env=event_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 network_budget = telemetry.load_json(network_budget_report)
 require(proc.returncode == 3 and network_budget["result"] == {"exitCode": 3, "status": "failed"}, "deny-network budget was not enforced")
 controls.append("deny-network-budget-enforcement")
@@ -215,7 +215,7 @@ proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
     "--out", str(failure_report), "--emit", "none", "--", "bash", "-c", "exit 7",
-], cwd=root)
+], cwd=root, env=event_env)
 failure = telemetry.load_json(failure_report)
 require(proc.returncode == 7 and failure["result"] == {"exitCode": 7, "status": "failed"}, "failure status was not preserved")
 controls.append("failure-exit-preservation")
@@ -225,7 +225,7 @@ proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
     "--out", str(signal_report), "--emit", "none", "--", "bash", "-c", "kill -TERM $$",
-], cwd=root)
+], cwd=root, env=event_env)
 signaled = telemetry.load_json(signal_report)
 require(proc.returncode == 143 and signaled["result"] == {"exitCode": 143, "status": "signaled"}, "signaled exit was not preserved")
 controls.append("signaled-exit-preservation")
@@ -261,24 +261,24 @@ controls.append("invalid-event-rejection")
 
 malformed_temp = temp / "malformed-channel"
 malformed_temp.mkdir()
-malformed_env = dict(os.environ, TMPDIR=str(malformed_temp))
+malformed_env = dict(event_env, TMPDIR=str(malformed_temp))
 proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
     "--emit", "none", "--", "bash", "-c", 'printf \'{"count":0,"kind":"cache-hit"}\\n\' >>"$GENESIS_GATE_TELEMETRY_EVENT_FILE"',
 ], cwd=root, env=malformed_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-require(proc.returncode == 2 and not list(malformed_temp.glob("genesis-gate-events.*")), "malformed event did not fail closed and clean up")
+require(proc.returncode == 2 and not list(malformed_temp.glob("genesis-gate-*")), "malformed event did not fail closed and clean up")
 controls.append("malformed-channel-fail-closed")
 
 launch_temp = temp / "launch-failure"
 launch_temp.mkdir()
-launch_env = dict(os.environ, TMPDIR=str(launch_temp))
+launch_env = dict(event_env, TMPDIR=str(launch_temp))
 proc = subprocess.run([
     sys.executable, str(root / "scripts/lib/gate_telemetry.py"),
     "--root", str(root), "--entrypoint", "scripts/check_doc_hygiene.sh",
     "--emit", "none", "--", "genesis-telemetry-command-that-does-not-exist",
 ], cwd=root, env=launch_env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-require(proc.returncode == 2 and not list(launch_temp.glob("genesis-gate-events.*")), "launch failure leaked event channel")
+require(proc.returncode == 2 and not list(launch_temp.glob("genesis-gate-*")), "launch failure leaked event channel")
 controls.append("launch-failure-cleanup")
 
 duplicate = temp / "duplicate.json"
@@ -312,11 +312,18 @@ for path in check_scripts:
 require(not missing, f"governed checks missing telemetry wrapper: {missing}")
 controls.append("complete-gate-wrapper-coverage")
 
-require(len(controls) == 20 and len(set(controls)) == 20, "control coverage drift")
+# Exercise the actual CLI through signal-ignoring descendants and nested owners.
+from gate_telemetry_cancellation import cancellation_self_test
+require(cancellation_self_test(root) == 20, "telemetry cancellation control inventory drift")
+controls.append("telemetry-owned-scope-cancellation")
+
+require(len(controls) == 21 and len(set(controls)) == 21, "control coverage drift")
 authorities = [
     "policies/gate_telemetry_v0.1.json",
     "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json",
     "scripts/lib/gate_telemetry.py",
+    "scripts/lib/supervisor_cancellation.py",
+    "scripts/lib/gate_telemetry_cancellation.py",
     "scripts/lib/gate_telemetry.sh",
     "scripts/check_gate_resource_telemetry.sh",
 ]
