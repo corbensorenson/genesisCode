@@ -211,10 +211,10 @@ pub(super) fn gc_build_sources(
     let mut lock_entries_term: Vec<Term> = Vec::new();
     let mut lock_artifacts_term: BTreeMap<TermOrdKey, Term> = BTreeMap::new();
     if include_lock {
-        let lock_path = sandbox_path_allow_missing(base_dir, lock_s, false).map_err(|error| {
+        let lock_file = sandbox_optional_document_read(base_dir, lock_s).map_err(|error| {
             mk_error(error_tok, "core/gc/bad-lock", error.to_string(), Some(op))
         })?;
-        if lock_path.exists() {
+        if let Some(lock_file) = lock_file {
             let Some(lock_authority) = lock_authority else {
                 return Err(mk_error(
                     error_tok,
@@ -224,7 +224,7 @@ pub(super) fn gc_build_sources(
                     Some(op),
                 ));
             };
-            let bytes = runner_cap_pkg_low::read_bounded_lock(&lock_path)
+            let bytes = runner_cap_pkg_low::read_bounded_lock(&lock_file)
                 .map_err(|message| mk_error(error_tok, "core/gc/bad-lock", message, Some(op)))?;
             match lock_authority.read_model_toml(&bytes) {
                 Ok(PkgLockModelDecision::Lock(lk)) => {

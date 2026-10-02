@@ -84,10 +84,20 @@ def main() -> None:
     binary, runtime = args.binary.resolve(strict=True), args.wasmtime.resolve(strict=True)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repository, text=True).strip()
     version = subprocess.check_output([str(runtime), "--version"], text=True).strip()
-    material_names = ("crates/gc_effects/src/rooted_fs_wasi.rs",
-                      "crates/gc_effects/tests/wasi_rooted_security.rs",
-                      "crates/gc_effects/Cargo.toml", "crates/gc_effects/src/lib.rs",
-                      "scripts/lib/wasi_rooted_controls.py")
+    material_names = (
+        "Cargo.lock", "selfhost/toolchain.gc", "crates/gc_effects/Cargo.toml",
+        "crates/gc_effects/src/lib.rs", "crates/gc_effects/src/rooted_fs_wasi.rs",
+        "crates/gc_effects/src/runner.rs", "crates/gc_effects/src/runner_io_ops.rs",
+        "crates/gc_effects/src/runner_gc_ops.rs", "crates/gc_effects/src/runner_cap_pkg_low.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/parity.rs",
+        "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
+        "crates/gc_effects/tests/wasi_rooted_security.rs",
+        "scripts/lib/wasi_rooted_controls.py",
+    )
     source_hashes = {name: hashlib.sha256((repository / name).read_bytes()).hexdigest()
                      for name in material_names}
     with tempfile.TemporaryDirectory(prefix="genesis-wasi-rooted-") as temporary:

@@ -71,7 +71,7 @@ pub(super) fn handle_pkg_install(
     let frozen = payload_pkg_bool(payload, ":frozen").unwrap_or(false);
     let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+    let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
         Ok(path) => path,
         Err(error) => {
             return Ok(mk_error(
@@ -539,7 +539,7 @@ pub(super) fn handle_pkg_verify(
     };
 
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+    let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
         Ok(p) => p,
         Err(e) => {
             return Ok(mk_error(

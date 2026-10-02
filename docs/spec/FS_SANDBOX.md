@@ -55,6 +55,15 @@ spellings of the configured root. An escaping link or a traversal cycle is rejec
 40 links are followed. The actual open remains root-relative if an ancestor changes after
 resolution. Stable WASI uses safe descriptor-relative operations with no-follow ancestor and final read opens. Symlink traversal remains denied on that profile; it does not inherit native inside-link support.
 
+Package lock readers use a typed `DocumentRead` grant that owns the opened file through
+bounded reading and parsing. Package add/list/load, resolution/install/verify, bridge-lock
+updates, parity parsing and GC lock-root discovery share this boundary. Legacy absolute
+inside-root lock names remain accepted. A diagnostic name is never reopened as authority.
+Replacing an ancestor, the final entry or the visible root name after acquisition cannot
+redirect that read to another file. The existing 4 MiB lock limit also applies to the parity
+parser. GC may omit a missing lock below an admitted root; failure to open the root is an
+error. Native inside-link and stable-WASI no-link read profiles remain as specified above.
+
 ## Write (`io/fs::write`)
 
 Write payload additionally contains:
@@ -151,7 +160,8 @@ an ancestor name with an escaping link cannot turn a later relative operation in
 outside-root I/O. Once a parent directory is opened, operations refer to that directory object;
 renaming its visible name does not change the handle's authority.
 
-Legacy pathname-returning adapters remain for package/module reads, GPK streaming, pins reads/locks,
+Legacy pathname-returning adapters remain for package manifests/module trees, VCS patch reads,
+WASI bridge-response reads, GPK streaming, pins reads/locks,
 quarantine/store integration and external process APIs. Their native preflight now authorizes
 before rooted parent creation, but a returned `PathBuf` still has a check/open race. They are
 transitional adapters, not equivalent to the capability operations. F02 remains open until all

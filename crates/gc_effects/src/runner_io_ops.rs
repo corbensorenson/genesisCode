@@ -287,6 +287,56 @@ pub(crate) fn sandbox_path_read(base_dir: &Path, input: &str) -> Result<PathBuf,
     }
 }
 
+/// Authority is the held file, never the diagnostic input name. Readers cannot
+/// convert this grant back into an ambient pathname to reopen it.
+pub(crate) struct DocumentRead {
+    file: std::fs::File,
+    #[cfg(any(test, feature = "parity-oracle"))]
+    description: String,
+}
+
+impl DocumentRead {
+    pub(crate) fn reader(&self) -> &std::fs::File {
+        &self.file
+    }
+
+    #[cfg(any(test, feature = "parity-oracle"))]
+    pub(crate) fn description(&self) -> &str {
+        &self.description
+    }
+}
+
+pub(crate) fn sandbox_document_read(
+    base_dir: &Path,
+    input: &str,
+) -> Result<DocumentRead, EffectsError> {
+    sandbox_optional_document_read(base_dir, input)?.ok_or_else(|| {
+        std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "document source does not exist",
+        )
+        .into()
+    })
+}
+
+pub(crate) fn sandbox_optional_document_read(
+    base_dir: &Path,
+    input: &str,
+) -> Result<Option<DocumentRead>, EffectsError> {
+    // Root admission is never optional. Only absence below the opened root is.
+    let root = crate::rooted_fs::FsRoot::open(base_dir)?;
+    let file = match root.open_document_read(input) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error.into()),
+    };
+    Ok(Some(DocumentRead {
+        file,
+        #[cfg(any(test, feature = "parity-oracle"))]
+        description: input.to_owned(),
+    }))
+}
+
 pub(crate) fn sandbox_path_write(
     base_dir: &Path,
     input: &str,

@@ -45,7 +45,7 @@ pub(super) fn dispatch_resolution(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
-            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+            let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -151,7 +151,7 @@ pub(super) fn dispatch_resolution(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
-            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+            let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -314,7 +314,7 @@ pub(super) fn dispatch_resolution(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
-            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+            let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -540,7 +540,7 @@ fn render_resolved_lock(
 
 fn load_lock_model(
     authority: Option<&mut PkgLockReadAuthority>,
-    path: &std::path::Path,
+    path: &crate::runner_io_ops::DocumentRead,
     error_tok: SealId,
     op: &str,
 ) -> Result<gc_pkg::GenesisLock, Value> {
@@ -563,7 +563,7 @@ fn load_lock_model(
 
     #[cfg(any(test, feature = "parity-oracle"))]
     {
-        gc_pkg::GenesisLock::load(path)
+        read_parity_lock(path)
             .map_err(|error| mk_error(error_tok, "core/pkg/bad-lock", error.to_string(), Some(op)))
     }
 

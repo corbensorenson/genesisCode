@@ -48,17 +48,18 @@ pub(super) fn dispatch_lock_io(
                 PkgLockOpsDecision::Write { bytes, lock_hash } => {
                     let base_dir = effective_base_dir(pol)?;
                     let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
-                    let lock_path = match sandbox_atomic_write_target(&base_dir, &lock_s, create_dirs) {
-                        Ok(path) => path,
-                        Err(error) => {
-                            return Ok(mk_error(
-                                error_tok,
-                                "core/caps/path-escape",
-                                error.to_string(),
-                                Some(op),
-                            ));
-                        }
-                    };
+                    let lock_path =
+                        match sandbox_atomic_write_target(&base_dir, &lock_s, create_dirs) {
+                            Ok(path) => path,
+                            Err(error) => {
+                                return Ok(mk_error(
+                                    error_tok,
+                                    "core/caps/path-escape",
+                                    error.to_string(),
+                                    Some(op),
+                                ));
+                            }
+                        };
                     if let Err(error) = atomic_write_text(&lock_path, &bytes) {
                         return Ok(mk_error(
                             error_tok,
@@ -94,7 +95,7 @@ pub(super) fn dispatch_lock_io(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
-            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+            let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -159,7 +160,7 @@ pub(super) fn dispatch_lock_io(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
-            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+            let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -216,7 +217,7 @@ pub(super) fn dispatch_lock_io(
                 Err(e) => return Ok(mk_error(error_tok, "core/pkg/bad-payload", e, Some(op))),
             };
             let base_dir = effective_base_dir(pol)?;
-            let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+            let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -296,7 +297,7 @@ fn dispatch_load_lock_parity(
         }
     };
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+    let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
         Ok(path) => path,
         Err(error) => {
             return Ok(mk_error(
@@ -307,7 +308,7 @@ fn dispatch_load_lock_parity(
             ));
         }
     };
-    let lock = match gc_pkg::GenesisLock::load(&lock_path) {
+    let lock = match read_parity_lock(&lock_path) {
         Ok(lock) => lock,
         Err(error) => {
             return Ok(mk_error(

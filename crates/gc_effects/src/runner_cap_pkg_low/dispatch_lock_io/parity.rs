@@ -84,7 +84,7 @@ fn add(
         }
     };
     let base = effective_base_dir(policy)?;
-    let path = match sandbox_path_read(&base, &lock_s) {
+    let path = match sandbox_document_read(&base, &lock_s) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(
@@ -95,7 +95,7 @@ fn add(
             ));
         }
     };
-    let mut lock = match gc_pkg::GenesisLock::load(&path) {
+    let mut lock = match read_parity_lock(&path) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(
@@ -197,7 +197,7 @@ fn list(
             ));
         }
     };
-    let path = match sandbox_path_read(&effective_base_dir(policy)?, &lock_s) {
+    let path = match sandbox_document_read(&effective_base_dir(policy)?, &lock_s) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(
@@ -208,7 +208,7 @@ fn list(
             ));
         }
     };
-    let lock = match gc_pkg::GenesisLock::load(&path) {
+    let lock = match read_parity_lock(&path) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(

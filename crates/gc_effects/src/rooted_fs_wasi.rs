@@ -161,6 +161,32 @@ impl FsRoot {
         .into())
     }
 
+    pub(crate) fn open_document_read(&self, input: &str) -> io::Result<std::fs::File> {
+        if input.ends_with('/') || input.ends_with("/.") {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "document source requires a file entry",
+            ));
+        }
+        let input = Path::new(input);
+        let input = if input.is_absolute() {
+            input
+                .strip_prefix(&self.base)
+                .map_err(|_| denied("document source escapes capability root"))?
+        } else {
+            input
+        };
+        let path = relative_path(input)?;
+        let (parent, leaf) = self.parent(&path, false)?;
+        Ok(fs::openat(
+            &parent,
+            leaf,
+            OFlags::RDONLY | OFlags::NOFOLLOW,
+            Mode::empty(),
+        )?
+        .into())
+    }
+
     pub(crate) fn write(&self, input: &str, bytes: &[u8], create: bool) -> io::Result<()> {
         let path = self.resolve(input)?;
         self.preflight(&path)?;
@@ -441,6 +467,33 @@ impl DirEntry {
 mod controls {
     use super::*;
     use std::os::unix::fs::symlink;
+
+    #[test]
+    fn wasi_rooted_document_read_retains_file_and_denies_links() {
+        let fixture = tempfile::tempdir().unwrap();
+        let base = fixture.path().join("root");
+        let outside = fixture.path().join("outside");
+        std::fs::create_dir_all(base.join("parent")).unwrap();
+        std::fs::create_dir(&outside).unwrap();
+        std::fs::write(base.join("parent/document"), b"inside").unwrap();
+        std::fs::write(outside.join("document"), b"outside").unwrap();
+        let root = FsRoot::open(&base).unwrap();
+        let held = root
+            .open_document_read(base.join("parent/document").to_str().unwrap())
+            .unwrap();
+        std::fs::rename(base.join("parent"), base.join("retained")).unwrap();
+        symlink(&outside, base.join("parent")).unwrap();
+        assert_eq!(std::io::read_to_string(held).unwrap(), "inside");
+        assert!(root.open_document_read("parent/document").is_err());
+        symlink("retained/document", base.join("link")).unwrap();
+        assert!(root.open_document_read("link").is_err());
+        assert!(root.open_document_read("retained/document/").is_err());
+        assert!(root.open_document_read("../outside/document").is_err());
+        assert!(
+            root.open_document_read(outside.join("document").to_str().unwrap())
+                .is_err()
+        );
+    }
 
     #[test]
     fn wasi_rooted_descriptor_operations_and_metadata() {

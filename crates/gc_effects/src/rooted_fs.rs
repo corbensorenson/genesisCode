@@ -313,6 +313,12 @@ impl FsRoot {
         Ok(self.directory.open(path)?.into_std())
     }
 
+    pub(crate) fn open_document_read(&self, input: &str) -> io::Result<std::fs::File> {
+        let input = self.legacy_relative_input(input)?;
+        let path = self.resolve_path(PathBuf::from(input), true, false)?;
+        Ok(self.directory.open(path)?.into_std())
+    }
+
     pub(crate) fn write(&self, input: &str, bytes: &[u8], create: bool) -> io::Result<()> {
         let path = self.resolve(input, false, true)?;
         let (parent, leaf) = self.parent(&path, create)?;

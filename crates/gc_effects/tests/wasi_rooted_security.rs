@@ -45,7 +45,8 @@ fn perform(
         let mut policies = policies.borrow_mut();
         policies.entry(base.to_path_buf()).or_insert_with(|| {
             let operations = ["io/fs::read", "io/fs::write", "io/fs::stat", "io/fs::list",
-                "io/fs::mkdir", "io/fs::remove", "io/fs::rename", "core/pkg-low::init"];
+                "io/fs::mkdir", "io/fs::remove", "io/fs::rename", "core/pkg-low::init",
+                "core/pkg-low::load-lock"];
             let mut document = format!("allow = {operations:?}\n");
             for op in operations {
                 document.push_str(&format!("[op.{op:?}]\nbase_dir = {:?}\ncreate_dirs = true\n", base.to_str().unwrap()));
@@ -273,6 +274,26 @@ fn wasi_actual_package_writer_replaces_entries_and_cleans_failure() {
             let document: toml::Value =
                 toml::from_str(std::str::from_utf8(&bytes).unwrap()).unwrap();
             assert_eq!(document["workspace"].as_str(), Some("wasi-control"));
+            let loaded = succeeds(perform(
+                &root,
+                "core/pkg-low::load-lock",
+                &format!("{{:lock {destination:?}}}"),
+                compiled,
+            ));
+            assert!(matches!(loaded.as_data(), Some(Term::Map(_))));
+        }
+        for source in [
+            "escape/genesis.lock",
+            "../outside/genesis.lock",
+            "genesis.lock/",
+            "/controls/outside/genesis.lock",
+        ] {
+            rejects(perform(
+                &root,
+                "core/pkg-low::load-lock",
+                &format!("{{:lock {source:?}}}"),
+                compiled,
+            ));
         }
         rejects(perform(
             &root,

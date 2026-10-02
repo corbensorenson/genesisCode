@@ -30,7 +30,7 @@ pub(super) fn update_lock(
         return Err(authority_unavailable());
     };
     let base_dir = effective_base_dir(policy)?;
-    let read_path = match sandbox_path_read(&base_dir, update.lock) {
+    let read_path = match sandbox_document_read(&base_dir, update.lock) {
         Ok(path) => path,
         Err(error) => {
             return Ok(Err(mk_error(
