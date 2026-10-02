@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+from contextlib import contextmanager
 import fnmatch
 from hashlib import sha256
 import json
@@ -87,6 +88,72 @@ REQUIRED_IDENTITY_EXCLUSIONS = {
 
 class AuthorityError(ValueError):
     pass
+
+
+class AuthorityCancelled(BaseException):
+    def __init__(self, signum: int):
+        self.signum = signum
+
+
+class CancellationScope:
+    """Unwind once; repeated termination must not interrupt owned cleanup."""
+
+    def __init__(self) -> None:
+        self.depth = 0
+        self.pending: Optional[int] = None
+        self.unwinding = False
+
+    def receive(self, signum: int, _frame: Any) -> None:
+        if self.unwinding:
+            return
+        if self.pending is None:
+            self.pending = signum
+        self.deliver()
+
+    def deliver(self) -> None:
+        if self.pending is not None and self.depth == 0 and not self.unwinding:
+            self.unwinding = True
+            raise AuthorityCancelled(self.pending)
+
+    @contextmanager
+    def defer(self):
+        self.depth += 1
+        try:
+            yield
+        finally:
+            self.depth -= 1
+            self.deliver()
+
+
+_cancellation_scope: Optional[CancellationScope] = None
+
+
+@contextmanager
+def cancellation_scope():
+    global _cancellation_scope
+    previous_scope = _cancellation_scope
+    scope = CancellationScope()
+    handlers = {}
+    try:
+        for name in ("SIGINT", "SIGTERM", "SIGHUP"):
+            signum = getattr(signal, name, None)
+            if signum is not None:
+                handlers[signum] = signal.signal(signum, scope.receive)
+        _cancellation_scope = scope
+        yield
+    finally:
+        _cancellation_scope = previous_scope
+        for signum, handler in handlers.items():
+            signal.signal(signum, handler)
+
+
+@contextmanager
+def deferred_cancellation():
+    if _cancellation_scope is None:
+        yield
+    else:
+        with _cancellation_scope.defer():
+            yield
 
 
 def reject_duplicate_keys(pairs: Sequence[tuple[str, Any]]) -> Dict[str, Any]:
@@ -554,15 +621,16 @@ def allocated_paths_bytes(paths: Sequence[Path]) -> int:
 
 
 def kill_and_reap(process: subprocess.Popen[Any]) -> None:
-    if process.poll() is None:
+    with deferred_cancellation():
         try:
             if os.name != "nt":
+                # The group can still own descendants after its leader exited.
                 os.killpg(process.pid, signal.SIGKILL)
-            else:
+            elif process.poll() is None:
                 process.kill()
         except ProcessLookupError:
             pass
-    process.wait()
+        process.wait()
 
 
 class AggregateResourceOwner:
@@ -745,12 +813,14 @@ def run_bounded(
     pass_fds: tuple[int, ...] = ()
     if owner is not None:
         process_environment, pass_fds = owner.child_environment(process_environment)
-    process = subprocess.Popen(
-        list(command), cwd=cwd, env=process_environment,
-        start_new_session=(os.name != "nt"),
-        **({"pass_fds": pass_fds} if pass_fds else {}),
-    )
+    process = None
     try:
+        with deferred_cancellation():
+            process = subprocess.Popen(
+                list(command), cwd=cwd, env=process_environment,
+                start_new_session=(os.name != "nt"),
+                **({"pass_fds": pass_fds} if pass_fds else {}),
+            )
         started = time.monotonic()
         while process.poll() is None:
             if time.monotonic() - started > timeout:
@@ -766,9 +836,9 @@ def run_bounded(
                 scope_root=cwd,
                 scope_disk_mib=disk_mib,
             )
-    except BaseException:
-        kill_and_reap(process)
-        raise
+    finally:
+        if process is not None:
+            kill_and_reap(process)
     if return_code != 0:
         raise subprocess.CalledProcessError(return_code, list(command))
 
@@ -893,60 +963,75 @@ def run_checks(
     )
     with tempfile.TemporaryDirectory(prefix="generated-authority-checks-", dir=owner.temporary_root) as temporary:
         log_root = Path(temporary)
-        while pending or active:
-            try:
-                owner.check("parallel validation", force_owned_sample=False)
-            except BaseException as exc:
-                failure = exc
-            while failure is None and pending and len(active) < CHECK_WORKERS:
-                next_pending = next_check_position(
-                    pending,
-                    [item[2] for item in active.values()],
-                )
-                if next_pending is None:
-                    break
-                index, check, timeout, lane = pending.pop(next_pending)
-                log_path = log_root / f"{index:04d}.log"
-                handle = log_path.open("wb")
-                process = subprocess.Popen(
-                    ["bash", check],
-                    cwd=stage,
-                    env=environment,
-                    stdout=handle,
-                    stderr=subprocess.STDOUT,
-                    start_new_session=(os.name != "nt"),
-                    **({"pass_fds": pass_fds} if pass_fds else {}),
-                )
-                active[index] = (
-                    check, timeout, lane, process, handle, time.monotonic(), log_path
-                )
+        try:
+            while pending or active:
+                try:
+                    owner.check("parallel validation", force_owned_sample=False)
+                except BaseException as exc:
+                    failure = exc
+                while failure is None and pending and len(active) < CHECK_WORKERS:
+                    next_pending = next_check_position(
+                        pending,
+                        [item[2] for item in active.values()],
+                    )
+                    if next_pending is None:
+                        break
+                    index, check, timeout, lane = pending.pop(next_pending)
+                    log_path = log_root / f"{index:04d}.log"
+                    with deferred_cancellation():
+                        handle = log_path.open("wb")
+                        try:
+                            process = subprocess.Popen(
+                                ["bash", check], cwd=stage, env=environment,
+                                stdout=handle, stderr=subprocess.STDOUT,
+                                start_new_session=(os.name != "nt"),
+                                **({"pass_fds": pass_fds} if pass_fds else {}),
+                            )
+                            active[index] = (
+                                check, timeout, lane, process, handle, time.monotonic(), log_path
+                            )
+                        except BaseException:
+                            handle.close()
+                            raise
 
-            now = time.monotonic()
-            for index, (check, timeout, _, process, handle, started, log_path) in list(active.items()):
-                return_code = process.poll()
-                if return_code is None and now - started <= timeout:
-                    continue
-                if return_code is None:
-                    failure = subprocess.TimeoutExpired(["bash", check], timeout)
-                elif return_code != 0:
-                    failure = subprocess.CalledProcessError(return_code, ["bash", check])
-                handle.close()
-                completed_logs[index] = log_path
-                durations_ms[index] = round((now - started) * 1000)
-                del active[index]
-                if failure is not None:
-                    break
-
-            if failure is not None:
-                for index, (_, _, _, process, handle, started, log_path) in active.items():
+                now = time.monotonic()
+                for index, (check, timeout, _, process, handle, started, log_path) in list(active.items()):
+                    return_code = process.poll()
+                    if return_code is None and now - started <= timeout:
+                        continue
+                    if return_code is None:
+                        failure = subprocess.TimeoutExpired(["bash", check], timeout)
+                    elif return_code != 0:
+                        failure = subprocess.CalledProcessError(return_code, ["bash", check])
                     kill_and_reap(process)
                     handle.close()
                     completed_logs[index] = log_path
-                    durations_ms[index] = round((time.monotonic() - started) * 1000)
-                active.clear()
-                break
-            if active:
-                time.sleep(0.05)
+                    durations_ms[index] = round((now - started) * 1000)
+                    del active[index]
+                    if failure is not None:
+                        break
+
+                if failure is not None:
+                    for index, (_, _, _, process, handle, started, log_path) in active.items():
+                        kill_and_reap(process)
+                        handle.close()
+                        completed_logs[index] = log_path
+                        durations_ms[index] = round((time.monotonic() - started) * 1000)
+                    active.clear()
+                    break
+                if active:
+                    time.sleep(0.05)
+
+        finally:
+            with deferred_cancellation():
+                try:
+                    for _, _, _, process, handle, _, _ in active.values():
+                        try:
+                            kill_and_reap(process)
+                        finally:
+                            handle.close()
+                finally:
+                    active.clear()
 
         sys.stdout.flush()
         for index in sorted(completed_logs):
@@ -1005,103 +1090,106 @@ def promote(
     changed = [rel for rel in outputs if file_identity(stage / rel) != file_identity(root / rel)]
     if not changed:
         return []
-    lock = common_git_dir(root) / LOCK_NAME
-    try:
-        descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError as exc:
-        raise AuthorityError(f"generated-authority publication lock exists: {lock}") from exc
-    try:
-        os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
-        os.close(descriptor)
-        descriptor = -1
-        transaction = Path(
-            tempfile.mkdtemp(
-                prefix="generated-authority-transaction-", dir=common_git_dir(root)
-            )
-        )
-    except BaseException:
-        if descriptor >= 0:
+    with deferred_cancellation():
+        lock = common_git_dir(root) / LOCK_NAME
+        try:
+            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        except FileExistsError as exc:
+            raise AuthorityError(f"generated-authority publication lock exists: {lock}") from exc
+        try:
+            os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
             os.close(descriptor)
-        lock.unlink(missing_ok=True)
-        raise
-    backups = transaction / "backups"
-    backups.mkdir()
-    if owner is not None:
-        owner.track_scope(transaction)
-    promoted: list[str] = []
-    temporary_paths: list[Path] = []
-    old_mask = None
-    try:
-        if hasattr(signal, "pthread_sigmask"):
-            old_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM, signal.SIGHUP})
-        if expected_input_snapshot is not None:
-            require(
-                tree_snapshot(root, set(outputs)) == expected_input_snapshot,
-                "canonical inputs changed before generated publication lock",
+            descriptor = -1
+            transaction = Path(
+                tempfile.mkdtemp(
+                    prefix="generated-authority-transaction-", dir=common_git_dir(root)
+                )
             )
-        if expected_output_identities is not None:
-            observed = {rel: file_identity(root / rel) for rel in outputs}
-            require(
-                observed == expected_output_identities,
-                "canonical outputs changed before generated publication lock",
-            )
-        if owner is not None:
-            owner.check("generated publication admission")
-        for rel in changed:
-            source = stage / rel
-            destination = root / rel
-            require(
-                source.is_file() and not source.is_symlink()
-                and destination.is_file() and not destination.is_symlink(),
-                f"generated output must be a regular file before promotion: {rel}",
-            )
-            backup = backups / rel
-            backup.parent.mkdir(parents=True, exist_ok=True)
+        except BaseException:
+            if descriptor >= 0:
+                os.close(descriptor)
+            lock.unlink(missing_ok=True)
+            raise
+        backups = transaction / "backups"
+        promoted: list[str] = []
+        temporary_paths: list[Path] = []
+        old_mask = None
+        try:
+            backups.mkdir()
             if owner is not None:
-                owner.track_scope(destination, preexisting=True)
-            shutil.copy2(destination, backup)
-            descriptor, temporary_name = tempfile.mkstemp(
-                prefix=f".{destination.name}.generated-authority-", dir=destination.parent
-            )
-            os.close(descriptor)
-            temporary = Path(temporary_name)
-            temporary_paths.append(temporary)
+                owner.track_scope(transaction)
+            if hasattr(signal, "pthread_sigmask"):
+                old_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGINT, signal.SIGTERM, signal.SIGHUP})
+            if expected_input_snapshot is not None:
+                require(
+                    tree_snapshot(root, set(outputs)) == expected_input_snapshot,
+                    "canonical inputs changed before generated publication lock",
+                )
+            if expected_output_identities is not None:
+                observed = {rel: file_identity(root / rel) for rel in outputs}
+                require(
+                    observed == expected_output_identities,
+                    "canonical outputs changed before generated publication lock",
+                )
             if owner is not None:
-                owner.track_scope(temporary)
-            shutil.copy2(source, temporary)
-            if owner is not None:
-                owner.check("generated publication staged copy")
-            os.replace(temporary, destination)
-            promoted.append(rel)
-            fail_after = os.environ.get("GENESIS_GENERATED_AUTHORITY_FAIL_AFTER_PROMOTIONS")
-            if fail_after and len(promoted) >= int(fail_after):
-                raise AuthorityError("injected promotion failure")
-        if expected_input_snapshot is not None:
+                owner.check("generated publication admission")
+            for rel in changed:
+                source = stage / rel
+                destination = root / rel
+                require(
+                    source.is_file() and not source.is_symlink()
+                    and destination.is_file() and not destination.is_symlink(),
+                    f"generated output must be a regular file before promotion: {rel}",
+                )
+                backup = backups / rel
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                if owner is not None:
+                    owner.track_scope(destination, preexisting=True)
+                shutil.copy2(destination, backup)
+                descriptor, temporary_name = tempfile.mkstemp(
+                    prefix=f".{destination.name}.generated-authority-", dir=destination.parent
+                )
+                os.close(descriptor)
+                temporary = Path(temporary_name)
+                temporary_paths.append(temporary)
+                if owner is not None:
+                    owner.track_scope(temporary)
+                shutil.copy2(source, temporary)
+                if owner is not None:
+                    owner.check("generated publication staged copy")
+                os.replace(temporary, destination)
+                promoted.append(rel)
+                fail_after = os.environ.get("GENESIS_GENERATED_AUTHORITY_FAIL_AFTER_PROMOTIONS")
+                if fail_after and len(promoted) >= int(fail_after):
+                    raise AuthorityError("injected promotion failure")
+            if expected_input_snapshot is not None:
+                require(
+                    tree_snapshot(root, set(outputs)) == expected_input_snapshot,
+                    "canonical inputs changed during generated publication",
+                )
+            observed_published = {rel: file_identity(root / rel) for rel in outputs}
+            expected_published = {rel: file_identity(stage / rel) for rel in outputs}
             require(
-                tree_snapshot(root, set(outputs)) == expected_input_snapshot,
-                "canonical inputs changed during generated publication",
+                observed_published == expected_published,
+                "canonical outputs changed during generated publication",
             )
-        observed_published = {rel: file_identity(root / rel) for rel in outputs}
-        expected_published = {rel: file_identity(stage / rel) for rel in outputs}
-        require(
-            observed_published == expected_published,
-            "canonical outputs changed during generated publication",
-        )
-        if owner is not None:
-            owner.check("generated publication verification")
-            owner.consume_events(final=True)
-    except BaseException:
-        for rel in reversed(promoted):
-            os.replace(backups / rel, root / rel)
-        raise
-    finally:
-        if old_mask is not None:
-            signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
-        for temporary in temporary_paths:
-            temporary.unlink(missing_ok=True)
-        shutil.rmtree(transaction, ignore_errors=True)
-        lock.unlink(missing_ok=True)
-    return changed
+            if owner is not None:
+                owner.check("generated publication verification")
+                owner.consume_events(final=True)
+        except BaseException:
+            for rel in reversed(promoted):
+                os.replace(backups / rel, root / rel)
+            raise
+        finally:
+            try:
+                for temporary in temporary_paths:
+                    temporary.unlink(missing_ok=True)
+                shutil.rmtree(transaction, ignore_errors=True)
+                lock.unlink(missing_ok=True)
+            finally:
+                if old_mask is not None:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, old_mask)
+        return changed
 
 
 def stage_closure(
@@ -1118,15 +1206,14 @@ def stage_closure(
     )
     baseline = tree_snapshot(root, set(outputs))
     baseline_outputs = {output: file_identity(root / output) for output in outputs}
-    temporary_root = Path(tempfile.mkdtemp(prefix="generated-authority-stage-"))
-    stage = temporary_root / "worktree"
-    try:
-        owner = AggregateResourceOwner(root, temporary_root, limits, sampling_root=root)
-    except BaseException:
-        shutil.rmtree(temporary_root, ignore_errors=True)
-        raise
+    temporary_root = None
+    owner = None
     publication_committed = False
     try:
+        with deferred_cancellation():
+            temporary_root = Path(tempfile.mkdtemp(prefix="generated-authority-stage-"))
+            stage = temporary_root / "worktree"
+            owner = AggregateResourceOwner(root, temporary_root, limits, sampling_root=root)
         owner.check("worktree setup")
         run_bounded(
             ["git", "worktree", "add", "--detach", str(stage), "HEAD"],
@@ -1154,29 +1241,33 @@ def stage_closure(
         if not update:
             require(not stale, "generated-authority closure is stale: " + ", ".join(stale))
             return []
-        promoted = promote(
-            root, stage, outputs,
-            expected_input_snapshot=baseline,
-            expected_output_identities=baseline_outputs,
-            owner=owner,
-        )
-        publication_committed = True
+        with deferred_cancellation():
+            promoted = promote(
+                root, stage, outputs,
+                expected_input_snapshot=baseline,
+                expected_output_identities=baseline_outputs,
+                owner=owner,
+            )
+            publication_committed = True
         return promoted
     finally:
-        if stage.exists():
-            subprocess.run(
-                ["git", "worktree", "remove", "--force", str(stage)],
-                cwd=root,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=60,
-            )
-        try:
-            # Final publication validation occurs while rollback is still available.
-            owner.close(validate=not publication_committed)
-        finally:
-            print("generated-authority-resource-observation: " + json.dumps(owner.resource_observation(), sort_keys=True))
-            shutil.rmtree(temporary_root, ignore_errors=True)
+        with deferred_cancellation():
+            try:
+                if temporary_root is not None and (temporary_root / "worktree").exists():
+                    subprocess.run(
+                        ["git", "worktree", "remove", "--force", str(temporary_root / "worktree")],
+                        cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                        timeout=60, check=True,
+                    )
+            finally:
+                try:
+                    if owner is not None:
+                        owner.close(validate=not publication_committed)
+                finally:
+                    if owner is not None:
+                        print("generated-authority-resource-observation: " + json.dumps(owner.resource_observation(), sort_keys=True))
+                    if temporary_root is not None:
+                        shutil.rmtree(temporary_root)
 
 
 def synthetic_graph(root: Path, graph: Mapping[str, Any], mutation: callable) -> None:
@@ -1785,10 +1876,12 @@ def self_test(root: Path, graph: Mapping[str, Any]) -> None:
             raise AuthorityError("self-test accepted concurrent output drift")
     controls += resource_attribution_self_test()
     require(controls == 40, "generated-authority self-test inventory drift")
+    from generated_authority_cancellation import cancellation_self_test
+    controls += cancellation_self_test(root)
     print(f"generated-authority-self-test: ok (negative_controls={controls})")
 
 
-def main(argv: Sequence[str]) -> int:
+def run_main(argv: Sequence[str]) -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="validate graph and discovery closure")
@@ -1858,6 +1951,15 @@ def main(argv: Sequence[str]) -> int:
         print(f"generated-authority: {exc}", file=sys.stderr)
         return 1
     return 0
+
+
+def main(argv: Sequence[str]) -> int:
+    try:
+        with cancellation_scope():
+            return run_main(argv)
+    except AuthorityCancelled as exc:
+        print(f"generated-authority: cancelled (signal={exc.signum}); owned cleanup completed", file=sys.stderr)
+        return 128 + exc.signum
 
 
 if __name__ == "__main__":

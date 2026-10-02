@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2013,6 +2013,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -2849,7 +2850,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3874,6 +3875,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -4326,7 +4328,7 @@
       "executionIdentitySha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "eccd8d3c08f00b6c03673e4c10223b2b0a826874a53f00183c9270574542dd3d",
+      "inputIdentitySha256": "bf58d60ec9a1f2f875818c7a17b06aacfcc5d966c173ef3275652401a3862642",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -4406,7 +4408,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5431,6 +5433,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -5838,7 +5841,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6863,6 +6866,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -7349,7 +7353,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -8374,6 +8378,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -9070,7 +9075,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "cf4b1f76aeccd90b7a231553897df3d7c3e147e43fc926b285c2a48ba16c867b",
+      "inputIdentitySha256": "cd40272f1013278d97967b8e5512bafe41ba011bd4ec19773220b350187b99c9",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9353,7 +9358,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10378,6 +10383,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -11886,7 +11892,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "9e5117beba21dcd0f644e6f59ad6a4d0f572b45f5450217b337cdc444c9bedbb",
+      "inputIdentitySha256": "8d77a24abae27cd9e73ce6eaa8e2b2d84ea50944caaae606e37b5a41eee5ffe2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12073,7 +12079,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13098,6 +13104,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -15122,7 +15129,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16147,6 +16154,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -17196,7 +17204,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18221,6 +18229,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -18817,7 +18826,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19842,6 +19851,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -20820,7 +20830,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21845,6 +21855,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -22533,7 +22544,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23558,6 +23569,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -24221,7 +24233,7 @@
       "executionIdentitySha256": "bf94a23c0d0681c59f3ca677dfd4c6152ed3f56b7844e22062e8329c48f19dfa",
       "expectedDurationSeconds": 15,
       "id": "gate/reference-host-profiles",
-      "inputIdentitySha256": "f442d716af5e00388199c5eea4b549fac66b53f7ec2a4148c771a1ecc2d91a39",
+      "inputIdentitySha256": "47e909a3ca698620739266e333cc5752f68b211af8bf5db161f5d1e676ca0185",
       "inputs": {
         "paths": [
           "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -24281,7 +24293,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "ddf6f35d4904c925c8eaab0c3b1decb49393fd2f0c63fb3e87f3dae4c5f9c3de",
+      "inputIdentitySha256": "42243c86a2fd0d88f1eb336f58bbf3a8dd71fe0069a3dbf9872ec302d7e6f953",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24482,7 +24494,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "3ae859dffa9c74eb244c43346acad602b3a726e4bdae5e958bc9a12b0d5a1afe",
+      "inputIdentitySha256": "f7d5119ec6b3a4540301edd09bddf8df44597453c8ad759f3773f86c3bd8ee50",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -27090,7 +27102,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28115,6 +28127,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -28624,7 +28637,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "79ebdd54bc159ae2405b5eb0d32d5ea99a8aa11232593f432698a40953ebd8a4",
+      "inputIdentitySha256": "1bb56c960b80e2575803030c0182b3650958cdbc42615b8f9d09ae3bcbdaf074",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29649,6 +29662,7 @@
           "scripts/lib/gc_task_benchmarks.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_authority.py",
+          "scripts/lib/generated_authority_cancellation.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",

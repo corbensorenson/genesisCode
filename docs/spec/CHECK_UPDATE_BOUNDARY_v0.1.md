@@ -825,10 +825,24 @@ Publication snapshots all non-output inputs, rejects concurrent source drift,
 and acquires one create-new lock in the Git common directory. Each replacement
 is prepared beside its destination while termination signals are blocked. A
 rollback journal preserves the original bytes until every output is promoted;
-any copy, replace, validation, injected-failure, or signal-path error restores
+any copy, replace, validation or injected-failure error restores
 every already replaced path in reverse order and removes the lock. Read-only
 generated-authority checks fail closed while that lock exists. Repeating a
 successful closure must produce no changed bytes and a clean working tree.
+
+The supervisor handles SIGINT, SIGTERM and SIGHUP as one cancellation request.
+Outside publication, it kills owned process groups, waits for their leaders,
+closes validation logs and event descriptors, and removes its staging worktree
+and Git registration before returning `128 + signal`. Ownership transfer during
+child creation is protected against interruption. Timeout and failed-spawn
+paths use the same cleanup, including descendants whose group leader exited.
+Further stop requests during unwind cannot interrupt cleanup. During atomic
+publication, cancellation is deferred until the complete verified commit or
+error-triggered rollback, temporary cleanup and lock release; cancellation does
+not report a partial publication. POSIX process-group ownership does not contain
+a child that deliberately escapes its group. SIGKILL, process crashes, Windows
+descendant containment and independent supported-host acceptance remain outside
+these local controls; they must not be inferred from a cancellation result.
 
 Automatic closure can never execute signing, attestation, key generation,
 dependency custody, release-asset publication, or retained E3/E4 evidence
