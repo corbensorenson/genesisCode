@@ -51,7 +51,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `P1.13`: F05: bound actual primitive work, including empty string repetition at maximum count, across execution tiers. Affected claims: `CAP-KERNEL-DETERMINISM`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`.
 - `P1.14`: F06: bind package verify custody to artifact-backed commit authority and reject native-decoder restoration. Affected claims: `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-SELFHOST-CUTOVER`, `CAP-SEMANTIC-VCS`, `CAP-STRICT-NO-FALLBACK`.
 - `P1.15`: F07: preserve registry service liveness and bounded wait/shutdown/join/drop ownership. Affected claims: `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`.
-- `P1.9`: F01: eliminate symbol/literal canonical identity collisions across construction, codecs, hashes and artifact storage. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-EFFECT-REPLAY`, `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.9`: F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-EFFECT-REPLAY`, `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
 - `R1.3.f`: Meet the cold, warm, large-workspace, parallel-agent, cancellation, and restart interface budgets. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.5.f`: Validate skill distribution, offline use, token budgets, and multi-agent compatibility. Affected claims: `CAP-AGENT-SKILL-PACK`.
 - `R2.3.e`: Meet explicit incremental large-workspace agent-loop SLOs. Affected claims: `CAP-AGENT-WORKSPACE-PERF`.
@@ -162,7 +162,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `fc08a89035d7d4acae965a9a11c97aa692b794633dd9eb750d87bf4e9a624062`.
+Machine-readable identity: `263bbdbaa46e7e0561d7d1e623a531580dec67a4a3187b8739e0978330b54268`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

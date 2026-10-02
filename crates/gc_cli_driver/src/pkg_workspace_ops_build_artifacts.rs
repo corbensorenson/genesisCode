@@ -125,10 +125,20 @@ pub(super) fn write_target_executable_bundle(
 
     write_if_same_or_new(&package_path, &package_payload.bytes)
         .map_err(|e| format!("write target package `{}`: {e}", package_path.display()))?;
-    write_if_same_or_new(&signature_path, format!("{package_sha256}\n").as_bytes())
-        .map_err(|e| format!("write package signature `{}`: {e}", signature_path.display()))?;
-    write_if_same_or_new(&entrypoint_path, entrypoint_src.as_bytes())
-        .map_err(|e| format!("write target entrypoint `{}`: {e}", entrypoint_path.display()))?;
+    write_if_same_or_new(&signature_path, format!("{package_sha256}\n").as_bytes()).map_err(
+        |e| {
+            format!(
+                "write package signature `{}`: {e}",
+                signature_path.display()
+            )
+        },
+    )?;
+    write_if_same_or_new(&entrypoint_path, entrypoint_src.as_bytes()).map_err(|e| {
+        format!(
+            "write target entrypoint `{}`: {e}",
+            entrypoint_path.display()
+        )
+    })?;
 
     let launch_adapter = Term::Map(
         [

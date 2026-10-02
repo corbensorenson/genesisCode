@@ -124,8 +124,13 @@ pub(super) fn dispatch_text_bytes_prim(
             let out_len = checked_mul(s.len(), n, "str/repeat")?;
             ctx.mem_observe_string_len(out_len)?;
             let mut out = string_with_capacity(out_len, "str/repeat")?;
-            for _ in 0..n {
-                out.push_str(s);
+            // A zero-width input must not turn an output-bounded operation
+            // into count-dependent work that never yields to the evaluator.
+            // Keep count validation and memory observation above this guard.
+            if out_len != 0 {
+                for _ in 0..n {
+                    out.push_str(s);
+                }
             }
             Ok(Value::data(Term::Str(out)))
         }

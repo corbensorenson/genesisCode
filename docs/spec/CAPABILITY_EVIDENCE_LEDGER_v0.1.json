@@ -1147,7 +1147,7 @@
     }
   ],
   "gap_catalog": {
-    "P1.9": "F01: eliminate symbol/literal canonical identity collisions across construction, codecs, hashes and artifact storage.",
+    "P1.9": "F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility.",
     "P1.10": "F02: authorize anchored filesystem traversal before mutation, including escaping symlinks and replacement races.",
     "P1.11": "F03: preserve source and destination on self-rename and failed overwrite; enforce safe replacement semantics.",
     "P1.12": "F04: remove the final filesystem entry without dereferencing its symlink target; specify native/WASI behavior.",

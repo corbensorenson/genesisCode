@@ -102,7 +102,7 @@ Authorized unqualified claims:
 
 Known GenesisCode gaps
 
-- `P1.9`: F01: eliminate symbol/literal canonical identity collisions across construction, codecs, hashes and artifact storage. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-EFFECT-REPLAY`, `CAP-SEMANTIC-VCS`, `CAP-PACKAGE-MANAGER`, `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-RUNTIME-SURFACES`
+- `P1.9`: F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-EFFECT-REPLAY`, `CAP-SEMANTIC-VCS`, `CAP-PACKAGE-MANAGER`, `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-RUNTIME-SURFACES`
 - `P1.10`: F02: authorize anchored filesystem traversal before mutation, including escaping symlinks and replacement races. Affected claims: `CAP-DENY-DEFAULT-POLICY`, `CAP-EFFECT-REPLAY`, `CAP-SEMANTIC-VCS`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-HOST-BRIDGE`
 - `P1.11`: F03: preserve source and destination on self-rename and failed overwrite; enforce safe replacement semantics. Affected claims: `CAP-EFFECT-REPLAY`, `CAP-SEMANTIC-VCS`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-HOST-BRIDGE`
 - `P1.12`: F04: remove the final filesystem entry without dereferencing its symlink target; specify native/WASI behavior. Affected claims: `CAP-EFFECT-REPLAY`, `CAP-SEMANTIC-VCS`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-HOST-BRIDGE`

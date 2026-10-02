@@ -362,20 +362,25 @@ fn agent_index_emits_expected_schema_and_sources() {
             .and_then(Value::as_str),
         Some("docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json")
     );
+    let symbol_index: Value = serde_json::from_str(include_str!(
+        "../../../docs/spec/GC_AGENT_SYMBOL_INDEX_v0.3.json"
+    ))
+    .expect("published language symbol index");
+    let symbol_count = symbol_index["symbols"].as_array().unwrap().len() as u64;
+    assert_eq!(symbol_index["symbolCount"].as_u64(), Some(symbol_count));
     assert_eq!(
         json.pointer("/data/language_symbol_index/symbol_count")
             .and_then(Value::as_u64),
-        Some(170)
+        Some(symbol_count)
     );
     assert_eq!(
         json.pointer("/data/language_symbol_index/unsupported_behavior_count")
             .and_then(Value::as_u64),
-        Some(12)
+        Some(symbol_index["unsupportedBehaviorCount"].as_u64().unwrap())
     );
     assert_eq!(
-        json.pointer("/data/language_symbol_index/unsupported_classes/0")
-            .and_then(Value::as_str),
-        Some("experimental-syntax")
+        json.pointer("/data/language_symbol_index/unsupported_classes"),
+        Some(&symbol_index["unsupportedClasses"])
     );
     assert_eq!(
         json.pointer("/data/language_symbol_index/lookup/command")
