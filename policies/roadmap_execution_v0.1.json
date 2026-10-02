@@ -1,7 +1,7 @@
 {
   "kind": "genesis/roadmap-execution-policy-v0.1",
   "version": "0.1",
-  "audit_date": "2026-08-14",
+  "audit_date": "2026-10-01",
   "execution_frontier": {
     "wip_limit": 1,
     "scope_freeze": {
@@ -75,7 +75,7 @@
       "R9.3.a",
       "R9.4.a"
     ],
-    "rationale": "The completed R0.4.j, R2.2.f, R4.1, R5.1/R5.3, and R4.2.a-d evidence is preserved. The current focus is R4.2.e package/registry/VCS authority; finish its coherent transaction, then the R2/R3 prerequisites, R4.2.f-g and R4.3-R4.5, and remaining Core agent/service/package/assurance/product work through exact reviewed R9.4.f. Select the first start-ready frontier candidate so a blocked downstream anchor cannot stall its prerequisite; the continuation-complete anchors cover every unfinished Core ancestor and exclude post-Core work. One repository-changing GenesisCode transaction owns the lane through Core. The signed handoff activates F2.a-r Foundation first; F2.r activates the finite R8.3.a-b seed including its still-open web/tool/product-assurance prerequisites; R8.3.b then activates isolated GenesisBench, GenesisChallenge, later Foundry expansion, broader applications, optional packs, and F1/F3/F4. F2.y additionally waits for R8.5.s and F2.z for its full sequential ancestry. Genesis Model implementation waits for R8.5.t; R8.5.p assembles a candidate, R8.5.q integrates it, and R8.5.r independently evaluates and releases it. These handoffs do not grant completion authority.",
+    "rationale": "The 2026-10-01 recovery matrix F01-F11 strengthens the current R4.2.e baseline without adding task families or increasing WIP. Repair its verification, canonical identity, primitive work, filesystem and registry boundary prerequisites serially before package/registry authority promotion or R2.1.h performance qualification; recovery alone does not close R4.2.e. The completed R0.4.j, R2.2.f, R4.1, R5.1/R5.3, and R4.2.a-d evidence is preserved. The current focus is R4.2.e package/registry/VCS authority; finish its coherent transaction, then the R2/R3 prerequisites, R4.2.f-g and R4.3-R4.5, and remaining Core agent/service/package/assurance/product work through exact reviewed R9.4.f. Select the first start-ready frontier candidate so a blocked downstream anchor cannot stall its prerequisite; the continuation-complete anchors cover every unfinished Core ancestor and exclude post-Core work. One repository-changing GenesisCode transaction owns the lane through Core. The signed handoff activates F2.a-r Foundation first; F2.r activates the finite R8.3.a-b seed including its still-open web/tool/product-assurance prerequisites; R8.3.b then activates isolated GenesisBench, GenesisChallenge, later Foundry expansion, broader applications, optional packs, and F1/F3/F4. F2.y additionally waits for R8.5.s and F2.z for its full sequential ancestry. Genesis Model implementation waits for R8.5.t; R8.5.p assembles a candidate, R8.5.q integrates it, and R8.5.r independently evaluates and releases it. These handoffs do not grant completion authority.",
     "task_context": {
       "R2.2.f": {
         "product_lanes": ["GenesisCode"],
@@ -1226,7 +1226,10 @@
       "owner_paths": [
         "crates/gc_cli/Cargo.toml",
         "crates/gc_cli/tests",
-        "crates/gc_wasi_cli/Cargo.toml"
+        "crates/gc_wasi_cli/Cargo.toml",
+        "crates/gc_coreform",
+        "crates/gc_kernel",
+        "crates/gc_registry"
       ],
       "start_after": ["R4.1", "R5.1", "R5.3"],
       "sequential": true

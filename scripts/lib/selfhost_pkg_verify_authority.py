@@ -226,11 +226,27 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"native verify semantic oracle remains in production route: {forbidden}")
     for marker in (
         "pub(super) fn observe_verify_commit_closure(", "store.path_for(hash).exists()",
-        "store.verify_hex(hash)", "gc_vcs::Commit::from_term", "gc_vcs::Evidence::from_term",
+        "store.verify_hex(hash)",
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)",
+        "gc_vcs::Evidence::from_term",
         "gc_vcs::Attestation::from_term",
     ):
         if marker not in mechanism:
             fail(f"bounded verify mechanism missing marker: {marker}")
+    if "gc_vcs::Commit::from_term" in mechanism:
+        fail("native commit semantic oracle remains in verify observation mechanism")
+    # Commit schema authority must consume the integrity-checked submitted term,
+    # before any fields derived from that term drive closure traversal.
+    integrity_at = mechanism.find("ensure_hash(commit_hex)")
+    term_at = mechanism.find("store_get_term(store, commit_hex)")
+    authority_at = mechanism.find(
+        "CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)"
+    )
+    traversal_at = mechanism.find("if commit.result != snapshot_hex")
+    if min(integrity_at, term_at, authority_at, traversal_at) < 0 or not (
+        integrity_at < term_at < authority_at < traversal_at
+    ):
+        fail("verify commit integrity, authority, or closure causal ordering drift")
     if '"core/pkg-low::verify"' not in runner or "PkgResolutionIdentityAuthority::load" not in runner:
         fail("verify lazy authority route missing")
     if "pub(super) fn handle_pkg_verify_parity(" not in parity:
@@ -318,6 +334,32 @@ def self_test(root, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", ".plan_verify(", ".legacy_plan_verify(", "causal plan")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify.rs", ".finalize_verify(", ".legacy_finalize_verify(", "causal finalize")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs", "pub(super) fn observe_verify_commit_closure(", "pub(super) fn native_verify_policy(", "mechanism custody")
+    mechanism_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/verify_observation.rs"
+    authority_call = "CommitAuthority::validate_expected_commit(policy, commit_authority, &commit_term)"
+    source_mutation(mechanism_path, authority_call,
+                    "gc_vcs::Commit::from_term(&commit_term)", "native commit decoder restoration")
+    source_mutation(mechanism_path, authority_call,
+                    "CommitAuthority::validate_expected_commit(policy, commit_authority, &Term::Nil)",
+                    "commit authority input substitution")
+    source_mutation(mechanism_path, authority_call,
+                    "CommitAuthority::validate_expected_commit(policy, &mut None, &commit_term)",
+                    "commit authority context bypass")
+    # Keeping the required call while admitting an additional native decoder
+    # must also fail: a positive source marker alone cannot close custody.
+    source_mutation(mechanism_path, "    let mut checked = 0_u64;",
+                    "    let _native_commit = gc_vcs::Commit::from_term(&Term::Nil);\n"
+                    "    let mut checked = 0_u64;", "additional native commit decoder")
+    old_block = """    if let Err(observation) = ensure_hash(commit_hex) {
+        return observation;
+    }
+"""
+    changed_mechanism = sources[mechanism_path].replace(old_block, "", 1)
+    if changed_mechanism == sources[mechanism_path]:
+        fail("self-test marker absent for commit integrity causal ordering")
+    changed_mechanism = changed_mechanism.replace(
+        "    if commit.result != snapshot_hex {", old_block + "    if commit.result != snapshot_hex {", 1
+    )
+    mutations.append((profile, {mechanism_path: changed_mechanism}, "commit integrity causal ordering"))
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/parity.rs", "pub(super) fn handle_pkg_verify_parity(", "pub(super) fn legacy_verify(", "parity custody")
     source_mutation("crates/gc_cli/tests/cli_pkg_lock.rs", "pkg_verify_rejects_commit_with_missing_patch_closure", "legacy_verify_test", "integration")
 
@@ -329,7 +371,7 @@ def self_test(root, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 21:
+    if controls != 26:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

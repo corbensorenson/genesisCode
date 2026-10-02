@@ -45,6 +45,13 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
+- `P1.10`: F02: authorize anchored filesystem traversal before mutation, including escaping symlinks and replacement races. Affected claims: `CAP-DENY-DEFAULT-POLICY`, `CAP-EFFECT-REPLAY`, `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.11`: F03: preserve source and destination on self-rename and failed overwrite; enforce safe replacement semantics. Affected claims: `CAP-EFFECT-REPLAY`, `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.12`: F04: remove the final filesystem entry without dereferencing its symlink target; specify native/WASI behavior. Affected claims: `CAP-EFFECT-REPLAY`, `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.13`: F05: bound actual primitive work, including empty string repetition at maximum count, across execution tiers. Affected claims: `CAP-KERNEL-DETERMINISM`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`.
+- `P1.14`: F06: bind package verify custody to artifact-backed commit authority and reject native-decoder restoration. Affected claims: `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-SELFHOST-CUTOVER`, `CAP-SEMANTIC-VCS`, `CAP-STRICT-NO-FALLBACK`.
+- `P1.15`: F07: preserve registry service liveness and bounded wait/shutdown/join/drop ownership. Affected claims: `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`.
+- `P1.9`: F01: eliminate symbol/literal canonical identity collisions across construction, codecs, hashes and artifact storage. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-EFFECT-REPLAY`, `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
 - `R1.3.f`: Meet the cold, warm, large-workspace, parallel-agent, cancellation, and restart interface budgets. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.5.f`: Validate skill distribution, offline use, token budgets, and multi-agent compatibility. Affected claims: `CAP-AGENT-SKILL-PACK`.
 - `R2.3.e`: Meet explicit incremental large-workspace agent-loop SLOs. Affected claims: `CAP-AGENT-WORKSPACE-PERF`.
@@ -121,7 +128,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: none. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: `P1.9`, `P1.10`, `P1.11`, `P1.12`, `P1.13`, `P1.14`, `P1.15`. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -155,7 +162,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `9c74462371952e86432cc5bea932b9a724cc37fa90f364f2bf6cef209806f1fd`.
+Machine-readable identity: `fc08a89035d7d4acae965a9a11c97aa692b794633dd9eb750d87bf4e9a624062`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

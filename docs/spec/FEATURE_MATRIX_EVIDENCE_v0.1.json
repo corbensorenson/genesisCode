@@ -7,7 +7,7 @@
     "CAP-BROWSER-XR",
     "CAP-DEPLOYMENT-PIPELINE"
   ],
-  "audit_date": "2026-08-14",
+  "audit_date": "2026-10-01",
   "entries": [
     {
       "capability": "Pure deterministic kernel separated from effects",
@@ -21,14 +21,15 @@
         "E1:cap-kernel-determinism/check-2"
       ],
       "gap_ids": [
-        "R7.2.a"
+        "R7.2.a",
+        "P1.13"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
       "implementation_paths": [
         "crates/gc_kernel/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.13; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -54,14 +55,15 @@
         "E1:cap-coreform-identity/check-1"
       ],
       "gap_ids": [
-        "R7.2.f"
+        "R7.2.f",
+        "P1.9"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
       "implementation_paths": [
         "crates/gc_coreform/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -122,7 +124,8 @@
         "E1:cap-deny-default-policy/check-1"
       ],
       "gap_ids": [
-        "R7.3.a"
+        "R7.3.a",
+        "P1.10"
       ],
       "host_binding_paths": [
         "crates/gc_effects/src"
@@ -131,7 +134,7 @@
       "implementation_paths": [
         "crates/gc_effects/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.10; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -157,7 +160,11 @@
         "E1:cap-effect-replay/check-2"
       ],
       "gap_ids": [
-        "R7.2.c"
+        "R7.2.c",
+        "P1.9",
+        "P1.10",
+        "P1.11",
+        "P1.12"
       ],
       "host_binding_paths": [
         "crates/gc_effects/src"
@@ -166,7 +173,7 @@
       "implementation_paths": [
         "crates/gc_effects/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -192,7 +199,12 @@
         "E1:cap-semantic-vcs/check-1"
       ],
       "gap_ids": [
-        "R4.2.e"
+        "R4.2.e",
+        "P1.9",
+        "P1.10",
+        "P1.11",
+        "P1.12",
+        "P1.14"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -200,7 +212,7 @@
         "crates/gc_vcs/src",
         "crates/gc_patches/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12, P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -227,7 +239,14 @@
       ],
       "gap_ids": [
         "R4.2.e",
-        "R6.1.a"
+        "R6.1.a",
+        "P1.9",
+        "P1.10",
+        "P1.11",
+        "P1.12",
+        "P1.13",
+        "P1.14",
+        "P1.15"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -235,7 +254,7 @@
         "crates/gc_pkg/src",
         "crates/gc_cli_driver/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12, P1.13, P1.14, P1.15; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -302,7 +321,9 @@
         "E1:cap-evidence-gated-publish/check-1"
       ],
       "gap_ids": [
-        "R6.2.d"
+        "R6.2.d",
+        "P1.9",
+        "P1.14"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -310,7 +331,7 @@
         "crates/gc_obligations/src",
         "crates/gc_registry/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -335,7 +356,12 @@
       ],
       "gap_ids": [
         "R3.2.a",
-        "R6.3.a"
+        "R6.3.a",
+        "P1.9",
+        "P1.10",
+        "P1.11",
+        "P1.12",
+        "P1.13"
       ],
       "host_binding_paths": [
         "crates/gc_effects/src"
@@ -346,7 +372,7 @@
         "crates/gc_wasi_cli/src",
         "crates/gc_wasm/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12, P1.13; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -411,7 +437,8 @@
         "E1:cap-selfhost-cutover/check-3"
       ],
       "gap_ids": [
-        "R4.4.c"
+        "R4.4.c",
+        "P1.14"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -419,7 +446,7 @@
         "selfhost",
         "scripts"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -446,7 +473,8 @@
       "gap_ids": [
         "R4.2.e",
         "R4.2.g",
-        "R4.4.c"
+        "R4.4.c",
+        "P1.14"
       ],
       "host_binding_paths": [],
       "immutable_evidence_ids": [],
@@ -454,7 +482,7 @@
         "crates/gc_cli_driver/src",
         "scripts"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
@@ -878,7 +906,11 @@
         "E1:cap-host-bridge/check-2"
       ],
       "gap_ids": [
-        "R7.3.b"
+        "R7.3.b",
+        "P1.10",
+        "P1.11",
+        "P1.12",
+        "P1.15"
       ],
       "host_binding_paths": [
         "crates/gc_effects/src"
@@ -887,7 +919,7 @@
       "implementation_paths": [
         "crates/gc_effects/src"
       ],
-      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+      "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.10, P1.11, P1.12, P1.15; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
       "maturity": "L1",
       "maturity_by_platform": {
         "linux-arm64": "L0",
