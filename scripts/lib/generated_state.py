@@ -737,12 +737,29 @@ def _discover_legacy_build_entries(
         _register_entry(registry, candidate)
 
 
-def _accounting_bytes(entry: Mapping[str, Any]) -> int:
-    return max(int(entry["reservationBytes"]), int(entry["observedAllocatedBytes"]))
+def _accounting_bytes(entry: Mapping[str, Any], *, reserved: bool = False) -> int:
+    allocated = int(entry["observedAllocatedBytes"])
+    return max(int(entry["reservationBytes"]), allocated) if reserved else allocated
 
 
 def _active_entry_ids(registry: Mapping[str, Any]) -> set[str]:
     return {lease["entryId"] for lease in registry["leases"]}
+
+
+def _registry_accounting_bytes(
+    registry: Mapping[str, Any], requested_id: str | None = None, *,
+    include_idle: bool = True,
+) -> int:
+    """Charge stored bytes plus one growth reservation per live/requested target."""
+    reserved_ids = _active_entry_ids(registry)
+    if requested_id is not None:
+        reserved_ids.add(requested_id)
+    return sum(
+        _accounting_bytes(entry, reserved=entry["id"] in reserved_ids)
+        for entry in registry["entries"]
+        if entry["retentionClass"] == "rebuildable-output"
+        and (include_idle or entry["id"] in reserved_ids)
+    )
 
 
 def _reclaim_entry(
@@ -892,12 +909,15 @@ def _enforce_limits(
 ) -> list[str]:
     reclaimed: list[str] = []
 
+    # No inactive deletion can make these simultaneous writers fit. Reject
+    # before opening a reclamation transaction or discarding a usable cache.
+    if _registry_accounting_bytes(
+        registry, protected_entry_id, include_idle=False,
+    ) > limits["hardBytes"]:
+        raise GeneratedStateError("generated-state hard quota admission denied")
+
     def accounting() -> int:
-        return sum(
-            _accounting_bytes(entry)
-            for entry in registry["entries"]
-            if entry["retentionClass"] == "rebuildable-output"
-        )
+        return _registry_accounting_bytes(registry, protected_entry_id)
 
     def candidates() -> list[MutableMapping[str, Any]]:
         active = _active_entry_ids(registry)
@@ -983,10 +1003,10 @@ def admit(
         _recover_transaction(root, state_root, policy, registry)
         _recover_leases(root, registry, identity_fn)
         _discover_legacy_build_entries(root, policy, registry)
-        # Refresh every active shared target before computing remaining growth.
-        active_ids = _active_entry_ids(registry)
+        # Idle retention is charged by stored allocation, not future growth.
+        # Refresh it too: an old release observation cannot authorize admission.
         for entry in registry["entries"]:
-            if entry["id"] in active_ids:
+            if entry["retentionClass"] == "rebuildable-output":
                 entry["observedAllocatedBytes"] = allocated_bytes(
                     _safe_absolute(root, entry["path"])
                 )
@@ -995,23 +1015,25 @@ def admit(
         )
         available_free = read_free()
         reclaimed: list[str] = []
+        candidate = _entry(
+            policy, owner, content_key, path, size_class,
+            registry["sequence"] + 1, allocated_bytes(requested_path),
+        )
         existing = _entry_by_path(registry, path)
         if existing is not None and existing["id"] not in _active_entry_ids(registry):
             if _accounting_bytes(existing) > limits["hardBytes"]:
+                # Even a completely empty replacement must fit beside live
+                # writers. Do not destroy the oversized cache for an impossible
+                # request; candidate validation also precedes this mutation.
+                minimum = _registry_accounting_bytes(registry, include_idle=False)
+                if minimum + int(candidate["reservationBytes"]) > limits["hardBytes"]:
+                    raise GeneratedStateError("generated-state hard quota admission denied")
                 _reclaim_entry(root, state_root, policy, registry, existing)
                 available_free = read_free()
                 reclaimed.append(existing["id"])
                 existing = None
+                candidate["observedAllocatedBytes"] = allocated_bytes(requested_path)
         registry["sequence"] += 1
-        candidate = _entry(
-            policy,
-            owner,
-            content_key,
-            path,
-            size_class,
-            registry["sequence"],
-            allocated_bytes(requested_path),
-        )
         was_new = existing is None
         current = _register_entry(registry, candidate)
         current["lastUseSequence"] = registry["sequence"]
@@ -1060,11 +1082,7 @@ def admit(
         )
         _sort_registry(registry)
         _write_registry(state_root, policy, registry)
-        accounting = sum(
-            _accounting_bytes(entry)
-            for entry in registry["entries"]
-            if entry["retentionClass"] == "rebuildable-output"
-        )
+        accounting = _registry_accounting_bytes(registry)
         return {
             "accountingBytes": accounting,
             "pendingGrowthBytes": _pending_growth_bytes(registry, current["id"]),
@@ -1207,7 +1225,7 @@ def status(
         entry for entry in registry["entries"] if entry["retentionClass"] == "rebuildable-output"
     ]
     return {
-        "accountingBytes": sum(_accounting_bytes(entry) for entry in rebuildable),
+        "accountingBytes": _registry_accounting_bytes(registry),
         "activeLeases": len(registry["leases"]),
         "entryCount": len(registry["entries"]),
         "hardBytes": limits["hardBytes"],

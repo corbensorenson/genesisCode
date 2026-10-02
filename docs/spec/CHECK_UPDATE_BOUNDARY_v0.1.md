@@ -640,8 +640,10 @@ paths outside an owner's declared roots, undeclared size classes, duplicate
 keys, and hard-quota overrides above GB-5 fail closed.
 
 Rebuildable producers MUST acquire a process-bound random lease before
-materializing repository-local state. Admission accounts for the larger of a
-size-class reservation and observed allocated bytes, reclaims inactive entries
+materializing repository-local state. Admission charges inactive entries by
+observed allocated bytes and each distinct live or requested materialization by
+the larger of its size-class reservation and observed allocation. It reclaims
+inactive entries
 in `(reclaim-order, last-use-sequence, entry-id)` order at the soft quota, and
 denies admission when active or requested state cannot fit under the hard quota
 or its physical-space requirement. That requirement currently includes the
@@ -649,8 +651,11 @@ existing build reserve, the sum of remaining growth for every distinct live and
 new requested materialization, and the recovery-journal allocation estimate
 derived from its measured payload.
 Multiple leases on one materialization share its reservation; distinct writers
-cannot spend the same free bytes. Admission refreshes live allocated sizes and
-counts `max(0, reservation - observed)` once per materialization.
+cannot spend the same free bytes. Admission refreshes both live and inactive
+allocated sizes before quota decisions and counts
+`max(0, reservation - observed)` once per live/requested materialization.
+When live and requested state alone exceeds the hard quota, admission MUST deny
+before reclaiming inactive caches: no such deletion can make those writers fit.
 
 The journal estimate measures the prospective serialized registry including the
 next lease, sequence growth and largest quarantine record. It reserves two

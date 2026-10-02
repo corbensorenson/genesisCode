@@ -843,13 +843,13 @@
       "execution_helper_closure": [
         {
           "path": "scripts/render_cargo_target_dir_policy_report.sh",
-          "sha256": "bdd068404de8dc885c65b1e423b18bcc0572cf21d59d73bb7a52eef47badc118"
+          "sha256": "20fbc24ee520c93cb51695ea5a7d1f158e62c5c3e20aa4c57d1ba5304de44f49"
         }
       ],
       "execution_helper_invocations": [
         "scripts/render_cargo_target_dir_policy_report.sh"
       ],
-      "execution_identity_sha256": "242ca8460da231b46767e4964fbc3b6656b93e244ae9007a53943df8349af97e",
+      "execution_identity_sha256": "5c1d6ea173f16090c1c260dc23cb337470da23c7583f4a18f1fecdf54862ebf2",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -864,6 +864,7 @@
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
+        "scripts/render_cargo_target_dir_policy_report.sh: (fixture / state.POLICY_REL).write_bytes(state.pretty_bytes(fixture_state_policy))",
         "scripts/render_cargo_target_dir_policy_report.sh: destination.parent.mkdir(parents=True, exist_ok=True)",
         "scripts/render_cargo_target_dir_policy_report.sh: duplicate_path.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
         "scripts/render_cargo_target_dir_policy_report.sh: feature_manifest.write_text(",
@@ -1216,6 +1217,8 @@
         "(cost_root / cost_a_path / \"payload.bin\").write_bytes(b\"a\" * 65536)",
         "(cost_root / cost_a_path).mkdir(parents=True)",
         "(cost_root / state.POLICY_REL).write_bytes(state.pretty_bytes(cost_policy))",
+        "(cycle_path / \"payload\").write_bytes(b\"x\" * 1024)",
+        "(host_path / \"payload\").write_bytes(b\"h\" * max(0, 8192 - state.allocated_bytes(host_path)))",
         "(lifecycle / \".genesis/build/legacy\").mkdir(parents=True)",
         "(lifecycle / \".genesis/build/legacy/payload.bin\").write_bytes(b\"legacy\")",
         "(lifecycle / \".genesis/cache/selfhost_toolchain\").mkdir(parents=True)",
@@ -1248,6 +1251,7 @@
         "(repo / \"policies\").mkdir(parents=True)",
         "(repo / \"source.gc\").write_text(\"(module fixture)\\n\", encoding=\"utf-8\")",
         "(repo / relative).mkdir(parents=True)",
+        "(slim_path / \"payload\").write_bytes(b\"s\" * max(0, 4096 - state.allocated_bytes(slim_path)))",
         "(transient_tree / \"payload.bin\").write_bytes(b\"payload\")",
         "(unauthorized / \".genesis/build\").mkdir(parents=True)",
         "(unauthorized / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
@@ -1255,7 +1259,9 @@
         "(unauthorized / \"source.gc\").write_text(\"fixture\\n\", encoding=\"utf-8\")",
         "bad_path.write_bytes(cleanup.pretty_bytes(bad_policy))",
         "cache_marker.write_bytes(cleanup.pretty_bytes(tampered))",
+        "cycle_path.mkdir(parents=True, exist_ok=True)",
         "duplicate.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
+        "host_path.mkdir(parents=True, exist_ok=True)",
         "linked_target.mkdir()",
         "mock_bin.mkdir()",
         "mock_df.write_text(\"#!/bin/sh\\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted\\nfixture 100 99 1 99%% /\\n'\\n\", encoding=\"utf-8\")",
@@ -1269,13 +1275,14 @@
         "quarantine_target.write_bytes(b\"protected target\")",
         "registry_path.write_bytes(valid_registry)",
         "registry_path.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
+        "slim_path.mkdir(parents=True, exist_ok=True)",
         "transient_tree.mkdir()",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT",
         "unbounded_path.write_bytes(state.pretty_bytes(unbounded_policy))"
       ],
       "execution_helper_closure": [],
       "execution_helper_invocations": [],
-      "execution_identity_sha256": "a9c6a3a96fcd9031eec0a6af8e6592efbf34f054e957104b27239cba81b33627",
+      "execution_identity_sha256": "535629443c99c4bbb2d9a67f01504915acbf96d8000bd1ffd01105d3bccecc48",
       "legacy_persistent_output_declaration": null,
       "mutation_helper_declaration": null,
       "mutation_helper_invocations": [],
@@ -1286,7 +1293,7 @@
       "r0_2_compliant": true,
       "read_only_persistent_inputs": [],
       "refresh_controls": [],
-      "sha256": "38e38b5aa32be2e0205cf7d1c11e85489e3062fd51bbf76fdd9a66d5830e5b4d",
+      "sha256": "1b484bfc8f039678ea3806cc7d8dbaf6e096bd872123ae7c25b9ef469c79b5a0",
       "transitive_noncompliant_checks": [],
       "update_invocations": [],
       "write_candidates": [
@@ -1297,6 +1304,8 @@
         "(cost_root / cost_a_path / \"payload.bin\").write_bytes(b\"a\" * 65536)",
         "(cost_root / cost_a_path).mkdir(parents=True)",
         "(cost_root / state.POLICY_REL).write_bytes(state.pretty_bytes(cost_policy))",
+        "(cycle_path / \"payload\").write_bytes(b\"x\" * 1024)",
+        "(host_path / \"payload\").write_bytes(b\"h\" * max(0, 8192 - state.allocated_bytes(host_path)))",
         "(lifecycle / \".genesis/build/legacy\").mkdir(parents=True)",
         "(lifecycle / \".genesis/build/legacy/payload.bin\").write_bytes(b\"legacy\")",
         "(lifecycle / \".genesis/cache/selfhost_toolchain\").mkdir(parents=True)",
@@ -1329,6 +1338,7 @@
         "(repo / \"policies\").mkdir(parents=True)",
         "(repo / \"source.gc\").write_text(\"(module fixture)\\n\", encoding=\"utf-8\")",
         "(repo / relative).mkdir(parents=True)",
+        "(slim_path / \"payload\").write_bytes(b\"s\" * max(0, 4096 - state.allocated_bytes(slim_path)))",
         "(transient_tree / \"payload.bin\").write_bytes(b\"payload\")",
         "(unauthorized / \".genesis/build\").mkdir(parents=True)",
         "(unauthorized / \".gitignore\").write_text(\".genesis/\\n\", encoding=\"utf-8\")",
@@ -1336,7 +1346,9 @@
         "(unauthorized / \"source.gc\").write_text(\"fixture\\n\", encoding=\"utf-8\")",
         "bad_path.write_bytes(cleanup.pretty_bytes(bad_policy))",
         "cache_marker.write_bytes(cleanup.pretty_bytes(tampered))",
+        "cycle_path.mkdir(parents=True, exist_ok=True)",
         "duplicate.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
+        "host_path.mkdir(parents=True, exist_ok=True)",
         "linked_target.mkdir()",
         "mock_bin.mkdir()",
         "mock_df.write_text(\"#!/bin/sh\\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted\\nfixture 100 99 1 99%% /\\n'\\n\", encoding=\"utf-8\")",
@@ -1350,6 +1362,7 @@
         "quarantine_target.write_bytes(b\"protected target\")",
         "registry_path.write_bytes(valid_registry)",
         "registry_path.write_text('{\"kind\":\"a\",\"kind\":\"b\"}\\n', encoding=\"utf-8\")",
+        "slim_path.mkdir(parents=True, exist_ok=True)",
         "transient_tree.mkdir()",
         "trap 'rm -rf \"$TMP_DIR\"' EXIT",
         "unbounded_path.write_bytes(state.pretty_bytes(unbounded_policy))"

@@ -26,6 +26,7 @@ temp = Path(sys.argv[2]).resolve()
 sys.path.insert(0, str(source_root / "scripts/lib"))
 import deterministic_cleanup as cleanup
 import generated_state as state
+from generated_state_accounting import accounting_self_test
 
 controls = []
 
@@ -541,46 +542,70 @@ for index in range(20):
         f".genesis/build/cargo-cache/v1/root/{target_family}/cycle-{index}", size_class,
         free_bytes_override=1 << 30,
     )
+    cycle_path = lifecycle / f".genesis/build/cargo-cache/v1/root/{target_family}/cycle-{index}"
+    cycle_path.mkdir(parents=True, exist_ok=True)
+    (cycle_path / "payload").write_bytes(b"x" * 1024)
     state.release(lifecycle, result["leaseToken"])
 steady = state.status(lifecycle)
 require(steady["rebuildableEntries"] <= 1 and steady["accountingBytes"] <= 8192, "profile cycles did not reach bounded steady state")
 controls.append("generated-state-bounded-steady-state")
 
-priority = temp / "priority"
-(priority / "policies").mkdir(parents=True)
-shutil.copyfile(source_root / cleanup.POLICY_REL, priority / cleanup.POLICY_REL)
-priority_policy = copy.deepcopy(bounded_policy)
-priority_policy["limits"]["softBytes"] = 14336
-(priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))
-(priority / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
-(priority / "source.gc").write_text("fixture\n", encoding="utf-8")
-subprocess.run(["git", "init", "-q"], cwd=priority, check=True)
-subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=priority, check=True)
-(priority / ".genesis/build").mkdir(parents=True)
-cleanup.initialize_root_marker(priority, ".genesis/build", "priority-fixture")
-host = state.admit(
-    priority, "cargo-cache", "6" * 64,
-    ".genesis/build/cargo-cache/v1/root/host/normal", "cargo-host",
-    free_bytes_override=1 << 30,
-)
-state.release(priority, host["leaseToken"])
-slim = state.admit(
-    priority, "cargo-cache", "7" * 64,
-    ".genesis/build/cargo-cache/v1/root/host/slim", "cargo-host-slim",
-    free_bytes_override=1 << 30,
-)
-state.release(priority, slim["leaseToken"])
-verifier = state.admit(
-    priority, "cargo-cache", "8" * 64,
-    ".genesis/build/cargo-cache/v1/tools-genesis-evidence-verifier/host/verifier",
-    "cargo-verifier", free_bytes_override=1 << 30,
-)
-require(
-    slim["entryId"] in verifier["reclaimedEntryIds"]
-    and host["entryId"] not in verifier["reclaimedEntryIds"],
-    "size-class reclaim priority did not preserve the warm host cache",
-)
-state.release(priority, verifier["leaseToken"])
+# Preserve priority pressure across filesystems with different directory
+# allocation. The second case is a finite backend model, not host qualification.
+physical_allocation = state.allocated_bytes
+for directory_minimum in (0, 4096):
+    def allocation_with_directory_minimum(path, max_entries=2_000_000):
+        total = physical_allocation(path, max_entries)
+        if directory_minimum and path.exists():
+            for item in [path, *path.rglob("*")]:
+                if item.is_dir():
+                    metadata = item.stat()
+                    allocated = metadata.st_blocks * 512 or metadata.st_size
+                    total += max(0, directory_minimum - allocated)
+        return total
+
+    with patch.object(state, "allocated_bytes", side_effect=allocation_with_directory_minimum):
+        priority = temp / f"priority-{directory_minimum}"
+        (priority / "policies").mkdir(parents=True)
+        shutil.copyfile(source_root / cleanup.POLICY_REL, priority / cleanup.POLICY_REL)
+        priority_policy = copy.deepcopy(bounded_policy)
+        priority_policy["limits"]["softBytes"] = 14336
+        (priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))
+        (priority / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
+        (priority / "source.gc").write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=priority, check=True)
+        subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=priority, check=True)
+        (priority / ".genesis/build").mkdir(parents=True)
+        cleanup.initialize_root_marker(priority, ".genesis/build", "priority-fixture")
+        host = state.admit(
+            priority, "cargo-cache", "6" * 64,
+            ".genesis/build/cargo-cache/v1/root/host/normal", "cargo-host",
+            free_bytes_override=1 << 30,
+        )
+        host_path = priority / ".genesis/build/cargo-cache/v1/root/host/normal"
+        host_path.mkdir(parents=True, exist_ok=True)
+        (host_path / "payload").write_bytes(b"h" * max(0, 8192 - state.allocated_bytes(host_path)))
+        state.release(priority, host["leaseToken"])
+        slim = state.admit(
+            priority, "cargo-cache", "7" * 64,
+            ".genesis/build/cargo-cache/v1/root/host/slim", "cargo-host-slim",
+            free_bytes_override=1 << 30,
+        )
+        slim_path = priority / ".genesis/build/cargo-cache/v1/root/host/slim"
+        slim_path.mkdir(parents=True, exist_ok=True)
+        (slim_path / "payload").write_bytes(b"s" * max(0, 4096 - state.allocated_bytes(slim_path)))
+        state.release(priority, slim["leaseToken"])
+        verifier = state.admit(
+            priority, "cargo-cache", "8" * 64,
+            ".genesis/build/cargo-cache/v1/tools-genesis-evidence-verifier/host/verifier",
+            "cargo-verifier", free_bytes_override=1 << 30,
+        )
+        require(
+            slim["entryId"] in verifier["reclaimedEntryIds"]
+            and host["entryId"] not in verifier["reclaimedEntryIds"],
+            "size-class reclaim priority did not preserve the warm host cache",
+        )
+        state.release(priority, verifier["leaseToken"])
 controls.append("generated-state-size-class-reclaim-priority")
 
 # Admission costs are measured from the actual journal and all live writers.
@@ -816,7 +841,10 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 56 and len(set(controls)) == 56, f"control coverage drift: {controls}")
+require(accounting_self_test(source_root) == 7, "idle allocation control coverage drift")
+controls.append("generated-state-idle-allocation-accounting")
+
+require(len(controls) == 57 and len(set(controls)) == 57, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",
@@ -824,6 +852,7 @@ authorities = [
     *generated_schema_paths,
     "scripts/lib/deterministic_cleanup.py",
     "scripts/lib/generated_state.py",
+    "scripts/lib/generated_state_accounting.py",
     "scripts/reclaim_build_space.sh",
     "scripts/lib/cargo_cache.py",
     "scripts/lib/dependency_mirror.py",

@@ -115,6 +115,7 @@ configuration_paths = {
     root / "scripts/lib/cargo_target_dir.sh",
     root / "scripts/lib/deterministic_cleanup.py",
     root / "scripts/lib/generated_state.py",
+    root / "scripts/lib/generated_state_accounting.py",
     root / "scripts/check_evidence_storage_classes.sh",
     root / "scripts/render_evidence_release_asset.sh",
 }
@@ -131,6 +132,23 @@ with tempfile.TemporaryDirectory(prefix="genesis-cargo-cache-policy.") as temp_r
         destination = fixture / source.relative_to(root)
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
+    # These private controls write only cache metadata and never invoke Cargo.
+    # Scale their byte reservations/quotas together rather than requiring an
+    # unrelated real build's GiB headroom. Production policy stays byte-exact;
+    # physical admission and hard-denial controls live in the lifecycle guard.
+    production_state_policy = (root / state.POLICY_REL).read_bytes()
+    fixture_state_policy = json.loads(production_state_policy)
+    for field in ("hardBytes", "softBytes", "minFreeBytes"):
+        fixture_state_policy["limits"][field] //= 1024
+    for size_class in fixture_state_policy["sizeClasses"]:
+        size_class["reservationBytes"] //= 1024
+    (fixture / state.POLICY_REL).write_bytes(state.pretty_bytes(fixture_state_policy))
+    validated_fixture_policy, _, _ = state.load_policy(fixture)
+    require(validated_fixture_policy == fixture_state_policy, "scaled fixture policy changed")
+    require((root / state.POLICY_REL).read_bytes() == production_state_policy,
+            "fixture scaling mutated production admission policy")
+    passed("fixture-only-metadata-admission-budget")
+
     source_fixture = fixture / "crates/gc_coreform/src/lib.rs"
     source_fixture.parent.mkdir(parents=True, exist_ok=True)
     source_fixture.write_text("pub fn source_only_fixture() {}\n", encoding="utf-8")
@@ -507,6 +525,7 @@ authority_paths = {
     root / "scripts/lib/cargo_cache.py",
     root / "scripts/lib/cargo_target_dir.sh",
     root / "scripts/lib/generated_state.py",
+    root / "scripts/lib/generated_state_accounting.py",
     root / "scripts/check_cargo_target_dir_policy.sh",
     root / "scripts/check_evidence_storage_classes.sh",
     root / "scripts/render_cargo_target_dir_policy_report.sh",
@@ -579,6 +598,7 @@ expected_controls = {
     "duplicate-policy-key-rejection",
     "feature-definition-sensitivity",
     "fresh-checkout-materialization",
+    "fixture-only-metadata-admission-budget",
     "github-environment-key-transition",
     "host-profile-co-residency",
     "host-path-exclusion",
