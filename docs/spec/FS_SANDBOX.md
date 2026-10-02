@@ -17,7 +17,7 @@ These capabilities are deny-by-default and must be explicitly allowed by `caps.t
 For `io/fs::*` operations, the capability policy may specify a `base_dir` (string path).
 
 - When loading `caps.toml` from disk, relative `base_dir` paths are resolved relative to the directory containing the `caps.toml` file.
-- At runtime, the runner canonicalizes and opens `base_dir` as a capability directory.
+- At runtime, the native runner canonicalizes and opens `base_dir` as a capability directory. Stable WASI lexically normalizes the configured root and opens its directory descriptor; subsequent payload traversal is descriptor-relative.
   Failure to open the configured root is an error. Filesystem operations use that held
   directory and relative directory handles; an ambient resolved pathname is not operation authority.
 
@@ -53,8 +53,7 @@ root. Relative links are interpreted from their containing directory. Parent com
 are reduced to a root-relative name before the capability open, including alternate host
 spellings of the configured root. An escaping link or a traversal cycle is rejected; at most
 40 links are followed. The actual open remains root-relative if an ancestor changes after
-resolution. Stable WASI currently rejects admission to the rooted filesystem effects with explicit
-`Unsupported`; it does not claim native directory-handle or symlink parity.
+resolution. Stable WASI uses safe descriptor-relative operations with no-follow ancestor and final read opens. Symlink traversal remains denied on that profile; it does not inherit native inside-link support.
 
 ## Write (`io/fs::write`)
 
@@ -143,7 +142,7 @@ Behavior:
   existence returns the existing policy error, including an occupied final link
 - hosts lacking the atomic no-replace primitive return explicit `Unsupported` before creating
   parents; Windows and other hosts are not silently given a check-then-rename fallback. Stable
-  WASI rejects the entire rooted-effects adapter at root admission
+  WASI supports atomic overwrite but rejects no-overwrite before parent creation
 
 ## Remaining Scope And Qualification
 
@@ -159,17 +158,25 @@ transitional adapters, not equivalent to the capability operations. F02 remains 
 consumers have the agreed boundary and independent acceptance.
 
 Rooted parent creation and recursive removal can make partial progress before a later I/O
-error. Atomic rename preserves entries on host rejection, but cancellation/crash recovery,
+error. Stable-WASI recursive removal admits at most 256 directory levels and returns an explicit error before descending further; this bounds host call-stack use. The depth error does not promise rollback of entries already removed. Atomic rename preserves entries on host rejection, but cancellation/crash recovery,
 cross-device controls, complete denied-operation rollback, hostile coequal writers, and host
 qualification require their separate evidence. The current native controls establish local
 behavior on their named host; source compilation is not WASI/Windows runtime qualification.
 This specification does not promote F02-F04 or supply an OS process sandbox.
 
-Stable-WASI compatibility remains a required recovery obligation: `cap-std`/`cap-fs-ext` are
-native-only dependencies because their WASI filesystem-time dependency requires an unstable
-Rust API. Rooted filesystem effects and typed document replacements explicitly return
-`Unsupported` on stable WASI before touching the configured root. This is a temporary
-availability reduction, not target qualification. The WASI CLI's bootstrap/path-based transport
-remains separately governed; its presence cannot certify the missing effect adapter. A stable
-descriptor-relative WASI implementation and actual runtime controls are required before the
-Core handoff or a claim of restored supported filesystem profiles.
+Stable-WASI filesystem effects and typed document replacements use the existing pinned
+`rustix` dependency and stable Rust descriptor ownership. `cap-std`/`cap-fs-ext` remain
+native-only because their WASI filesystem-time dependency requires an unstable Rust API.
+WASI `:readonly` remains false, matching stable Rust metadata because Preview1 filestat has no Unix permission bits; it never grants write authority.
+Each ancestor is opened separately with `NOFOLLOW`; read-only preparation examines existing
+ancestors before any creation, and parent creation reopens each new entry without following
+links. Stat, list metadata, unlink and atomic overwrite inspect or operate on final entries
+without dereferencing links. Document replacement retains the same bounded exclusive
+acquisition, write/synchronization, same-parent rename and failure-cleanup protocol.
+
+Actual WASI controls must execute the compiled target, exercise admitted and denied operations,
+and independently compare host entry identities/content. Native emulation and target compilation
+alone are insufficient. These local controls restore the tested operations but do not qualify
+all hosts or close F02-F04. The WASI CLI's bootstrap/path-based transport and remaining legacy
+consumers stay separately governed. No-overwrite rename remains explicitly unsupported on this
+profile until an atomic primitive and its evidence exist.

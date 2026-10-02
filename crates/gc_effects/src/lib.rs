@@ -80,6 +80,6 @@ pub fn set_session_effect_ceiling(limit: Option<u64>) {
 #[cfg(test)]
 mod tests;
 
-#[cfg(all(test, not(target_os = "wasi")))]
+#[cfg(all(test, unix))]
 #[path = "rooted_fs_wasi.rs"]
-mod wasi_rooted_admission_controls;
+mod wasi_rooted_descriptor_controls;

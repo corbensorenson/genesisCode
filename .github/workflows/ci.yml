@@ -1093,6 +1093,7 @@ jobs:
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release --locked --offline
           GENESIS_WASI_SMOKE_NATIVE_BIN="$native_smoke_bin" \
             bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
+          bash scripts/test_wasi_rooted_fs.sh
 
       - name: Finalize Hosted Timing Calibration
         if: ${{ always() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && env.GENESIS_CI_PROFILE == 'standard' && env.GENESIS_CI_LANE == 'standard' }}
