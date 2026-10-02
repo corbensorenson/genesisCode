@@ -48,7 +48,7 @@ pub(super) fn dispatch_lock_io(
                 PkgLockOpsDecision::Write { bytes, lock_hash } => {
                     let base_dir = effective_base_dir(pol)?;
                     let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
-                    let lock_path = match sandbox_path_write(&base_dir, &lock_s, create_dirs) {
+                    let lock_path = match sandbox_atomic_write_target(&base_dir, &lock_s, create_dirs) {
                         Ok(path) => path,
                         Err(error) => {
                             return Ok(mk_error(
@@ -111,7 +111,7 @@ pub(super) fn dispatch_lock_io(
                     return Ok(mk_error(error_tok, "core/pkg/bad-lock", message, Some(op)));
                 }
             };
-            let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+            let lock_write_path = match sandbox_atomic_write_target(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(

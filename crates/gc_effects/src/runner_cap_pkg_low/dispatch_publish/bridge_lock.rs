@@ -52,7 +52,7 @@ pub(super) fn update_lock(
             )));
         }
     };
-    let write_path = match sandbox_path_write(&base_dir, update.lock, false) {
+    let write_path = match sandbox_atomic_write_target(&base_dir, update.lock, false) {
         Ok(path) => path,
         Err(error) => {
             return Ok(Err(mk_error(

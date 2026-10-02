@@ -58,7 +58,7 @@ fn init(
     let hash = blake3::hash(&bytes).to_hex().to_string();
     let base = effective_base_dir(policy)?;
     let create_dirs = policy.map(|value| value.create_dirs).unwrap_or(false);
-    let path = sandbox_path_write(&base, &lock_s, create_dirs)
+    let path = sandbox_atomic_write_target(&base, &lock_s, create_dirs)
         .map_err(|error| EffectsError::Log(format!("parity path: {error}")))?;
     atomic_write_text(&path, &bytes).map_err(|error| {
         EffectsError::Log(format!("parity {operation} persistence failed: {error}"))
@@ -172,7 +172,7 @@ fn add(
     );
     let bytes = lock.to_toml_canonical().into_bytes();
     let hash = blake3::hash(&bytes).to_hex().to_string();
-    let write_path = sandbox_path_write(&base, &lock_s, false)
+    let write_path = sandbox_atomic_write_target(&base, &lock_s, false)
         .map_err(|error| EffectsError::Log(format!("parity path: {error}")))?;
     atomic_write_text(&write_path, &bytes).map_err(|error| {
         EffectsError::Log(format!("parity {operation} persistence failed: {error}"))

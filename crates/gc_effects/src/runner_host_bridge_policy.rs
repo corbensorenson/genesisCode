@@ -2,10 +2,9 @@
 use sha2::{Digest, Sha256};
 
 use super::*;
-use crate::policy::{
-    AuthorizedBridgeAllowlist, AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy,
-    AuthorizedBridgeTransport,
-};
+#[cfg(not(target_os = "wasi"))]
+use crate::policy::{AuthorizedBridgeAllowlist, AuthorizedBridgeTransport};
+use crate::policy::{AuthorizedBridgeDigest, AuthorizedBridgeIdentityPolicy};
 
 #[cfg(not(target_os = "wasi"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -317,7 +316,9 @@ pub(crate) fn enforce_response_limit(
 #[cfg(test)]
 mod authority_tests {
     use super::*;
-    use crate::policy::{AuthorizedBridgeAllowlist, AuthorizedBridgeIdentityPolicy};
+    use crate::policy::{
+        AuthorizedBridgeAllowlist, AuthorizedBridgeIdentityPolicy, AuthorizedBridgeTransport,
+    };
     use std::collections::BTreeMap;
 
     fn policy(digest: AuthorizedBridgeDigest, raw: &str) -> OpPolicy {

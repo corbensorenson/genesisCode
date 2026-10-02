@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "8bc1a376a28f3efd2ecf791a5d0a0c331fa079631ab7d3ee072dc8a7bfe9dec0",
+  "contentIdentitySha256": "693d05f1cd04f99baeb2b2bfc2940fc6d0fc3b250d0b23b6b59a5101903910ec",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -1775,11 +1775,11 @@
           "gitPackageRecords": 0,
           "path": "Cargo.lock",
           "pathOrWorkspacePackageRecords": 18,
-          "registryPackageRecords": 443,
+          "registryPackageRecords": 454,
           "schemaVersion": 4,
-          "sha256": "ba28b65b338829a7db9fc4301f226a339c6aab81743b974ae5ca0de1601cbcae",
-          "totalPackageRecords": 461,
-          "uniquePackageIdentities": 461
+          "sha256": "dadd08c50ed289624d4b243bc5dadf112e94232d63765a6031aa7bd75bf27f72",
+          "totalPackageRecords": 472,
+          "uniquePackageIdentities": 472
         },
         {
           "gitPackageRecords": 0,
@@ -2733,7 +2733,7 @@
     }
   },
   "sourceIdentities": {
-    "Cargo.lock": "ba28b65b338829a7db9fc4301f226a339c6aab81743b974ae5ca0de1601cbcae",
+    "Cargo.lock": "dadd08c50ed289624d4b243bc5dadf112e94232d63765a6031aa7bd75bf27f72",
     "Cargo.toml": "36566f84c9351572596298906707431245352296c7718aa1035087f61d83ab32",
     "deny.toml": "efdae31392b03f5228bd48e96eb14ef718520ae19b4d9de064ef9ed1c19978e5",
     "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "d1aa20fa3652cf7cc5a122bea2c8e7d212c52009aea716fe2ce790617d91e109",

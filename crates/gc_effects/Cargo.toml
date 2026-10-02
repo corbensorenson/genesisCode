@@ -34,6 +34,8 @@ gc_registry = { path = "../gc_registry" }
 gc_opt = { path = "../gc_opt" }
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
+cap-std = "=4.0.3"
+cap-fs-ext = "=4.0.3"
 fs2 = "0.4"
 crossterm = "0.28"
 notify = "6"
@@ -44,6 +46,7 @@ minifb = { version = "0.27", optional = true }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+rustix = { version = "=1.1.3", features = ["fs"] }
 
 [dev-dependencies]
 proptest = "1"

@@ -1,6 +1,4 @@
 use std::io::Read;
-#[cfg(unix)]
-use std::io::Write;
 #[cfg(target_os = "wasi")]
 use std::path::Component;
 use std::path::{Path, PathBuf};
@@ -19,20 +17,19 @@ pub(crate) enum FsReadError {
     Cancelled,
 }
 
-pub(crate) fn read_file_with_optional_limit(
-    path: &Path,
+pub(crate) fn read_open_file_with_optional_limit(
+    mut file: std::fs::File,
     max_bytes: Option<usize>,
     cancel: Option<&TimeoutCancelToken>,
 ) -> Result<Vec<u8>, FsReadError> {
     let Some(limit) = max_bytes else {
-        let mut f = std::fs::File::open(path).map_err(FsReadError::Io)?;
         let mut out = Vec::new();
         let mut buf = [0u8; 8 * 1024];
         loop {
             if cancel.is_some_and(|t| t.is_cancelled()) {
                 return Err(FsReadError::Cancelled);
             }
-            let n = f.read(&mut buf).map_err(FsReadError::Io)?;
+            let n = file.read(&mut buf).map_err(FsReadError::Io)?;
             if n == 0 {
                 break;
             }
@@ -40,14 +37,13 @@ pub(crate) fn read_file_with_optional_limit(
         }
         return Ok(out);
     };
-    let mut f = std::fs::File::open(path).map_err(FsReadError::Io)?;
     let mut out = Vec::new();
     let mut buf = [0u8; 8 * 1024];
     loop {
         if cancel.is_some_and(|t| t.is_cancelled()) {
             return Err(FsReadError::Cancelled);
         }
-        let n = f.read(&mut buf).map_err(FsReadError::Io)?;
+        let n = file.read(&mut buf).map_err(FsReadError::Io)?;
         if n == 0 {
             break;
         }
@@ -287,22 +283,7 @@ pub(crate) fn sandbox_path_read(base_dir: &Path, input: &str) -> Result<PathBuf,
 
     #[cfg(not(target_os = "wasi"))]
     {
-        let candidate = Path::new(input);
-        let full = if candidate.is_absolute() {
-            candidate.to_path_buf()
-        } else {
-            base_dir.join(candidate)
-        };
-        let canon = std::fs::canonicalize(&full).map_err(|e| {
-            EffectsError::Log(format!("read path invalid `{}`: {e}", full.display()))
-        })?;
-        if !canon.starts_with(base_dir) {
-            return Err(EffectsError::Log(format!(
-                "read path escapes base_dir: {}",
-                canon.display()
-            )));
-        }
-        Ok(canon)
+        Ok(crate::rooted_fs::FsRoot::open(base_dir)?.legacy_path(input, true, false, false)?)
     }
 }
 
@@ -327,91 +308,28 @@ pub(crate) fn sandbox_path_write(
 
     #[cfg(not(target_os = "wasi"))]
     {
-        let candidate = Path::new(input);
-        let joined = if candidate.is_absolute() {
-            candidate.to_path_buf()
-        } else {
-            base_dir.join(candidate)
-        };
-
-        if let Some(parent) = joined.parent() {
-            if create_dirs {
-                std::fs::create_dir_all(parent).map_err(|e| {
-                    EffectsError::Log(format!("create dir `{}` failed: {e}", parent.display()))
-                })?;
-            }
-            let parent_canon = std::fs::canonicalize(parent).map_err(|e| {
-                EffectsError::Log(format!("write parent invalid `{}`: {e}", parent.display()))
-            })?;
-            if !parent_canon.starts_with(base_dir) {
-                return Err(EffectsError::Log(format!(
-                    "write path escapes base_dir: {}",
-                    parent_canon.display()
-                )));
-            }
-        }
-        Ok(joined)
+        Ok(crate::rooted_fs::FsRoot::open(base_dir)?.legacy_path(
+            input,
+            false,
+            true,
+            create_dirs,
+        )?)
     }
 }
 
-pub(crate) fn atomic_write_text(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
-    let parent = path
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
-    std::fs::create_dir_all(&parent)?;
-    let mut sequence = 0u64;
-    let tmp = loop {
-        let candidate = parent.join(format!(
-            ".{}.{}.{}.tmp",
-            path.file_name().and_then(|s| s.to_str()).unwrap_or("out"),
-            crate::platform_process_id(),
-            sequence
-        ));
-        sequence = sequence.saturating_add(1);
-        match std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&candidate)
-        {
-            Ok(mut file) => {
-                use std::io::Write as _;
-                file.write_all(bytes)?;
-                break candidate;
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error),
-        }
-    };
-    std::fs::rename(&tmp, path)?;
-    Ok(())
+pub(crate) fn sandbox_atomic_write_target(
+    base_dir: &Path,
+    input: &str,
+    create_dirs: bool,
+) -> Result<crate::rooted_fs::AtomicWriteTarget, EffectsError> {
+    Ok(crate::rooted_fs::FsRoot::open(base_dir)?.prepare_atomic_write(input, create_dirs)?)
 }
 
-pub(crate) fn write_file_no_follow(path: &Path, bytes: &[u8]) -> Result<(), std::io::Error> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-
-        let mut f = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .custom_flags(libc::O_NOFOLLOW)
-            .open(path)?;
-        f.write_all(bytes)?;
-        f.sync_all()?;
-        Ok(())
-    }
-    #[cfg(not(unix))]
-    {
-        if path.exists() {
-            let md = std::fs::symlink_metadata(path)?;
-            if md.file_type().is_symlink() {
-                return Err(std::io::Error::other("refusing to write through symlink"));
-            }
-        }
-        std::fs::write(path, bytes)
-    }
+pub(crate) fn atomic_write_text(
+    target: &crate::rooted_fs::AtomicWriteTarget,
+    bytes: &[u8],
+) -> Result<(), std::io::Error> {
+    target.write(bytes)
 }
 
 pub(crate) fn sandbox_path_allow_missing(
@@ -435,32 +353,14 @@ pub(crate) fn sandbox_path_allow_missing(
 
     #[cfg(not(target_os = "wasi"))]
     {
-        let candidate = Path::new(input);
-        let full = if candidate.is_absolute() {
-            candidate.to_path_buf()
-        } else {
-            base_dir.join(candidate)
-        };
-        if full.exists() {
-            return sandbox_path_read(base_dir, input);
-        }
-        if let Some(parent) = full.parent() {
-            if create_dirs {
-                std::fs::create_dir_all(parent).map_err(|e| {
-                    EffectsError::Log(format!("create dir `{}` failed: {e}", parent.display()))
-                })?;
-            }
-            let canon_parent = std::fs::canonicalize(parent).map_err(|e| {
-                EffectsError::Log(format!("path parent invalid `{}`: {e}", parent.display()))
-            })?;
-            if !canon_parent.starts_with(base_dir) {
-                return Err(EffectsError::Log(format!(
-                    "path escapes base_dir: {}",
-                    canon_parent.display()
-                )));
-            }
-        }
-        Ok(full)
+        Ok(
+            crate::rooted_fs::FsRoot::open(base_dir)?.legacy_path(
+                input,
+                true,
+                true,
+                create_dirs,
+            )?,
+        )
     }
 }
 

@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 
 use crate::runner_io_ops::{canonical_path_material, validate_portable_effect_path};
 
-fn fs_entry_kind(file_type: &std::fs::FileType) -> &'static str {
+fn fs_entry_kind(file_type: &crate::rooted_fs::FileType) -> &'static str {
     if file_type.is_file() {
         "file"
     } else if file_type.is_dir() {
@@ -36,13 +36,12 @@ pub(super) fn capability_io_fs_stat(
 ) -> Result<Value, EffectsError> {
     let path_s = payload_path(payload)?;
     let base_dir = effective_base_dir(pol)?;
-    let path = sandbox_path_allow_missing(&base_dir, &path_s, false)?;
+    let path = base_dir.join(&path_s);
     let Some(rel_path) = fs_rel_display_path(&base_dir, &path) else {
         return Ok(path_encoding_error(error_tok, op));
     };
-    let md = match std::fs::symlink_metadata(&path) {
-        Ok(md) => Some(md),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+    let md = match crate::rooted_fs::FsRoot::open(&base_dir).and_then(|root| root.stat(&path_s)) {
+        Ok(md) => md,
         Err(e) => {
             return Ok(Value::Sealed {
                 token: error_tok,
@@ -95,16 +94,23 @@ pub(super) fn capability_io_fs_list(
 ) -> Result<Value, EffectsError> {
     let path_s = payload_path(payload)?;
     let base_dir = effective_base_dir(pol)?;
-    let path = sandbox_path_read(&base_dir, &path_s)?;
-    let read_dir = match std::fs::read_dir(&path) {
-        Ok(rd) => rd,
-        Err(e) => {
-            return Ok(Value::Sealed {
-                token: error_tok,
-                payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
-            });
-        }
-    };
+    let requested_path = base_dir.join(&path_s);
+    let (relative_path, read_dir) =
+        match crate::rooted_fs::FsRoot::open(&base_dir).and_then(|root| root.list(&path_s)) {
+            Ok(result) => result,
+            Err(e) => {
+                return Ok(Value::Sealed {
+                    token: error_tok,
+                    payload: Box::new(Value::data(io_error_payload(
+                        op,
+                        &base_dir,
+                        &requested_path,
+                        &e,
+                    ))),
+                });
+            }
+        };
+    let path = base_dir.join(relative_path);
 
     let mut entries = Vec::new();
     let mut canonical_paths = BTreeSet::new();
@@ -118,7 +124,7 @@ pub(super) fn capability_io_fs_list(
                 });
             }
         };
-        let entry_path = entry.path();
+        let entry_path = path.join(entry.file_name());
         let entry_md = match entry.metadata() {
             Ok(md) => md,
             Err(e) => {
@@ -174,12 +180,9 @@ pub(super) fn capability_io_fs_mkdir(
     let path_s = payload_path(payload)?;
     let base_dir = effective_base_dir(pol)?;
     let create_parents = payload_optional_bool_field(payload, op, ":parents", true)?;
-    let path = sandbox_path_allow_missing(&base_dir, &path_s, create_parents)?;
-    let result = if create_parents {
-        std::fs::create_dir_all(&path)
-    } else {
-        std::fs::create_dir(&path)
-    };
+    let path = base_dir.join(&path_s);
+    let result = crate::rooted_fs::FsRoot::open(&base_dir)
+        .and_then(|root| root.mkdir(&path_s, create_parents));
     match result {
         Ok(()) => Ok(Value::data(Term::Nil)),
         Err(e) => Ok(Value::Sealed {
@@ -198,30 +201,9 @@ pub(super) fn capability_io_fs_remove(
     let path_s = payload_path(payload)?;
     let base_dir = effective_base_dir(pol)?;
     let recursive = payload_optional_bool_field(payload, op, ":recursive", false)?;
-    let path = sandbox_path_allow_missing(&base_dir, &path_s, false)?;
-    let md = match std::fs::symlink_metadata(&path) {
-        Ok(md) => Some(md),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-        Err(e) => {
-            return Ok(Value::Sealed {
-                token: error_tok,
-                payload: Box::new(Value::data(io_error_payload(op, &base_dir, &path, &e))),
-            });
-        }
-    };
-    let Some(md) = md else {
-        return Ok(Value::data(Term::Nil));
-    };
-    let file_type = md.file_type();
-    let result = if file_type.is_dir() && !file_type.is_symlink() {
-        if recursive {
-            std::fs::remove_dir_all(&path)
-        } else {
-            std::fs::remove_dir(&path)
-        }
-    } else {
-        std::fs::remove_file(&path)
-    };
+    let path = base_dir.join(&path_s);
+    let result =
+        crate::rooted_fs::FsRoot::open(&base_dir).and_then(|root| root.remove(&path_s, recursive));
     match result {
         Ok(()) => Ok(Value::data(Term::Nil)),
         Err(e) => Ok(Value::Sealed {
@@ -244,46 +226,19 @@ pub(super) fn capability_io_fs_rename(
     let overwrite = payload_optional_bool_field(payload, op, ":overwrite", false)?;
     let base_dir = effective_base_dir(pol)?;
     let create_dirs = pol.is_some_and(|p| p.create_dirs);
-    let from = sandbox_path_read(&base_dir, &from_path)?;
-    let to = sandbox_path_allow_missing(&base_dir, &to_path, create_dirs)?;
-    if !overwrite && to.exists() {
-        return Ok(mk_error(
+    let from = base_dir.join(&from_path);
+    let result = crate::rooted_fs::FsRoot::open(&base_dir)
+        .and_then(|root| root.rename(&from_path, &to_path, overwrite, create_dirs));
+    match result {
+        Ok(()) => Ok(Value::data(Term::Nil)),
+        Err(e) if !overwrite && e.kind() == std::io::ErrorKind::AlreadyExists => Ok(mk_error(
             error_tok,
             "core/caps/policy-error",
             format!(
-                "{op} target `{}` already exists; set :overwrite true to allow replacing it",
-                fs_rel_display_path(&base_dir, &to).unwrap_or_else(|| "<invalid-path>".to_string())
+                "{op} target `{to_path}` already exists; set :overwrite true to allow replacing it"
             ),
             Some(op),
-        ));
-    }
-    let result = if overwrite && to.exists() {
-        let md = std::fs::symlink_metadata(&to).map_err(|e| Value::Sealed {
-            token: error_tok,
-            payload: Box::new(Value::data(io_error_payload(op, &base_dir, &to, &e))),
-        });
-        match md {
-            Ok(md) => {
-                let remove_result = if md.file_type().is_dir() && !md.file_type().is_symlink() {
-                    std::fs::remove_dir_all(&to)
-                } else {
-                    std::fs::remove_file(&to)
-                };
-                if let Err(e) = remove_result {
-                    return Ok(Value::Sealed {
-                        token: error_tok,
-                        payload: Box::new(Value::data(io_error_payload(op, &base_dir, &to, &e))),
-                    });
-                }
-                std::fs::rename(&from, &to)
-            }
-            Err(sealed) => return Ok(sealed),
-        }
-    } else {
-        std::fs::rename(&from, &to)
-    };
-    match result {
-        Ok(()) => Ok(Value::data(Term::Nil)),
+        )),
         Err(e) => Ok(Value::Sealed {
             token: error_tok,
             payload: Box::new(Value::data(io_error_payload(op, &base_dir, &from, &e))),

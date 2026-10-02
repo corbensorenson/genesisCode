@@ -111,7 +111,7 @@ pub(super) fn dispatch_snapshot(
 
             if let Some(out_s) = out_s {
                 let base_dir = effective_base_dir(pol)?;
-                let out_path = sandbox_path_write(
+                let out_path = sandbox_atomic_write_target(
                     &base_dir,
                     &out_s,
                     pol.map(|p| p.create_dirs).unwrap_or(false),
@@ -274,7 +274,7 @@ pub(super) fn dispatch_snapshot(
             };
 
             if let Some(out_s) = out_s {
-                let out_path = sandbox_path_write(
+                let out_path = sandbox_atomic_write_target(
                     &base_dir,
                     &out_s,
                     pol.map(|p| p.create_dirs).unwrap_or(false),
@@ -414,7 +414,7 @@ pub(super) fn dispatch_snapshot(
 
                 if let Some(out_s) = &out_s {
                     let base_dir = effective_base_dir(pol)?;
-                    let out_path = sandbox_path_write(
+                    let out_path = sandbox_atomic_write_target(
                         &base_dir,
                         out_s,
                         pol.map(|p| p.create_dirs).unwrap_or(false),
@@ -514,7 +514,7 @@ pub(super) fn dispatch_snapshot(
 
                 if let Some(out_s) = &out_s {
                     let base_dir = effective_base_dir(pol)?;
-                    let out_path = sandbox_path_write(
+                    let out_path = sandbox_atomic_write_target(
                         &base_dir,
                         out_s,
                         pol.map(|p| p.create_dirs).unwrap_or(false),
@@ -556,7 +556,7 @@ pub(super) fn dispatch_snapshot(
 
             if let Some(out_s) = &out_s {
                 let base_dir = effective_base_dir(pol)?;
-                let out_path = sandbox_path_write(
+                let out_path = sandbox_atomic_write_target(
                     &base_dir,
                     out_s,
                     pol.map(|p| p.create_dirs).unwrap_or(false),

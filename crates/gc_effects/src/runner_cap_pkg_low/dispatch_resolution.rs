@@ -221,7 +221,7 @@ pub(super) fn dispatch_resolution(
                     Ok(result) => result,
                     Err(error) => return Ok(error),
                 };
-            let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+            let lock_write_path = match sandbox_atomic_write_target(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
@@ -384,7 +384,7 @@ pub(super) fn dispatch_resolution(
                     Ok(result) => result,
                     Err(error) => return Ok(error),
                 };
-            let lock_write_path = match sandbox_path_write(&base_dir, &lock_s, false) {
+            let lock_write_path = match sandbox_atomic_write_target(&base_dir, &lock_s, false) {
                 Ok(p) => p,
                 Err(e) => {
                     return Ok(mk_error(
