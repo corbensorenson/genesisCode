@@ -6,6 +6,9 @@ use gc_kernel::{EvalCtx, Value, eval_module, value_hash};
 use gc_prelude::build_prelude;
 use replay_support::replay;
 
+#[path = "store_caps/remote_integrity.rs"]
+mod store_remote_integrity;
+
 fn load_policy(path: &std::path::Path) -> CapsPolicy {
     let artifact = std::env::var_os("GENESIS_TEST_SELFHOST_ARTIFACT")
         .map(std::path::PathBuf::from)

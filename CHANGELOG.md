@@ -4,6 +4,9 @@ All notable GenesisCode changes are tracked here. The project is pre-1.0; format
 
 ## [Unreleased]
 
+- Reject registry redirects, malformed object identities and corrupt backend responses at the shared client boundary; stream bounded file/HTTP reads and admit complete sync download batches before installation. Preserve existing store/sync hash-mismatch classifications and strict replay. Whole-closure rollback and independent recovery acceptance remain open.
+- Recover journaled reclamation of regular-file selfhost caches as well as Cargo directories; reject quarantine links without changing their targets or the existing resource policy.
+
 - Define GenesisCode, GenesisBench, and Genesis Model as independently versioned products with separate release authorities, typed compatibility, isolated acceptance lanes, and no model dependency for the language release.
 - Expand the benchmark roadmap through signed public governance, lineage-correct statistics, fixed-scaffold model comparison, temporal challenge overlays, construct-validity studies, a training/evaluation firewall, profile-bound local models, and four-cell language/model co-evolution.
 - Add the self-hostable signed GenesisBench result registry and deterministic lexicographic static leaderboard, preserving complete append-only result history and independently replayed scoring.
@@ -128,7 +131,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: `P1.9`, `P1.10`, `P1.11`, `P1.12`, `P1.13`, `P1.14`, `P1.15`. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: `P1.9`, `P1.10`, `P1.11`, `P1.12`, `P1.13`, `P1.14`, `P1.15`, `P1.16`. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -162,7 +165,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `01e1e3d5e1a436232c632101a120b5c2f75617921b8c0624482c656f558c6031`.
+Machine-readable identity: `92942f242998d0a25a3c38b21559b35de82e1182f14c18425def7f8b46383c17`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

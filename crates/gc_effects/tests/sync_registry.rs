@@ -1102,3 +1102,6 @@ mod sync_registry_cases_a;
 
 #[path = "sync_registry/cases_b.rs"]
 mod sync_registry_cases_b;
+
+#[path = "sync_registry/store_integrity.rs"]
+mod sync_registry_store_integrity;

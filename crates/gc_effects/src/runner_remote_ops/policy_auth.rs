@@ -302,6 +302,7 @@ pub(super) fn registry_error_code(
 ) -> &'static str {
     match err {
         gc_registry::RegistryError::Auth(_) => auth_code,
+        gc_registry::RegistryError::HashMismatch { .. } => "core/sync/hash-mismatch",
         _ => "core/sync/remote-error",
     }
 }

@@ -454,6 +454,9 @@ fn registry_error_http(err: RegistryError) -> (u16, String, String) {
         RegistryError::Auth(msg) => (401, "unauthorized".to_string(), msg),
         RegistryError::RemoteSpec(msg) => (400, "bad_request".to_string(), msg),
         RegistryError::Protocol(msg) => (400, "protocol".to_string(), msg),
+        error @ RegistryError::HashMismatch { .. } => {
+            (400, "protocol".to_string(), error.to_string())
+        }
         RegistryError::Http(msg) => {
             let status = parse_status_code_hint(&msg).unwrap_or(500);
             let code = match status {

@@ -1,5 +1,6 @@
 pub fn wasi_http_bridge_configured() -> bool {
-    wasi_http_bridge_root_from_env().is_some() || discover_workspace_runtime_wasi_bridge_root().is_some()
+    wasi_http_bridge_root_from_env().is_some()
+        || discover_workspace_runtime_wasi_bridge_root().is_some()
 }
 
 fn wasi_http_bridge_root_for_base(base: &Url) -> Option<PathBuf> {
@@ -42,7 +43,10 @@ fn resolve_wasi_http_bridge_root_for_remote(root: &Path, base: &Url) -> PathBuf 
 
     if let Some(host_token) = bridge_host_token(base)
         && (root.join(base.scheme()).is_dir()
-            || root.file_name().map(|n| n == "wasi-http-bridge").unwrap_or(false))
+            || root
+                .file_name()
+                .map(|n| n == "wasi-http-bridge")
+                .unwrap_or(false))
     {
         return root.join(base.scheme()).join(host_token).join("v1");
     }
@@ -56,18 +60,10 @@ fn resolve_wasi_http_bridge_root_for_remote(root: &Path, base: &Url) -> PathBuf 
 
 fn bridge_host_token(base: &Url) -> Option<String> {
     let host = base.host_str()?;
-    let port = base.port_or_known_default().unwrap_or_else(|| {
-        if base.scheme() == "https" {
-            443
-        } else {
-            80
-        }
-    });
-    Some(format!(
-        "{}_{}",
-        sanitize_bridge_token_segment(host),
-        port
-    ))
+    let port = base
+        .port_or_known_default()
+        .unwrap_or_else(|| if base.scheme() == "https" { 443 } else { 80 });
+    Some(format!("{}_{}", sanitize_bridge_token_segment(host), port))
 }
 
 fn sanitize_bridge_token_segment(raw: &str) -> String {
@@ -87,10 +83,7 @@ pub fn wasi_http_bridge_resolve_remote_root(
     remote: &str,
 ) -> Result<PathBuf, RegistryError> {
     let base = normalize_remote_base(remote)?;
-    Ok(resolve_wasi_http_bridge_root_for_remote(
-        bridge_root,
-        &base,
-    ))
+    Ok(resolve_wasi_http_bridge_root_for_remote(bridge_root, &base))
 }
 
 #[cfg(target_os = "wasi")]
@@ -133,38 +126,79 @@ fn chunk_upload_not_supported(err: &RegistryError) -> bool {
     }
 }
 
+fn validate_store_hash(hash: &str) -> Result<(), RegistryError> {
+    if hash.len() != 64
+        || !hash
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return Err(RegistryError::Protocol(
+            "store: identity must be 64 lowercase hex digits".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+pub fn verify_store_object(op: &str, hash: &str, bytes: &[u8]) -> Result<(), RegistryError> {
+    validate_store_hash(hash)?;
+    let actual = blake3::hash(bytes).to_hex().to_string();
+    if actual != hash {
+        return Err(RegistryError::HashMismatch {
+            operation: op.to_string(),
+            expected: hash.to_string(),
+            actual,
+        });
+    }
+    Ok(())
+}
+
+// File and HTTP bodies use the same limit+1 probe, including bodies that grow
+// after a metadata/Content-Length observation. No infallible Vec growth occurs.
+fn read_bytes_limited(
+    op: &str,
+    reader: &mut impl Read,
+    max_bytes: Option<usize>,
+) -> Result<Vec<u8>, RegistryError> {
+    let max = max_bytes.unwrap_or(usize::MAX);
+    let mut out = Vec::new();
+    let mut buffer = [0u8; 8192];
+    loop {
+        let remaining = max - out.len();
+        let probe = buffer.len().min(remaining.saturating_add(1));
+        let n = match reader.read(&mut buffer[..probe]) {
+            Ok(n) => n,
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(RegistryError::Http(format!("{op} read: {e}"))),
+        };
+        if n == 0 {
+            return Ok(out);
+        }
+        if n > remaining {
+            return Err(RegistryError::Protocol(format!(
+                "resource-limit: {op}: response exceeds configured limit (> {max} bytes)"
+            )));
+        }
+        let required = out.len() + n;
+        if required > out.capacity() {
+            let capacity = required.max(out.capacity().max(8192).saturating_mul(2).min(max));
+            out.try_reserve_exact(capacity - out.len()).map_err(|e| {
+                RegistryError::Protocol(format!("resource-limit: {op}: allocation refused: {e}"))
+            })?;
+        }
+        out.extend_from_slice(&buffer[..n]);
+    }
+}
+
 #[cfg(not(target_os = "wasi"))]
 fn read_response_bytes_limited(
     op: &str,
     mut r: reqwest::blocking::Response,
     max_bytes: Option<usize>,
 ) -> Result<Vec<u8>, RegistryError> {
-    if let Some(max) = max_bytes {
-        if let Some(cl) = r.content_length() {
-            enforce_body_limit(op, Some(max), cl)?;
-        }
-        let mut out: Vec<u8> = Vec::new();
-        let mut buf = [0u8; 8 * 1024];
-        loop {
-            let n = r
-                .read(&mut buf)
-                .map_err(|e| RegistryError::Http(format!("{op} read: {e}")))?;
-            if n == 0 {
-                break;
-            }
-            if out.len().saturating_add(n) > max {
-                return Err(RegistryError::Protocol(format!(
-                    "resource-limit: {op}: response exceeds configured limit (> {max} bytes)"
-                )));
-            }
-            out.extend_from_slice(&buf[..n]);
-        }
-        Ok(out)
-    } else {
-        r.bytes()
-            .map(|b| b.to_vec())
-            .map_err(|e| RegistryError::Http(format!("{op} bytes: {e}")))
+    if let Some(cl) = r.content_length() {
+        enforce_body_limit(op, max_bytes, cl)?;
     }
+    read_bytes_limited(op, &mut r, max_bytes)
 }
 
 pub fn normalize_remote_base(remote: &str) -> Result<Url, RegistryError> {

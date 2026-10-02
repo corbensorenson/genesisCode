@@ -516,7 +516,10 @@ def render_markdown() -> str:
 
 
 def validate_candidate(candidate: Any) -> None:
-    expected = render_document()
+    _validate_candidate_against(candidate, render_document())
+
+
+def _validate_candidate_against(candidate: Any, expected: Mapping[str, Any]) -> None:
     require(isinstance(candidate, dict), "release-note artifact must be an object")
     require(candidate == expected, "release-note artifact contains stale or unsupported claims")
     identity = candidate.get("contentIdentitySha256")
@@ -586,13 +589,17 @@ def check() -> None:
 
 def self_test() -> None:
     expected = render_document()
+    # Derive the oracle from source twice, independently of the retained artifact.
+    # Every mutant gets its own copy; only the unchanged oracle is shared.
+    require(expected == render_document(), "release-note source derivation is nondeterministic")
+    _validate_candidate_against(expected, expected)
     controls = []
 
     def reject(label: str, mutate: Any) -> None:
         candidate = copy.deepcopy(expected)
         mutate(candidate)
         try:
-            validate_candidate(candidate)
+            _validate_candidate_against(candidate, expected)
         except ReleaseNotesError:
             controls.append(label)
         else:

@@ -1,6 +1,5 @@
 use std::collections::BTreeMap;
 use std::fs::OpenOptions;
-#[cfg(not(target_os = "wasi"))]
 use std::io::Read;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -39,3 +38,7 @@ include!("registry/types_and_client.rs");
 include!("registry/client_impl/mod.rs");
 include!("registry/remote_helpers.rs");
 include!("registry/file_backend.rs");
+
+#[cfg(test)]
+#[path = "registry/read_boundary_tests.rs"]
+mod read_boundary_tests;

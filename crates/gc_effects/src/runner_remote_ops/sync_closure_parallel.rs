@@ -78,6 +78,8 @@ pub(super) fn sync_pull_closure(
                 stats.max_artifact_bytes,
                 stats.max_batch_bytes,
             );
+            // Admit the complete downloaded batch before installing any member.
+            let mut planned_bytes = *stats.store_written_bytes;
             for (i, h) in missing_hashes.iter().enumerate() {
                 let bytes = match &dl_results[i] {
                     Ok(b) => b,
@@ -105,8 +107,24 @@ pub(super) fn sync_pull_closure(
                         ));
                     }
                 };
+                gc_registry::verify_store_object("store/get", h, bytes).map_err(|error| {
+                    mk_error(
+                        stats.error_tok,
+                        registry_error_code(&error, "core/sync/remote-auth"),
+                        error.to_string(),
+                        Some(stats.op),
+                    )
+                })?;
+                planned_bytes = planned_bytes.checked_add(bytes.len()).ok_or_else(|| {
+                    mk_error(
+                        stats.error_tok,
+                        "core/caps/resource-limit",
+                        "store artifact byte accounting overflow".to_string(),
+                        Some(stats.op),
+                    )
+                })?;
                 if let Some(limit) = stats.store_max_run_bytes {
-                    let observed = (*stats.store_written_bytes).saturating_add(bytes.len());
+                    let observed = planned_bytes;
                     if observed > limit {
                         return Err(mk_resource_limit_error(
                             stats.error_tok,
@@ -117,6 +135,18 @@ pub(super) fn sync_pull_closure(
                         ));
                     }
                 }
+            }
+            for (h, result) in missing_hashes.iter().zip(&dl_results) {
+                // Every result was admitted above; keep a fallible path rather
+                // than assuming that a remote cannot return an error.
+                let bytes = result.as_ref().map_err(|error| {
+                    mk_error(
+                        stats.error_tok,
+                        registry_error_code(error, "core/sync/remote-auth"),
+                        error.to_string(),
+                        Some(stats.op),
+                    )
+                })?;
                 let got = store.put_bytes(bytes).map_err(|e| {
                     mk_error(
                         stats.error_tok,

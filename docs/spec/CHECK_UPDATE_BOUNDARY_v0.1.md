@@ -643,7 +643,9 @@ and whole-root quarantine serialize on Unix, macOS, Windows, and linked Git
 worktrees without holding an open file inside the tree being renamed. Registry
 writes are atomic and every reclamation journals `planned` then `quarantined`
 state before removal. A later admission or status operation deterministically
-finishes an interrupted quarantine. Recursive removal requires the platform's
+finishes an interrupted quarantine. A regular-file materialization is unlinked;
+directory materializations use recursive removal, and special files or final
+symlinks are rejected without following their targets. Recursive removal requires the platform's
 symlink-attack-resistant implementation and uses bounded retries only for
 transient metadata recreation; continuous mutation remains a fail-closed
 transaction for later recovery.

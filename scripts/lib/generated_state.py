@@ -13,6 +13,7 @@ from pathlib import Path, PurePosixPath
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -548,6 +549,12 @@ def _sort_registry(registry: MutableMapping[str, Any]) -> None:
 
 
 def _remove_tree(path: Path) -> None:
+    mode = path.lstat().st_mode
+    if stat.S_ISREG(mode):
+        path.unlink()
+        return
+    if not stat.S_ISDIR(mode):
+        raise GeneratedStateError("generated-state quarantine is not a regular file or directory")
     if not shutil.rmtree.avoids_symlink_attacks:
         raise GeneratedStateError("platform lacks symlink-safe recursive removal")
 

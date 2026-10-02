@@ -59,6 +59,13 @@ pub enum RegistryError {
     #[error("http error: {0}")]
     Http(String),
 
+    #[error("{operation}: hash mismatch (expected {expected}, got {actual})")]
+    HashMismatch {
+        operation: String,
+        expected: String,
+        actual: String,
+    },
+
     #[error("protocol error: {0}")]
     Protocol(String),
 }
@@ -243,4 +250,3 @@ pub struct RefsSetResp {
     pub name: String,
     pub hash: String,
 }
-

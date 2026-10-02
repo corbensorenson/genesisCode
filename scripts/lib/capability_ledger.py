@@ -710,6 +710,12 @@ def render_matrix(ledger: Mapping[str, Any]) -> str:
         lines.append(
             "- Active `upgrade_plan.md` P0/P1 defects: none. Roadmap maturity gaps above remain open and are not erased by an empty defect queue."
         )
+    else:
+        lines.append(
+            "- Active `upgrade_plan.md` P0/P1 defects: "
+            + ", ".join(f"`{defect_id}`" for defect_id in ledger["active_defect_ids"])
+            + "."
+        )
 
     lines.extend(render_product_target_sections(ledger))
     lines.extend(["", "Primary evidence paths:", ""])

@@ -753,6 +753,14 @@ pub(crate) fn ensure_artifact_hash_available(
                 Some(op),
             ));
         }
+        Err(gc_registry::RegistryError::HashMismatch { .. }) => {
+            return Err(mk_error(
+                error_tok,
+                "core/store/hash-mismatch",
+                "remote bytes hash mismatch".to_string(),
+                Some(op),
+            ));
+        }
         Err(e) => {
             let code = registry_error_code(&e, "core/store/remote-auth");
             return Err(mk_error(error_tok, code, e.to_string(), Some(op)));
@@ -778,6 +786,10 @@ pub(crate) fn ensure_artifact_hash_available(
         Err(v) => Err(v),
     }
 }
+
+#[cfg(test)]
+#[path = "pkg_resolution/registry_integrity_tests.rs"]
+mod registry_integrity_tests;
 
 #[cfg(test)]
 mod tests {

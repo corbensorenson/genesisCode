@@ -457,6 +457,47 @@ post_crash = state.status(lifecycle)
 require(not quarantine_path.exists() and post_crash["entryCount"] >= 1, "quarantined transaction did not recover")
 controls.append("generated-state-crash-recovery")
 
+# Selfhost materializations are files, whereas Cargo materializations are trees.
+# Exercise both normal reclamation and recovery after the journaled rename.
+(lifecycle / ".genesis/cache/selfhost_toolchain").mkdir(parents=True)
+cleanup.initialize_root_marker(lifecycle, ".genesis/cache", "fixture-cache")
+for index, crash_after_rename in enumerate([False, True]):
+    key = str(index + 5) * 64
+    relative = f".genesis/cache/selfhost_toolchain/{key}.gc"
+    (lifecycle / relative).write_bytes(b"rebuildable artifact")
+    cached = state.admit(lifecycle, "selfhost-cache", key, relative, "selfhost-cache",
+                         free_bytes_override=1 << 30)
+    state.release(lifecycle, cached["leaseToken"])
+    with state.state_lock(lifecycle, loaded_policy) as state_root:
+        registry = state._load_registry(state_root, loaded_policy, loaded_sha)
+        entry = next(item for item in registry["entries"] if item["id"] == cached["entryId"])
+        if crash_after_rename:
+            registry["sequence"] += 1
+            transaction_id = state._transaction_id(entry, registry["sequence"])
+            quarantined = f"{loaded_policy['stateRoot']}/quarantine/{transaction_id}"
+            os.replace(lifecycle / relative, lifecycle / quarantined)
+            registry["transaction"] = {"entryId": entry["id"], "id": transaction_id,
+                "phase": "quarantined", "sourcePath": relative, "quarantinePath": quarantined}
+            state._write_registry(state_root, loaded_policy, registry)
+        else:
+            state._reclaim_entry(lifecycle, state_root, loaded_policy, registry, entry)
+    state.status(lifecycle)
+    final = state._load_registry(state_root, loaded_policy, loaded_sha)
+    require(not (lifecycle / relative).exists() and final["transaction"] is None
+            and all(item["id"] != cached["entryId"] for item in final["entries"]),
+            "file materialization reclamation/recovery left an unfinished transaction")
+    controls.append("generated-state-file-crash-recovery" if crash_after_rename
+                    else "generated-state-file-reclamation")
+
+quarantine_link = temp / "quarantine-link"
+quarantine_target = temp / "quarantine-target"
+quarantine_target.write_bytes(b"protected target")
+quarantine_link.symlink_to(quarantine_target)
+state_rejected("generated-state-quarantine-link-rejection",
+    lambda: state._remove_tree(quarantine_link), "not a regular file or directory")
+require(quarantine_target.read_bytes() == b"protected target" and quarantine_link.is_symlink(),
+        "quarantine link rejection changed the target or entry")
+
 concurrent_path = ".genesis/build/cargo-cache/v1/root/host/concurrent"
 command = [
     sys.executable, str(source_root / "scripts/lib/generated_state.py"),
@@ -775,7 +816,7 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 53 and len(set(controls)) == 53, f"control coverage drift: {controls}")
+require(len(controls) == 56 and len(set(controls)) == 56, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",
