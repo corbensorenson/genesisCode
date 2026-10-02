@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "263bbdbaa46e7e0561d7d1e623a531580dec67a4a3187b8739e0978330b54268",
+  "contentIdentitySha256": "01e1e3d5e1a436232c632101a120b5c2f75617921b8c0624482c656f558c6031",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -1992,7 +1992,7 @@
             "CAP-SEMANTIC-VCS"
           ],
           "id": "P1.9",
-          "summary": "F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility."
+          "summary": "F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility. Local 2026-10-02 E0 serialization-admission controls do not close lossless runtime hashing, versioned replay compatibility, remaining production-boundary audit or independent acceptance."
         },
         {
           "affectedClaims": [
@@ -2742,7 +2742,7 @@
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
     "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json": "3eeb4593d1a0c89e90ad95c381e15c231fde5bec11a6fb61b0a0c550f398be61",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "c2d02320e5da19ee5b86e72ab1ec4b1bddaa0fe4bc19ad323df0705f04116c3b",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "ce58a8795f86f927ccf09c90ffbeec82b70ba27a3632e7074099428bde04f60b",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",

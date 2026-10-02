@@ -41,26 +41,8 @@ pub(super) fn dispatch_text_bytes_prim(
             if s.is_empty() {
                 return type_err(ctx, "sym/from-str expects non-empty string");
             }
-            // Match lexer delimiter constraints: symbols may not contain whitespace or delimiters.
-            let bs = s.as_bytes();
-            for &b in bs {
-                if matches!(
-                    b,
-                    b' ' | b'\t'
-                        | b'\n'
-                        | b'\r'
-                        | b'('
-                        | b')'
-                        | b'['
-                        | b']'
-                        | b'{'
-                        | b'}'
-                        | b'\''
-                        | b'"'
-                        | b';'
-                ) {
-                    return type_err(ctx, "sym/from-str invalid symbol text");
-                }
+            if gc_coreform::validate_symbol_name(s).is_err() {
+                return type_err(ctx, "sym/from-str invalid symbol text");
             }
             ctx.mem_observe_string_len(s.len())?;
             Ok(Value::data(Term::Symbol(clone_str(s, "sym/from-str")?)))

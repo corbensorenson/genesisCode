@@ -17,6 +17,34 @@ CoreForm is represented as immutable `Term` values:
 - vectors `[ ... ]`
 - maps `{k v k2 v2 ...}` (key/value pairs)
 
+### Canonical domain admission
+
+A symbol name must parse as exactly one symbol with identical text. Empty names,
+`nil`, `true`, `false`, names starting with an ASCII digit or `-` followed by an
+ASCII digit, and names containing a lexer delimiter are not canonical symbols.
+The delimiters are ASCII space, tab, LF, CR, `(`, `)`, `[`, `]`, `{`, `}`, `'`,
+`"`, and `;`. Other Unicode scalars retain their v0.2 behavior; `.` is an ordinary
+symbol and does not introduce a dotted-list form in this profile.
+
+Admission examines every nested list element, vector element, map key and map
+value. A pair's cdr must be nil or another admitted pair. Arbitrary runtime pairs
+remain legitimate data for `pair/cons`, `pair/car` and `pair/cdr`; an improper pair
+has no canonical v0.2 serialization and must be rejected at that boundary rather
+than serialized as a placeholder. The proper list `(pair <improper>)` is ordinary
+canonical data and must retain its historical bytes and identity.
+
+The Rust reference library provides `Term::try_symbol`, `validate_symbol_name`,
+`validate_canonical_term`, and checked term/module printer and hash APIs for host
+boundary admission. Raw `Term` construction is not an admission proof. Infallible
+reference printer/hash helpers require an already admitted canonical term;
+diagnostic rendering of other runtime data must not become wire bytes or identity.
+The GenesisCode printer and hash library reject inadmissible input as a sealed
+`core/type-error`. Valid v0.2 printing, ordering, prefixes and hashes are unchanged.
+
+Runtime hashing, including noncanonical runtime pairs, is governed separately by
+`VALUE_EFFECT_HASH.md`. Canonical admission does not repair its existing runtime
+alias counterexamples or authorize a silent hash/log format change.
+
 ## Canonicalization (Source -> Canonical CoreForm)
 
 Canonicalization must:

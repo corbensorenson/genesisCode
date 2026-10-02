@@ -109,6 +109,15 @@ fn cmp_compound(a: &Term, b: &Term) -> Ordering {
 }
 
 impl Term {
+    /// Construct an admitted v0.2 symbol at a host boundary.
+    pub fn try_symbol(s: impl Into<String>) -> Result<Self, crate::SymbolNameError> {
+        let name = s.into();
+        crate::validate_symbol_name(&name)?;
+        Ok(Term::Symbol(name))
+    }
+
+    /// Construct raw runtime data. This does not admit the term for canonical
+    /// serialization; untrusted names must use `try_symbol`.
     pub fn symbol(s: impl Into<String>) -> Self {
         Term::Symbol(s.into())
     }

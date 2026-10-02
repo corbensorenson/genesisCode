@@ -30,6 +30,14 @@ Rust remains responsible only for bounded mechanisms whose outcomes are transpor
 
 These mechanisms may fail closed. They do not infer a replay verdict. A response-load failure is transported as `:response-status :load-error`; the authority rejects it before the host can apply a continuation.
 
+Unsealing an effect request admits its entire payload to the canonical domain in
+`COREFORM_CANON_HASH.md` before hashing or dispatch. Unsupported raw symbols or
+improper pairs, including nested keys and values, return an explicit `BadPayload`
+host error. No payload hash, policy verdict, replay observation, or performed
+effect is produced for that request. This serialization failure does not override
+the authority's verdict on any representable logged fact. Admitted v0.2 payload
+bytes and hashes remain unchanged.
+
 ## Protocol
 
 Requests have kind `genesis/effect-replay-authority-request-v0.1`, version `1`, and exactly one phase-specific field set:

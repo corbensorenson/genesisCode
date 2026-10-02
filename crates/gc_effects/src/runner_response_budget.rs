@@ -13,6 +13,11 @@ pub(super) fn unseal_effect_request(
     let Value::EffectRequest(r) = payload.as_ref() else {
         return Err(EffectsError::BadEffectSeal);
     };
+    // The log's payload identity is a canonical CoreForm hash. Reject raw runtime
+    // data outside that domain before any caller hashes or dispatches it. This
+    // is serialization admission, not a capability or replay verdict.
+    gc_coreform::validate_canonical_term(&r.payload)
+        .map_err(|error| EffectsError::BadPayload(format!("noncanonical CoreForm: {error}")))?;
     Ok((r.as_ref().clone(), *token))
 }
 

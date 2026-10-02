@@ -51,6 +51,15 @@ struct Lexer<'a> {
     bytes: &'a [u8],
 }
 
+#[cfg(test)]
+pub(crate) fn lexer_symbol_observation(source: &str) -> bool {
+    // Observe tokens before the admitted Term constructor, so an admission
+    // defect cannot make both sides of the differential property agree.
+    let mut lexer = Lexer::new(source);
+    matches!(lexer.next(), Ok((Tok::Symbol(ref name), _)) if name == source && !matches!(name.as_str(), "nil" | "true" | "false"))
+        && matches!(lexer.next(), Ok((Tok::Eof, _)))
+}
+
 impl<'a> Lexer<'a> {
     fn new(s: &'a str) -> Self {
         Self {
@@ -165,21 +174,7 @@ impl<'a> Lexer<'a> {
     fn read_symbol(&mut self) -> String {
         let start = self.i;
         while let Some(b) = self.peek_byte() {
-            if matches!(
-                b,
-                b' ' | b'\t'
-                    | b'\n'
-                    | b'\r'
-                    | b'('
-                    | b')'
-                    | b'['
-                    | b']'
-                    | b'{'
-                    | b'}'
-                    | b'\''
-                    | b'"'
-                    | b';'
-            ) {
+            if crate::admission::is_symbol_delimiter(b) {
                 break;
             }
             // Advance by one UTF-8 scalar to keep `self.i` on a char boundary.
@@ -404,7 +399,10 @@ impl<'a> Parser<'a> {
                 "nil" => Ok(Term::Nil),
                 "true" => Ok(Term::Bool(true)),
                 "false" => Ok(Term::Bool(false)),
-                _ => Ok(Term::Symbol(s)),
+                _ => Term::try_symbol(s).map_err(|error| ParseError::Unexpected {
+                    at,
+                    msg: error.to_string(),
+                }),
             },
             Tok::RParen | Tok::RBracket | Tok::RBrace => Err(ParseError::Unexpected {
                 at,

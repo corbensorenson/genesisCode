@@ -2612,3 +2612,30 @@ fn str_repeat_preserves_validation_and_output_limits_in_both_tiers() {
         KernelErrorKind::MemoryLimit.to_string()
     );
 }
+
+#[test]
+fn symbol_constructor_rejects_literal_and_integer_token_aliases_in_both_tiers() {
+    for name in ["nil", "true", "false", "0", "12name", "-1", "-12name"] {
+        let source = format!(
+            "(prim sym/from-str {})",
+            gc_coreform::print_term(&Term::Str(name.into()))
+        );
+        for compiled in [false, true] {
+            let mut ctx = EvalCtx::with_step_limit(Some(100));
+            let token = ctx.protocol.unwrap().error;
+            let mut env = Env::empty();
+            let forms = parse_module(&source).unwrap();
+            let value = if compiled {
+                eval_module_compiled(&mut ctx, &mut env, &forms)
+            } else {
+                eval_module(&mut ctx, &mut env, &forms)
+            }
+            .unwrap();
+            assert!(
+                matches!(value, Value::Sealed { token: actual, .. } if actual == token),
+                "{name} compiled={compiled}: {}",
+                value.debug_repr()
+            );
+        }
+    }
+}

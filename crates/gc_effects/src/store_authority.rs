@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use gc_coreform::{Term, TermOrdKey, hash_term, print_term};
+use gc_coreform::{Term, TermOrdKey, hash_term_checked, print_term};
 use gc_kernel::{Apply, EvalCtx, MemLimits, Value};
 use gc_prelude::{build_prelude, load_selfhost_coreform_toolchain_v1_with_mode};
 use num_traits::ToPrimitive;
@@ -114,7 +114,8 @@ impl StoreAuthority {
         authority: Value,
         request: Term,
     ) -> Result<(Term, [u8; 32]), EffectsError> {
-        let request_hash = hash_term(&request);
+        let request_hash = hash_term_checked(&request)
+            .map_err(|error| authority_error(format!("noncanonical request: {error}")))?;
         self.context.reset_counters();
         self.context.step_limit = Some(STEP_LIMIT);
         let value = authority
