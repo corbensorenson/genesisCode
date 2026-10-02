@@ -1224,6 +1224,7 @@
     "R4.2": {
       "profile": "selfhost-authority",
       "owner_paths": [
+        ".github/workflows/ci.yml",
         "crates/gc_cli/Cargo.toml",
         "crates/gc_cli/tests",
         "crates/gc_wasi_cli/Cargo.toml",

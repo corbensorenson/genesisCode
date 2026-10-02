@@ -988,7 +988,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2172,6 +2172,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -2846,7 +2847,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -4030,6 +4031,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -4400,7 +4402,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5584,6 +5586,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -5829,7 +5832,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -7013,6 +7016,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -7337,7 +7341,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -8521,6 +8525,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -9337,7 +9342,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10521,6 +10526,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -11128,7 +11134,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "838748c35c657840d81c518d96bfe899859e23b2462b411fb0c00ac010946043",
+      "inputIdentitySha256": "89d9c85cc7cb1ac556af6f38af2ef791d9c5a397f0d4570e469a494625de1850",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11634,6 +11640,7 @@
           "scripts/render_selfhost_symbol_ownership_report.sh",
           "scripts/render_task_concurrency_stress_report.sh",
           "scripts/render_vcs_selfhost_contract_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_release_profile_guard.sh",
           "scripts/update_agent_generative_workloads_report.sh",
@@ -12051,7 +12058,7 @@
       "executionIdentitySha256": "698a84508b5266dcf869048d0ffb37a79abadca50f1f7ef6428fd5066f987349",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13235,6 +13242,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -15097,7 +15105,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16281,6 +16289,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -17168,7 +17177,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18352,6 +18361,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -18786,7 +18796,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19970,6 +19980,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -20786,7 +20797,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21970,6 +21981,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -22496,7 +22508,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23680,6 +23692,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -24816,7 +24829,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "7b66b9398673c0ec34c85645cabd6bd6d174e699852c9f7e337c9691001195c9",
+      "inputIdentitySha256": "912d871d183591acc28f8cfd573030e0bc1c35294996960db1633fde7c9cf3dc",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -25493,7 +25506,7 @@
       "executionIdentitySha256": "605aa59a4fc7df643fa1470e994534127f07bff8312bf30126bacfc3b5c26643",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "77a7281e819fcdf8303d51622f90c1bc0e67e52048e220dc44c6004db3f67a16",
+      "inputIdentitySha256": "f4b3283765d2a8148f1ed597af943edcf4eaffc108da9bdfb4988c6df5f64838",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25923,6 +25936,7 @@
           "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
           "scripts/lib/toml_compat.py",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/update_genesis_evidence_profile.sh",
           "scripts/update_genesis_evidence_verifier_vectors.sh",
           "selfhost/cli_coreform_v1.gc",
@@ -27047,7 +27061,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28231,6 +28245,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",
@@ -28578,7 +28593,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "83937ce34c026434b2f02d3a4f5ea814e7136f96f34ea10e197bb50a582e7964",
+      "inputIdentitySha256": "00d5fa392eaf58d2f8cc5b51e7b0eb2fc966dba061a8ce1d430cc26a0a91a864",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29762,6 +29777,7 @@
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/render_webxr_browser_conformance_report.sh",
           "scripts/render_write_genesiscode_skill_conformance_report.sh",
+          "scripts/requirements-selfhost-checker.txt",
           "scripts/selfhost_default_profile_guard.sh",
           "scripts/selfhost_refactor_pipeline.py",
           "scripts/selfhost_release_profile_guard.sh",

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Independently verify the GenesisCode frontend production authority profile."""
+"""Independently verify the GenesisCode frontend production authority profile.
+
+Host dependency input: scripts/requirements-selfhost-checker.txt. Provision this
+lock before invoking the verifier; verification never installs dependencies or
+substitutes the production Rust hash implementation.
+"""
 
 from __future__ import annotations
 
