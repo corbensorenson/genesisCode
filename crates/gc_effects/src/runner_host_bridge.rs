@@ -1,5 +1,7 @@
 use crate::policy::{AuthorizedMaxBytes, OpPolicy};
-use crate::runner_io_ops::{effective_base_dir, sandbox_path_read};
+#[cfg(not(target_os = "wasi"))]
+use crate::runner_io_ops::sandbox_path_read;
+use crate::runner_io_ops::{FsReadError, effective_base_dir, sandbox_document_read};
 #[cfg(not(target_os = "wasi"))]
 use crate::runner_process_control::{
     configure_killable_process, hard_process_tree_termination_supported,
@@ -374,7 +376,7 @@ fn decode_bridge_stdout(
         ));
     }
 
-    let stdout_s = String::from_utf8(stdout.to_vec()).map_err(|e| BridgeError {
+    let stdout_s = std::str::from_utf8(stdout).map_err(|e| BridgeError {
         code: format!("{family}/bridge-stdout-utf8"),
         message: e.to_string(),
     })?;

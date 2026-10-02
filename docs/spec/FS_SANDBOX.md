@@ -64,6 +64,14 @@ redirect that read to another file. The existing 4 MiB lock limit also applies t
 parser. GC may omit a missing lock below an admitted root; failure to open the root is an
 error. Native inside-link and stable-WASI no-link read profiles remain as specified above.
 
+VCS patch-file inputs and WASI bridge-response files also consume `DocumentRead` grants.
+When their policy declares `max_bytes`, the shared document reader probes at most one
+byte beyond the admitted read bound and uses fallible buffer growth; it never reads the
+whole file merely to decide that it is oversized. Patch-file limits apply to encoded source
+bytes before UTF-8 decoding or CoreForm parsing. Bridge document framing and whole-profile
+limits are defined in `HOST_BRIDGE_PROTOCOL.md`. An absent byte limit retains the legacy
+profile and does not establish bounded memory, cancellation or special-file admission.
+
 ## Write (`io/fs::write`)
 
 Write payload additionally contains:
@@ -160,8 +168,8 @@ an ancestor name with an escaping link cannot turn a later relative operation in
 outside-root I/O. Once a parent directory is opened, operations refer to that directory object;
 renaming its visible name does not change the handle's authority.
 
-Legacy pathname-returning adapters remain for package manifests/module trees, VCS patch reads,
-WASI bridge-response reads, GPK streaming, pins reads/locks,
+Legacy pathname-returning adapters remain for package manifests/module trees,
+GPK streaming, pins reads/locks,
 quarantine/store integration and external process APIs. Their native preflight now authorizes
 before rooted parent creation, but a returned `PathBuf` still has a check/open race. They are
 transitional adapters, not equivalent to the capability operations. F02 remains open until all

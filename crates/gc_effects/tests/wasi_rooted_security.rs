@@ -7,6 +7,8 @@ use gc_kernel::{EvalCtx, Value, eval_module, eval_module_compiled};
 use gc_prelude::{SelfhostBootstrapMode, build_prelude};
 use std::path::{Path, PathBuf};
 
+#[path = "support/document_reader_controls.rs"]
+mod document_reader_controls;
 #[path = "support/replay.rs"]
 mod replay_support;
 
@@ -257,6 +259,8 @@ fn wasi_actual_final_links_are_entries() {
 fn wasi_actual_package_writer_replaces_entries_and_cleans_failure() {
     for compiled in [false, true] {
         let root = fixture("documents", compiled);
+        let artifact = PathBuf::from(std::env::var("GENESIS_TEST_SELFHOST_ARTIFACT").unwrap());
+        document_reader_controls::controls(&root, &artifact, compiled);
         for destination in [
             "genesis.lock".to_string(),
             root.join("absolute/genesis.lock")

@@ -203,7 +203,18 @@ pub(super) fn dispatch_snapshot(
                     }
                 }
             } else {
-                let patch_path = match sandbox_path_read(&base_dir, &patch_s) {
+                let limit = match op_extra_positive_usize(pol, "max_bytes") {
+                    Ok(limit) => limit,
+                    Err(message) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/caps/policy-error",
+                            message,
+                            Some(op),
+                        ));
+                    }
+                };
+                let patch_path = match sandbox_document_read(&base_dir, &patch_s) {
                     Ok(p) => p,
                     Err(e) => {
                         return Ok(mk_error(
@@ -214,18 +225,37 @@ pub(super) fn dispatch_snapshot(
                         ));
                     }
                 };
-                let s = match std::fs::read_to_string(&patch_path) {
-                    Ok(s) => s,
-                    Err(e) => {
+                let bytes = match patch_path.read_bytes(limit) {
+                    Ok(bytes) => bytes,
+                    Err(FsReadError::LimitExceeded { observed, limit }) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/patch-too-large",
+                            format!("patch document exceeds max_bytes ({observed} > {limit})"),
+                            Some(op),
+                        ));
+                    }
+                    Err(error) => {
                         return Ok(mk_error(
                             error_tok,
                             "core/vcs/io-error",
-                            e.to_string(),
+                            format!("cannot read patch document: {error:?}"),
                             Some(op),
                         ));
                     }
                 };
-                match gc_coreform::parse_term(&s) {
+                let s = match std::str::from_utf8(&bytes) {
+                    Ok(text) => text,
+                    Err(error) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/vcs/io-error",
+                            error.to_string(),
+                            Some(op),
+                        ));
+                    }
+                };
+                match gc_coreform::parse_term(s) {
                     Ok(t) => t,
                     Err(e) => {
                         return Ok(mk_error(

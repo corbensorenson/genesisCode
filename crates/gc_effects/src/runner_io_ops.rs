@@ -296,6 +296,46 @@ pub(crate) struct DocumentRead {
 }
 
 impl DocumentRead {
+    /// Consume the admitted handle. A bounded read probes at most one byte
+    /// beyond the limit and grows its result only with fallible allocation.
+    pub(crate) fn read_bytes(self, max_bytes: Option<usize>) -> Result<Vec<u8>, FsReadError> {
+        let mut file = self.file;
+        let mut out = Vec::new();
+        let mut buffer = [0u8; 8 * 1024];
+        loop {
+            let requested = max_bytes.map_or(buffer.len(), |limit| {
+                limit
+                    .saturating_sub(out.len())
+                    .saturating_add(1)
+                    .min(buffer.len())
+            });
+            let read = file
+                .read(&mut buffer[..requested])
+                .map_err(FsReadError::Io)?;
+            if read == 0 {
+                return Ok(out);
+            }
+            let observed = out.len().checked_add(read).ok_or_else(|| {
+                FsReadError::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "document size overflow",
+                ))
+            })?;
+            if let Some(limit) = max_bytes
+                && observed > limit
+            {
+                return Err(FsReadError::LimitExceeded { observed, limit });
+            }
+            out.try_reserve(read).map_err(|_| {
+                FsReadError::Io(std::io::Error::new(
+                    std::io::ErrorKind::OutOfMemory,
+                    "document allocation failed",
+                ))
+            })?;
+            out.extend_from_slice(&buffer[..read]);
+        }
+    }
+
     pub(crate) fn reader(&self) -> &std::fs::File {
         &self.file
     }
@@ -417,6 +457,68 @@ pub(crate) fn sandbox_path_allow_missing(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn document_read_bounds_probe_and_accepts_exact_empty_and_legacy_inputs() {
+        let fixture = tempfile::tempdir().unwrap();
+        let path = fixture.path().join("document");
+        std::fs::write(&path, b"1234").unwrap();
+        assert_eq!(
+            sandbox_document_read(fixture.path(), "document")
+                .unwrap()
+                .read_bytes(Some(4))
+                .unwrap(),
+            b"1234"
+        );
+        let error = sandbox_document_read(fixture.path(), "document")
+            .unwrap()
+            .read_bytes(Some(2))
+            .unwrap_err();
+        assert!(matches!(
+            error,
+            FsReadError::LimitExceeded {
+                observed: 3,
+                limit: 2
+            }
+        ));
+        assert!(matches!(
+            sandbox_document_read(fixture.path(), "document")
+                .unwrap()
+                .read_bytes(Some(0)),
+            Err(FsReadError::LimitExceeded {
+                observed: 1,
+                limit: 0
+            })
+        ));
+        assert_eq!(
+            sandbox_document_read(fixture.path(), path.to_str().unwrap())
+                .unwrap()
+                .read_bytes(None)
+                .unwrap(),
+            b"1234"
+        );
+        std::fs::File::create(&path).unwrap();
+        assert!(
+            sandbox_document_read(fixture.path(), "document")
+                .unwrap()
+                .read_bytes(Some(0))
+                .unwrap()
+                .is_empty()
+        );
+        std::fs::File::create(&path)
+            .unwrap()
+            .set_len(64 * 1024 * 1024)
+            .unwrap();
+        assert!(matches!(
+            sandbox_document_read(fixture.path(), "document")
+                .unwrap()
+                .read_bytes(Some(32)),
+            Err(FsReadError::LimitExceeded {
+                observed: 33,
+                limit: 32
+            })
+        ));
+    }
 
     fn map_value_str<'a>(payload: &'a Term, key: &str) -> Option<&'a str> {
         let Term::Map(m) = payload else {

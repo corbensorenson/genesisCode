@@ -40,6 +40,7 @@ def prepare(root: Path) -> list[Path]:
     outside = root / "outside"
     outside.mkdir()
     (outside / "retained").write_bytes(b"retained")
+    (outside / "patch.gc").write_text("{:type :vcs/patch :v 1 :ops []}")
     preserved = [outside]
     for tier in range(2):
         for case in ("ordinary", "denied", "entries", "documents", "replay"):
@@ -88,6 +89,9 @@ def main() -> None:
         "Cargo.lock", "selfhost/toolchain.gc", "crates/gc_effects/Cargo.toml",
         "crates/gc_effects/src/lib.rs", "crates/gc_effects/src/rooted_fs_wasi.rs",
         "crates/gc_effects/src/runner.rs", "crates/gc_effects/src/runner_io_ops.rs",
+        "crates/gc_effects/src/runner_cap_vcs_low/dispatch_snapshot.rs",
+        "crates/gc_effects/src/runner_host_bridge.rs",
+        "crates/gc_effects/src/runner_host_bridge_wasi.rs",
         "crates/gc_effects/src/runner_gc_ops.rs", "crates/gc_effects/src/runner_cap_pkg_low.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs",
@@ -96,6 +100,7 @@ def main() -> None:
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution/install_verify/parity.rs",
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
         "crates/gc_effects/tests/wasi_rooted_security.rs",
+        "crates/gc_effects/tests/support/document_reader_controls.rs",
         "scripts/lib/wasi_rooted_controls.py",
     )
     source_hashes = {name: hashlib.sha256((repository / name).read_bytes()).hexdigest()
