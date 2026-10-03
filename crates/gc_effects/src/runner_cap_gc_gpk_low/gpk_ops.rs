@@ -177,6 +177,7 @@ pub(super) fn handle_gpk_export(
     };
     let mut all: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     match gpk_export_closure_local(
+        CommitValidationContext::new(ctx.policy, &mut commit_authority, error_tok, op),
         store,
         &resolved_root,
         GpkClosureOptions {
@@ -187,11 +188,7 @@ pub(super) fn handle_gpk_export(
             root_snapshot_for_locked_deps: root_snapshot_for_locked_deps.as_deref(),
             root_commit_admitted: root_commit.is_some(),
         },
-        ctx.policy,
-        &mut commit_authority,
         &mut all,
-        error_tok,
-        op,
     ) {
         Ok(()) => {}
         Err(v) => return Ok(v),

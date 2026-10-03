@@ -924,7 +924,7 @@
   ],
   "kind": "genesis/gc-agent-profile-v0.3",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "c602d9bd67bc65d9b1200957afe5f52dedff9d5e55e02f7dda02641840ab5671",
+  "profileIdentitySha256": "7edb579f07852427110d4547d8568d2e720b14d66c4c018456d9b9bfe3128478",
   "sourceIdentities": {
     "crates/gc_cli/tests/gc_agent_profile_v03.rs": "04716e0603e8eace128099de6c5b479df40c43f8dbc96a9b238fab89641c99c3",
     "crates/gc_cli_driver/src/diagnostics.rs": "57f4f8b7e9057a81c5f641ea8c3a96f3668c0f6935e4b5613637483903802307",
@@ -933,7 +933,7 @@
     "crates/gc_coreform/src/parse.rs": "ee0e3093551788acf6894c2fccbabf9749f6071904d74ebc3fc38d0882312576",
     "crates/gc_coreform/src/term.rs": "07e8b5cd68bf27305e70df0e4e7261c552338b36ccc316522e1d82eb38db9f75",
     "crates/gc_effects/src/policy.rs": "df1bf515c29fd078b88908f98c300580a81c4948626cc162ce25b9bec4b3c7c5",
-    "crates/gc_effects/src/runner_response_budget.rs": "cca6413990d9c37f9526267cd5ccd89ad59b4aaec7c71d751c06cb05785df0c7",
+    "crates/gc_effects/src/runner_response_budget.rs": "48032cb18a0e6a9927d51357fe04eb9293ccf7c517b2c38674a60c362b983a0e",
     "crates/gc_effects/tests/coreform_canonical_admission.rs": "e2ca1e477c385295f96fc5b6347bd633588917c4933d2e853dc424a0e5fe1aaf",
     "crates/gc_kernel/src/error.rs": "2809950c07c0c53101de67031a153c05f23012736a8a5f46ae83e7a7f6180d01",
     "crates/gc_kernel/src/eval.rs": "07b7709f054c8196910713cb7058e792543f4330690ef083ee1f0d683ee8032d",

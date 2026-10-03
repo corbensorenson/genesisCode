@@ -517,12 +517,10 @@ pub(crate) fn resolve_requirement(
                     Some(op),
                 ));
             };
-            let local_refs_list = RefsAuthority::consumer_list(
-                refs_authority.as_deref_mut(),
-                refs,
-                Some("refs/tags/"),
-            )
-            .map_err(|e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)))?;
+            let local_refs_list =
+                RefsAuthority::consumer_list(refs_authority, refs, Some("refs/tags/")).map_err(
+                    |e| mk_error(error_tok, "core/refs/io-error", e.to_string(), Some(op)),
+                )?;
             let local_candidates = collect_semver_candidates(&local_refs_list, &req_range);
             let mut resolved = select_semver_tag_ref(
                 identity_authority.as_deref_mut(),

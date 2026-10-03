@@ -221,15 +221,12 @@ pub(super) fn handle_pkg_install_parity(
                     return Ok(v);
                 }
                 match validate_commit_artifact_closure(
+                    CommitValidationContext::new(policy, commit_authority, error_tok, op),
                     store,
-                    policy,
-                    commit_authority,
                     name,
                     snapshot_hex,
                     commit_hex,
                     true,
-                    error_tok,
-                    op,
                 ) {
                     Ok(n) => checked = checked.saturating_add(n),
                     Err(v) => return Ok(v),
@@ -287,15 +284,18 @@ pub(super) fn handle_pkg_install_parity(
 }
 
 pub(super) fn handle_pkg_verify_parity(
+    validation: CommitValidationContext<'_>,
     payload: &Term,
     pol: Option<&OpPolicy>,
-    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
-    commit_authority: &mut Option<CommitAuthority>,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<Value, EffectsError> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     let store = store.ok_or_else(|| {
         EffectsError::Log("missing artifact store for core/pkg-low::verify".to_string())
     })?;
@@ -381,15 +381,12 @@ pub(super) fn handle_pkg_verify_parity(
         }
         if let Some(commit_hex) = &entry.commit {
             match validate_commit_artifact_closure(
+                CommitValidationContext::new(policy, commit_authority, error_tok, op),
                 store,
-                policy,
-                commit_authority,
                 name,
                 snapshot_hex,
                 commit_hex,
                 true,
-                error_tok,
-                op,
             ) {
                 Ok(count) => checked = checked.saturating_add(count),
                 Err(error) => return Ok(error),

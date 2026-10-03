@@ -94,7 +94,7 @@ pub(super) fn capability_pkg_low(
             policy,
             store,
             refs,
-            refs_authority.as_deref_mut(),
+            refs_authority,
             pkg_lock_read_authority,
             pkg_package_manifest_authority,
             budget,

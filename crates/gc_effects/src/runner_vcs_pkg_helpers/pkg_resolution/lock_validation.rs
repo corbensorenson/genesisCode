@@ -84,16 +84,19 @@ fn compute_requirement_fingerprint_parity(
 }
 
 pub(crate) fn validate_commit_artifact_closure(
+    validation: CommitValidationContext<'_>,
     store: &ArtifactStore,
-    policy: &CapsPolicy,
-    commit_authority: &mut Option<CommitAuthority>,
     dep_name: &str,
     snapshot_hex: &str,
     commit_hex: &str,
     require_evidence_for_obligations: bool,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<u64, Value> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     let mut checked: u64 = 0;
     let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     let mut ensure_hash = |h: &str| -> Result<(), Value> {
@@ -214,16 +217,19 @@ pub(crate) fn validate_commit_artifact_closure(
 }
 
 pub(crate) fn validate_locked_entries_strict(
+    validation: CommitValidationContext<'_>,
     mut identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
     store: &ArtifactStore,
-    policy: &CapsPolicy,
-    commit_authority: &mut Option<CommitAuthority>,
     requirements: &BTreeMap<String, gc_pkg::Requirement>,
     locked: &BTreeMap<String, gc_pkg::LockedEntry>,
     require_evidence_for_obligations: bool,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<(), Value> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     for (name, le) in locked {
         let req = requirements.get(name).ok_or_else(|| {
             mk_error(
@@ -416,15 +422,12 @@ pub(crate) fn validate_locked_entries_strict(
 
         if let Some(commit_hex) = &le.commit
             && let Err(v) = validate_commit_artifact_closure(
+                CommitValidationContext::new(policy, commit_authority, error_tok, op),
                 store,
-                policy,
-                commit_authority,
                 name,
                 &le.snapshot,
                 commit_hex,
                 require_evidence_for_obligations,
-                error_tok,
-                op,
             )
         {
             return Err(v);

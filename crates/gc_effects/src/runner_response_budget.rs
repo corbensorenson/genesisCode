@@ -1,5 +1,11 @@
 use super::*;
 
+/// Keeps an operation's error seal and operation identity together across dispatch.
+pub(crate) struct OperationErrorContext<'a> {
+    pub(crate) error_tok: SealId,
+    pub(crate) op: &'a str,
+}
+
 pub(super) fn unseal_effect_request(
     v: &Value,
     effect_tok: SealId,

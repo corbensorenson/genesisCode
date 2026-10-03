@@ -327,7 +327,7 @@ pub(super) fn capability_gc_gpk_low(
             Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::purge" => {
-            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+            let authority = gc_authority.ok_or_else(|| {
                 EffectsError::Log(
                     "core/gc-low::purge requires the artifact-loaded GenesisCode GC authority"
                         .to_string(),
@@ -421,7 +421,7 @@ pub(super) fn capability_gc_gpk_low(
                 policy,
                 store,
                 refs,
-                refs_authority: refs_authority.as_deref_mut(),
+                refs_authority,
                 budget,
                 error_tok,
                 op,

@@ -424,7 +424,7 @@ pub(super) fn dispatch_meta(
                 let found = match vcs_find_commit_for_snapshot(
                     store,
                     rdb,
-                    refs_authority.as_deref_mut(),
+                    refs_authority,
                     &mut commit_authority,
                     &sh,
                 ) {

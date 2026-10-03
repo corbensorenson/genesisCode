@@ -230,15 +230,15 @@ pub(super) fn capability_sync_pull(
 }
 
 pub(super) fn capability_sync_push(
+    errors: OperationErrorContext<'_>,
     payload: &Term,
     pol: Option<&OpPolicy>,
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs_authority: Option<&mut RefsAuthority>,
-    error_tok: SealId,
-    op: &str,
     timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
+    let OperationErrorContext { error_tok, op } = errors;
     let store = store.ok_or_else(|| {
         EffectsError::Log("missing artifact store for core/sync::push".to_string())
     })?;
@@ -314,14 +314,11 @@ pub(super) fn capability_sync_push(
     let mut commit_authority = None;
     for h in &roots {
         match sync_closure_local(
+            CommitValidationContext::new(policy, &mut commit_authority, error_tok, op),
             store,
             h,
             depth,
-            policy,
-            &mut commit_authority,
             &mut all,
-            error_tok,
-            op,
         ) {
             Ok(()) => {}
             Err(v) => return Ok(v),
@@ -448,15 +445,18 @@ pub(super) fn capability_sync_push(
 }
 
 pub(super) fn sync_closure_local(
+    validation: CommitValidationContext<'_>,
     store: &ArtifactStore,
     root: &str,
     depth: u64,
-    policy: &CapsPolicy,
-    commit_authority: &mut Option<CommitAuthority>,
     out: &mut std::collections::BTreeSet<String>,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<(), Value> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     use std::collections::{HashSet, VecDeque};
     let mut q: VecDeque<(String, u64)> = VecDeque::new();
     q.push_back((root.to_string(), depth));

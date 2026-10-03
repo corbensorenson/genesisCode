@@ -72,16 +72,19 @@ pub(super) fn plan_workflow_parity(
 
 #[cfg(any(test, feature = "parity-oracle"))]
 pub(super) fn finalize_workflow_parity(
+    validation: CommitValidationContext<'_>,
     model: &gc_pkg::GenesisLock,
     workflow: PkgResolutionWorkflow,
     executed: &ExecutedWorkflow,
     store: &ArtifactStore,
-    policy: &CapsPolicy,
-    commit_authority: &mut Option<CommitAuthority>,
     strict: bool,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<PkgWorkflowFinalized, Value> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     let locked = executed.resolved.clone();
     let mut selected_count = 0_u64;
     let mut updated_count = 0_u64;

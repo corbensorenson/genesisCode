@@ -469,7 +469,7 @@ pub(super) fn dispatch_resolution(
             policy,
             store,
             refs,
-            refs_authority.as_deref_mut(),
+            refs_authority,
             lock_authority,
             identity_authority,
             &mut commit_authority,
@@ -480,15 +480,12 @@ pub(super) fn dispatch_resolution(
         ),
 
         "core/pkg-low::verify" => install_verify::handle_pkg_verify(
+            CommitValidationContext::new(policy, &mut commit_authority, error_tok, op),
             payload,
             pol,
-            policy,
             store,
             lock_authority,
             identity_authority,
-            &mut commit_authority,
-            error_tok,
-            op,
         ),
 
         _ => Ok(mk_error(

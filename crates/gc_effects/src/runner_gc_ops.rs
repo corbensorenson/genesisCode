@@ -1,15 +1,18 @@
 use super::*;
 
 pub(super) fn gpk_export_closure_local(
+    validation: CommitValidationContext<'_>,
     store: &ArtifactStore,
     root: &str,
     opts: GpkClosureOptions<'_>,
-    policy: &CapsPolicy,
-    commit_authority: &mut Option<CommitAuthority>,
     out: &mut std::collections::BTreeSet<String>,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<(), Value> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     use std::collections::{HashSet, VecDeque};
 
     let mut helper_ctx = EvalCtx::new();
