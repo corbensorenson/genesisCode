@@ -382,10 +382,7 @@ pub(super) fn call_capability_with_runtime(
         ),
 
         "core/sync::push" => capability_sync_push(
-            OperationErrorContext {
-                error_tok,
-                op,
-            },
+            OperationErrorContext { error_tok, op },
             payload,
             pol,
             policy,

@@ -43,7 +43,7 @@ def prepare(root: Path) -> list[Path]:
     (outside / "patch.gc").write_text("{:type :vcs/patch :v 1 :ops []}")
     preserved = [outside]
     for tier in range(2):
-        for case in ("ordinary", "denied", "entries", "documents", "replay"):
+        for case in ("ordinary", "denied", "entries", "documents", "replay", "sync-import"):
             fixture = root / f"{case}-{tier}"
             fixture.mkdir()
             if case == "ordinary":
@@ -101,6 +101,12 @@ def main() -> None:
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs",
         "crates/gc_effects/tests/wasi_rooted_security.rs",
         "crates/gc_effects/tests/support/document_reader_controls.rs",
+        "crates/gc_effects/src/store.rs", "crates/gc_effects/src/store/import.rs",
+        "crates/gc_effects/src/rooted_fs/scratch_wasi.rs",
+        "crates/gc_effects/src/runner_remote_ops/sync_closure_parallel.rs",
+        "crates/gc_effects/src/runner_remote_ops/sync_capabilities.rs",
+        "crates/gc_registry/src/registry/remote_helpers.rs",
+        "crates/gc_effects/tests/support/sync_import_controls.rs",
         "scripts/lib/wasi_rooted_controls.py",
     )
     source_hashes = {name: hashlib.sha256((repository / name).read_bytes()).hexdigest()
@@ -140,8 +146,8 @@ def main() -> None:
         print(output.decode("utf-8", errors="replace"), end="")
         if timed_out or not result["source_unchanged"] or process.returncode != 0 or before != after:
             raise RuntimeError("actual WASI control or host identity/content preservation failed")
-        if b"5 passed; 0 failed" not in output:
-            raise RuntimeError("actual WASI control inventory did not execute all five tests")
+        if b"6 passed; 0 failed" not in output:
+            raise RuntimeError("actual WASI control inventory did not execute all six tests")
         print("Host-side snapshots: outside and denied fixture identities/content preserved.")
 
 

@@ -78,15 +78,39 @@ pub(super) fn capability_sync_pull(
             return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
         }
     };
+    // Preserve the existing per-selector closure bound across one request.
+    // Staging must not impose a smaller aggregate limit on multiple selectors.
+    let Some(max_import_objects) = roots
+        .len()
+        .checked_add(refnames.len())
+        .and_then(|selectors| selectors.checked_mul(50_000))
+    else {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/resource-limit",
+            "sync import object bound overflow".to_string(),
+            Some(op),
+        ));
+    };
     let mut pulled: u64 = 0;
     let mut already: u64 = 0;
     let mut heads: Vec<Term> = Vec::new();
     let mut pending_refs: Vec<BulkSetInput> = Vec::with_capacity(refnames.len());
     let mut commit_authority = None;
 
+    let mut import = crate::store::ArtifactImport::new(
+        store,
+        sp.max_artifact_bytes,
+        policy
+            .store
+            .max_run_bytes
+            .map(|limit| limit.saturating_sub(budget.store_written_bytes)),
+        max_import_objects,
+    );
+
     for h in &roots {
         let mut stats = SyncPullStats {
-            pulled: &mut pulled,
+            import: &mut import,
             already: &mut already,
             store_written_bytes: &mut budget.store_written_bytes,
             store_max_run_bytes: policy.store.max_run_bytes,
@@ -127,7 +151,7 @@ pub(super) fn capability_sync_pull(
             }
         };
         let mut stats = SyncPullStats {
-            pulled: &mut pulled,
+            import: &mut import,
             already: &mut already,
             store_written_bytes: &mut budget.store_written_bytes,
             store_max_run_bytes: policy.store.max_run_bytes,
@@ -164,6 +188,10 @@ pub(super) fn capability_sync_pull(
             .into_iter()
             .collect(),
         ));
+    }
+
+    if let Err(error) = import.publish(&mut budget.store_written_bytes, &mut pulled) {
+        return Ok(sync_import_error(error, error_tok, op));
     }
 
     if !pending_refs.is_empty() {

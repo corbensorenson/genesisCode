@@ -7,6 +7,9 @@ use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
+#[path = "rooted_fs/scratch_wasi.rs"]
+mod scratch;
+
 pub(crate) struct FsRoot {
     directory: OwnedFd,
     base: PathBuf,

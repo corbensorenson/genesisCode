@@ -66,6 +66,10 @@ struct IntegrityCache {
     verified: BTreeMap<String, FileSig>,
 }
 
+#[path = "store/import.rs"]
+mod import;
+pub(crate) use import::{ArtifactImport, ImportError};
+
 impl ArtifactStore {
     fn env_truthy(name: &str) -> bool {
         fn is_truthy(value: &str) -> bool {

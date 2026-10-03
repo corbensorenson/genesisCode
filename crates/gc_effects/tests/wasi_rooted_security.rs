@@ -11,6 +11,8 @@ use std::path::{Path, PathBuf};
 mod document_reader_controls;
 #[path = "support/replay.rs"]
 mod replay_support;
+#[path = "support/sync_import_controls.rs"]
+mod sync_import_controls;
 
 fn fixture(name: &str, compiled: bool) -> PathBuf {
     PathBuf::from(std::env::var("GENESIS_WASI_FS_FIXTURES").unwrap())
@@ -347,5 +349,13 @@ fn wasi_actual_strict_replay_ignores_current_filesystem() {
             assert!(!root.exists());
             std::fs::rename(root.with_extension("held"), &root).unwrap();
         }
+    }
+}
+
+#[test]
+fn wasi_actual_file_backed_whole_pull_preserves_inventory_on_late_rejection() {
+    let artifact = PathBuf::from(std::env::var("GENESIS_TEST_SELFHOST_ARTIFACT").unwrap());
+    for compiled in [false, true] {
+        sync_import_controls::controls(&fixture("sync-import", compiled), &artifact, compiled);
     }
 }

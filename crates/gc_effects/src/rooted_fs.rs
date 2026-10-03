@@ -7,6 +7,9 @@ use std::ffi::OsString;
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
+#[path = "rooted_fs/scratch_native.rs"]
+mod scratch;
+
 pub(crate) struct FsRoot {
     directory: Dir,
     base: PathBuf,

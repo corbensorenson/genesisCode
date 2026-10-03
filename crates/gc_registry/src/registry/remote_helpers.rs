@@ -126,7 +126,8 @@ fn chunk_upload_not_supported(err: &RegistryError) -> bool {
     }
 }
 
-fn validate_store_hash(hash: &str) -> Result<(), RegistryError> {
+/// Admit a canonical content identity before using it as a transport or store name.
+pub fn validate_store_hash(hash: &str) -> Result<(), RegistryError> {
     if hash.len() != 64
         || !hash
             .bytes()

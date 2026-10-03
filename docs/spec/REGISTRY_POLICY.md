@@ -95,23 +95,55 @@ their configured file adapter and do not perform HTTP redirect hops.
 
 ### Sync installation and compatibility
 
-Sync MUST preflight all results in a downloaded batch for transport success,
-resource budgets and byte identity before installing any member of that batch.
-Corrupt bytes never enter the destination store. Hash mismatches retain sealed
-`core/sync/hash-mismatch`; artifact-backed store get projects the typed failure
-to its existing `:remote-hash-mismatch` authority observation. Package artifact
-hydration and the explicit store parity route retain `core/store/hash-mismatch`
-and the stable message `remote bytes hash mismatch`. Strict replay
-retains the recorded sealed result without registry access.
+Sync pull MUST admit all requested roots, ref heads and closure batches before
+installing any downloaded object in the destination store. Transport success,
+byte identity, configured logical write budgets and typed commit validation
+precede publication. Corrupt responses, missing remote objects, admission
+failures and malformed identities leave the destination object inventory
+unchanged. Canonical hash admission precedes local pathname selection. Existing
+objects are preserved; rejected imports never implement rollback by deleting
+previously installed objects.
 
-Previously verified batches can remain if a later batch fails; whole-closure
-rollback is still an open F11 acceptance obligation. This contract does not
-silently grant transaction atomicity for I/O failure or cancellation during
-installation. The wire object format, BLAKE3 identity, language profile and
-effect-log version are unchanged. The new typed Rust error variant requires
-downstream exhaustive matches to handle hash mismatch; successful API results
-retain their existing types and bytes. Previously accepted malformed identities,
-corrupt responses and redirects now fail closed.
+The common artifact-store import overlay retains verified bytes in one
+request-owned file-backed spool. Acquisition uses an exclusive, non-following
+open under a held capability directory and at most 1024 temporary-name attempts.
+Occupied entries are preserved. Unix and stable-WASI unlink the temporary name
+while retaining its descriptor; Windows uses exclusive sharing and
+FILE_FLAG_DELETE_ON_CLOSE. The descriptor lifetime owns cleanup, including
+early returns. Host qualification must exercise the actual platform mechanism;
+a descriptor adapter exercised on a native host alone is not WASI qualification.
+
+An import index uses fixed-size content identities and fallible index/order
+reservation. Its object bound derives from the existing 50k traversal ceiling
+per requested root/ref selector, with checked aggregate arithmetic. It adds no
+smaller whole-request object ceiling. Duplicate staged objects are reused;
+ordinary successful `:pulled`/`:present` values and logical write charging remain
+unchanged. Per-artifact and batch ceilings still apply. The remaining configured
+`store.max_run_bytes` bounds staged new payload before spool growth; absence of
+that limit retains the legacy absence of an aggregate payload ceiling. These
+logical payload limits do not measure total heap/RSS or physical disk allocation.
+During publication, spool, installed objects and one store temporary can coexist;
+physical growth can approach twice staged payload plus one artifact and filesystem
+metadata. Physical disk admission and hard cancellation of filesystem I/O require
+their separate resource/host contracts.
+
+Publication preflights every spool range and verifies identity again before each
+store write. An I/O failure after admission can retain completed verified writes;
+each completed logical write is charged even when a later write fails. Ref updates
+retain their existing artifact-authorized bulk policy after object publication.
+This mechanism does not promise distributed object/ref atomicity or arbitrary
+filesystem rollback. Hash mismatches retain sealed `core/sync/hash-mismatch`;
+artifact-backed store get projects the typed failure to its existing
+`:remote-hash-mismatch` authority observation. Package artifact hydration and the
+explicit store parity route retain `core/store/hash-mismatch` and the stable
+message `remote bytes hash mismatch`. Strict replay retains the recorded sealed
+result without registry access.
+
+The wire object format, BLAKE3 identity, language profile and effect-log version
+are unchanged. The typed Rust error variant requires downstream exhaustive
+matches to handle hash mismatch; successful API results retain their existing
+types and bytes. Previously accepted malformed identities, corrupt responses,
+redirects and partially installed rejected sync pulls now fail closed.
 
 
 ## Native HTTP server admission and ownership v0.1
