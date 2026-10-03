@@ -186,6 +186,14 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     ):
         if marker not in parent:
             fail(f"bounded lock transport missing marker: {marker}")
+    reader_marker = "pub(super) fn read_bounded_lock("
+    if parent.count(reader_marker) != 1:
+        fail("held lock reader declaration is not unique")
+    held_reader = parent.split(reader_marker, 1)[1].split("\n}", 1)[0]
+    for marker in ("file: &crate::runner_io_ops::DocumentRead", "file.reader()",
+                   ".take(MAX_LOCK_BYTES + 1)"):
+        if marker not in held_reader:
+            fail(f"held lock reader missing contract: {marker}")
     for operation in PACKAGE_OPERATIONS + GC_OPERATIONS:
         if operation not in classifier:
             fail(f"runner lazy authority set missing {operation}")
@@ -270,8 +278,8 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
         fail("GC plan and run do not each build authority-backed root sources")
     for marker in (
         "lock_authority: Option<&mut PkgLockReadAuthority>",
-        "sandbox_path_allow_missing(base_dir, lock_s, false)",
-        "runner_cap_pkg_low::read_bounded_lock(&lock_path)",
+        "sandbox_optional_document_read(base_dir, lock_s)",
+        "runner_cap_pkg_low::read_bounded_lock(&lock_file)",
         "lock_authority.read_model_toml(&bytes)",
         "core/gc/lock-authority-unavailable",
         "GC lock roots require the artifact-loaded GenesisCode lock model authority",
@@ -397,7 +405,7 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_gc_gpk_low.rs", "                    lock_info,", "                    Term::Nil,", "gc-lock-observation-binding")
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "lock_authority.read_model_toml(&bytes)", "gc_pkg::GenesisLock::load(&lock_path)", "gc-authority-route")
     source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "gc_lock_authority_fails_closed_before_store_mutation_when_missing", "gc_missing_authority_is_ignored", "gc-fail-closed-control")
-    source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "sandbox_path_allow_missing(base_dir, lock_s, false)", "base_dir.join(lock_s)", "gc-lock-path-admission")
+    source_mutation("crates/gc_effects/src/runner_gc_ops.rs", "sandbox_optional_document_read(base_dir, lock_s)", "base_dir.join(lock_s)", "gc-lock-path-admission")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
     source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".get(AUTHORITY_BINDING)", ".get(\"native-model\")", "cli-model-route")
     source_mutation("crates/gc_cli_driver/src/pkg_lock_model_authority.rs", ".is_file()", ".is_dir()", "cli-regular-file-admission")
@@ -411,6 +419,9 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_cli/tests/cli_pkg_workspace.rs", "gcpm_env_hydrate_rejects_invalid_lock_before_store_or_environment_write", "legacy_env_lock_test", "cli-env-prewrite-control")
     source_mutation("crates/gc_cli/tests/cli_pkg_workspace.rs", "gcpm_env_rejects_nonregular_lock_before_store_or_environment_write", "legacy_env_nonregular_lock_test", "cli-env-nonregular-control")
 
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "file: &crate::runner_io_ops::DocumentRead", "file: &Path", "gc-held-reader-type")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "file.reader()", "std::fs::File::open(file.description())?", "gc-pathname-reopen")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", ".take(MAX_LOCK_BYTES + 1)", ".take(MAX_LOCK_BYTES)", "gc-oversize-probe")
     controls = 0
     for changed_profile, overrides, name in mutations:
         try:
@@ -419,7 +430,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 34:
+    if controls != 37:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-model-authority: self-test ok (negative_controls={controls})")
     return controls

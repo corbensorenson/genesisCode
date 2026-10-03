@@ -14,9 +14,9 @@ toc-depth: 2
 | Source | Title / kind | Type | SHA-256 |
 |---|---|---|---|
 | [`AGENTS.md`](../AGENTS.md) | Genesis Program Working Agreement | md | `3162c6e64a6e` |
-| [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `7e27700703a8` |
+| [`CHANGELOG.md`](../CHANGELOG.md) | Changelog | md | `c442f52b0f94` |
 | [`README.md`](../README.md) | GenesisCode (v0.2) | md | `0dd915fba729` |
-| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `b729f958692c` |
+| [`ROADMAP.md`](../ROADMAP.md) | GenesisCode Roadmap: Agent-Native, Universal, Efficient, Self-Hosted, and Trustworthy | md | `8606c7386f9f` |
 | [`feature_matrix.md`](../feature_matrix.md) | GenesisCode Feature Matrix (Audit Date: 2026-10-02) | md | `24027ae8e78d` |
 | [`genesisCode.md`](../genesisCode.md) | Tab 1 | md | `9564337ad055` |
 | [`upgrade_plan.md`](../upgrade_plan.md) | GenesisCode Upgrade Plan - Red-Team Backlog (Unresolved Only) | md | `259b6602e2b3` |
@@ -60,8 +60,8 @@ toc-depth: 2
 | [`docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json`](../docs/program/EVIDENCE_ADVERSARIAL_MATRIX_v0.1.json) | genesis/evidence-adversarial-matrix-v0.1 | json | `f9f281eb2bf7` |
 | [`docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json`](../docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json) | genesis/evidence-fixture-classification-v0.1 | json | `d1aa20fa3652` |
 | [`docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json`](../docs/program/GENESISBENCH_TEMPORAL_EPOCH_AUDIT_v0.1.json) | genesis/genesisbench-temporal-epoch-audit-v0.1 | json | `271f52604ade` |
-| [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `538b7807d302` |
-| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `9a75bd21c926` |
+| [`docs/program/RELEASE_NOTES_v0.2.0.json`](../docs/program/RELEASE_NOTES_v0.2.0.json) | genesis/release-notes-v0.1 | json | `7b52eb5f1362` |
+| [`docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json`](../docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json) | genesis/roadmap-execution-manifest-v0.1 | json | `06b7dd4cf590` |
 | [`docs/program/assurance_closures/do178c-a-org-independence-program.closure.json`](../docs/program/assurance_closures/do178c-a-org-independence-program.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `4d821d2aba34` |
 | [`docs/program/assurance_closures/do178c-b-authority-signoff.closure.json`](../docs/program/assurance_closures/do178c-b-authority-signoff.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `31533ffae41b` |
 | [`docs/program/assurance_closures/iec62304-c-qms-integration.closure.json`](../docs/program/assurance_closures/iec62304-c-qms-integration.closure.json) | genesis/assurance-control-closure-bundle-v0.1 | json | `68a9f4ee61ee` |
@@ -287,7 +287,7 @@ toc-depth: 2
 | [`docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json`](../docs/spec/PROFILE_NEGOTIATION_v0.1.schema.json) | GenesisCode Package Profile Negotiation v0.1 | schema | `1b6b90a12d7c` |
 | [`docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json`](../docs/spec/REFERENCE_HOST_OBSERVATION_v0.1.schema.json) | GenesisCode Reference Host Observation v0.1 | schema | `8a94e816ed67` |
 | [`docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json`](../docs/spec/REFERENCE_HOST_PROFILES_v0.1.schema.json) | GenesisCode Reference Host Profiles v0.1 | schema | `6c5999814fa0` |
-| [`docs/spec/REGISTRY_POLICY.md`](../docs/spec/REGISTRY_POLICY.md) | Registry Policy and Transport (v0.2) | md | `77bffdec5e76` |
+| [`docs/spec/REGISTRY_POLICY.md`](../docs/spec/REGISTRY_POLICY.md) | Registry Policy and Transport (v0.2) | md | `0fe4da5789d4` |
 | [`docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_AGGREGATE_v0.2.schema.json) | GenesisCode release evidence aggregate v0.2 | schema | `25723ddd0982` |
 | [`docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_DAG_v0.2.schema.json) | GenesisCode release evidence DAG v0.2 | schema | `2487aa377656` |
 | [`docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json`](../docs/spec/RELEASE_EVIDENCE_FANOUT_AUTH_v0.2.schema.json) | GenesisCode same-run release evidence fanout authentication v0.2 | schema | `2c7d5ef909ea` |
@@ -385,7 +385,7 @@ toc-depth: 2
 | [`docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md`](../docs/spec/SEMANTIC_REFACTOR_PLAN_v0.1.md) | Semantic Refactor Plan v0.1 | md | `4c194bc195a8` |
 | [`docs/spec/SIGNING.md`](../docs/spec/SIGNING.md) | Acceptance Signing (v0.2) | md | `304042287058` |
 | [`docs/spec/SOURCE_SIZE_BUDGET_v0.1.md`](../docs/spec/SOURCE_SIZE_BUDGET_v0.1.md) | Source Size Budget v0.1 | md | `f31895d3ca19` |
-| [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json) | genesis/stage0-dependency-boundary-v0.1 | json | `c27e360a688d` |
+| [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.json) | genesis/stage0-dependency-boundary-v0.1 | json | `e92d677b35e5` |
 | [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md) | Stage0 Dependency Boundary v0.1 | md | `a332218b90c8` |
 | [`docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json`](../docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.schema.json) | GenesisCode Stage0 Dependency Boundary v0.1 | schema | `5de329ff06cf` |
 | [`docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json`](../docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json) | genesis/stage0-trust-contract-v0.1 | json | `10c89d44660e` |

@@ -21,7 +21,9 @@ use thiserror::Error;
 mod server;
 #[cfg(not(target_os = "wasi"))]
 pub use server::{
-    HttpRegistryServerConfig, HttpRegistryServerHandle, spawn_http_file_registry_server,
+    HttpRegistryServerConfig, HttpRegistryServerHandle, HttpRegistryServerLimits,
+    HttpRegistryShutdown, spawn_http_file_registry_server,
+    spawn_http_file_registry_server_with_limits,
 };
 
 #[cfg(not(target_os = "wasi"))]

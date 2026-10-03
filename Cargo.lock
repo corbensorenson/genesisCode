@@ -1324,14 +1324,20 @@ name = "gc_registry"
 version = "0.2.0"
 dependencies = [
  "blake3",
+ "bytes",
  "fs2",
+ "futures-util",
  "gc_coreform",
  "gc_vcs",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror 2.0.18",
  "tiny_http",
+ "tokio",
 ]
 
 [[package]]
@@ -1712,6 +1718,7 @@ dependencies = [
  "http",
  "http-body",
  "httparse",
+ "httpdate",
  "itoa",
  "pin-project-lite",
  "pin-utils",
