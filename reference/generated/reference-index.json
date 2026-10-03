@@ -5,11 +5,11 @@
     "docs/spec/HOST_ABI_INDEX_v0.1.json": "f17e9fe14cdfcfca2b44132d0d880761a6886a967d78692ce5b205b9c1537ee2"
   },
   "counts": {
-    "canonicalSources": 381,
+    "canonicalSources": 382,
     "diagnostics": 201,
     "exampleFiles": 189,
     "hostOperations": 188,
-    "schemas": 149,
+    "schemas": 150,
     "symbols": 176
   },
   "kind": "genesis/quarto-reference-index-v0.1",
@@ -28,7 +28,7 @@
     },
     {
       "path": "ROADMAP.md",
-      "sha256": "7e8f95ab46588a768e6f325fe3be8de8e147e616ceb3c983d906053953c3b046"
+      "sha256": "b729f958692c0506c85d3d54902269cb10c53daa6659670607c46dc4f8965568"
     },
     {
       "path": "docs/AGENT_ONBOARDING_v0.1.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "docs/program/ROADMAP_EXECUTION_MANIFEST_v0.1.json",
-      "sha256": "7150d4fc6113d6ae68a867f0152a8730ae367ff18214142b0b6aa47908c5585d"
+      "sha256": "9a75bd21c92630588933b77d833b07668e47a6c02942f98aedb95402f9cdcb56"
     },
     {
       "path": "docs/program/assurance_closures/do178c-a-org-independence-program.closure.json",
@@ -300,11 +300,11 @@
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-      "sha256": "9eeb97f70dc1f203a83d8bfb011444096a88776255e28e387d573c6552aa8db0"
+      "sha256": "666c01e104c39674ce501412f8ad99472d0c6abdd2a8c28e04ad81f9b3094f83"
     },
     {
       "path": "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
-      "sha256": "4806a319f555524bbc0324c4e63f3f0abdc479abfe10692f873e5706dfe763ca"
+      "sha256": "636d336923137cb60518454931ea3bf1b3070f5e4fcc96518507e8e44ac26f93"
     },
     {
       "path": "docs/spec/CLI.md",
@@ -597,6 +597,10 @@
     {
       "path": "docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json",
       "sha256": "27b693eed1662ccc738a5dab74b2ec6973a734fd45847a1e4bd84fd6302b524a"
+    },
+    {
+      "path": "docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json",
+      "sha256": "85bf48558d7c56121f313f2a83ce2b9ce1122f62e02e8289d964a08fc68d447c"
     },
     {
       "path": "docs/spec/GENESISBENCH_ADAPTATION_MANIFEST_v0.1.schema.json",

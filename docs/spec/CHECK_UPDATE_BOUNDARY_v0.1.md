@@ -641,7 +641,7 @@ keys, and hard-quota overrides above GB-5 fail closed.
 
 Rebuildable producers MUST acquire a process-bound random lease before
 materializing repository-local state. Admission charges inactive entries by
-observed allocated bytes and each distinct live or requested materialization by
+observed allocated bytes and each distinct live or requested build materialization by
 the larger of its size-class reservation and observed allocation. It reclaims
 inactive entries
 in `(reclaim-order, last-use-sequence, entry-id)` order at the soft quota, and
@@ -650,12 +650,66 @@ or its physical-space requirement. That requirement currently includes the
 existing build reserve, the sum of remaining growth for every distinct live and
 new requested materialization, and the recovery-journal allocation estimate
 derived from its measured payload.
-Multiple leases on one materialization share its reservation; distinct writers
+Multiple build leases on one materialization share its reservation; distinct writers
 cannot spend the same free bytes. Admission refreshes both live and inactive
 allocated sizes before quota decisions and counts
 `max(0, reservation - observed)` once per live/requested materialization.
 When live and requested state alone exceeds the hard quota, admission MUST deny
 before reclaiming inactive caches: no such deletion can make those writers fit.
+For a build request sharing an existing materialization, a larger requested class
+raises the one shared reservation before quota and physical-space checks. Admission
+never silently uses a smaller registered budget. A denied upgrade restores the
+prior entry and retains all earlier live leases; releasing an older lease cannot
+lower an admitted live upgrade. A smaller request keeps a larger retained budget
+conservatively. Metadata-only requests do not relabel a live build's reservation.
+An existing ownership/content identity is checked before oversized-entry eviction;
+cache size cannot change whether an identity conflict is rejected.
+The lease-count bound MUST also be checked before evicting an oversized idle
+requested cache. Persisted entry ownership, roots, size class, reservation,
+retention and reclamation order MUST agree with the current producer policy;
+a registry record cannot grant itself a smaller reservation or deletion authority.
+
+Cargo metadata-only materialization uses a separate `cargo-metadata` lease.
+The common library freezes the exact bounded serialized payload before admission
+and writes those same bytes. Each such lease reserves two allocation-unit-rounded
+payload copies plus two allocation units per relative path component and two
+additional components. These growth budgets add for concurrent metadata writers,
+including writers sharing a cache; they do not replace a live build reservation.
+Quota accounting adds metadata growth to the entry's observed/build accounting;
+physical admission adds it to all remaining build growth and the journal estimate.
+This operation requires its own derived headroom rather than the default build
+free-space floor when no build lease is live. An explicit caller minimum and the
+floor protecting any live build remain effective. Directory overhead is an
+estimate, not an arbitrary-filesystem hard bound or build-peak qualification.
+Transient metadata leases are released on success and materialization failure.
+On the declared POSIX profiles, an existing metadata file is opened nonblocking
+and without following a final symlink, admitted as regular through its descriptor,
+then compared through an unbuffered read bounded to the expected payload plus one
+byte. This does not claim an ancestor-race repair or universal cancellation.
+Discovery of unregistered Cargo entries and registry loading also use the shared
+descriptor-admitted JSON reader: nonblocking open, regular-file admission,
+unbuffered bounded chunks and at most one byte beyond the existing 8 MiB limit.
+An initial descriptor size is an early rejection, never permission for an
+unbounded later read. Invalid UTF-8 and duplicate keys return explicit lifecycle
+errors. Registry and discovered metadata final links are rejected, including
+dangling registry entries; a dangling link is not absent writable state. Explicit
+policy JSON paths retain link-to-regular compatibility. Missing nonblocking or
+required no-follow descriptor support fails closed; this does not qualify an
+unsupported host or repair ancestor traversal races.
+The frozen metadata plan also binds the cache identity and size-class selection
+used for admission. The identity must agree with the frozen canonical cache key;
+later mutation of the caller's result cannot change the lease's key or build
+reservation while publishing the earlier payload. Discovery and materialization
+share one type-admitted Cargo size-class selector. Legacy missing environment
+observations retain the conservative build class; malformed environment values
+fail explicitly before entry registration or lease mutation.
+The generated-state policy identity MUST hash the same frozen bounded payload that was decoded
+and validated, rather than rereading its path. Decoder nesting/value-domain and
+allocation failures return explicit errors and close the admitted descriptor.
+Registry reference IDs and entry fields are type-admitted before host collection
+operations or identity construction. Explicit invalid process IDs are rejected
+before lease mutation; only an absent PID selects the caller-parent default.
+Process identity returns unavailable for invalid or host-unrepresentable IDs.
 
 The journal estimate measures the prospective serialized registry including the
 next lease, sequence growth and largest quarantine record. It reserves two
@@ -694,7 +748,14 @@ identity includes operating-system boot/session and process-start identity so
 PID reuse cannot preserve a stale lease.
 
 The disposable registry conforms to
-`docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json`. Its mutex is resolved
+`docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json`, with closed lease fields
+`operation` and `growthBytes`. Build leases use zero explicit growth and the
+policy-bound size-class reservation; metadata leases require positive bounded
+growth and Cargo ownership. Validated v0.1 registries remain readable and their
+four-field leases are conservatively interpreted as build leases. Passive reads
+do not persist migration; the next registry mutation atomically writes v0.2.
+The v0.1 schema remains unchanged and old readers reject the new version rather
+than silently lowering its reservations. Its mutex is resolved
 through the Git control directory, outside every cleanup root, so admission
 and whole-root quarantine serialize on Unix, macOS, Windows, and linked Git
 worktrees without holding an open file inside the tree being renamed. Registry

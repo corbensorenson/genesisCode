@@ -125,7 +125,93 @@ def accounting_self_test(source_root: Path) -> int:
         state.release(root, final["leaseToken"])
         checks.append("idle-growth-remeasured-before-quota-admission")
 
-    _require(len(checks) == 7, "control inventory drift")
+    with tempfile.TemporaryDirectory(prefix="generated-state-lease-bound-") as temporary:
+        root = Path(temporary).resolve()
+        (root / "policies").mkdir()
+        (root / cleanup.POLICY_REL).write_bytes((source_root / cleanup.POLICY_REL).read_bytes())
+        policy["limits"]["maxLeases"] = 1
+        (root / state.POLICY_REL).write_bytes(state.pretty_bytes(policy))
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        (root / ".genesis/build").mkdir(parents=True)
+        cleanup.initialize_root_marker(root, ".genesis/build", "lease-bound-controls")
+        idle = admit(host, "cargo-host", "a")
+        state.release(root, idle["leaseToken"])
+        target = root / host
+        target.mkdir(parents=True)
+        payload = target / "payload"
+        payload.write_bytes(b"a" * 4096)
+        live = admit(wasm, "cargo-host", "b")
+        payload.write_bytes(b"x" * 300000)
+        before = (payload.stat().st_ino, payload.read_bytes())
+        try:
+            admit(host, "cargo-host", "a")
+        except state.GeneratedStateError as exc:
+            _require("lease bound exceeded" in str(exc), "wrong lease-bound diagnostic")
+        else:
+            raise AssertionError("lease-bound request admitted")
+        _require((payload.stat().st_ino, payload.read_bytes()) == before,
+                 "lease-bound denial reclaimed the oversized idle cache")
+        _require(state.validate_lease(root, live["leaseToken"], wasm)["valid"],
+                 "lease-bound denial invalidated live ownership")
+        state.release(root, live["leaseToken"])
+        checks.append("lease-bound-denial-precedes-oversized-idle-reclamation")
+
+    with tempfile.TemporaryDirectory(prefix="generated-state-contract-") as temporary:
+        root = Path(temporary).resolve()
+        (root / "policies").mkdir()
+        (root / cleanup.POLICY_REL).write_bytes((source_root / cleanup.POLICY_REL).read_bytes())
+        policy["limits"]["maxLeases"] = 16
+        (root / state.POLICY_REL).write_bytes(state.pretty_bytes(policy))
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        (root / ".genesis/build").mkdir(parents=True)
+        cleanup.initialize_root_marker(root, ".genesis/build", "contract-controls")
+        first = admit(host, "cargo-host", "a")
+        target = root / host
+        target.mkdir(parents=True)
+        payload = target / "payload"
+        payload.write_bytes(b"x" * 4096)
+        original = (payload.stat().st_ino, payload.read_bytes())
+        other_path = ".genesis/build/cargo-cache/v1/root/host/other"
+        other = admit(other_path, "cargo-host", "c")
+        try:
+            admit(host, "cargo-wasm", "a")
+        except state.GeneratedStateError as exc:
+            _require("hard quota admission denied" in str(exc), "wrong budget-upgrade denial")
+        else:
+            raise AssertionError("larger requested budget escaped the hard quota")
+        report = state.status(root)
+        _require(report["activeLeases"] == 2 and report["accountingBytes"] == 262144,
+                 "denied upgrade leaked a lease or retained the prospective budget")
+        _require(state.validate_lease(root, first["leaseToken"], host)["valid"]
+                 and state.validate_lease(root, other["leaseToken"], other_path)["valid"]
+                 and (payload.stat().st_ino, payload.read_bytes()) == original,
+                 "denied upgrade changed live ownership or stored bytes")
+        checks.append("denied-build-budget-upgrade-rolls-back-with-live-leases")
+        state.release(root, other["leaseToken"])
+        larger = admit(host, "cargo-wasm", "a")
+        _require(larger["accountingBytes"] == 196608
+                 and larger["pendingGrowthBytes"] == 196608 - state.allocated_bytes(target),
+                 "larger request reused a smaller registered growth budget")
+        state.release(root, first["leaseToken"])
+        _require(state.status(root)["accountingBytes"] == 196608,
+                 "releasing an older lease lowered the live upgraded budget")
+        _require((payload.stat().st_ino, payload.read_bytes()) == original,
+                 "admitted budget upgrade changed cached data")
+        state.release(root, larger["leaseToken"])
+        checks.append("larger-build-demand-upgrades-one-shared-reservation")
+        payload.write_bytes(b"x" * 300000)
+        original = (payload.stat().st_ino, payload.read_bytes())
+        try:
+            admit(host, "cargo-host", "b")
+        except state.GeneratedStateError as exc:
+            _require("content key changed" in str(exc), "wrong identity-change denial")
+        else:
+            raise AssertionError("oversized replacement bypassed existing identity")
+        _require((payload.stat().st_ino, payload.read_bytes()) == original,
+                 "invalid oversized replacement deleted the original cache")
+        checks.append("oversized-request-identity-checked-before-reclamation")
+
+    _require(len(checks) == 11, "control inventory drift")
     print("generated-state-accounting: " + json.dumps({"controls": checks}, sort_keys=True))
     return len(checks)
 

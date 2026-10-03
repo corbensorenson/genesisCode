@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import tempfile
@@ -249,16 +251,73 @@ def resolve(
     return {"target_dir": target_dir, "metadata": metadata, "metadata_file": policy["metadataFile"]}
 
 
-def materialize(result: Mapping[str, Any]) -> bool:
-    target = Path(result["target_dir"])
+@dataclass(frozen=True)
+class MetadataMaterialization:
+    target: Path
+    filename: str
+    payload: bytes
+    content_key: str = field(init=False)
+    size_class: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.target, Path):
+            raise CachePolicyError("cache metadata target is not a path")
+        if self.filename != ".genesis-cargo-cache-key.json":
+            raise CachePolicyError("cache metadata filename drift")
+        if not isinstance(self.payload, bytes) or not 0 < len(self.payload) <= generated_state.MAX_JSON_BYTES:
+            raise CachePolicyError("cache metadata exceeds bounded materialization payload")
+        try:
+            document = json.loads(self.payload, object_pairs_hook=reject_duplicate_keys)
+            if not isinstance(document, dict) or not isinstance(document.get("cacheKey"), dict):
+                raise CachePolicyError("cache metadata key is invalid")
+            key = document["cacheKey"]
+            identity = document.get("cacheKeySha256")
+            if not isinstance(identity, str) or not SHA_RE.fullmatch(identity) or identity != digest_bytes(canonical_bytes(key)):
+                raise CachePolicyError("cache metadata key identity mismatch")
+            size_class = generated_state.cargo_size_class(key.get("scope"), key.get("buildEnvironment"))
+        except CachePolicyError:
+            raise
+        except generated_state.GeneratedStateError as exc:
+            raise CachePolicyError(str(exc)) from exc
+        except (ValueError, UnicodeError, RecursionError, MemoryError) as exc:
+            raise CachePolicyError("invalid bounded frozen cache metadata") from exc
+        object.__setattr__(self, "content_key", identity)
+        object.__setattr__(self, "size_class", size_class)
+
+
+def prepare_materialization(result: Mapping[str, Any]) -> MetadataMaterialization:
+    payload = pretty_bytes(result["metadata"])
+    if not 0 < len(payload) <= generated_state.MAX_JSON_BYTES:
+        raise CachePolicyError("cache metadata exceeds bounded materialization payload")
+    filename = str(result["metadata_file"])
+    if filename != ".genesis-cargo-cache-key.json":
+        raise CachePolicyError("cache metadata filename drift")
+    return MetadataMaterialization(Path(result["target_dir"]), filename, payload)
+
+
+def materialize(result: Mapping[str, Any], prepared: MetadataMaterialization | None = None) -> bool:
+    plan = prepare_materialization(result) if prepared is None else prepared
+    target, expected = plan.target, plan.payload
     target.mkdir(parents=True, exist_ok=True)
-    metadata_path = target / str(result["metadata_file"])
-    expected = pretty_bytes(result["metadata"])
-    if metadata_path.exists():
-        observed = metadata_path.read_bytes()
-        if observed != expected:
-            raise CachePolicyError(f"cache metadata mismatch: {metadata_path}")
-        return True
+    metadata_path = target / plan.filename
+    flags = os.O_RDONLY | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(metadata_path, flags)
+    except FileNotFoundError:
+        descriptor = None
+    if descriptor is not None:
+        try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise CachePolicyError("cache metadata is not a regular file")
+            with os.fdopen(descriptor, "rb", buffering=0) as handle:
+                descriptor = None
+                observed = handle.read(len(expected) + 1)
+            if observed != expected:
+                raise CachePolicyError(f"cache metadata mismatch: {metadata_path}")
+            return True
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
     fd, tmp_name = tempfile.mkstemp(prefix=f".{metadata_path.name}.", dir=target)
     try:
         with os.fdopen(fd, "wb") as handle:
@@ -272,6 +331,42 @@ def materialize(result: Mapping[str, Any]) -> bool:
         except FileNotFoundError:
             pass
     return False
+
+
+def materialize_admitted(root: Path, result: dict[str, Any], lease_pid: int | None = None) -> bool:
+    """Bind admission to the frozen bytes actually written, or to a future build."""
+    root = root.resolve()
+    plan = prepare_materialization(result)
+    target = plan.target.resolve()
+    build_root = root / ".genesis/build"
+    admission = None
+    transient = lease_pid is None
+    try:
+        target.relative_to(build_root)
+    except ValueError:
+        pass
+    else:
+        relative_target = target.relative_to(root).as_posix()
+        deterministic_cleanup.require_safe_parent_chain(root, ".genesis/build")
+        build_root.mkdir(parents=True, exist_ok=True)
+        deterministic_cleanup.initialize_root_marker(root, ".genesis/build", "cargo-cache")
+        admission = generated_state.admit(
+            root, "cargo-cache", plan.content_key, relative_target,
+            plan.size_class, pid=os.getpid() if transient else lease_pid,
+            metadata_payload=plan.payload if transient else None,
+        )
+        if not transient:
+            result["generated_state"] = admission
+    try:
+        return materialize(result, plan)
+    except BaseException:
+        if admission is not None and not transient:
+            generated_state.release(root, admission["leaseToken"])
+            result.pop("generated_state", None)
+        raise
+    finally:
+        if admission is not None and transient:
+            generated_state.release(root, admission["leaseToken"])
 
 
 def emit(result: Mapping[str, Any], output_format: str) -> None:
@@ -320,56 +415,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         result["root"] = args.root.resolve()
         result["cache_hit"] = False
         if not args.no_materialize:
-            transient_lease = args.lease_pid is None
-            admission_pid = os.getpid() if transient_lease else args.lease_pid
-            target = Path(result["target_dir"]).resolve()
-            build_root = args.root.resolve() / ".genesis/build"
-            try:
-                target.relative_to(build_root)
-            except ValueError:
-                relative_target = None
-            else:
-                relative_target = target.relative_to(args.root.resolve()).as_posix()
-                deterministic_cleanup.require_safe_parent_chain(
-                    args.root.resolve(), ".genesis/build"
-                )
-                build_root.mkdir(parents=True, exist_ok=True)
-                deterministic_cleanup.initialize_root_marker(
-                    args.root.resolve(), ".genesis/build", "cargo-cache"
-                )
-                scope = result["metadata"]["cacheKey"]["scope"]
-                build_environment = result["metadata"]["cacheKey"]["buildEnvironment"]
-                size_class = (
-                    "cargo-verifier"
-                    if scope == "evidence-verifier-host"
-                    else "cargo-host-slim"
-                    if scope == "root-host"
-                    and build_environment.get("CARGO_INCREMENTAL") == "0"
-                    and build_environment.get("CARGO_PROFILE_DEV_DEBUG") == "0"
-                    else "cargo-wasm"
-                    if scope in ("root-wasi", "root-wasm")
-                    else "cargo-host"
-                )
-                result["generated_state"] = generated_state.admit(
-                    args.root.resolve(),
-                    "cargo-cache",
-                    result["metadata"]["cacheKeySha256"],
-                    relative_target,
-                    size_class,
-                    pid=admission_pid,
-                )
-            try:
-                result["cache_hit"] = materialize(result)
-            except BaseException:
-                if result.get("generated_state"):
-                    generated_state.release(
-                        args.root.resolve(), result["generated_state"]["leaseToken"]
-                    )
-                raise
-            if transient_lease and result.get("generated_state"):
-                generated_state.release(
-                    args.root.resolve(), result["generated_state"]["leaseToken"]
-                )
+            result["cache_hit"] = materialize_admitted(args.root, result, args.lease_pid)
         emit(result, args.format)
     except (
         CachePolicyError,

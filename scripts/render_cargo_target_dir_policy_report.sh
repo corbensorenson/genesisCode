@@ -116,6 +116,8 @@ configuration_paths = {
     root / "scripts/lib/deterministic_cleanup.py",
     root / "scripts/lib/generated_state.py",
     root / "scripts/lib/generated_state_accounting.py",
+    root / "scripts/lib/cargo_metadata_admission.py",
+    root / "docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json",
     root / "scripts/check_evidence_storage_classes.sh",
     root / "scripts/render_evidence_release_asset.sh",
 }
@@ -526,6 +528,8 @@ authority_paths = {
     root / "scripts/lib/cargo_target_dir.sh",
     root / "scripts/lib/generated_state.py",
     root / "scripts/lib/generated_state_accounting.py",
+    root / "scripts/lib/cargo_metadata_admission.py",
+    root / "docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json",
     root / "scripts/check_cargo_target_dir_policy.sh",
     root / "scripts/check_evidence_storage_classes.sh",
     root / "scripts/render_cargo_target_dir_policy_report.sh",

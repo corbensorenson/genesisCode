@@ -27,6 +27,7 @@ sys.path.insert(0, str(source_root / "scripts/lib"))
 import deterministic_cleanup as cleanup
 import generated_state as state
 from generated_state_accounting import accounting_self_test
+from cargo_metadata_admission import metadata_self_test
 
 controls = []
 
@@ -307,6 +308,7 @@ state_policy, _, _ = state.load_policy(source_root)
 generated_schema_paths = [
     "docs/spec/GENERATED_STATE_POLICY_v0.1.schema.json",
     "docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json",
+    "docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json",
 ]
 for relative in generated_schema_paths:
     schema = cleanup.load_json(source_root / relative)
@@ -715,7 +717,7 @@ for source_entry in journal_probe["entries"]:
     possible = copy.deepcopy(journal_probe)
     possible["sequence"] += 2
     possible["leases"].append({"entryId": "0" * 64, "id": "0" * 32,
-                              "pid": 2**63 - 1, "processIdentity": "0" * 64})
+                              "pid": 2**63 - 1, "processIdentity": "0" * 64, "operation": "cargo-metadata", "growthBytes": 2**63 - 1})
     possible["transaction"] = {"entryId": "0" * 64, "id": "0" * 64,
         "phase": "quarantined", "sourcePath": source_entry["path"],
         "quarantinePath": ".genesis/build/.generated-state-v0.1/quarantine/" + "0" * 64}
@@ -841,10 +843,12 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(accounting_self_test(source_root) == 7, "idle allocation control coverage drift")
+require(accounting_self_test(source_root) == 11, "idle allocation control coverage drift")
 controls.append("generated-state-idle-allocation-accounting")
+require(metadata_self_test(source_root) == 23, "metadata operation control coverage drift")
+controls.append("cargo-metadata-operation-admission")
 
-require(len(controls) == 57 and len(set(controls)) == 57, f"control coverage drift: {controls}")
+require(len(controls) == 58 and len(set(controls)) == 58, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",
@@ -853,6 +857,7 @@ authorities = [
     "scripts/lib/deterministic_cleanup.py",
     "scripts/lib/generated_state.py",
     "scripts/lib/generated_state_accounting.py",
+    "scripts/lib/cargo_metadata_admission.py",
     "scripts/reclaim_build_space.sh",
     "scripts/lib/cargo_cache.py",
     "scripts/lib/dependency_mirror.py",
