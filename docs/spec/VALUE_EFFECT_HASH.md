@@ -392,3 +392,95 @@ This hash is recorded in logs and must match during replay.
 ## Log Version Note
 
 GenesisCode v0.2 uses `.gclog :version = 3` for the current `value_hash` encoding (parser remains backward-compatible with legacy `:version = 2` logs).
+
+## Staged Lossless Runtime-Term Identity v0.3
+
+`genesis/runtime-term-hash/v0.3` is an additive, explicit host-library codec for
+finite immutable `Term` trees, including improper pairs and raw symbol text.
+It does not select the current `genesis/value-effect-hash/v0.2` profile, change
+`hash_term`, admit a value for canonical serialization, or change the effect-log
+writer or accepted readers. Production continuation/response hashing still
+uses the legacy value algorithm until the complete value-graph and log-profile
+migration is reviewed and activated. The existing runtime alias counterexamples
+therefore remain open; this codec is the term component of that repair.
+
+`gc_kernel::runtime_term_hash(term, limits)` returns BLAKE3 over the exact byte
+domain `GCvalue-v0.3\0term\0`, followed by one preorder structural encoding.
+Every `\0` in that domain denotes a single zero octet. Each term starts with
+one octet indicating its type. Counts and lengths are unsigned 64-bit
+little-endian integers. No whitespace, printer output, placeholder, implicit
+normalization, native pointer, or platform integer representation participates.
+
+| Tag | Type | Fields following the tag |
+|---|---|---|
+| 0 | Nil | none |
+| 1 | Bool | one octet: false = 0, true = 1 |
+| 2 | Int | one sign octet (zero = 0, positive = 1, negative = 2); magnitude limb count; magnitude limbs |
+| 3 | Str | UTF-8 byte length; exact UTF-8 bytes |
+| 4 | Bytes | octet length; exact octets |
+| 5 | Symbol | UTF-8 byte length; exact UTF-8 bytes |
+| 6 | Pair | complete car encoding, then complete cdr encoding |
+| 7 | Vector | element count; complete encodings in element order |
+| 8 | Map | entry count; complete key encoding then complete value encoding for each entry in normative CoreForm key order |
+
+Integer magnitude limbs are base 2^32, least significant limb first, each as four
+little-endian octets. The highest limb is nonzero. Zero has sign 0 and no limbs;
+nonzero integers have sign 1 or 2 and at least one limb. This rule is independent
+of the integer library's physical limb width. For example, 2^64 + 9 has limbs
+`[9, 0, 1]`; its negative has the same magnitude and sign 2. Strings and symbols
+are distinguished by tag even when their text is identical. Raw symbols are
+encoded exactly, including literal-looking names and embedded zero scalars;
+this does not make them legal canonical symbols or source forms.
+
+The encoding is injective before hashing: disjoint tags select a unique field
+grammar; scalar lengths identify exact byte boundaries; pair arity is fixed;
+container counts determine exactly how many recursively self-delimiting terms
+follow. Integer sign and normalized magnitude are unique. Different immutable
+trees therefore cannot alias by representation, including nested improper pair
+keys and values. This is not a mathematical claim that BLAKE3 has no collisions.
+An improper pair does not acquire wire syntax or a store identity from this
+runtime hash, and the proper list `(pair <improper>)` keeps its historical
+canonical bytes and hash.
+
+### Bounded streaming and failures
+
+The caller must supply all three `RuntimeTermHashLimits` ceilings. There are no
+ambient defaults, unlimited sentinels, or fallback algorithms:
+
+- `max_nodes`: the number of reached term occurrences, including map keys and
+  values and both pair fields. Every occurrence counts even if a future storage
+  representation shares a physical owner.
+- `max_encoded_bytes`: every encoded octet, including the domain, type tags,
+  counts, signs, limbs, and payload bytes.
+- `max_pending_frames`: the maximum number of live borrowed traversal frames.
+  A frame is a pending term or a container iterator. This is a traversal-storage
+  limit, not a language-visible term-depth or container-width limit.
+
+Equality with a limit succeeds; exceeding it returns an explicit
+`KernelErrorKind::MemoryLimit` with dimension `runtime-hash-nodes`,
+`runtime-hash-bytes`, or `runtime-hash-frames` and exact observed/limit values.
+Zero is a real ceiling. Counter/length overflow and a failed fallible stack
+reservation also return explicit memory errors, without inventing a numeric
+host-allocation ceiling. Failure exposes no partial digest and never selects
+the legacy printer-based algorithm.
+
+The implementation streams borrowed scalar data and magnitude limbs directly
+into BLAKE3. It traverses pairs and containers without host recursion, cloning
+trees, flattening containers, constructing integer byte buffers, or building a
+complete encoded byte string. A container retains an iterator and schedules one
+entry at a time; fanout does not allocate one pending frame per child. Stack
+growth uses fallible reservations bounded by the caller's frame ceiling. Node
+and byte charges precede the corresponding encoding work; an oversized scalar
+fails before its bytes are hashed. Work is O(reached nodes + admitted encoded
+bytes) and traversal storage is O(pending frames), bounded by the supplied
+ceiling. Construction, ordering, comparison, and destruction of the input term
+remain separate boundaries and are not certified by this codec.
+
+The codec corpus freezes independent Python/BLAKE3 vectors for every tag,
+multi-limb signed integers, exact Unicode and octets, raw symbol distinctions,
+improper pairs, the proper placeholder list, and nested containers. It also
+checks nested alias families, stable map ordering, exact/one-short resource
+limits, large scalar preflight, a 20,000-pair traversal on a small host stack,
+wide containers under a constant frame ceiling, and semantic mutation
+rejection. These local controls do not establish full value-graph identity,
+log migration, cross-host qualification, or independent release acceptance.

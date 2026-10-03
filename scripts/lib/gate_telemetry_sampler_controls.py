@@ -372,6 +372,59 @@ def native_inventory_self_test() -> int:
     return controls
 
 
+
+def inventory_termination_self_test() -> int:
+    # Force the exit-observation schedule without relying on a rare kernel race.
+    # Actual native exited/live/unknown group behavior is covered above.
+    cases = (
+        ('late-reap', None, False, None, 'darwin', None, True),
+        ('reaped', 0, False, None, 'darwin', None, False),
+        ('live', None, True, None, 'darwin', 'denied', False),
+        ('unknown', None, None, None, 'darwin', 'unknown', False),
+        ('late-timeout', None, False, 'timeout', 'darwin', 'denied', True),
+        ('other-host', 0, False, None, 'linux', 'denied', False),
+    )
+    for name, status, live, reap_fault, host, expected, should_wait in cases:
+        waits = []
+        native_calls = []
+        class Leader:
+            pid = 100
+            def poll(self):
+                return status
+            def wait(self, timeout):
+                waits.append(timeout)
+                if timeout != 0.5:
+                    raise telemetry.TelemetryError('inventory reap became unbounded')
+                if reap_fault == 'timeout':
+                    raise subprocess.TimeoutExpired('inventory helper', timeout)
+                return 0
+        class Native:
+            def group_has_live_processes(self, pgid):
+                native_calls.append(pgid)
+                if live is None:
+                    raise telemetry.darwin_inventory.InventoryError('unknown group state')
+                return live
+        with patch.object(telemetry.sys, 'platform', host), \
+                patch.object(telemetry.os, 'killpg', side_effect=PermissionError('controlled denial')), \
+                patch.object(telemetry.darwin_inventory, 'NativeInventory', return_value=Native()):
+            try:
+                telemetry.Sampler(1, 20).terminate_inventory_group(Leader())
+            except (telemetry.TelemetryError, telemetry.darwin_inventory.InventoryError) as exc:
+                message = ('unknown group state' if expected == 'unknown' else
+                           f'inventory group signal denied (leader_status={status})')
+                if expected is None or str(exc) != message:
+                    raise telemetry.TelemetryError(f'wrong termination result: {name}') from exc
+            else:
+                if expected is not None:
+                    raise telemetry.TelemetryError(f'uncertain inventory cleanup accepted: {name}')
+        if waits != ([0.5] if should_wait else []):
+            raise telemetry.TelemetryError(f'inventory termination wait order changed: {name}')
+        if native_calls != ([100] if host == 'darwin' else []):
+            raise telemetry.TelemetryError(f'inventory termination native admission changed: {name}')
+    print('gate-telemetry-inventory-termination: ok (schedule_controls=6)')
+    return len(cases)
+
+
 def birth_identity_self_test() -> int:
     import copy
     import generated_state as state

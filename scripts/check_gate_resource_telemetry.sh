@@ -74,10 +74,11 @@ require(
     "sampler failure was not captured for parent propagation",
 )
 controls.append("sampler-failure-propagation")
-from gate_telemetry_sampler_controls import birth_identity_self_test, inventory_protocol_self_test, native_inventory_self_test, sampler_self_test
+from gate_telemetry_sampler_controls import birth_identity_self_test, inventory_termination_self_test, inventory_protocol_self_test, native_inventory_self_test, sampler_self_test
 require(sampler_self_test() == 9, "sampler lifecycle control inventory drift")
 controls.append("sampler-bounded-inventory-ownership")
 require(native_inventory_self_test() == 26, "native inventory control inventory drift")
+require(inventory_termination_self_test() == 6, "inventory termination schedule control drift")
 controls.append("sampler-native-process-inventory")
 require(inventory_protocol_self_test() == 9, "inventory protocol control inventory drift")
 controls.append("sampler-closed-inventory-protocol")

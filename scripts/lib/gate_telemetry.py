@@ -348,10 +348,17 @@ class Sampler:
             pass
         except PermissionError as exc:
             status = proc.poll()
-            # Permission denial alone never proves successful cleanup.
-            if (status is None or sys.platform != "darwin"
+            # Permission denial alone never proves successful cleanup. Darwin
+            # can report exited group members before nonblocking wait observes
+            # the leader's exit. Confirm no live members, then bound the reap.
+            if (sys.platform != "darwin"
                     or darwin_inventory.NativeInventory().group_has_live_processes(proc.pid)):
                 raise TelemetryError(f"inventory group signal denied (leader_status={status})") from exc
+            if status is None:
+                try:
+                    proc.wait(timeout=0.5)
+                except subprocess.TimeoutExpired:
+                    raise TelemetryError("inventory group signal denied (leader_status=None)") from exc
 
     def sample(self):
         if self.platform == "linux":

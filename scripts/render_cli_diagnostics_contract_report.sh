@@ -23,11 +23,18 @@ genesis_configure_cargo_target_dir \
 START_MS="$(genesis_profile_gate_now_ms)"
 BUDGET_MS="${GENESIS_CLI_DIAGNOSTICS_CONTRACT_BUDGET_MS:-300000}"
 
-cargo test -p gc_cli --test cli_diagnostics_matrix --quiet
-cargo test -p gc_cli --test cli_human_diagnostics --quiet
-cargo test -p gc_cli --test cli_structured_failures --quiet
-cargo test -p gc_cli --features parity-harness --test cli_diagnostic_goldens --quiet
-cargo test -p gc_cli_driver diagnostics::tests --quiet
+# Resolve the required parity fixture dependencies once. The normal genesis binary
+# still links the production driver; genesis_parity uses the separate parity driver.
+# Without this feature cli_structured_failures silently contains zero tests. Include
+# the normal driver's complete library suite instead of rebuilding its dependencies
+# after switching back from parity fixtures merely to select eleven unit tests.
+cargo test -p gc_cli -p gc_cli_driver --features gc_cli/parity-harness \
+  --lib \
+  --test cli_diagnostics_matrix \
+  --test cli_human_diagnostics \
+  --test cli_structured_failures \
+  --test cli_diagnostic_goldens \
+  --quiet
 
 BASELINE_HISTORY=""
 if [[ "$HISTORY_INPUT_PATH" != "$HISTORY_PATH" && -f "$HISTORY_INPUT_PATH" ]]; then
