@@ -296,3 +296,334 @@ fn named_capture_external_scope_and_warm_cycle_roots_remain_live_then_reclaim() 
         assert!(!alive(), "retired module/capture cycle leaked");
     }
 }
+
+#[test]
+fn compiled_semantic_admission_rejects_name_depth_and_body_ir_contradictions() {
+    fn mutate(expr: &mut Arc<CExpr>) {
+        match Arc::make_mut(expr) {
+            CExpr::Var { name, .. } if name == "keeper" => *name = "other0".to_string(),
+            CExpr::Let(bindings, body) => {
+                for (_, rhs) in bindings {
+                    mutate(rhs);
+                }
+                mutate(body);
+            }
+            CExpr::FnUnary { body, .. } => mutate(body),
+            CExpr::Prim { args, .. } => {
+                for arg in args {
+                    mutate(arg);
+                }
+            }
+            _ => {}
+        }
+    }
+    let source = format!(
+        "(let ((keeper {:?}) (other0 1)) (fn (arg) (prim int/add (prim str/len keeper) other0)))",
+        "x".repeat(16384)
+    );
+    let forms =
+        gc_coreform::canonicalize_module(gc_coreform::parse_module(&source).unwrap()).unwrap();
+    let valid = compile_module(&forms).unwrap();
+    let blob = encode_compiled_module_blob(&valid).unwrap();
+    assert_eq!(
+        encode_compiled_module_blob(&decode_compiled_module_blob(&blob).unwrap()).unwrap(),
+        blob
+    );
+    let mut corrupt = valid;
+    for form in &mut corrupt.forms {
+        if let CompiledForm::Expr(expr) = form {
+            mutate(expr);
+        }
+    }
+    let error =
+        decode_compiled_module_blob(&encode_compiled_module_blob(&corrupt).unwrap()).unwrap_err();
+    assert!(matches!(error.kind, KernelErrorKind::Internal));
+    assert_eq!(
+        error.msg,
+        "compiled module semantic metadata is inconsistent"
+    );
+    let forms = gc_coreform::parse_module("(fn (arg) (prim int/add arg 1))").unwrap();
+    let mut corrupt = compile_module(&forms).unwrap();
+    let CompiledForm::Expr(expr) = &mut corrupt.forms[0] else {
+        panic!("not expr")
+    };
+    let CExpr::FnUnary { body, .. } = Arc::make_mut(expr) else {
+        panic!("not fn")
+    };
+    *body = Arc::new(CExpr::Atom(Term::Int(42.into())));
+    assert!(decode_compiled_module_blob(&encode_compiled_module_blob(&corrupt).unwrap()).is_err());
+}
+
+#[test]
+fn compiled_semantic_admission_preserves_all_source_forms_sugar_and_namespaces() {
+    let sources = [
+        "(fn (x) nil)",
+        "(fn (x) true)",
+        "(fn (x) 42)",
+        "(fn (x) \"text\")",
+        "(fn (x) b\"00ff\")",
+        "(fn (x) x)",
+        "(fn (x) [1 (quote sym)])",
+        "(fn (x) {:a x :b (prim int/add x 1)})",
+        "(fn (x) (quote (a . (b))))",
+        "(fn (x) (if x 1 2))",
+        "(fn (x) (begin x 42))",
+        "(fn (x) (begin x))",
+        "(fn (x) (let ((a x) (b a)) b))",
+        "(fn (x) (let () x 42))",
+        "(fn (x) (fn (a b) x a b))",
+        "(fn (x) (prim missing/op x))",
+        "(fn (x) (seal))",
+        "(fn (x) (seal x x))",
+        "(fn (x) (unseal x x))",
+        "(fn (x) (x 1))",
+        "(fn (x) (x 1 2 3))",
+        "(fn (x) (((x 1) 2) 3))",
+        "(fn (x) ((begin (x 1)) 2))",
+        "(fn (x) ((x) 1))",
+        "(def current 1) (def fn1 (fn (x) current)) (def current 2) (fn1 0)",
+        "(let ((current 1)) (fn (x) (let ((current 2)) (fn (current) current))))",
+    ];
+    for source in sources {
+        let raw = gc_coreform::parse_module(source).unwrap();
+        let normalized = gc_coreform::canonicalize_module(raw.clone()).unwrap();
+        for forms in [&raw, &normalized] {
+            for namespace in ["", "module:qualified"] {
+                let compiled = compile_module_with_site_namespace(forms, namespace).unwrap();
+                let blob = encode_compiled_module_blob(&compiled).unwrap();
+                let restored = decode_compiled_module_blob(&blob)
+                    .unwrap_or_else(|error| panic!("{source} {namespace}: {error}"));
+                assert_eq!(encode_compiled_module_blob(&restored).unwrap(), blob);
+                assert_eq!(
+                    compiled_module_coverage_manifest_from_compiled(&compiled),
+                    compiled_module_coverage_manifest_from_compiled(&restored)
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn compiled_semantic_admission_checks_every_redundant_body_field() {
+    type Mutation = fn(&mut CExpr);
+    let cases: &[(&str, Mutation)] = &[
+        ("(fn (x) 42)", |body| {
+            *body = CExpr::Atom(Term::Int(43.into()));
+        }),
+        ("(fn (x) x)", |body| {
+            let CExpr::Var { resolution, .. } = body else {
+                panic!("not var")
+            };
+            *resolution = VarResolution::Local { depth: 0, slot: 1 };
+        }),
+        ("(fn (x) x)", |body| {
+            let CExpr::Var { resolution, .. } = body else {
+                panic!("not var")
+            };
+            *resolution = VarResolution::Local { depth: 1, slot: 0 };
+        }),
+        ("(fn (x) x)", |body| {
+            let CExpr::Var { resolution, .. } = body else {
+                panic!("not var")
+            };
+            *resolution = VarResolution::External;
+        }),
+        ("(fn (x) [1 2])", |body| {
+            let CExpr::Vector(items) = body else {
+                panic!("not vector")
+            };
+            items.reverse();
+        }),
+        ("(fn (x) {:a 1 :b 2})", |body| {
+            let CExpr::Map(items) = body else {
+                panic!("not map")
+            };
+            items.reverse();
+        }),
+        ("(fn (x) (quote (1 2)))", |body| {
+            *body = CExpr::Quote(Term::Int(42.into()));
+        }),
+        ("(fn (x) (if x 1 2))", |body| {
+            let CExpr::If {
+                then_expr,
+                else_expr,
+                ..
+            } = body
+            else {
+                panic!("not if")
+            };
+            std::mem::swap(then_expr, else_expr);
+        }),
+        ("(fn (x) (begin 1 2))", |body| {
+            let CExpr::Begin(items) = body else {
+                panic!("not begin")
+            };
+            items.reverse();
+        }),
+        ("(fn (x) (let ((a 1)) a))", |body| {
+            let CExpr::Let(bindings, _) = body else {
+                panic!("not let")
+            };
+            bindings[0].0 = "changed".to_string();
+        }),
+        ("(fn (x) (fn (a) a))", |body| {
+            let CExpr::FnUnary { param, .. } = body else {
+                panic!("not fn")
+            };
+            *param = "changed".to_string();
+        }),
+        ("(fn (x) (prim int/add x 1))", |body| {
+            let CExpr::Prim { op, .. } = body else {
+                panic!("not prim")
+            };
+            *op = PrimOp::IntMul;
+        }),
+        ("(fn (x) (prim missing/op x))", |body| {
+            let CExpr::PrimUnknown { op, .. } = body else {
+                panic!("not unknown")
+            };
+            *op = "changed/op".to_string();
+        }),
+        ("(fn (x) (seal))", |body| {
+            *body = CExpr::Atom(Term::Nil);
+        }),
+        ("(fn (x) (seal x x))", |body| {
+            let CExpr::Seal(left, right) = body else {
+                panic!("not seal")
+            };
+            *body = CExpr::Unseal(left.clone(), right.clone());
+        }),
+        ("(fn (x) (unseal x x))", |body| {
+            let CExpr::Unseal(left, right) = body else {
+                panic!("not unseal")
+            };
+            *body = CExpr::Seal(left.clone(), right.clone());
+        }),
+        ("(fn (x) (x 1))", |body| {
+            let CExpr::App(left, right) = body else {
+                panic!("not app")
+            };
+            std::mem::swap(left, right);
+        }),
+        ("(fn (x) ((x 1) 2))", |body| {
+            let CExpr::AppN {
+                extra_app_ticks, ..
+            } = body
+            else {
+                panic!("not appn")
+            };
+            *extra_app_ticks = 0;
+        }),
+    ];
+    for (source, mutate) in cases {
+        let mut module = compile_module(&gc_coreform::parse_module(source).unwrap()).unwrap();
+        let CompiledForm::Expr(expr) = &mut module.forms[0] else {
+            panic!("not expr")
+        };
+        let CExpr::FnUnary { body, .. } = Arc::make_mut(expr) else {
+            panic!("not fn")
+        };
+        mutate(Arc::make_mut(body));
+        let error = decode_compiled_module_blob(&encode_compiled_module_blob(&module).unwrap())
+            .unwrap_err();
+        assert!(matches!(error.kind, KernelErrorKind::Internal), "{source}");
+        assert_eq!(
+            error.msg, "compiled module semantic metadata is inconsistent",
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn compiled_semantic_admission_checks_root_scope_inventory_and_tags() {
+    let forms = gc_coreform::parse_module("(def current 1) (fn (arg) current)").unwrap();
+    let original = compile_module(&forms).unwrap();
+    let mut extra = original.clone();
+    extra.module_names.push("unused".to_string());
+    assert!(decode_compiled_module_blob(&encode_compiled_module_blob(&extra).unwrap()).is_err());
+    let mut slot = original;
+    let CompiledForm::Expr(expr) = &mut slot.forms[1] else {
+        panic!("not expr")
+    };
+    let CExpr::FnUnary { body, .. } = Arc::make_mut(expr) else {
+        panic!("not fn")
+    };
+    let CExpr::Var { resolution, .. } = Arc::make_mut(body) else {
+        panic!("not var")
+    };
+    *resolution = VarResolution::Module { slot: 1 };
+    assert!(decode_compiled_module_blob(&encode_compiled_module_blob(&slot).unwrap()).is_err());
+    for source in ["(fn (arg) nil)", "(let ((arg 1)) arg)", "arg"] {
+        let mut module = compile_module(&gc_coreform::parse_module(source).unwrap()).unwrap();
+        let CompiledForm::Expr(expr) = &mut module.forms[0] else {
+            panic!("not expr")
+        };
+        match Arc::make_mut(expr) {
+            CExpr::FnUnary { param, .. } => *param = "1".to_string(),
+            CExpr::Let(bindings, body) => {
+                bindings[0].0 = "1".to_string();
+                let CExpr::Var { name, .. } = Arc::make_mut(body) else {
+                    panic!("not var")
+                };
+                *name = "1".to_string();
+            }
+            body @ CExpr::Var { .. } => *body = CExpr::Atom(Term::Symbol("arg".to_string())),
+            _ => panic!("unexpected form"),
+        }
+        assert!(
+            decode_compiled_module_blob(&encode_compiled_module_blob(&module).unwrap()).is_err(),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn compiled_writer_rejects_unsupported_term_domain_without_changing_direct_values() {
+    let invalid = [
+        Term::Pair(
+            Box::new(Term::Int(1.into())),
+            Box::new(Term::Int(11.into())),
+        ),
+        Term::Vector(vec![Term::Symbol("true".to_string())]),
+        Term::Map([(TermOrdKey(Term::Symbol("false".to_string())), Term::Nil)].into()),
+        Term::Vector(vec![Term::Map(
+            [(TermOrdKey(Term::Nil), Term::Symbol("123tail".to_string()))].into(),
+        )]),
+    ];
+    for datum in invalid {
+        let quoted = Term::list(vec![Term::Symbol("quote".to_string()), datum.clone()]);
+        let compiled = compile_module(&[quoted]).unwrap();
+        let value =
+            eval_compiled_module(&mut EvalCtx::new(), &mut Env::empty(), &compiled).unwrap();
+        assert!(matches!(value, Value::Data(ref actual) if actual.as_ref() == &datum));
+        let error = encode_compiled_module_blob(&compiled).unwrap_err();
+        assert!(matches!(error.kind, KernelErrorKind::BadForm));
+        assert!(
+            error
+                .msg
+                .starts_with("compiled module term is outside canonical serialization domain:")
+        );
+    }
+    for source in [
+        "(quote (pair <improper>))",
+        "(quote [true])",
+        "(quote {:a [1 2]})",
+        "(fn (arg) (quote [true]))",
+    ] {
+        let compiled = compile_module(&gc_coreform::parse_module(source).unwrap()).unwrap();
+        let blob = encode_compiled_module_blob(&compiled).unwrap();
+        assert_eq!(
+            encode_compiled_module_blob(&decode_compiled_module_blob(&blob).unwrap()).unwrap(),
+            blob
+        );
+    }
+    let raw_body = Term::list(vec![
+        Term::Symbol("fn".to_string()),
+        Term::list(vec![Term::Symbol("arg".to_string())]),
+        Term::list(vec![
+            Term::Symbol("quote".to_string()),
+            Term::Symbol("true".to_string()),
+        ]),
+    ]);
+    assert!(encode_compiled_module_blob(&compile_module(&[raw_body]).unwrap()).is_err());
+}

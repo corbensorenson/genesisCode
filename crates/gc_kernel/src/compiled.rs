@@ -18,6 +18,7 @@ mod compiled_coverage;
 mod compiled_runtime;
 #[cfg(test)]
 mod tests;
+mod validation;
 pub use capture::{CompiledLexicalEnv, CompiledModuleCells};
 #[path = "compiled/trace_impl.rs"]
 mod trace_impl;

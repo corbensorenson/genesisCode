@@ -21,3 +21,18 @@ pub(super) fn validate_names(names: &[String]) -> Result<(), KernelError> {
     }
     Ok(())
 }
+
+pub(super) fn render_term(t: &gc_coreform::Term) -> Result<String, KernelError> {
+    let rendered = gc_coreform::print_term_checked(t).map_err(|error| {
+        let kind = if matches!(error, gc_coreform::CanonicalDomainError::WorkAllocation) {
+            KernelErrorKind::MemoryLimit
+        } else {
+            KernelErrorKind::BadForm
+        };
+        KernelError::new(
+            kind,
+            format!("compiled module term is outside canonical serialization domain: {error}"),
+        )
+    })?;
+    Ok(rendered)
+}

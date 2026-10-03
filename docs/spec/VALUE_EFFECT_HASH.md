@@ -73,10 +73,29 @@ parent edges and recursive backedges are charged; depth holes and compiler metad
 Representation changes cannot omit retained captures from the live limit.
 
 The `GCKM5` reader admits only canonical, unique module slot names and requires each definition's
-name to agree with its indexed slot. Valid writer bytes remain unchanged. This inventory check is
-not full compiled-expression translation validation; body/IR equivalence remains a separate
-obligation. Compiled expression and coverage tables are immutable and may be shared across any
-number of closures.
+name to agree with its indexed slot. The inventory must contain exactly the first-occurrence
+ordering of definitions. Every variable's declared local depth/slot, module slot or external class
+must agree with its name in the nearest sequential `let`/function scope and the complete module
+inventory. Canonical binder names and compiler expression shapes are checked before admission.
+
+An independent source-grammar checker relates each closure's stored body term to its executable
+IR, including literal and quoted fields, container keys/values, conditionals, sequential bindings,
+curried functions, primitive operation identity, seals, argument order and flattened application
+step metadata. It does not recompile a candidate or use its derived capture/forward plans as proof.
+Coverage table indices retain their separate admission checks. This is structural metadata/body
+admission, not a complete source-authenticated cache or optimizer translation certificate; those
+obligations and exact cross-tier semantics remain separately governed.
+
+Every term field in the `GCKM5` writer uses the shared checked canonical-domain printer. Unsupported
+improper pairs or raw symbol text, including nested keys/values and body terms, return explicit
+`BadForm` errors instead of lossy bytes; canonical-admission work allocation failure returns
+`MemoryLimit`. Direct kernel data evaluation and pair operations remain available. Valid historical
+writer bytes and the current value/log hash profiles remain unchanged.
+
+The relation checker uses borrowed source references, iterative traversal/equality and fallible
+worklist reservations. It does not establish complete decoder/printer work, destructor, allocator
+or process bounds; the wider resource obligations remain open. Compiled expression and coverage
+tables are immutable and may be shared across any number of closures.
 
 Capture minimization is an implementation obligation, not permission to change scope. Removing an
 unreferenced binding must not change values, hashes, errors, coverage, effects, or resource charges.

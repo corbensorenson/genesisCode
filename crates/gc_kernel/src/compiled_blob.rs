@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::PrimOp;
 use crate::fallible_alloc::{clone_str, vec_with_capacity};
-use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+use gc_coreform::{Term, TermOrdKey, parse_term};
 
 #[path = "compiled/blob_inventory.rs"]
 mod inventory;
@@ -101,6 +101,7 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             "compiled module blob has trailing bytes",
         ));
     }
+    super::validation::validate(&forms, &module_names)?;
     let decision_conditions = super::compiled_coverage::collect_decision_conditions_and_validate(
         &forms,
         statement_sites.len(),
@@ -145,7 +146,7 @@ fn push_str_slice(out: &mut Vec<u8>, xs: &[String]) -> Result<(), KernelError> {
 }
 
 fn push_term(out: &mut Vec<u8>, t: &Term) -> Result<(), KernelError> {
-    let rendered = print_term(t);
+    let rendered = inventory::render_term(t)?;
     push_str(out, &rendered)
 }
 

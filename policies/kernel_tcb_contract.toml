@@ -12,6 +12,9 @@ expected_kernel_surface_files = [
   "compiled/blob_inventory.rs",
   "compiled/capture.rs",
   "compiled/trace_impl.rs",
+  "compiled/validation/mod.rs",
+  "compiled/validation/source.rs",
+  "compiled/validation/terms.rs",
   "compiled_runtime/apply.rs",
   "compiled_runtime/eval.rs",
   "compiled_runtime/forward_args.rs",
@@ -159,6 +162,9 @@ required_test_markers = [
 ]
 
 [file_roles]
+"compiled/validation/mod.rs" = "optimized-tier"
+"compiled/validation/source.rs" = "optimized-tier"
+"compiled/validation/terms.rs" = "optimized-tier"
 "compiled.rs" = "optimized-tier"
 "compiled_blob.rs" = "optimized-tier"
 "compiled_compile.rs" = "optimized-tier"
@@ -215,6 +221,9 @@ optimized-tier = [
 ]
 
 [line_budgets]
+"crates/gc_kernel/src/compiled/validation/mod.rs" = 260
+"crates/gc_kernel/src/compiled/validation/source.rs" = 380
+"crates/gc_kernel/src/compiled/validation/terms.rs" = 100
 "crates/gc_kernel/src/compiled.rs" = 520
 "crates/gc_kernel/src/compiled_blob.rs" = 520
 "crates/gc_kernel/src/compiled_compile.rs" = 700
