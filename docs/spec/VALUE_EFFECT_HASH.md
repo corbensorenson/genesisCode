@@ -58,9 +58,24 @@ by scope-aware free-variable analysis. A closure that requires recursive or forw
 also retains the nearest marked module scope, whose binding table is updated as top-level `def`
 forms complete.
 
-Compiled closures retain only compiler-resolved lexical slots required by the body, plus the shared
-compiled module cells needed for recursive and forward module references. External bindings remain
-in an `Env`. Compiled expression and coverage tables are immutable and may be shared across any
+Compiled closures retain only compiler-resolved lexical values required by the body. Their stored
+entries are ordered by lexical depth and carry immutable name-to-depth metadata; discarded depth
+holes do not allocate retained value entries. Nested captures preserve those resolved depths.
+External bindings remain in an `Env`. Compiled module slots are an immutable name view over the
+same live named module `Env` used by the reference tier, rather than a separate value table.
+Definitions update that scope once: earlier closures observe later definitions and warm updates,
+right-hand sides see the preceding binding, and missing names retain the reference unbound error.
+Parent lookup and local shadowing follow the ordinary `Env` chain.
+
+Live accounting merges captured lexical entries and selected external locals into the same single
+semantic capture frame above the module anchor as the reference tier. Captured names and values,
+parent edges and recursive backedges are charged; depth holes and compiler metadata are not.
+Representation changes cannot omit retained captures from the live limit.
+
+The `GCKM5` reader admits only canonical, unique module slot names and requires each definition's
+name to agree with its indexed slot. Valid writer bytes remain unchanged. This inventory check is
+not full compiled-expression translation validation; body/IR equivalence remains a separate
+obligation. Compiled expression and coverage tables are immutable and may be shared across any
 number of closures.
 
 Capture minimization is an implementation obligation, not permission to change scope. Removing an
@@ -70,11 +85,11 @@ correct.
 
 ### Recursive module cycles
 
-Recursive and mutually recursive definitions require a backedge. The current implementation has
-two cycle-capable anchors:
-
-1. A tree-walk module `Env` owns its binding values, while a bound closure can own that same `Env`.
-2. Compiled module cells own their values, while a compiled closure can own those same module cells.
+Recursive and mutually recursive definitions require a backedge. Both tiers use a live module
+`Env` that owns its binding values, while a bound closure can own that same `Env`. Compiled slot
+metadata also retains that scope. Every physical strong edge, including multiple owners of one
+scope and compact captured value entries, participates in tracing; immutable names do not own
+runtime values.
 
 The cycle may be indirect. For example, a module cell can own a vector, map, sealed value, contract,
 native partial application, or effect continuation that eventually owns a closure pointing back to

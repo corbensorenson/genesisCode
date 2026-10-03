@@ -9,6 +9,8 @@ expected_kernel_surface_files = [
   "compiled_blob.rs",
   "compiled_compile.rs",
   "compiled_coverage.rs",
+  "compiled/blob_inventory.rs",
+  "compiled/capture.rs",
   "compiled/trace_impl.rs",
   "compiled_runtime/apply.rs",
   "compiled_runtime/eval.rs",
@@ -35,6 +37,7 @@ expected_kernel_surface_files = [
   "free_vars.rs",
   "lib.rs",
   "logical_heap.rs",
+  "logical_heap/captures.rs",
   "runtime_term_hash.rs",
   "text_profile.rs",
   "value.rs",
@@ -110,8 +113,8 @@ required_owner_markers = [
   "Contract(Shared<Contract>)",
   "EffectRequest(Shared<EffectRequest>)",
   "Shared<EnvFrame>",
-  "Shared<Vec<Option<Value>>>",
-  "Shared<RefCell<Vec<Option<Value>>>>",
+  "Shared<Vec<(u16, Value)>>",
+  "pub(super) bindings: Env",
   "Shared<Vec<Value>>",
 ]
 required_trace_markers = [
@@ -161,6 +164,8 @@ required_test_markers = [
 "compiled_compile.rs" = "optimized-tier"
 "compiled_coverage.rs" = "optimized-tier"
 "compiled/trace_impl.rs" = "optimized-tier"
+"compiled/capture.rs" = "optimized-tier"
+"compiled/blob_inventory.rs" = "optimized-tier"
 "compiled_runtime/apply.rs" = "optimized-tier"
 "compiled_runtime/eval.rs" = "optimized-tier"
 "compiled_runtime/forward_args.rs" = "optimized-tier"
@@ -186,6 +191,7 @@ required_test_markers = [
 "free_vars.rs" = "reference-semantics"
 "lib.rs" = "tier-bridge"
 "logical_heap.rs" = "shared-semantics"
+"logical_heap/captures.rs" = "shared-semantics"
 "runtime_term_hash.rs" = "shared-semantics"
 "text_profile.rs" = "shared-semantics"
 "value.rs" = "tier-bridge"
@@ -214,6 +220,8 @@ optimized-tier = [
 "crates/gc_kernel/src/compiled_compile.rs" = 700
 "crates/gc_kernel/src/compiled_coverage.rs" = 230
 "crates/gc_kernel/src/compiled/trace_impl.rs" = 30
+"crates/gc_kernel/src/compiled/capture.rs" = 140
+"crates/gc_kernel/src/compiled/blob_inventory.rs" = 80
 "crates/gc_kernel/src/compiled_runtime/apply.rs" = 450
 "crates/gc_kernel/src/compiled_runtime/eval.rs" = 260
 "crates/gc_kernel/src/compiled_runtime/forward_args.rs" = 90
@@ -239,6 +247,7 @@ optimized-tier = [
 "crates/gc_kernel/src/free_vars.rs" = 160
 "crates/gc_kernel/src/lib.rs" = 80
 "crates/gc_kernel/src/logical_heap.rs" = 430
+"crates/gc_kernel/src/logical_heap/captures.rs" = 80
 "crates/gc_kernel/src/runtime_term_hash.rs" = 240
 "crates/gc_kernel/src/text_profile.rs" = 120
 "crates/gc_kernel/src/value.rs" = 720

@@ -6,7 +6,7 @@ impl Finalize for CompiledLexicalEnv {}
 
 unsafe impl Trace for CompiledLexicalEnv {
     fn trace(&self, ctx: &mut Context<'_>) {
-        self.0.trace(ctx);
+        self.values.trace(ctx);
     }
 }
 
@@ -14,6 +14,6 @@ impl Finalize for CompiledModuleCells {}
 
 unsafe impl Trace for CompiledModuleCells {
     fn trace(&self, ctx: &mut Context<'_>) {
-        self.0.trace(ctx);
+        self.bindings.trace(ctx);
     }
 }

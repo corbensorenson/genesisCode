@@ -1,3 +1,5 @@
+mod captures;
+
 use std::cell::RefCell;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -190,6 +192,7 @@ enum CycleKey {
     Map(*const crate::value::ValueMap),
     Closure(*const crate::value::ClosureData),
     CompiledClosure(*const crate::value::CompiledClosureData),
+    CompiledEnvironment(*const crate::value::CompiledClosureData),
     Native(*const crate::value::NativeFn),
     Contract(*const Contract),
     EffectRequest(*const crate::value::EffectRequest),
@@ -199,6 +202,7 @@ enum CycleKey {
 enum Work {
     Value(Value),
     Env(Env),
+    CompiledEnvironment(Shared<crate::value::CompiledClosureData>),
     Contract(Shared<Contract>),
     Exit(CycleKey),
 }
@@ -235,6 +239,9 @@ pub(crate) fn logical_live_units(values: &[&Value], environments: &[&Env]) -> u6
 
     while let Some(work) = stack.pop() {
         match work {
+            Work::CompiledEnvironment(closure) => {
+                captures::visit(&closure, &mut active, &mut stack, &mut units);
+            }
             Work::Exit(key) => {
                 active.remove(&key);
             }
@@ -310,7 +317,11 @@ pub(crate) fn logical_live_units(values: &[&Value], environments: &[&Env]) -> u6
                         }
                         units = units.saturating_add(closure.param.len() as u64);
                         charge_term_edge(&closure.body, &mut units);
-                        push_edge(&mut stack, Work::Env(closure.env.clone()), &mut units);
+                        push_edge(
+                            &mut stack,
+                            Work::CompiledEnvironment(closure.clone()),
+                            &mut units,
+                        );
                     }
                     Value::Sealed { payload, .. } => {
                         push_edge(&mut stack, Work::Value(*payload), &mut units);
