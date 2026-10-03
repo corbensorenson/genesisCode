@@ -20,6 +20,8 @@ import tempfile
 import time
 from typing import Any, Callable, Iterator, Mapping, MutableMapping, Sequence
 
+from allocated_resources import AllocationError, allocated_paths_bytes
+
 
 POLICY_REL = "policies/generated_state_v0.1.json"
 SHA_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -553,24 +555,10 @@ def _entry(
 
 
 def allocated_bytes(path: Path, max_entries: int = 2_000_000) -> int:
-    if not path.exists():
-        return 0
-    total = 0
-    seen = 0
-    stack = [path]
-    while stack:
-        current = stack.pop()
-        stat = current.lstat()
-        if current.is_symlink():
-            raise GeneratedStateError("generated-state materialization contains a symlink")
-        seen += 1
-        if seen > max_entries:
-            raise GeneratedStateError("generated-state materialization entry bound exceeded")
-        total += int(getattr(stat, "st_blocks", 0)) * 512 or int(stat.st_size)
-        if current.is_dir():
-            with os.scandir(current) as iterator:
-                stack.extend(Path(item.path) for item in iterator)
-    return total
+    try:
+        return allocated_paths_bytes([path], max_entries=max_entries, reject_symlinks=True)
+    except AllocationError as exc:
+        raise GeneratedStateError(str(exc)) from exc
 
 
 def process_identity(pid: int) -> str | None:

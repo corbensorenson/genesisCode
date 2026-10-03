@@ -19,6 +19,8 @@ import tempfile
 import time
 from typing import Any, Dict, Iterable, Mapping, Optional, Sequence
 
+import allocated_resources
+
 from gate_telemetry import TelemetryError, load_policy as load_telemetry_policy
 from supervisor_cancellation import (
     SupervisorCancelled as AuthorityCancelled, cancellation_scope, deferred_cancellation,
@@ -530,32 +532,10 @@ def allocated_tree_bytes(path: Path) -> int:
 
 
 def allocated_paths_bytes(paths: Sequence[Path]) -> int:
-    total = 0
-    seen: set[tuple[int, int]] = set()
-    stack = list(paths)
-    while stack:
-        current = stack.pop()
-        try:
-            metadata = current.lstat()
-        except FileNotFoundError:
-            continue
-        except OSError as exc:
-            raise AuthorityError(f"owned allocation metadata is unreadable (errno={exc.errno})") from exc
-        identity = (metadata.st_dev, metadata.st_ino)
-        if identity in seen:
-            continue
-        seen.add(identity)
-        require(hasattr(metadata, "st_blocks"), "owned allocation accounting is unavailable on this host")
-        total += max(0, int(metadata.st_blocks)) * 512
-        if stat.S_ISDIR(metadata.st_mode) and not stat.S_ISLNK(metadata.st_mode):
-            try:
-                with os.scandir(current) as entries:
-                    stack.extend(Path(entry.path) for entry in entries)
-            except FileNotFoundError:
-                continue
-            except OSError as exc:
-                raise AuthorityError(f"owned allocation directory is unreadable (errno={exc.errno})") from exc
-    return total
+    try:
+        return allocated_resources.allocated_paths_bytes(paths)
+    except allocated_resources.AllocationError as exc:
+        raise AuthorityError(str(exc)) from exc
 
 
 def kill_and_reap(process: subprocess.Popen[Any]) -> None:
@@ -1413,13 +1393,13 @@ def resource_attribution_self_test() -> int:
         for reason in ("unavailable", "metadata-unreadable", "directory-unreadable"):
             if reason == "unavailable":
                 observation = patch.object(Path, "lstat", return_value=SimpleNamespace(st_dev=1, st_ino=1))
-                diagnostic = "accounting is unavailable"
+                diagnostic = "metadata is unavailable"
             elif reason == "metadata-unreadable":
                 observation = patch.object(Path, "lstat", side_effect=PermissionError(13, "denied"))
                 diagnostic = "metadata is unreadable"
             else:
                 observation = patch.object(os, "scandir", side_effect=PermissionError(13, "denied"))
-                diagnostic = "directory is unreadable"
+                diagnostic = "metadata is unreadable"
             with observation:
                 try:
                     allocated_tree_bytes(metadata_scope)

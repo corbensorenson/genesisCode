@@ -28,6 +28,7 @@ import deterministic_cleanup as cleanup
 import generated_state as state
 from generated_state_accounting import accounting_self_test
 from cargo_metadata_admission import metadata_self_test
+from allocated_resources_controls import allocation_self_test
 
 controls = []
 
@@ -562,7 +563,7 @@ for directory_minimum in (0, 4096):
             for item in [path, *path.rglob("*")]:
                 if item.is_dir():
                     metadata = item.stat()
-                    allocated = metadata.st_blocks * 512 or metadata.st_size
+                    allocated = metadata.st_blocks * 512
                     total += max(0, directory_minimum - allocated)
         return total
 
@@ -571,7 +572,7 @@ for directory_minimum in (0, 4096):
         (priority / "policies").mkdir(parents=True)
         shutil.copyfile(source_root / cleanup.POLICY_REL, priority / cleanup.POLICY_REL)
         priority_policy = copy.deepcopy(bounded_policy)
-        priority_policy["limits"]["softBytes"] = 14336
+        priority_policy["limits"]["softBytes"] = 14335
         (priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))
         (priority / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
         (priority / "source.gc").write_text("fixture\n", encoding="utf-8")
@@ -597,6 +598,9 @@ for directory_minimum in (0, 4096):
         slim_path.mkdir(parents=True, exist_ok=True)
         (slim_path / "payload").write_bytes(b"s" * max(0, 4096 - state.allocated_bytes(slim_path)))
         state.release(priority, slim["leaseToken"])
+        verifier_reservation = next(item["reservationBytes"] for item in priority_policy["sizeClasses"] if item["id"] == "cargo-verifier")
+        require(state.status(priority)["accountingBytes"] + verifier_reservation > priority_policy["limits"]["softBytes"],
+                "reclaim-priority fixture does not exercise allocation pressure")
         verifier = state.admit(
             priority, "cargo-cache", "8" * 64,
             ".genesis/build/cargo-cache/v1/tools-genesis-evidence-verifier/host/verifier",
@@ -847,8 +851,10 @@ require(accounting_self_test(source_root) == 11, "idle allocation control covera
 controls.append("generated-state-idle-allocation-accounting")
 require(metadata_self_test(source_root) == 23, "metadata operation control coverage drift")
 controls.append("cargo-metadata-operation-admission")
+require(allocation_self_test() == 16, "allocated-block control coverage drift")
+controls.append("shared-allocated-block-observation")
 
-require(len(controls) == 58 and len(set(controls)) == 58, f"control coverage drift: {controls}")
+require(len(controls) == 59 and len(set(controls)) == 59, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",
@@ -856,6 +862,9 @@ authorities = [
     *generated_schema_paths,
     "scripts/lib/deterministic_cleanup.py",
     "scripts/lib/generated_state.py",
+    "scripts/lib/allocated_resources.py",
+    "scripts/lib/allocated_resources_controls.py",
+    "scripts/lib/supervisor_cancellation.py",
     "scripts/lib/gate_telemetry_darwin_inventory.py",
     "scripts/lib/generated_state_accounting.py",
     "scripts/lib/cargo_metadata_admission.py",

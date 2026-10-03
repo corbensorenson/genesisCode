@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
+      "inputIdentitySha256": "ed50c67a5aa0fcf33410e4b1122a4e92d294ec11adda1fb5798f262defb1fc8f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -238,6 +238,7 @@
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/check_write_genesiscode_skill_pack.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -367,7 +368,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -445,6 +446,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -456,6 +458,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -573,7 +576,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "e70f977173413a6f8362931e4fe5e50d6c60aa67f92cb3efcc4c555134e9f06d",
+      "inputIdentitySha256": "35546219e217e6bac0ced55ae627e8827c6e54d5571729907e795ff437f5a52b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -614,12 +617,14 @@
           "scripts/check_disk_headroom.sh",
           "scripts/check_remote_registry_runtime_parity.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/heavy_gate_preflight.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_reference_workflows_report.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
@@ -673,7 +678,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -751,6 +756,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -762,6 +768,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -834,7 +841,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -912,6 +919,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -923,6 +931,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -995,7 +1004,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -1986,6 +1995,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -2427,7 +2438,7 @@
       "executionIdentitySha256": "dc8c3972ea84e9fc83764032aa4462865a7749042942cb3e1007b0a0f640d4d1",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-stress-suite",
-      "inputIdentitySha256": "f882a9fcd08f16a9e0419058f659c7f4960602b88f3cd94c61862cddc1cd2ff8",
+      "inputIdentitySha256": "3c6f8df6d229c8c2e0f8e597c0861cde78642a336a5cb43d76e3bd2faf1061c6",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2438,11 +2449,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_ai_stress_suite.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_ai_stress_suite_report.sh"
         ],
         "sets": [
@@ -2602,7 +2615,7 @@
       "executionIdentitySha256": "687ed492d01041e91cbcb820d10aeca8eee9d0cea6552f2ab82fb078d88c8c1d",
       "expectedDurationSeconds": 600,
       "id": "gate/backend-starter-workflows",
-      "inputIdentitySha256": "5aec35b69e8dc3af682fdc03962263341678558f0b278b2f132a81b4f424a26d",
+      "inputIdentitySha256": "1aef986f0cff58a94851cb14bc7ac07080a488fde24b57efd4afd9595e4e5f31",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2613,11 +2626,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_backend_starter_workflows.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_backend_starter_workflows_report.sh"
         ],
         "sets": [
@@ -2668,7 +2683,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "2b6368c656f82e7c53423d6a6ff5677cb86ab04ffb99df2f5fc0f8bb774e7b76",
+      "inputIdentitySha256": "472887758fad0589f43f02e0ea61be36b8ba544a81956f38bf17630b757e34ac",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2683,11 +2698,13 @@
           "scripts/check_disk_headroom.sh",
           "scripts/check_old_bootstrap_retirement.sh",
           "scripts/check_rust_engine_compat.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_bootstrap_retirement_gate_report.sh",
           "scripts/selfhost_default_profile_guard.sh",
@@ -2868,7 +2885,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3859,6 +3876,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -4351,10 +4370,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_cargo_target_dir_policy.sh",
-      "executionIdentitySha256": "1d1217229cacfb4231f788c8283845cd7757b6e58f7bef2a15793dc954855deb",
+      "executionIdentitySha256": "b884b81aacb683ee3bf9674773abf9ae170c49c2a61b72e35c01359dfd9c3854",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "5a3115596c43588812af56ea709a19de89a7fcb5d6b417235b5ea87889477197",
+      "inputIdentitySha256": "2fed56fd7507bb530d39d5206fb7ac145eec94387b59cd7eb5661d7da6a57497",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -4380,6 +4399,7 @@
           "scripts/check_cargo_target_dir_policy.sh",
           "scripts/check_docs_quickstart.sh",
           "scripts/check_evidence_storage_classes.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_metadata_admission.py",
           "scripts/lib/cargo_target_dir.sh",
@@ -4388,6 +4408,7 @@
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/generated_state_accounting.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_cargo_target_dir_policy_report.sh",
           "scripts/render_evidence_release_asset.sh",
           "scripts/update_evidence_fixture_classification.sh",
@@ -4438,7 +4459,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5429,6 +5450,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -5879,7 +5902,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6870,6 +6893,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -7308,7 +7333,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "45272c5c69d09c67c821fe9321d72dca90f2ed4bb9519c5da5dacde4d9b07129",
+      "inputIdentitySha256": "13ec665767a6e558bfe8b90fd3171b6b607fa2eb7150a4163fd4c970cda591a1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7331,6 +7356,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_cli_diagnostics_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -7401,7 +7427,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -8392,6 +8418,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -8832,7 +8860,7 @@
       "executionIdentitySha256": "93f27a873ea8472638b14b9e2fa6d8a6c2c2d902715b61fe81367b5ffbc78faa",
       "expectedDurationSeconds": 600,
       "id": "gate/dependency-mirror-contract",
-      "inputIdentitySha256": "db6e5e96521a55238b53307a5620e2157bce3158b280de1ee69d79db35534b07",
+      "inputIdentitySha256": "3347d2c78b1364042f2f68ec0715584cd1617d35bf5225e26953df7e2724744d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8844,10 +8872,12 @@
           "policies/deterministic_cleanup_v0.1.json",
           "policies/generated_state_v0.1.json",
           "scripts/check_dependency_mirror_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "tools/genesis-evidence-verifier/Cargo.lock",
           "tools/genesis-evidence-verifier/Cargo.toml"
         ],
@@ -8897,10 +8927,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_deterministic_cleanup.sh",
-      "executionIdentitySha256": "8fcef0766d12ec68f52ee52fd2c1bab85ad2655cfc178edc598903de5e88b972",
+      "executionIdentitySha256": "ed125d3eaa291f4011cd09400c5465b0e936cab95e34012e59dbc8650ed9f416",
       "expectedDurationSeconds": 15,
       "id": "gate/deterministic-cleanup",
-      "inputIdentitySha256": "f638f760f76370a4ac59298a567491c9335e008709ab3956ca42bf8777e68d9b",
+      "inputIdentitySha256": "8acc455e184ecaabce9e46e8fa2f50a14a1a6e33cd6507402826bb1a3a68f5ef",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8920,6 +8950,8 @@
           "rust-toolchain.toml",
           "scripts/check_deterministic_cleanup.sh",
           "scripts/check_disk_headroom.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_metadata_admission.py",
           "scripts/lib/dependency_mirror.py",
@@ -8927,6 +8959,7 @@
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/generated_state_accounting.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "tools/genesis-evidence-verifier/Cargo.lock",
           "tools/genesis-evidence-verifier/Cargo.toml"
@@ -8958,7 +8991,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "c780eeb0eab1eaddba8bf875eb67c9a752be334b2ef3e23fce40ce3ad2fb3bfb",
+      "sourceSha256": "f6b9d58fd20b42538c2a583ae2901a307046c62a8d7fb9ac9f3c9524107c9b7a",
       "tools": [
         "bash",
         "git",
@@ -8974,15 +9007,17 @@
       "executionIdentitySha256": "e2fba39cc68eb909cc93f3eaaf701a5ffb690fe0f403a006b86360521d349ff1",
       "expectedDurationSeconds": 900,
       "id": "gate/disk-headroom",
-      "inputIdentitySha256": "8800eaba4eed26800ea6d34e845a4aa1393843d896ed62dd6b96c23e2df19fb5",
+      "inputIdentitySha256": "0fb33b6c14634006e2e4cf1084fc4fc9e13edfa8819ab9ce9422eaf0103fc073",
       "inputs": {
         "paths": [
           "policies/deterministic_cleanup_v0.1.json",
           "policies/generated_state_v0.1.json",
           "scripts/check_disk_headroom.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh"
         ],
         "sets": [
@@ -9138,7 +9173,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "9eda3e68a2f55413d91e742998ff4d8d428e4236722175d161f6636ef32962f2",
+      "inputIdentitySha256": "6e4f673cebe45b6256085916575749a443d47e389ed22aee2b0eab544d6dae20",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9224,7 +9259,7 @@
       "executionIdentitySha256": "b76d99cec379d2550ae5c258f43bbe188f709a60e021c0e9f570ef041c128b4b",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "31c06e7c061a88153f455d3a35e280698fc27dc850830c614bcb369d6cc57a82",
+      "inputIdentitySha256": "73be5a0bb469260529aadd8bf9a980f1e4484f5227d9a4879d46d431c0a313ce",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9237,11 +9272,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_docs_quickstart.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
-          "scripts/lib/generated_state.py"
+          "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py"
         ],
         "sets": [
           "fixtures",
@@ -9354,7 +9391,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "a6a1cbd57656c45021bde5a646f292c09ac88840c4753d51b7dd21fbfae5085c",
+      "inputIdentitySha256": "2842f1c5cbaa3e8359680b3e96bacccb6a4710f53ba5613bdd0c640b7b834bbc",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9367,11 +9404,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_domain_starter_registry_bootstrap.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_domain_starter_registry_bootstrap_report.sh",
           "selfhost/toolchain.gc"
         ],
@@ -9423,7 +9462,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10414,6 +10453,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -10848,7 +10889,7 @@
       "executionIdentitySha256": "b686c1153348d35c232edc811e28deb68ad36d48a8382f7a39f18ade7f415596",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-adversarial-matrix",
-      "inputIdentitySha256": "2bbb4c9c108c200abc5a1eff33f1e520dc0cd0be5784d881566f9d0c2008634f",
+      "inputIdentitySha256": "12db063158b475296debbd89bec2350ed4ff5c57425cf6b95c823c3aef77c31e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10873,6 +10914,7 @@
           "rust-toolchain.toml",
           "scripts/check_evidence_adversarial_matrix.sh",
           "scripts/check_genesis_evidence_profile.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -10880,6 +10922,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/update_genesis_evidence_profile.sh",
           "scripts/update_genesis_evidence_verifier_vectors.sh",
           "tools/genesis-evidence-verifier/Cargo.toml",
@@ -10934,7 +10977,7 @@
       "executionIdentitySha256": "f1819ef0549b700487acbb2fc0a57164a28bedb8ba5f95d482d4ed92f377eeef",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-storage-classes",
-      "inputIdentitySha256": "3ebc4585d969dd1c93687659c28332be5a25ee23e90c92da6583637a9129eb27",
+      "inputIdentitySha256": "445f359504fffdb99c90ac7667754af59b8ea83e6e5ea41571f04716ea77da53",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10951,12 +10994,14 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_evidence_storage_classes.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/evidence_storage.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_evidence_release_asset.sh",
           "scripts/update_evidence_fixture_classification.sh",
           "tools/genesis-evidence-verifier/Cargo.toml"
@@ -11087,7 +11132,7 @@
       "executionIdentitySha256": "369dec1c4ce9c66ecd7f2a44bc738555302296e56acbe6e7794df456e94ba1d0",
       "expectedDurationSeconds": 600,
       "id": "gate/foundation-stdlib-conformance",
-      "inputIdentitySha256": "ee29a21b1514a699413743058361e08dfe568d49e347bcb6a08666f1daf2ad98",
+      "inputIdentitySha256": "8b7ec4559a9b5a345906d84159035b9d5ce3437de30fde83faf47543d48bbb43",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11098,6 +11143,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_foundation_stdlib_conformance.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -11105,6 +11151,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_foundation_stdlib_conformance_report.sh"
         ],
         "sets": [
@@ -11155,7 +11202,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "a43095aa99433dc923efd144b8a3374566429c76e70d47021a2872ecd9a80837",
+      "inputIdentitySha256": "75d2bc64464d3b9df0e900f483823eea0515d30e217e1c898f51ac2de2e04477",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11166,6 +11213,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_full_cross_host_profile_budget.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -11173,6 +11221,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/selfhost_artifact_cache.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_full_cross_host_profile_budget_report.sh",
           "scripts/selfhost_strict_golden.sh",
           "scripts/wasm_bindgen_node.sh",
@@ -11230,7 +11279,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "9227e585c8b05d357dbc1dd15fd3347baef212125a741d0256e0fe06d679d68e",
+      "inputIdentitySha256": "c333c2ec33410e18c009cbc0564ab75699fc4865138793819bd2dc8a3037f061",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11662,6 +11711,7 @@
           "scripts/check_selfhost_boundary.sh",
           "scripts/check_selfhost_doc_runtime_parity.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -11715,6 +11765,7 @@
           "scripts/lib/semantic_ownership_ledger.py",
           "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/lib/toml_compat.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
@@ -11903,7 +11954,7 @@
       "executionIdentitySha256": "84afdbc05ffd75ddd1bd5a8be01cfbb24b331150d6cba45b3baa870b29c89fbb",
       "expectedDurationSeconds": 600,
       "id": "gate/fuzz-differential-hardening",
-      "inputIdentitySha256": "5e5ac546cc3091e9f3059fb74ca0ca9bc2247bf86976af619b67adc1f50c34a1",
+      "inputIdentitySha256": "a63f53e9735646786aaf540f31c25b9a5fbba2c871a20bef2cdddcfff27177b8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11914,6 +11965,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_fuzz_differential_hardening.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -11921,6 +11973,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_fuzz_differential_hardening_report.sh"
         ],
         "sets": [
@@ -11971,7 +12024,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "b697a4422962fe38b29950e43ddf99061b70489edba2a929d24503998e456285",
+      "inputIdentitySha256": "8b905c12cb385139997384bce9c3c6e9ec27911218cafc89df8f5b9ec34a18ee",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12158,7 +12211,7 @@
       "executionIdentitySha256": "ed3f32e920a014d82f4edcd2f3c0a7cf9ba2f66ebee2a1f170e71ba15799d6a9",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13149,6 +13202,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -13583,7 +13638,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
+      "inputIdentitySha256": "ed50c67a5aa0fcf33410e4b1122a4e92d294ec11adda1fb5798f262defb1fc8f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13812,6 +13867,7 @@
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/check_write_genesiscode_skill_pack.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -13945,7 +14001,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
+      "inputIdentitySha256": "ed50c67a5aa0fcf33410e4b1122a4e92d294ec11adda1fb5798f262defb1fc8f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14174,6 +14230,7 @@
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/check_write_genesiscode_skill_pack.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -14307,7 +14364,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
+      "inputIdentitySha256": "ed50c67a5aa0fcf33410e4b1122a4e92d294ec11adda1fb5798f262defb1fc8f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14536,6 +14593,7 @@
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/check_write_genesiscode_skill_pack.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -14669,7 +14727,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
+      "inputIdentitySha256": "ed50c67a5aa0fcf33410e4b1122a4e92d294ec11adda1fb5798f262defb1fc8f",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14898,6 +14956,7 @@
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/check_write_genesiscode_skill_pack.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -15085,7 +15144,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "0b96eed83a6656819902541dd225e0668147bdd12ddc02f9396e5429ce7ddeac",
+      "inputIdentitySha256": "753001e8fab1bafb4ec50b5e69a89211a324506a308273b5dc567b7215fb8313",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15101,11 +15160,13 @@
           "rust-toolchain.toml",
           "scripts/check_gcpm_operation_contract_pack.sh",
           "scripts/check_remote_registry_runtime_parity.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_gcpm_operation_contract_pack_report.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "selfhost/toolchain.gc"
@@ -15158,7 +15219,7 @@
       "executionIdentitySha256": "30b12f7abe0eaf84a31e0103738acc000d625686153d2c6d8b5737f4405b463e",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-target-runtime-pipelines",
-      "inputIdentitySha256": "6fdcbf6e43e95b22a3f653b713148d885cb12cf8e96a91c1b06c7e0613b6ea61",
+      "inputIdentitySha256": "da9897a0198129c336e6b3b2a755c4907a0f9a46c825609c11e669396ed6d427",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15171,11 +15232,13 @@
           "policies/release_target_reference_set_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_gcpm_target_runtime_pipelines.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_gcpm_target_runtime_pipelines_report.sh"
         ],
         "sets": [
@@ -15230,7 +15293,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16221,6 +16284,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -16710,7 +16775,7 @@
       "executionIdentitySha256": "306605408348dfd5d3d8dcb2bd2ccc36f5acf9145ff266ce0dd0109840b15ae9",
       "expectedDurationSeconds": 600,
       "id": "gate/genesis-evidence-verifier",
-      "inputIdentitySha256": "eb3b585f88c8b4e2c5534489c0d10d46886dddaeb7dfcf028747bc99a3b2fb8f",
+      "inputIdentitySha256": "de7e31079da2d7089fa809294f11a82a0a5fb6597f2a72378fda27ef5f19f475",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16733,6 +16798,7 @@
           "rust-toolchain.toml",
           "scripts/check_genesis_evidence_profile.sh",
           "scripts/check_genesis_evidence_verifier.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -16740,6 +16806,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/update_genesis_evidence_profile.sh",
           "scripts/update_genesis_evidence_verifier_vectors.sh",
           "tools/genesis-evidence-verifier/Cargo.toml"
@@ -16845,7 +16912,7 @@
       "executionIdentitySha256": "7972c3efbac37816d1f5e3ca14532db17796739a68e95c8a590b126191d2a594",
       "expectedDurationSeconds": 900,
       "id": "gate/gfx-runtime-profile",
-      "inputIdentitySha256": "c649ccda8620896d5c186443c06b1e09aba3238a89e0e27111028a6e2e661feb",
+      "inputIdentitySha256": "158b6985c0cb7a562a351a90e6ad6a90c74cc16915b18cd5d332f73d6e481645",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16857,6 +16924,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_gfx_runtime_profile.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -16864,6 +16932,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_gfx_runtime_profile_report.sh"
         ],
         "sets": [
@@ -16915,7 +16984,7 @@
       "executionIdentitySha256": "24239065fa25638a77942996f8ca28eb8b6f64530e407346c5cb5dfb440dd1c6",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-compute-device-conformance",
-      "inputIdentitySha256": "dfda954c27096e4987a9126b3eeb6f7006bae2b70290c350f09a264ee0e3f085",
+      "inputIdentitySha256": "dca6b406287b620c7af8374510b7c23c15f3c9b26a025025b1acb59227af4e78",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16927,6 +16996,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_gpu_compute_device_conformance.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -16935,6 +17005,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_gpu_compute_device_conformance_report.sh",
           "scripts/render_gpu_compute_runtime_profile_report.sh",
@@ -16988,7 +17059,7 @@
       "executionIdentitySha256": "6fc60e397ee532144dcc4fdc96e3ad453c10758b1289d742f093ae67f413e4b4",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-compute-runtime-profile",
-      "inputIdentitySha256": "7cc730427d78ea0d2ed7d350ab14aba2f157ff99ebba3448cdf8ed38f94085ca",
+      "inputIdentitySha256": "21493fe5fac8c27ad980caf32f51a1b7ad119c4c6eac1ccc16bd88a77fdfac13",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17000,6 +17071,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_gpu_compute_runtime_profile.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -17008,6 +17080,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_gpu_compute_runtime_profile_report.sh"
         ],
@@ -17059,7 +17132,7 @@
       "executionIdentitySha256": "b670ee5748457381aed83dc9fe411f7ca7d2d3bb55f2b5c8583a8b7a3c7a5cba",
       "expectedDurationSeconds": 15,
       "id": "gate/gpu-conformance-lane-matrix",
-      "inputIdentitySha256": "2638fd0dfbec3447bf280af568877d8093fb09f01f5661cf6932d91605f89428",
+      "inputIdentitySha256": "600ef407d45756d40d8c0aca80b461794ed79ea1a583b31b7bf59d380cfee50d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17075,6 +17148,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_gpu_conformance_lane_matrix.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/ci_runner_preflight.py",
@@ -17084,6 +17158,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_gpu_compute_device_conformance_report.sh",
           "scripts/render_gpu_compute_runtime_profile_report.sh",
@@ -17237,7 +17312,7 @@
       "executionIdentitySha256": "571e9fbc0fbb41c51e8092a2f938808cc125232fe1021a2b3f21cbe0a4ba55a5",
       "expectedDurationSeconds": 900,
       "id": "gate/gpu-gfx-headroom-conformance",
-      "inputIdentitySha256": "75f6a6c1c2d49e6d13a6d1b369d086973e361060c54ab7d02db635f0e414e2c8",
+      "inputIdentitySha256": "0f6f1c563896100e4e862769bc059a8d448a1a533c10fe36f5b3d0c0f6a080f7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17251,6 +17326,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_gpu_gfx_headroom_conformance.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -17260,6 +17336,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_gpu_compute_device_conformance_report.sh",
           "scripts/render_gpu_compute_runtime_profile_report.sh",
@@ -17319,7 +17396,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18310,6 +18387,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -18748,7 +18827,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18826,6 +18905,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -18837,6 +18917,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -18950,7 +19031,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19941,6 +20022,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -20430,7 +20513,7 @@
       "executionIdentitySha256": "6466f307236f05e28ff3f1dd3b3e1715c59366428c614be4555b07b7e876cc25",
       "expectedDurationSeconds": 600,
       "id": "gate/host-abi-conformance",
-      "inputIdentitySha256": "926f06e7ba7bdaf632cb0b50f44791fbd2053e98f82e2380bdef9f6ac40e4d6a",
+      "inputIdentitySha256": "17f456ec061581643aead1ef707bcb7f90b60bce35aba0687d24391cd6a77004",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20450,11 +20533,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_host_abi_conformance.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
-          "scripts/lib/generated_state.py"
+          "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py"
         ],
         "sets": [
           "fixtures",
@@ -20555,7 +20640,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20633,6 +20718,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -20644,6 +20730,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -20716,7 +20803,7 @@
       "executionIdentitySha256": "05300562e2b0cb900ba3e760c4551bfcafa84c0ded06cbf6fa20b79c0b5bb39d",
       "expectedDurationSeconds": 900,
       "id": "gate/hot-path-budgets",
-      "inputIdentitySha256": "b72b1df5134dacb8d721bf535c0d98277b5a4cf7e4aeb5f0672a8f9d27471884",
+      "inputIdentitySha256": "195c93d2f54e772e819935973a3b53d5312f6fea86e68b205530297ecc4f411b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20728,6 +20815,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_hot_path_budgets.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -20738,6 +20826,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_hot_path_budgets_report.sh",
           "tests/spec/pkg_basic/basic.gc",
@@ -20844,7 +20933,7 @@
       "executionIdentitySha256": "11dcb18ddf3b101266b5d31f2a011f8efc2273a082339cac79cc76bef5a88407",
       "expectedDurationSeconds": 900,
       "id": "gate/large-workspace-agent-perf",
-      "inputIdentitySha256": "bd3ea169e19a2dd40eedc87697d721eb194274626d1f356963f90d79d3060452",
+      "inputIdentitySha256": "14728cc7bff7966e09944c93b8983d52b379b032f4694ad8077704789fac7818",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20856,6 +20945,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_large_workspace_agent_perf.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -20866,6 +20956,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_large_workspace_agent_perf_report.sh"
         ],
@@ -20966,7 +21057,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21957,6 +22048,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -22391,7 +22484,7 @@
       "executionIdentitySha256": "d8e1db277383038068fcbff74d03c0ca37b90514089ab49898f7fe7d9c3a5631",
       "expectedDurationSeconds": 300,
       "id": "gate/no-user-panics-compiler",
-      "inputIdentitySha256": "ce0e2a2c5bdbe9c1cea66b6250937767bdb0d04068d4291add46c2861710b598",
+      "inputIdentitySha256": "afd15dddfa81a17dc82714eed6e255b5707d2b6bc99363f1cdf04aa1dd496d17",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22402,6 +22495,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_no_user_panics_compiler.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -22409,6 +22503,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_no_user_panics_report.sh"
         ],
         "sets": [
@@ -22508,7 +22603,7 @@
       "executionIdentitySha256": "388075c094ad38a4e063ba523bb70d80abd66c4b0bcfb93d97d35c93d119dd93",
       "expectedDurationSeconds": 900,
       "id": "gate/perf-budgets",
-      "inputIdentitySha256": "4927b5af7cbd82de173349a85075b33d4e2a47a2ec6f326e18906dbf2a56d83c",
+      "inputIdentitySha256": "383a7d49f935eff0086b61470736b730dc61435f3564c9048e9aff037c1840fd",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22521,6 +22616,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_perf_budgets.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -22530,6 +22626,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_perf_budgets_report.sh"
         ],
@@ -22690,7 +22787,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23681,6 +23778,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -24172,7 +24271,7 @@
       "executionIdentitySha256": "fadef0fd8c58b7fabf793d7c9fe8ee5de53873977a40b28d5893ef6e69e225b2",
       "expectedDurationSeconds": 1800,
       "id": "gate/production-cli-help-surface",
-      "inputIdentitySha256": "defa0c6eb629831e262abc8f5e39281d8479b754f19b38b7108931642ec6f61f",
+      "inputIdentitySha256": "028f8fad223648980e7f8613e4458be3af3de53056d80d37460cab0f16c1803b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24184,6 +24283,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_production_cli_help_surface.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -24193,6 +24293,7 @@
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_production_cli_help_surface_report.sh"
         ],
@@ -24244,7 +24345,7 @@
       "executionIdentitySha256": "52b8f2ffae22b6ec11f09d276b063567e3b1aa25b50e1d18057967b2ae80ef6a",
       "expectedDurationSeconds": 1800,
       "id": "gate/production-cli-parse-surface",
-      "inputIdentitySha256": "afb2f99387ca0758d7c806ee6f82e8971fded67a8e2274419ac6986a81aa3718",
+      "inputIdentitySha256": "857edb2b0e59dd79876ec1b7cd82058f1aa2c601788f09e7d132d8c23316c3d1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24255,6 +24356,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_production_cli_parse_surface.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -24263,6 +24365,7 @@
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_production_cli_parse_surface_report.sh"
         ],
         "sets": [
@@ -24391,7 +24494,7 @@
       "executionIdentitySha256": "bf94a23c0d0681c59f3ca677dfd4c6152ed3f56b7844e22062e8329c48f19dfa",
       "expectedDurationSeconds": 15,
       "id": "gate/reference-host-profiles",
-      "inputIdentitySha256": "3b0772331312df41ceeab97586d1f3da8172e2b6c80445f129ea28bf74486745",
+      "inputIdentitySha256": "533c57bf39011807cf0df65f06958ef5221c9e711a5a52f5a82183db3fe7dea4",
       "inputs": {
         "paths": [
           "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -24451,7 +24554,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "3483051562d7bfe2beeb92c1c821b94097a0c7d326651a8ba7703a13bd1e5efb",
+      "inputIdentitySha256": "e8819685a4514d33ab45307d8ce1dab1d711282125c12d91b138330e3bbeb0c6",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24652,7 +24755,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "3166148bf4c6b733947da0e7f5a17a20b45c4884193c8f5d334b5ff1f0c2d2d4",
+      "inputIdentitySha256": "da76f1cdee8d2680bcdd55d0798350575d5b81aa790c82c5d9026394f81f88e4",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24785,6 +24888,7 @@
           "scripts/check_reference_host_profiles.sh",
           "scripts/check_release_notes.sh",
           "scripts/check_release_smoke.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -24815,6 +24919,7 @@
           "scripts/lib/genesisbench_tracks.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/release_notes.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/lib/toml_compat.py",
           "scripts/render_reference_host_observation.sh",
           "scripts/update_gate_manifest.sh",
@@ -24868,7 +24973,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "ddbde89f927928499791ba193a56a9a48d76403f44bfea6dded725bed83236cc",
+      "inputIdentitySha256": "3d225383091a04c8f7f1af12715bff1adab142ef317be4679ede24910da5bfb8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24879,11 +24984,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_remote_registry_runtime_parity.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "selfhost/toolchain.gc"
         ],
@@ -24935,7 +25042,7 @@
       "executionIdentitySha256": "8f5310e9a5301ac5e50ca6fceb9746bc7a9eb296b438b2dbbfe00fbb7b91b932",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "fbb3de7c8c9dd13ee0d1efa5c100c6e69f2414bb32d57d8cde1e0a466a49d362",
+      "inputIdentitySha256": "9375a9c47a92b5e28c75d47dfd7419acdd49db8e87f8362f5223bcce874543d9",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24964,6 +25071,7 @@
           "prelude/prelude.gc",
           "rust-toolchain.toml",
           "scripts/check_roadmap_baseline.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -24972,6 +25080,7 @@
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/roadmap_baseline.py",
           "scripts/lib/roadmap_workloads.py",
+          "scripts/lib/supervisor_cancellation.py",
           "selfhost/toolchain.gc",
           "tools/genesis-evidence-producer/Cargo.lock",
           "tools/genesis-evidence-producer/Cargo.toml",
@@ -25276,7 +25385,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25354,6 +25463,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -25365,6 +25475,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -25437,7 +25548,7 @@
       "executionIdentitySha256": "dc25d3a3da8b1ee786b963d05f4c1b84ead45a05f4a7b5b9f9628e3f7e12d573",
       "expectedDurationSeconds": 900,
       "id": "gate/runtime-microbench-budgets",
-      "inputIdentitySha256": "f97ba4a2965c751a943cd44f11a25a35e8bba0b9ae9c0cc5b606edd862a310ee",
+      "inputIdentitySha256": "48505e9f88abef3da5055d3624c63fd65cde9ac8b037e4102a542cfcd79d4ce6",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25449,6 +25560,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_runtime_microbench_budgets.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -25457,6 +25569,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_runtime_microbench_budgets_report.sh"
         ],
@@ -25509,7 +25622,7 @@
       "executionIdentitySha256": "83d7dcb48cd39e1d161ad38a609cc7ac2408398c3ecab34bede8a08ab4144db7",
       "expectedDurationSeconds": 900,
       "id": "gate/runtime-workload-budgets",
-      "inputIdentitySha256": "58ce628d50f5ba94a811c5471411a4082dc7b16d240308fa9746f1c84ba38391",
+      "inputIdentitySha256": "1d731c5241023a809b566c350fd2e377a7ccb88735b2a0cdbde82c207543e235",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25521,6 +25634,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_runtime_workload_budgets.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -25529,6 +25643,7 @@
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_runtime_workload_budgets_report.sh"
         ],
@@ -25629,7 +25744,7 @@
       "executionIdentitySha256": "2cb630dc95963b8f1f56eb63ade2ab93c476ff6caaad083666376d8ec86ed971",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "68b63a4eeb11a5ca2b1d9466f42759191c45c6aebada75b8c4767caf2048e0ef",
+      "inputIdentitySha256": "dc3ef8fc3e361b2de972c3d9228a37c7ab887ea230ed447392f50d2acafd4ff3",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25642,6 +25757,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_selfhost_artifact_fresh.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -25650,6 +25766,7 @@
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/selfhost_artifact_cache.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_selfhost_artifact_fresh_report.sh",
           "scripts/render_selfhost_toolchain_review.sh",
@@ -25710,7 +25827,7 @@
       "executionIdentitySha256": "605aa59a4fc7df643fa1470e994534127f07bff8312bf30126bacfc3b5c26643",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "14fef40fb42ec3711fe8199ab4cbaea397eaa8724cc90689d1462dfeb204871d",
+      "inputIdentitySha256": "3d000007c4a6faa03021925d3e188c9173cd169c38aac7dcbfb1421928205f8e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26096,6 +26213,7 @@
           "scripts/check_genesis_evidence_verifier.sh",
           "scripts/check_selfhost_boundary.sh",
           "scripts/check_selfhost_doc_runtime_parity.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -26142,6 +26260,7 @@
           "scripts/lib/semantic_ownership_ledger.py",
           "scripts/lib/stage0_dependency_boundary.py",
           "scripts/lib/stage0_trust_contract.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/lib/toml_compat.py",
           "scripts/requirements-selfhost-checker.txt",
           "scripts/update_genesis_evidence_profile.sh",
@@ -26290,7 +26409,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "12017d17c54e863d5f355fa28abdc536a10b86db4d9cb20e4bca6376764d479a",
+      "inputIdentitySha256": "e507b252f6e315600153703d7ea37f667d29c47dc22fc73f7118174a75fca659",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26303,6 +26422,7 @@
           "rust-toolchain.toml",
           "scripts/check_disk_headroom.sh",
           "scripts/check_selfhost_dashboard_fresh.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -26310,6 +26430,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_selfhost_dashboard_fresh_report.sh",
           "selfhost/toolchain.gc"
@@ -26468,7 +26589,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "8c63090f0e6341dc4869b80928c456d655a8aba7315327d010c3d351cf9eb8c0",
+      "inputIdentitySha256": "40e9729e60435afa14798a78a519861cff667a25c554aa033f7ef60873a32554",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26519,6 +26640,7 @@
           "scripts/check_remote_registry_runtime_parity.sh",
           "scripts/check_selfhost_readiness_scorecard.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -26531,6 +26653,7 @@
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/release_bin.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -26663,7 +26786,7 @@
       "executionIdentitySha256": "2267ce93b50fd79d51d2986a05c59a871e0bba7d8586850d442df8b18020be8e",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-symbol-ownership",
-      "inputIdentitySha256": "d21a4fd1a91a93e1d15f2eef4d4532b66ec31059cb2c48aa4994f1f104419f20",
+      "inputIdentitySha256": "13b7e84bacc8f917c5900c4b5f606ea46e1746307e4d0220f86a3a17f4e2128b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26674,6 +26797,7 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_selfhost_symbol_ownership.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -26681,6 +26805,7 @@
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_selfhost_symbol_ownership_report.sh"
         ],
         "sets": [
@@ -26731,7 +26856,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "322be0aa15f26e90fc74d5d458469f30611355b314267da127c4ad88430f4cba",
+      "inputIdentitySha256": "6663a0d63b5dfbae58240a53b0b031e6d950ee84006e08c539119bb86ff0738e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26743,12 +26868,14 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_selfhost_toolchain_review_fresh.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/selfhost_artifact_cache.sh",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_selfhost_toolchain_review.sh",
           "scripts/update_selfhost_toolchain_review.sh",
           "selfhost/toolchain.freshness.json",
@@ -26799,7 +26926,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26877,6 +27004,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -26888,6 +27016,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -27117,7 +27246,7 @@
       "executionIdentitySha256": "8b46f84ab4ee1987a4f906f473383335a8c61fea2822b1af8ff29068884d1a52",
       "expectedDurationSeconds": 1800,
       "id": "gate/supply-chain",
-      "inputIdentitySha256": "4f4b8de91d6a687a84a155f3263df390aeb7e2f926258594dde7c7c443116456",
+      "inputIdentitySha256": "1a38b11a2fe8092963cb09a652fa56db3bbd8c18d18efd42b82f86a3eb4354e7",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -27131,12 +27260,14 @@
           "policies/supply_chain_duplicate_major_allowlist.txt",
           "rust-toolchain.toml",
           "scripts/check_supply_chain.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
-          "scripts/lib/rustsec_advisory_db.py"
+          "scripts/lib/rustsec_advisory_db.py",
+          "scripts/lib/supervisor_cancellation.py"
         ],
         "sets": [
           "fixtures",
@@ -27187,7 +27318,7 @@
       "executionIdentitySha256": "f73ba180441ea65e9b9ae08bae08669623919ff88a37bffa67c0f0b1f29ce54d",
       "expectedDurationSeconds": 900,
       "id": "gate/task-concurrency-stress",
-      "inputIdentitySha256": "4f426942112c4722b9e3d93feb5de4e684263f30c3b50cd8ac55c13badb15f36",
+      "inputIdentitySha256": "74f5788a95b8b798b8f826f3cc07ac676e4ffc896055296a10b00a99c72b0526",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -27198,11 +27329,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_task_concurrency_stress.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_task_concurrency_stress_report.sh"
         ],
         "sets": [
@@ -27275,7 +27408,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28266,6 +28399,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -28818,7 +28953,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
+      "inputIdentitySha256": "97f8b3672114b205fcb54c959bb584eff467738fd370845d93920e4c9925626c",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29809,6 +29944,8 @@
           "scripts/gpu_device_runtime_deterministic.sh",
           "scripts/install_wasi_sdk.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
+          "scripts/lib/allocated_resources_controls.py",
           "scripts/lib/capability_dispatch_ops.sh",
           "scripts/lib/capability_ledger.py",
           "scripts/lib/cargo_cache.py",
@@ -30302,7 +30439,7 @@
       "executionIdentitySha256": "ee98150995cf06d1154b98f37201d1e633fcbc1a82171a3ab4834069bfaed5bc",
       "expectedDurationSeconds": 600,
       "id": "gate/vcs-selfhost-contract",
-      "inputIdentitySha256": "423332125b0ddc2b48cc32339d20f442bda20012fb3e878b30bf8922e67c5a6d",
+      "inputIdentitySha256": "79886d4d3160aa765cda2a5543b25a9e933896e88f50ed380574574dc7ef57ef",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -30314,11 +30451,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_vcs_selfhost_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_vcs_selfhost_contract_report.sh"
         ],
         "sets": [
@@ -30442,7 +30581,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "bc88988cf20f94250fd3bc163781de42319f508f8bd5d5618eae57133cb26bba",
+      "inputIdentitySha256": "7711298f3f64c9cb1d32253afb55fe2365194ddf95ffadfc9ee1ecaaa7a4a32a",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -30479,11 +30618,13 @@
           "scripts/check_v1_compatibility.sh",
           "scripts/check_version_surfaces.sh",
           "scripts/check_versioning_release_hygiene.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/lib/v1_compatibility.py",
           "scripts/lib/version_surfaces.py",
           "selfhost/pkg_scaffold_authority_v1.gc",
@@ -30538,7 +30679,7 @@
       "executionIdentitySha256": "d9b4fcf075af51ebd5bb1e2f2e57e31eaa5be6de51d2e2851cf20dff0cc1b5d5",
       "expectedDurationSeconds": 600,
       "id": "gate/warm-protocol-contract",
-      "inputIdentitySha256": "85ecf066e50003c38040909591a9fcc683e4ca0b7111a633e7fe3f07e0864abe",
+      "inputIdentitySha256": "362bdfe326126cf6c493d864e5feb6cf5585b823457a29fdf3f8250f14f16e8c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -30580,11 +30721,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_warm_protocol_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/lib/warm_protocol_contract.py"
         ],
         "sets": [
@@ -30635,7 +30778,7 @@
       "executionIdentitySha256": "0ca4c65775a742da8344928a6c70fd3ad57c5efb3936c9d5699a4b8f8f1f3fee",
       "expectedDurationSeconds": 1800,
       "id": "gate/wasm-production-surface",
-      "inputIdentitySha256": "62fbb42505a21e496307a3204a81b5cbaf8a925e50520dfdf1e5fda693db8ecb",
+      "inputIdentitySha256": "749f8d60edf0b9bb6a1abad0642980c0d10958244fce6fa5f89dd8b6ef559f00",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -30646,11 +30789,13 @@
           "policies/generated_state_v0.1.json",
           "rust-toolchain.toml",
           "scripts/check_wasm_production_surface.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/wasm_bindgen_node.sh"
         ],
@@ -30807,7 +30952,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -30885,6 +31030,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -30896,6 +31042,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -30965,7 +31112,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
+      "inputIdentitySha256": "18f2568192069a3be890087c7c0e8ddb93d5a5f569167147bc7eed335e814676",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -31043,6 +31190,7 @@
           "scripts/check_write_genesiscode_skill_conformance.sh",
           "scripts/check_write_genesiscode_skill_distribution.sh",
           "scripts/lib/agent_gpu_profile_contract.sh",
+          "scripts/lib/allocated_resources.py",
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
@@ -31054,6 +31202,7 @@
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/host_bridge_daemon_lifecycle.py",
           "scripts/lib/host_handle_lifecycle_evidence.py",
+          "scripts/lib/supervisor_cancellation.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_agent_generative_workloads_report.sh",
           "scripts/render_agent_reference_workflows_report.sh",
@@ -31285,7 +31434,7 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "3e7eabcbd5aa602733a4aea22ac4ebb78a4a6cdaeca329eb423f8ec8f1f73561"
+        "sha256": "16aa4a8a03a36178bf399081243b884334ca841a3f5f96c9434867dcb539deb3"
       },
       {
         "path": "genesis.prerequisites.json",

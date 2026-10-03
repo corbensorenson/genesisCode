@@ -743,6 +743,23 @@ operations or identity construction. Explicit invalid process IDs are rejected
 before lease mutation; only an absent PID selects the caller-parent default.
 Process identity returns unavailable for invalid or host-unrepresentable IDs.
 
+Lifecycle and generated-authority allocation observers share a bounded host
+library. Within one observed forest they charge each `(device, inode)` once,
+using the maximum allocated-block observation of an alias. POSIX `st_blocks`
+counts 512-byte units; zero blocks remain zero even for a large sparse logical
+file. Logical length is never a fallback for unavailable allocation metadata.
+Missing or malformed block metadata, unsupported descriptor backends, and
+permission or enumeration failures return explicit owner errors. A name that
+disappears during an active writer's scan is an ordinary sampled race.
+Observers hold directory descriptors during descent and use non-following
+child metadata/open operations. Lifecycle materializations reject link entries,
+including dangling links; aggregate observations charge link entries without
+following destinations. Every walk has entry and directory-depth bounds and
+closes descriptors and iterators on success, disappearance, cancellation and
+failure. Callers still authorize the forest roots; these observations neither
+grant reclamation authority nor prove an atomic snapshot, exact copy-on-write
+consumption, or a bound on a future writer's temporary peak.
+
 The journal estimate measures the prospective serialized registry including the
 next lease, sequence growth and largest quarantine record. It reserves two
 filesystem-block-rounded registry copies and four directory-entry allocation
