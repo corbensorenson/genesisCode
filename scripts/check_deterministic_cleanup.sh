@@ -856,6 +856,7 @@ authorities = [
     *generated_schema_paths,
     "scripts/lib/deterministic_cleanup.py",
     "scripts/lib/generated_state.py",
+    "scripts/lib/gate_telemetry_darwin_inventory.py",
     "scripts/lib/generated_state_accounting.py",
     "scripts/lib/cargo_metadata_admission.py",
     "scripts/reclaim_build_space.sh",

@@ -74,6 +74,15 @@ require(
     "sampler failure was not captured for parent propagation",
 )
 controls.append("sampler-failure-propagation")
+from gate_telemetry_sampler_controls import birth_identity_self_test, inventory_protocol_self_test, native_inventory_self_test, sampler_self_test
+require(sampler_self_test() == 9, "sampler lifecycle control inventory drift")
+controls.append("sampler-bounded-inventory-ownership")
+require(native_inventory_self_test() == 26, "native inventory control inventory drift")
+controls.append("sampler-native-process-inventory")
+require(inventory_protocol_self_test() == 9, "inventory protocol control inventory drift")
+controls.append("sampler-closed-inventory-protocol")
+require(birth_identity_self_test() == 9, "birth identity control inventory drift")
+controls.append("sampler-unprivileged-legacy-birth-identity")
 schema_path = root / "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json"
 schema = telemetry.load_json(schema_path)
 require(
@@ -317,13 +326,15 @@ from gate_telemetry_cancellation import cancellation_self_test
 require(cancellation_self_test(root) == 20, "telemetry cancellation control inventory drift")
 controls.append("telemetry-owned-scope-cancellation")
 
-require(len(controls) == 21 and len(set(controls)) == 21, "control coverage drift")
+require(len(controls) == 25 and len(set(controls)) == 25, "control coverage drift")
 authorities = [
     "policies/gate_telemetry_v0.1.json",
     "docs/spec/GATE_RESOURCE_TELEMETRY_v0.1.schema.json",
     "scripts/lib/gate_telemetry.py",
     "scripts/lib/supervisor_cancellation.py",
     "scripts/lib/gate_telemetry_cancellation.py",
+    "scripts/lib/gate_telemetry_sampler_controls.py",
+    "scripts/lib/gate_telemetry_darwin_inventory.py",
     "scripts/lib/gate_telemetry.sh",
     "scripts/check_gate_resource_telemetry.sh",
 ]

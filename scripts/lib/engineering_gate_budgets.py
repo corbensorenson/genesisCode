@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT / "scripts/lib"))
 from toml_compat import tomllib
 import engineering_gate_timing_calibration as timing_calibration
 import engineering_gate_timing_observations as timing_observations
+import prerequisite_manifest
 
 POLICY = ROOT / "policies/engineering_gate_budgets_v0.1.json"
 SCHEMA = ROOT / "docs/spec/ENGINEERING_GATE_BUDGETS_v0.1.schema.json"
@@ -45,12 +46,12 @@ TIMING_CALIBRATION_POINTER = {
     "collector": "scripts/lib/engineering_gate_timing_observations.py",
 }
 STDLIB = {
-    "__future__", "argparse", "ast", "base64", "binascii", "collections", "concurrent", "contextlib", "copy",
+    "__future__", "argparse", "ast", "base64", "binascii", "collections", "concurrent", "contextlib", "copy", "ctypes",
     "dataclasses", "datetime", "decimal", "errno", "fcntl", "fnmatch", "fractions", "functools", "gzip",
     "hashlib", "html", "http", "io", "json", "math", "msvcrt", "os", "pathlib", "platform", "queue", "random", "re",
     "shlex", "shutil", "signal", "socket", "stat",
     "secrets", "statistics", "string", "subprocess", "sys", "tarfile", "tempfile", "threading", "time", "tomllib",
-    "types", "typing", "urllib", "xml", "zipfile",
+    "types", "typing", "unittest", "urllib", "xml", "zipfile",
 }
 
 
@@ -279,9 +280,10 @@ def check_source_concentration(policy: Mapping[str, Any]) -> Tuple[int, int]:
 
 
 def undeclared_python_modules(
-    sources: Iterable[Tuple[str, str]], repo_modules: Set[str]
+    sources: Iterable[Tuple[str, str]], repo_modules: Set[str],
+    declared_modules: Optional[Mapping[str, str]] = None,
 ) -> Dict[str, Set[str]]:
-    import_re = re.compile(r"^\s*(?:import|from)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
+    import_re = re.compile(r"^\s*(?:import|from)\s+")
     unknown: Dict[str, Set[str]] = {}
     for source_name, source in sources:
         if source_name.endswith(".py"):
@@ -301,9 +303,38 @@ def undeclared_python_modules(
             # Shell helpers can execute Python heredocs, so keep their scan
             # conservative. Python files use ASTs so inert string payloads do
             # not become false host prerequisites.
-            modules = import_re.findall(source)
+            modules = []
+            lines = source.splitlines(keepends=True)
+            position = 0
+            while position < len(lines):
+                if not import_re.match(lines[position]):
+                    position += 1
+                    continue
+                # Admit a bounded complete statement, including parentheses,
+                # continuations, aliases and later semicolon-separated imports.
+                # Source strings in actual Python files still use the whole AST.
+                snippet = ""
+                for end in range(position, min(position + 32, len(lines))):
+                    snippet += lines[end].lstrip() if end == position else lines[end]
+                    if len(snippet.encode("utf-8")) > 65536:
+                        break
+                    try:
+                        statement = ast.parse(snippet)
+                    except SyntaxError:
+                        continue
+                    for node in ast.walk(statement):
+                        if isinstance(node, ast.Import):
+                            modules.extend(alias.name.split(".", 1)[0] for alias in node.names)
+                        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+                            modules.append(node.module.split(".", 1)[0])
+                    position = end + 1
+                    break
+                else:
+                    raise BudgetError(f"GB-8 cannot parse bounded shell-embedded import: {source_name}")
+                if len(snippet.encode("utf-8")) > 65536:
+                    raise BudgetError(f"GB-8 shell-embedded import exceeds its bound: {source_name}")
         for module in modules:
-            if module not in STDLIB and module not in repo_modules:
+            if module not in STDLIB and module not in repo_modules and module not in (declared_modules or {}):
                 unknown.setdefault(module, set()).add(source_name)
     return unknown
 
@@ -326,6 +357,12 @@ def repository_python_modules() -> Set[str]:
 
 
 def check_python_closure() -> int:
+    prerequisites = load_json(ROOT / "genesis.prerequisites.json")
+    try:
+        prerequisite_manifest.validate_manifest(prerequisites, check_sources=False)
+        declared = prerequisite_manifest.declared_python_modules(prerequisites)
+    except prerequisite_manifest.PrerequisiteError as exc:
+        raise BudgetError(f"GB-8 invalid Python prerequisite declaration: {exc}") from exc
     repo_modules = repository_python_modules()
     sources: List[Tuple[str, str]] = []
     scanned = 0
@@ -337,11 +374,10 @@ def check_python_closure() -> int:
             sources.append(
                 (path.relative_to(ROOT).as_posix(), path.read_text(encoding="utf-8"))
             )
-    unknown = undeclared_python_modules(sources, repo_modules)
+    unknown = undeclared_python_modules(sources, repo_modules, declared)
     if unknown:
         detail = "; ".join(f"{name}:{','.join(sorted(paths))}" for name, paths in sorted(unknown.items()))
         raise BudgetError("GB-8 undeclared Python modules: " + detail)
-    prerequisites = load_json(ROOT / "genesis.prerequisites.json")
     python = next((tool for tool in prerequisites.get("tools", []) if tool.get("id") == "python"), None)
     if python is None or python.get("constraint", {}).get("minInclusive") != "3.9.0":
         raise BudgetError("GB-8 prerequisite manifest does not declare Python >=3.9.0")
@@ -457,10 +493,38 @@ def self_test() -> int:
         raise BudgetError("release-profile leakage negative control was accepted")
     platform_stdlib = (
         "import concurrent.futures\nimport contextlib\nimport errno\nimport fcntl\nimport msvcrt\nimport queue\n"
+        "import ctypes\nimport unittest\nfrom unittest.mock import patch\n"
     )
     if undeclared_python_modules((("platform.py", platform_stdlib),), set()):
         raise BudgetError("declared cross-platform Python standard-library modules were rejected")
     controls += 1
+    declared = prerequisite_manifest.declared_python_modules(
+        load_json(ROOT / "genesis.prerequisites.json")
+    )
+    imports = (("checker.py", "import blake3\n"),)
+    if undeclared_python_modules(imports, set(), declared):
+        raise BudgetError("reviewed Python checker declaration was rejected")
+    if undeclared_python_modules(imports, set()) != {"blake3": {"checker.py"}}:
+        raise BudgetError("third-party module was accepted without a declaration")
+    controls += 2
+    for name, source in [
+        ("comma.py", "import json, genesis_unlisted_dependency\n"),
+        ("comma.sh", "python3 - <<'PY'\nimport json, genesis_unlisted_dependency\nPY\n"),
+        ("continued.sh", "python3 - <<'PY'\nimport json, \\\n genesis_unlisted_dependency\nPY\n"),
+        ("from.sh", "python3 - <<'PY'\nfrom json import dumps; import genesis_unlisted_dependency\nPY\n"),
+        ("parenthesized.sh", "python3 - <<'PY'\nfrom json import (\n dumps,\n); import genesis_unlisted_dependency\nPY\n"),
+        ("alias.sh", "python3 - <<'PY'\nimport blake3 as checker, genesis_unlisted_dependency as surprise\nPY\n"),
+    ]:
+        if undeclared_python_modules(((name, source),), set(), declared) != {"genesis_unlisted_dependency": {name}}:
+            raise BudgetError(f"undeclared compound Python import escaped GB-8: {name}")
+        controls += 1
+    for source in ("import json, (\n", "from json import (\n" + "# continuation\n" * 33):
+        try:
+            undeclared_python_modules((("malformed.sh", source),), set(), declared)
+        except BudgetError:
+            controls += 1
+        else:
+            raise BudgetError("malformed/unbounded shell import was accepted")
     repo_modules = repository_python_modules()
     if "lib" not in repo_modules or "quarto_site_contract" not in repo_modules:
         raise BudgetError("repository Python module discovery omitted a governed import root")

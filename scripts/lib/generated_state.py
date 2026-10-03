@@ -593,6 +593,19 @@ def process_identity(pid: int) -> str | None:
             payload = f"linux\0{pid}\0{fields[21]}\0{boot}".encode()
         except (OSError, IndexError):
             return None
+    elif sys.platform == "darwin":
+        # Preserve the existing posix/PID/lstart digest without launching a
+        # privileged ps child that cannot be observed by the resource owner.
+        import gate_telemetry_darwin_inventory as darwin_inventory
+        try:
+            started_sec = darwin_inventory.NativeInventory().start_time(pid)
+            if started_sec is None:
+                return None
+            started = time.asctime(time.localtime(started_sec))
+        except (darwin_inventory.InventoryError, OSError, OverflowError, ValueError) as exc:
+            # Unknown identity cannot be reclassified as an idle producer.
+            raise GeneratedStateError("Darwin process birth identity is unavailable") from exc
+        payload = f"posix\0{pid}\0{started}".encode()
     else:
         try:
             result = subprocess.run(

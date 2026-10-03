@@ -220,6 +220,38 @@ do not contain commands that deliberately escape their group and do not qualify
 Windows, host crashes, SIGKILL of the owning supervisor or independent release
 acceptance.
 
+The sampler starts no further inventory work after stop. Darwin's fixed
+unprivileged isolated Python helper reads the process tree through libproc's
+public `proc_listpids` and `RUSAGE_INFO_V0` ABI. It avoids privileged `/bin/ps`
+execution and runs in a private helper group with a five-second collection
+deadline,
+a 1 MiB output ceiling enforced while reading, and interruptible nonblocking
+pipe reads. Stop kills that group, reaps its helper and closes the pipe within the
+existing two-second sampler join envelope; an exited leader cannot retain an
+executing helper descendant. Kernel orphan reaping is not an owned child wait.
+Darwin signal permission
+denial supplies no cleanup proof: the owner reaps an exited leader and checks
+native group membership and exit state, accepting only an empty or entirely
+exited group. A live member or unknown group state fails explicitly. Timeout,
+excess output, malformed encoding or nonzero helper exit
+fails the observation explicitly. A partial or truncated inventory never
+supplies successful evidence. Linux traversal checks stop while discovering
+and sampling the process tree. The last successful samples and child rusage
+remain available; stopping does not launch a final unbounded inventory probe.
+The helper bounds discovery to 32,768 processes, rejects truncated native
+child inventories, and treats only a vanished process as an ordinary sampling
+race. RSS is conservatively rounded up to KiB for the existing inventory
+protocol. The parent rejects malformed, oversized-numeric, duplicate or
+contradictory tree rows before committing a sample; numeric conversion cannot
+escape the explicit sampler error channel. The ABI is defined in Apple’s
+[public libproc headers](https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.h)
+and `sys/resource.h`; native observations do not qualify unsupported hosts.
+Darwin cache leases read PID start time from the exact-size native BSD ABI
+instead of launching a privileged `ps` child. They preserve the existing
+`posix`/PID/English-asctime digest payload, including its second precision and
+timezone behavior. A vanished PID remains absent; an unknown native birth
+observation fails explicitly and cannot authorize stale-lease reclamation.
+
 The aggregate disk ceiling charges sampled allocated growth in declared owned
 paths, with filesystem/device/inode deduplication. Those paths include the
 private staging tree and its Git registration, controlled child temporary

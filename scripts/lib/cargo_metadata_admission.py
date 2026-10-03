@@ -43,6 +43,7 @@ def metadata_self_test(source_root: Path) -> int:
             "policies/deterministic_cleanup_v0.1.json", "rust-toolchain.toml",
             ".cargo/config.toml", "Cargo.lock", "tools/genesis-evidence-verifier/Cargo.lock",
             "scripts/lib/cargo_cache.py", "scripts/lib/generated_state.py",
+            "scripts/lib/gate_telemetry_darwin_inventory.py",
             "scripts/lib/deterministic_cleanup.py",
         }
         policy = cache.load_policy(source_root)

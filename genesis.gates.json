@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
+      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -243,6 +243,7 @@
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -366,7 +367,7 @@
       "executionIdentitySha256": "d3e2741f0fcab5b0fa1d2ff0fb72a893ff39b658c355fbd70f1ea7f5efaf5766",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-generative-workloads",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -447,6 +448,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -571,7 +573,7 @@
       "executionIdentitySha256": "ca60c0c8740ffc38f92b66c4a85bf1c85c764940d9d9014b38fc968ff96a5ab0",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-reference-workflows",
-      "inputIdentitySha256": "005a2e11f520da95e105387b5d8e33e67987de223c31c577187046546a790de1",
+      "inputIdentitySha256": "e70f977173413a6f8362931e4fe5e50d6c60aa67f92cb3efcc4c555134e9f06d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -615,6 +617,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/reclaim_build_space.sh",
@@ -670,7 +673,7 @@
       "executionIdentitySha256": "66ef3f82bf4765502de63a33b0356c0804894ee1fcc843ec637ebb6804f886ee",
       "expectedDurationSeconds": 900,
       "id": "gate/agent-scenario-perf",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -751,6 +754,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -830,7 +834,7 @@
       "executionIdentitySha256": "e77e022585c7cf3d8e2757027f36242b99edd40d66ead53ccba1eb31acd2e892",
       "expectedDurationSeconds": 600,
       "id": "gate/agent-workflow-runtime-parity",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -911,6 +915,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -990,7 +995,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2000,6 +2005,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -2420,7 +2427,7 @@
       "executionIdentitySha256": "dc8c3972ea84e9fc83764032aa4462865a7749042942cb3e1007b0a0f640d4d1",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-stress-suite",
-      "inputIdentitySha256": "95207e443f0a8ae923477b13589605a09ca1ff8195b3d385e0603d037bc60117",
+      "inputIdentitySha256": "f882a9fcd08f16a9e0419058f659c7f4960602b88f3cd94c61862cddc1cd2ff8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2434,6 +2441,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_ai_stress_suite_report.sh"
         ],
@@ -2594,7 +2602,7 @@
       "executionIdentitySha256": "687ed492d01041e91cbcb820d10aeca8eee9d0cea6552f2ab82fb078d88c8c1d",
       "expectedDurationSeconds": 600,
       "id": "gate/backend-starter-workflows",
-      "inputIdentitySha256": "3ea0ccf1bd582148c736cca9c572559a60b2593e4b4a2124de7a86fbae363244",
+      "inputIdentitySha256": "5aec35b69e8dc3af682fdc03962263341678558f0b278b2f132a81b4f424a26d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2608,6 +2616,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_backend_starter_workflows_report.sh"
         ],
@@ -2659,7 +2668,7 @@
       "executionIdentitySha256": "2bec1b19f45e35266e54e5a7cc2719bcb9a240ef3c5eb4cc6b62e6ab068c9368",
       "expectedDurationSeconds": 1800,
       "id": "gate/bootstrap-retirement-gate",
-      "inputIdentitySha256": "688732baa35eca374b4f690465f34d12510751d91ae62a7d829ae2bc8fcf5f09",
+      "inputIdentitySha256": "2b6368c656f82e7c53423d6a6ff5677cb86ab04ffb99df2f5fc0f8bb774e7b76",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -2677,6 +2686,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/reclaim_build_space.sh",
           "scripts/render_bootstrap_retirement_gate_report.sh",
@@ -2858,7 +2868,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3868,6 +3878,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -4339,10 +4351,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_cargo_target_dir_policy.sh",
-      "executionIdentitySha256": "aba6c755cb86185dfa07d79cf523a52b086242646612d7bfc5fc47e1251f3196",
+      "executionIdentitySha256": "1d1217229cacfb4231f788c8283845cd7757b6e58f7bef2a15793dc954855deb",
       "expectedDurationSeconds": 15,
       "id": "gate/cargo-target-dir-policy",
-      "inputIdentitySha256": "58024c8cff26022981f805664fb81bebc293b292b7809320ada5223771384dba",
+      "inputIdentitySha256": "5a3115596c43588812af56ea709a19de89a7fcb5d6b417235b5ea87889477197",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -4373,6 +4385,7 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/evidence_storage.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/generated_state_accounting.py",
           "scripts/render_cargo_target_dir_policy_report.sh",
@@ -4425,7 +4438,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5435,6 +5448,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -5864,7 +5879,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6874,6 +6889,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -7291,7 +7308,7 @@
       "executionIdentitySha256": "7589ad69e7f64592a89c2415a6c1eeefa7df379887597d5295085be8b3fb5e79",
       "expectedDurationSeconds": 600,
       "id": "gate/cli-diagnostics-contract",
-      "inputIdentitySha256": "eea56814a3928f926199294cfe46ff9532edca7423de0c9853eaca6294aab42c",
+      "inputIdentitySha256": "45272c5c69d09c67c821fe9321d72dca90f2ed4bb9519c5da5dacde4d9b07129",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -7319,6 +7336,7 @@
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
           "scripts/lib/gc_repair_utility.py",
@@ -7383,7 +7401,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -8393,6 +8411,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -8812,7 +8832,7 @@
       "executionIdentitySha256": "93f27a873ea8472638b14b9e2fa6d8a6c2c2d902715b61fe81367b5ffbc78faa",
       "expectedDurationSeconds": 600,
       "id": "gate/dependency-mirror-contract",
-      "inputIdentitySha256": "42bd88c36c35c8f3c110248e6d31257b6bc0a5ce37b40dad7384ad4fcad0573a",
+      "inputIdentitySha256": "db6e5e96521a55238b53307a5620e2157bce3158b280de1ee69d79db35534b07",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8826,6 +8846,7 @@
           "scripts/check_dependency_mirror_contract.sh",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "tools/genesis-evidence-verifier/Cargo.lock",
           "tools/genesis-evidence-verifier/Cargo.toml"
@@ -8876,10 +8897,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_deterministic_cleanup.sh",
-      "executionIdentitySha256": "02a00f2ad3cf76d08319762e6ecc3dfce2d569390decec8d9b7296fa6c07a31b",
+      "executionIdentitySha256": "8fcef0766d12ec68f52ee52fd2c1bab85ad2655cfc178edc598903de5e88b972",
       "expectedDurationSeconds": 15,
       "id": "gate/deterministic-cleanup",
-      "inputIdentitySha256": "598e7477e4ba0f2c564a130fc6077c1737f17d99b8bc028b7bc7d187585db620",
+      "inputIdentitySha256": "f638f760f76370a4ac59298a567491c9335e008709ab3956ca42bf8777e68d9b",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -8903,6 +8924,7 @@
           "scripts/lib/cargo_metadata_admission.py",
           "scripts/lib/dependency_mirror.py",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/generated_state_accounting.py",
           "scripts/reclaim_build_space.sh",
@@ -8936,7 +8958,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "f14c054b0bf0f9638d7665e02129ae483d2d6c5eb35e995b2f22a9de7b58f007",
+      "sourceSha256": "c780eeb0eab1eaddba8bf875eb67c9a752be334b2ef3e23fce40ce3ad2fb3bfb",
       "tools": [
         "bash",
         "git",
@@ -8952,13 +8974,14 @@
       "executionIdentitySha256": "e2fba39cc68eb909cc93f3eaaf701a5ffb690fe0f403a006b86360521d349ff1",
       "expectedDurationSeconds": 900,
       "id": "gate/disk-headroom",
-      "inputIdentitySha256": "fed55d8869dadba7b35a04163e5063804beb089c9565a1e98c4083b711a6ff40",
+      "inputIdentitySha256": "8800eaba4eed26800ea6d34e845a4aa1393843d896ed62dd6b96c23e2df19fb5",
       "inputs": {
         "paths": [
           "policies/deterministic_cleanup_v0.1.json",
           "policies/generated_state_v0.1.json",
           "scripts/check_disk_headroom.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/reclaim_build_space.sh"
         ],
@@ -9115,7 +9138,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "7e368643fdd46f031a8f979a61abcd35d948e2c7a933c30b72fb03639f9b559b",
+      "inputIdentitySha256": "9eda3e68a2f55413d91e742998ff4d8d428e4236722175d161f6636ef32962f2",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9201,7 +9224,7 @@
       "executionIdentitySha256": "b76d99cec379d2550ae5c258f43bbe188f709a60e021c0e9f570ef041c128b4b",
       "expectedDurationSeconds": 600,
       "id": "gate/docs-quickstart",
-      "inputIdentitySha256": "bc51b66a72b82ba5583a6e543df061055016afdc973dda9b38dec433dc2d21ca",
+      "inputIdentitySha256": "31c06e7c061a88153f455d3a35e280698fc27dc850830c614bcb369d6cc57a82",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9217,6 +9240,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py"
         ],
         "sets": [
@@ -9330,7 +9354,7 @@
       "executionIdentitySha256": "12284e4018c1c869105cefa1d4620091e91cea214697a765f24c3dbe6db94e94",
       "expectedDurationSeconds": 600,
       "id": "gate/domain-starter-registry-bootstrap",
-      "inputIdentitySha256": "f181ee613815e2e7653c93fb369ceee910e8684b752e62908b2436ecf362b384",
+      "inputIdentitySha256": "a6a1cbd57656c45021bde5a646f292c09ac88840c4753d51b7dd21fbfae5085c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -9346,6 +9370,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_domain_starter_registry_bootstrap_report.sh",
           "selfhost/toolchain.gc"
@@ -9398,7 +9423,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10408,6 +10433,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -10821,7 +10848,7 @@
       "executionIdentitySha256": "b686c1153348d35c232edc811e28deb68ad36d48a8382f7a39f18ade7f415596",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-adversarial-matrix",
-      "inputIdentitySha256": "01dd8dac6e5c04c176ea0ab0ac47983fc979bda4fe5882424318ba7cc9c561d2",
+      "inputIdentitySha256": "2bbb4c9c108c200abc5a1eff33f1e520dc0cd0be5784d881566f9d0c2008634f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10849,6 +10876,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -10906,7 +10934,7 @@
       "executionIdentitySha256": "f1819ef0549b700487acbb2fc0a57164a28bedb8ba5f95d482d4ed92f377eeef",
       "expectedDurationSeconds": 600,
       "id": "gate/evidence-storage-classes",
-      "inputIdentitySha256": "2d163fee9c994098d09394b79b3a5c286898046e643f351a011db82015118d4a",
+      "inputIdentitySha256": "3ebc4585d969dd1c93687659c28332be5a25ee23e90c92da6583637a9129eb27",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -10927,6 +10955,7 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/evidence_storage.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_evidence_release_asset.sh",
           "scripts/update_evidence_fixture_classification.sh",
@@ -11058,7 +11087,7 @@
       "executionIdentitySha256": "369dec1c4ce9c66ecd7f2a44bc738555302296e56acbe6e7794df456e94ba1d0",
       "expectedDurationSeconds": 600,
       "id": "gate/foundation-stdlib-conformance",
-      "inputIdentitySha256": "fe7a84c1e2752b3006f2e9bb191d0b6218cf12bbaf778c995b84b01a15f1ae2d",
+      "inputIdentitySha256": "ee29a21b1514a699413743058361e08dfe568d49e347bcb6a08666f1daf2ad98",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11072,6 +11101,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -11125,7 +11155,7 @@
       "executionIdentitySha256": "195f2212e295ac50ad6f114fb2787515e69a0d0491177522b49d1e0892e27ab0",
       "expectedDurationSeconds": 900,
       "id": "gate/full-cross-host-profile-budget",
-      "inputIdentitySha256": "4b26252951d1c0ae99d6e54e4838a0b67eae36155464a2b586ccf991bd44c4d8",
+      "inputIdentitySha256": "a43095aa99433dc923efd144b8a3374566429c76e70d47021a2872ecd9a80837",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11139,6 +11169,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_runtime_budget.py",
           "scripts/lib/selfhost_artifact_cache.sh",
@@ -11199,7 +11230,7 @@
       "executionIdentitySha256": "3761df806061bdfee873be8acec17fddcce41ddf3e441e202df089765ad95dda",
       "expectedDurationSeconds": 1800,
       "id": "gate/full-selfhost-cutover-profile",
-      "inputIdentitySha256": "f59454015ddba7e8ddfe3c191a9a04a772e14fd16ebea8bb02f6f5a260d84699",
+      "inputIdentitySha256": "9227e585c8b05d357dbc1dd15fd3347baef212125a741d0256e0fe06d679d68e",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11634,6 +11665,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
@@ -11871,7 +11903,7 @@
       "executionIdentitySha256": "84afdbc05ffd75ddd1bd5a8be01cfbb24b331150d6cba45b3baa870b29c89fbb",
       "expectedDurationSeconds": 600,
       "id": "gate/fuzz-differential-hardening",
-      "inputIdentitySha256": "c528a61979a2167ce38cc426befdc413c6233ad39e891917907fc909ff05463f",
+      "inputIdentitySha256": "5e5ac546cc3091e9f3059fb74ca0ca9bc2247bf86976af619b67adc1f50c34a1",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -11885,6 +11917,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -11938,7 +11971,7 @@
       "executionIdentitySha256": "76777bdf1e707e91b7d575f93b44e1cbeed5aa7a39b47da0e8db4f1bf96911ab",
       "expectedDurationSeconds": 15,
       "id": "gate/gate-manifest",
-      "inputIdentitySha256": "d117f94c71ca5fb49f22f6b65f030ecfb52c84517c0e124066f6fd9fd7f1df04",
+      "inputIdentitySha256": "b697a4422962fe38b29950e43ddf99061b70489edba2a929d24503998e456285",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -12122,10 +12155,10 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_gate_resource_telemetry.sh",
-      "executionIdentitySha256": "d6c8d1ace84f763378ae689b8b0b8dcfd2cddf2f32eea70756b0bf717643aefc",
+      "executionIdentitySha256": "ed3f32e920a014d82f4edcd2f3c0a7cf9ba2f66ebee2a1f170e71ba15799d6a9",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13135,6 +13168,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -13532,7 +13567,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "2e12a1211aa528b802288fcf6bcbe2c92a61997177897f7ed5c6f4adfe8174ed",
+      "sourceSha256": "7cdc5783a965d9c77d20a0244557a413459534a9aabbf553b0c995ff24fd4bc6",
       "tools": [
         "bash",
         "git",
@@ -13548,7 +13583,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
+      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13782,6 +13817,7 @@
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -13909,7 +13945,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
+      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14143,6 +14179,7 @@
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -14270,7 +14307,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
+      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14504,6 +14541,7 @@
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -14631,7 +14669,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
+      "inputIdentitySha256": "3e7bfd8634687e7c7123a17be5b490f8acdeb5dc9f23a98fae537fbf04287090",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14865,6 +14903,7 @@
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -15046,7 +15085,7 @@
       "executionIdentitySha256": "cfc47b30a1e71fb4604406eca52a58987d030ec13e0edb9648ea569c53df521d",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-operation-contract-pack",
-      "inputIdentitySha256": "c63f33d83b4e16270f425475cd3bc76815f2cdf30e065fc7d85a510dc2902194",
+      "inputIdentitySha256": "0b96eed83a6656819902541dd225e0668147bdd12ddc02f9396e5429ce7ddeac",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15065,6 +15104,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_gcpm_operation_contract_pack_report.sh",
           "scripts/render_remote_registry_runtime_parity_report.sh",
@@ -15118,7 +15158,7 @@
       "executionIdentitySha256": "30b12f7abe0eaf84a31e0103738acc000d625686153d2c6d8b5737f4405b463e",
       "expectedDurationSeconds": 600,
       "id": "gate/gcpm-target-runtime-pipelines",
-      "inputIdentitySha256": "a6480e26155d290fe78a6234c589b610c569ea6e721e077f84f527600277a859",
+      "inputIdentitySha256": "6fdcbf6e43e95b22a3f653b713148d885cb12cf8e96a91c1b06c7e0613b6ea61",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -15134,6 +15174,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_gcpm_target_runtime_pipelines_report.sh"
         ],
@@ -15189,7 +15230,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16199,6 +16240,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -16667,7 +16710,7 @@
       "executionIdentitySha256": "306605408348dfd5d3d8dcb2bd2ccc36f5acf9145ff266ce0dd0109840b15ae9",
       "expectedDurationSeconds": 600,
       "id": "gate/genesis-evidence-verifier",
-      "inputIdentitySha256": "1750436fc088ac94a8842ff5842142c771bd3aecfa0bdc6390885d55e62f2178",
+      "inputIdentitySha256": "eb3b585f88c8b4e2c5534489c0d10d46886dddaeb7dfcf028747bc99a3b2fb8f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16693,6 +16736,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -16801,7 +16845,7 @@
       "executionIdentitySha256": "7972c3efbac37816d1f5e3ca14532db17796739a68e95c8a590b126191d2a594",
       "expectedDurationSeconds": 900,
       "id": "gate/gfx-runtime-profile",
-      "inputIdentitySha256": "dfe46b7d47d1f94cab69da9f3da8e95d645e13f1770abb5de01b3dda3a86e610",
+      "inputIdentitySha256": "c649ccda8620896d5c186443c06b1e09aba3238a89e0e27111028a6e2e661feb",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16816,6 +16860,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -16870,7 +16915,7 @@
       "executionIdentitySha256": "24239065fa25638a77942996f8ca28eb8b6f64530e407346c5cb5dfb440dd1c6",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-compute-device-conformance",
-      "inputIdentitySha256": "582e73ecb03ce30dcd997baeebaf90388e9b74c2d44ccaf83cc693d9e6561c26",
+      "inputIdentitySha256": "dfda954c27096e4987a9126b3eeb6f7006bae2b70290c350f09a264ee0e3f085",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16885,6 +16930,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
@@ -16942,7 +16988,7 @@
       "executionIdentitySha256": "6fc60e397ee532144dcc4fdc96e3ad453c10758b1289d742f093ae67f413e4b4",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-compute-runtime-profile",
-      "inputIdentitySha256": "f778fbb8d7aa35e4d992ec953246cbcd54d296a8872ecf3f62c2a63a3fa3fc23",
+      "inputIdentitySha256": "7cc730427d78ea0d2ed7d350ab14aba2f157ff99ebba3448cdf8ed38f94085ca",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -16957,6 +17003,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
@@ -17012,7 +17059,7 @@
       "executionIdentitySha256": "b670ee5748457381aed83dc9fe411f7ca7d2d3bb55f2b5c8583a8b7a3c7a5cba",
       "expectedDurationSeconds": 15,
       "id": "gate/gpu-conformance-lane-matrix",
-      "inputIdentitySha256": "c7b9f1165716145181c86e6051d8e9198e28f3ccf6adce233bf90e18454421a7",
+      "inputIdentitySha256": "2638fd0dfbec3447bf280af568877d8093fb09f01f5661cf6932d91605f89428",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17032,6 +17079,7 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/ci_runner_preflight.py",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
@@ -17189,7 +17237,7 @@
       "executionIdentitySha256": "571e9fbc0fbb41c51e8092a2f938808cc125232fe1021a2b3f21cbe0a4ba55a5",
       "expectedDurationSeconds": 900,
       "id": "gate/gpu-gfx-headroom-conformance",
-      "inputIdentitySha256": "986eb56ee58014c1fdfeed9322bc09c90703569a390bd9d61997c78446d3c0cb",
+      "inputIdentitySha256": "75f6a6c1c2d49e6d13a6d1b369d086973e361060c54ab7d02db635f0e414e2c8",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -17206,6 +17254,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/perf_disk_mode.sh",
@@ -17270,7 +17319,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18280,6 +18329,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -18697,7 +18748,7 @@
       "executionIdentitySha256": "aa61621489dbc0f1d7f5fa54d4dc57dbaf4e026ffdcfd04f8d6fc436aa5a090b",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-xr-productization-kits",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18778,6 +18829,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -18898,7 +18950,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19908,6 +19960,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -20376,7 +20430,7 @@
       "executionIdentitySha256": "6466f307236f05e28ff3f1dd3b3e1715c59366428c614be4555b07b7e876cc25",
       "expectedDurationSeconds": 600,
       "id": "gate/host-abi-conformance",
-      "inputIdentitySha256": "49c80f2becd3b8e3aea9417bf89c334a67dc94fb57f77cab55993a90b4d74fe4",
+      "inputIdentitySha256": "926f06e7ba7bdaf632cb0b50f44791fbd2053e98f82e2380bdef9f6ac40e4d6a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20399,6 +20453,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py"
         ],
         "sets": [
@@ -20500,7 +20555,7 @@
       "executionIdentitySha256": "5f281a59e7343570ba1444f9ee1aba8073e63b15f7d9d9c15d4591f3627ef1c8",
       "expectedDurationSeconds": 600,
       "id": "gate/host-bridge-fault-injection",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -20581,6 +20636,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -20660,7 +20716,7 @@
       "executionIdentitySha256": "05300562e2b0cb900ba3e760c4551bfcafa84c0ded06cbf6fa20b79c0b5bb39d",
       "expectedDurationSeconds": 900,
       "id": "gate/hot-path-budgets",
-      "inputIdentitySha256": "6902baa20849c54cffcfbc36e66f4dde6d73793a89e1ba18243e33a9c0fec746",
+      "inputIdentitySha256": "b72b1df5134dacb8d721bf535c0d98277b5a4cf7e4aeb5f0672a8f9d27471884",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20675,6 +20731,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_state.py",
           "scripts/lib/measure.sh",
@@ -20787,7 +20844,7 @@
       "executionIdentitySha256": "11dcb18ddf3b101266b5d31f2a011f8efc2273a082339cac79cc76bef5a88407",
       "expectedDurationSeconds": 900,
       "id": "gate/large-workspace-agent-perf",
-      "inputIdentitySha256": "50b23979b93f142374929df013a8a5c35cc09c697785adadc7910dca85c7746e",
+      "inputIdentitySha256": "bd3ea169e19a2dd40eedc87697d721eb194274626d1f356963f90d79d3060452",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -20802,6 +20859,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_state.py",
           "scripts/lib/measure.sh",
@@ -20908,7 +20966,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21918,6 +21976,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -22331,7 +22391,7 @@
       "executionIdentitySha256": "d8e1db277383038068fcbff74d03c0ca37b90514089ab49898f7fe7d9c3a5631",
       "expectedDurationSeconds": 300,
       "id": "gate/no-user-panics-compiler",
-      "inputIdentitySha256": "f6b6f56e1328f9686edb3a24f448214ee52c34ae9f9eded061d2099bb39876e8",
+      "inputIdentitySha256": "ce0e2a2c5bdbe9c1cea66b6250937767bdb0d04068d4291add46c2861710b598",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22345,6 +22405,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -22447,7 +22508,7 @@
       "executionIdentitySha256": "388075c094ad38a4e063ba523bb70d80abd66c4b0bcfb93d97d35c93d119dd93",
       "expectedDurationSeconds": 900,
       "id": "gate/perf-budgets",
-      "inputIdentitySha256": "d58e62b5f961c3d0f6d739c28c6d68cd84a9909bc480043b13a621d83402f229",
+      "inputIdentitySha256": "4927b5af7cbd82de173349a85075b33d4e2a47a2ec6f326e18906dbf2a56d83c",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -22463,6 +22524,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/measure.sh",
           "scripts/lib/perf_disk_mode.sh",
@@ -22628,7 +22690,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23638,6 +23700,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -24048,19 +24112,21 @@
       "dependencies": [],
       "diskBudgetMiB": 64,
       "entrypoint": "scripts/check_prerequisite_manifest.sh",
-      "executionIdentitySha256": "9313b74c7e3af1b28620f1c58ab538fb0de623ed2e04aa85a14967336ece2a16",
+      "executionIdentitySha256": "7169a9215add0d5b67f6e446219d14eb146f5a69b231d9ce566ba39fcfbb698e",
       "expectedDurationSeconds": 15,
       "id": "gate/prerequisite-manifest",
-      "inputIdentitySha256": "3dc0a3ed2639e83775c5f968eaeb5bb8e4ac1eae6f7682de9161b7cbadd4cd75",
+      "inputIdentitySha256": "d89e769ecd09b36a26d380ecdcc0a894047bf88c87e360d49a80e76835e78526",
       "inputs": {
         "paths": [
+          "Cargo.lock",
           "docs/spec/PREREQUISITES_v0.1.schema.json",
           "genesis.prerequisites.json",
           "rust-toolchain.toml",
           "scripts/check_prerequisite_manifest.sh",
           "scripts/genesis_prerequisites.sh",
           "scripts/install_wasi_sdk.sh",
-          "scripts/lib/prerequisite_manifest.py"
+          "scripts/lib/prerequisite_manifest.py",
+          "scripts/requirements-selfhost-checker.txt"
         ],
         "sets": [
           "governance"
@@ -24089,7 +24155,7 @@
         "maxShards": 0,
         "mode": "gate-level"
       },
-      "sourceSha256": "94032f5fc575b04652175f5ac0687aba7ccd5a9c26d5793b599a94cb8f1a6c5b",
+      "sourceSha256": "66d1d5c9d27b6c002618f3e6c8e91d7724bf555d6af2bc2db42fa6bb0b30ae8a",
       "tools": [
         "bash",
         "git",
@@ -24106,7 +24172,7 @@
       "executionIdentitySha256": "fadef0fd8c58b7fabf793d7c9fe8ee5de53873977a40b28d5893ef6e69e225b2",
       "expectedDurationSeconds": 1800,
       "id": "gate/production-cli-help-surface",
-      "inputIdentitySha256": "a1fe6bd2407de1cf3d32461bd031764d76c6e8a3a0824f110fa994bebb7c09ca",
+      "inputIdentitySha256": "defa0c6eb629831e262abc8f5e39281d8479b754f19b38b7108931642ec6f61f",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24121,6 +24187,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/heavy_gate_preflight.sh",
           "scripts/lib/profile_gate_timing.sh",
@@ -24177,7 +24244,7 @@
       "executionIdentitySha256": "52b8f2ffae22b6ec11f09d276b063567e3b1aa25b50e1d18057967b2ae80ef6a",
       "expectedDurationSeconds": 1800,
       "id": "gate/production-cli-parse-surface",
-      "inputIdentitySha256": "f4b6970c141faeb7f3963b32fa7bc892da5166cadf7c78e3eb9264cbb0a8dd27",
+      "inputIdentitySha256": "afb2f99387ca0758d7c806ee6f82e8971fded67a8e2274419ac6986a81aa3718",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24191,6 +24258,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -24323,7 +24391,7 @@
       "executionIdentitySha256": "bf94a23c0d0681c59f3ca677dfd4c6152ed3f56b7844e22062e8329c48f19dfa",
       "expectedDurationSeconds": 15,
       "id": "gate/reference-host-profiles",
-      "inputIdentitySha256": "1aab37a091045ffb85a187c414a1d60a83971c326643def00b7f9ea4e6d5b545",
+      "inputIdentitySha256": "3b0772331312df41ceeab97586d1f3da8172e2b6c80445f129ea28bf74486745",
       "inputs": {
         "paths": [
           "docs/spec/CHECK_UPDATE_BOUNDARY_v0.1.md",
@@ -24383,7 +24451,7 @@
       "executionIdentitySha256": "d525e699cb622cd46ca6e8282770c29bcc7cf4833b828f9fc939dbf13673d1ec",
       "expectedDurationSeconds": 15,
       "id": "gate/release-notes",
-      "inputIdentitySha256": "0b1f7bcaa7302470c72a66c9458574262a71a037c5f7e0995fed779ee3649a95",
+      "inputIdentitySha256": "3483051562d7bfe2beeb92c1c821b94097a0c7d326651a8ba7703a13bd1e5efb",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24584,7 +24652,7 @@
       "executionIdentitySha256": "2c4fbf1049c51685c50ab5892a6dcf111b89096950a96e1197bed6d9b5295b6e",
       "expectedDurationSeconds": 1800,
       "id": "gate/release-smoke",
-      "inputIdentitySha256": "111adbff16f9dbd026d7d2d7efe9e041a67482a29716293d97634018e9eba3ee",
+      "inputIdentitySha256": "3166148bf4c6b733947da0e7f5a17a20b45c4884193c8f5d334b5ff1f0c2d2d4",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -24721,6 +24789,7 @@
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
           "scripts/lib/gate_manifest.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_scoring.py",
           "scripts/lib/gc_agent_scoring_contract.py",
@@ -24799,7 +24868,7 @@
       "executionIdentitySha256": "db4697e39bd056f127b21773d55fb3b24c0c7346e56357e75904c8052c6f8091",
       "expectedDurationSeconds": 600,
       "id": "gate/remote-registry-runtime-parity",
-      "inputIdentitySha256": "22f617dd2d6958a4bd863e88fbd13b0e226298ebb01b9cc02b8968422d66fbe9",
+      "inputIdentitySha256": "ddbde89f927928499791ba193a56a9a48d76403f44bfea6dded725bed83236cc",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24813,6 +24882,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_remote_registry_runtime_parity_report.sh",
           "selfhost/toolchain.gc"
@@ -24865,7 +24935,7 @@
       "executionIdentitySha256": "8f5310e9a5301ac5e50ca6fceb9746bc7a9eb296b438b2dbbfe00fbb7b91b932",
       "expectedDurationSeconds": 600,
       "id": "gate/roadmap-baseline",
-      "inputIdentitySha256": "e16102edc073c3db1d97b2cdc7736eab6d9cf7379bb97f22d9874f0540b3f26f",
+      "inputIdentitySha256": "fbb3de7c8c9dd13ee0d1efa5c100c6e69f2414bb32d57d8cde1e0a466a49d362",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -24897,6 +24967,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/reference_host_profiles.py",
           "scripts/lib/roadmap_baseline.py",
@@ -24958,7 +25029,7 @@
       "executionIdentitySha256": "9b6a2ff9b7ca7a48d6759ac76e474ba6b2c2eb158fcd7ec16da891893b3bc235",
       "expectedDurationSeconds": 15,
       "id": "gate/roadmap-execution-manifest",
-      "inputIdentitySha256": "73cd3cf51cb029f5eb0691b38b852588e33f196b5486e99491b342c71443a482",
+      "inputIdentitySha256": "a9a63413fc334717583e8ad9801033efd3af76e64bbeaa8e1c932121000c4505",
       "inputs": {
         "paths": [
           "ROADMAP.md",
@@ -25205,7 +25276,7 @@
       "executionIdentitySha256": "2d58fe7e1acc2a494adddc936b71c05fb8b54e0b2466339323cc2970048666fc",
       "expectedDurationSeconds": 600,
       "id": "gate/runtime-backend-feature-matrix",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -25286,6 +25357,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -25365,7 +25437,7 @@
       "executionIdentitySha256": "dc25d3a3da8b1ee786b963d05f4c1b84ead45a05f4a7b5b9f9628e3f7e12d573",
       "expectedDurationSeconds": 900,
       "id": "gate/runtime-microbench-budgets",
-      "inputIdentitySha256": "bc7984b0b19e3337d87309a4ed3f2ecdcfd5e4d38f01d552f075fceffec67502",
+      "inputIdentitySha256": "f97ba4a2965c751a943cd44f11a25a35e8bba0b9ae9c0cc5b606edd862a310ee",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25380,6 +25452,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
@@ -25436,7 +25509,7 @@
       "executionIdentitySha256": "83d7dcb48cd39e1d161ad38a609cc7ac2408398c3ecab34bede8a08ab4144db7",
       "expectedDurationSeconds": 900,
       "id": "gate/runtime-workload-budgets",
-      "inputIdentitySha256": "79fb56c0d54deec6a2759a727f075adaa71338bce3358eaae38147769d6e8c94",
+      "inputIdentitySha256": "58ce628d50f5ba94a811c5471411a4082dc7b16d240308fa9746f1c84ba38391",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25451,6 +25524,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/perf_disk_mode.sh",
           "scripts/lib/profile_gate_timing.sh",
@@ -25555,7 +25629,7 @@
       "executionIdentitySha256": "2cb630dc95963b8f1f56eb63ade2ab93c476ff6caaad083666376d8ec86ed971",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-artifact-fresh",
-      "inputIdentitySha256": "4cb5bf1c14a139b2fc06e3b2d500582cee9542feec9eea0102520650202938ed",
+      "inputIdentitySha256": "68b63a4eeb11a5ca2b1d9466f42759191c45c6aebada75b8c4767caf2048e0ef",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -25571,6 +25645,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -25635,7 +25710,7 @@
       "executionIdentitySha256": "605aa59a4fc7df643fa1470e994534127f07bff8312bf30126bacfc3b5c26643",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-boundary",
-      "inputIdentitySha256": "5a210528e7c5190aca7ce6244499bec24511bcb29e52ecc343fcb75d750096a2",
+      "inputIdentitySha256": "14fef40fb42ec3711fe8199ab4cbaea397eaa8724cc90689d1462dfeb204871d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26024,6 +26099,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesis_evidence_profile.py",
           "scripts/lib/genesis_evidence_verifier_vectors.py",
@@ -26214,7 +26290,7 @@
       "executionIdentitySha256": "f06a6c3fc3574f462bce4f32e85c39d6504550b7378913d21e6a8970d6b464ee",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-dashboard-fresh",
-      "inputIdentitySha256": "bc6ecc0ab566f43308ae81c69d578428d07017c925c2500c60f167b004ee9c8a",
+      "inputIdentitySha256": "12017d17c54e863d5f355fa28abdc536a10b86db4d9cb20e4bca6376764d479a",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26230,6 +26306,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -26391,7 +26468,7 @@
       "executionIdentitySha256": "d435faaba2111dede4a5464aad99795faf1cf94bb4abc689d6a0194f2dad1cd9",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-readiness-scorecard",
-      "inputIdentitySha256": "9f0c6c5522fa483d00997b66d9326a65d6223d68c1db5b81fd3323d29316f8ce",
+      "inputIdentitySha256": "8c63090f0e6341dc4869b80928c456d655a8aba7315327d010c3d351cf9eb8c0",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26445,6 +26522,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/gcpm_caps_fixture.sh",
           "scripts/lib/generated_state.py",
           "scripts/lib/heavy_gate_preflight.sh",
@@ -26585,7 +26663,7 @@
       "executionIdentitySha256": "2267ce93b50fd79d51d2986a05c59a871e0bba7d8586850d442df8b18020be8e",
       "expectedDurationSeconds": 600,
       "id": "gate/selfhost-symbol-ownership",
-      "inputIdentitySha256": "c1fa6401f0fbfca7677da8470e9325985f804f838189e32d72ca7e41d8e46ded",
+      "inputIdentitySha256": "d21a4fd1a91a93e1d15f2eef4d4532b66ec31059cb2c48aa4994f1f104419f20",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26599,6 +26677,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/profile_gate_timing.sh",
           "scripts/lib/profile_runtime_budget.py",
@@ -26652,7 +26731,7 @@
       "executionIdentitySha256": "27aefbbc28c5abbc4073b73b9388f161f2fe7a27dd933332522571eb5f80f012",
       "expectedDurationSeconds": 15,
       "id": "gate/selfhost-toolchain-review-fresh",
-      "inputIdentitySha256": "c98f7dec9fdbe0cceea59eb833229674312cf43af35f04c686451d7d22f78e98",
+      "inputIdentitySha256": "322be0aa15f26e90fc74d5d458469f30611355b314267da127c4ad88430f4cba",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -26667,6 +26746,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/selfhost_artifact_cache.sh",
           "scripts/render_selfhost_toolchain_review.sh",
@@ -26719,7 +26799,7 @@
       "executionIdentitySha256": "47026ef70dbcbaca5146ac68c12b0d459836311ca3de36faaa7629a191619519",
       "expectedDurationSeconds": 900,
       "id": "gate/slo-report-contracts",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -26800,6 +26880,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -27036,7 +27117,7 @@
       "executionIdentitySha256": "8b46f84ab4ee1987a4f906f473383335a8c61fea2822b1af8ff29068884d1a52",
       "expectedDurationSeconds": 1800,
       "id": "gate/supply-chain",
-      "inputIdentitySha256": "309b33edfd9fc90dd8e7027c2589d91b65922d0ef3b1a266283a7003e7e74e11",
+      "inputIdentitySha256": "4f4b8de91d6a687a84a155f3263df390aeb7e2f926258594dde7c7c443116456",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -27053,6 +27134,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/rustsec_advisory_db.py"
         ],
@@ -27105,7 +27187,7 @@
       "executionIdentitySha256": "f73ba180441ea65e9b9ae08bae08669623919ff88a37bffa67c0f0b1f29ce54d",
       "expectedDurationSeconds": 900,
       "id": "gate/task-concurrency-stress",
-      "inputIdentitySha256": "f643ec4437226b8853e0ae8e7b43b5ba59ee85322f0d39e0dc4be00a90b8e345",
+      "inputIdentitySha256": "4f426942112c4722b9e3d93feb5de4e684263f30c3b50cd8ac55c13badb15f36",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -27119,6 +27201,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_task_concurrency_stress_report.sh"
         ],
@@ -27192,7 +27275,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28202,6 +28285,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -28733,7 +28818,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
+      "inputIdentitySha256": "7c7a9266149d8178dc7da09543887359d1bca77d116dadec0c86c929e89a53f7",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29743,6 +29828,8 @@
           "scripts/lib/gate_telemetry.py",
           "scripts/lib/gate_telemetry.sh",
           "scripts/lib/gate_telemetry_cancellation.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
+          "scripts/lib/gate_telemetry_sampler_controls.py",
           "scripts/lib/gc_agent_benchmark_run.py",
           "scripts/lib/gc_agent_core_card.py",
           "scripts/lib/gc_agent_corpus.py",
@@ -30215,7 +30302,7 @@
       "executionIdentitySha256": "ee98150995cf06d1154b98f37201d1e633fcbc1a82171a3ab4834069bfaed5bc",
       "expectedDurationSeconds": 600,
       "id": "gate/vcs-selfhost-contract",
-      "inputIdentitySha256": "4e83562fe3ac586d10197d62c682515033bb07ff03481c44b382f9ffc7f87846",
+      "inputIdentitySha256": "423332125b0ddc2b48cc32339d20f442bda20012fb3e878b30bf8922e67c5a6d",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -30230,6 +30317,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_vcs_selfhost_contract_report.sh"
         ],
@@ -30354,7 +30442,7 @@
       "executionIdentitySha256": "01c8cd92ab8a5a23ca01057291b6e4422011aad714627a46819aaa99eb26b9ee",
       "expectedDurationSeconds": 1800,
       "id": "gate/versioning-release-hygiene",
-      "inputIdentitySha256": "9978c87f07d4d4b39827f1b1b73771b1cba1beab049b8fa3208a46fa95bb619e",
+      "inputIdentitySha256": "bc88988cf20f94250fd3bc163781de42319f508f8bd5d5618eae57133cb26bba",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -30394,6 +30482,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/v1_compatibility.py",
           "scripts/lib/version_surfaces.py",
@@ -30449,7 +30538,7 @@
       "executionIdentitySha256": "d9b4fcf075af51ebd5bb1e2f2e57e31eaa5be6de51d2e2851cf20dff0cc1b5d5",
       "expectedDurationSeconds": 600,
       "id": "gate/warm-protocol-contract",
-      "inputIdentitySha256": "ddaa4bb2f9484118cc04d00a5d10ae2f081c580ebdd7347041a6e5d1eccf03ec",
+      "inputIdentitySha256": "85ecf066e50003c38040909591a9fcc683e4ca0b7111a633e7fe3f07e0864abe",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -30494,6 +30583,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/warm_protocol_contract.py"
         ],
@@ -30545,7 +30635,7 @@
       "executionIdentitySha256": "0ca4c65775a742da8344928a6c70fd3ad57c5efb3936c9d5699a4b8f8f1f3fee",
       "expectedDurationSeconds": 1800,
       "id": "gate/wasm-production-surface",
-      "inputIdentitySha256": "ff259ec3b9aa53529aa993631dde1515486add00f7adb6f735173d8523d2ee27",
+      "inputIdentitySha256": "62fbb42505a21e496307a3204a81b5cbaf8a925e50520dfdf1e5fda693db8ecb",
       "inputs": {
         "paths": [
           "Cargo.lock",
@@ -30559,6 +30649,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/render_wasm_production_surface_report.sh",
           "scripts/wasm_bindgen_node.sh"
@@ -30612,7 +30703,7 @@
       "executionIdentitySha256": "fac716fb1bf3d09ace84753889af7cb4a0aae230ddead596059ff262d80f89dd",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance",
-      "inputIdentitySha256": "5bd382422288e4aa9c772ad616af97ef4458f61e89b912d11a25bf95ed81e7ff",
+      "inputIdentitySha256": "80ee6f3cdc3ddf3aae812dfd8769c4116de2262f0f2000e27f05620d630d6829",
       "inputs": {
         "paths": [
           "genesis.prerequisites.json",
@@ -30664,7 +30755,7 @@
       "executionIdentitySha256": "636bdfe583f7a448ca4b753cf1b86d9881543dc71ed6f3e64f98beb55bc4e76e",
       "expectedDurationSeconds": 15,
       "id": "gate/webxr-browser-conformance-lane",
-      "inputIdentitySha256": "62dcc7ebc4b6698026401d567d3a7bce70c0fb3aeeac9e8ec205ba5402c5ff55",
+      "inputIdentitySha256": "c28f3b836dbdd9526ab667f9c67361358fb1cd5ac6436c7fa92ab3cc871be445",
       "inputs": {
         "paths": [
           "genesis.prerequisites.json",
@@ -30716,7 +30807,7 @@
       "executionIdentitySha256": "bbe2e1c9d149006417ec5f1306ec33706509361f12e3aa3e7569174bf87596de",
       "expectedDurationSeconds": 15,
       "id": "gate/write-genesiscode-skill-conformance",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -30797,6 +30888,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -30873,7 +30965,7 @@
       "executionIdentitySha256": "0eaca0b9de65841e9bdbcccf6b126ed1304badf0acbe15c7979692c7cd7d485d",
       "expectedDurationSeconds": 600,
       "id": "gate/write-genesiscode-skill-distribution",
-      "inputIdentitySha256": "747f1469e497f55f8fa8ced2d3c602d9be25a3237364712ad47eee36f58c6a34",
+      "inputIdentitySha256": "a6a6b40cd4ad0fdaecccab83c841a4dbc3bcf0a48e05820ea1d4f5db24b8f4ed",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -30954,6 +31046,7 @@
           "scripts/lib/cargo_cache.py",
           "scripts/lib/cargo_target_dir.sh",
           "scripts/lib/deterministic_cleanup.py",
+          "scripts/lib/gate_telemetry_darwin_inventory.py",
           "scripts/lib/generated_state.py",
           "scripts/lib/genesiscode_authoring_skill.py",
           "scripts/lib/health_profile_evidence.py",
@@ -31192,11 +31285,11 @@
     "generatedFrom": [
       {
         "path": "docs/spec/CHECK_UPDATE_BOUNDARY_AUDIT_v0.1.json",
-        "sha256": "666c01e104c39674ce501412f8ad99472d0c6abdd2a8c28e04ad81f9b3094f83"
+        "sha256": "3e7eabcbd5aa602733a4aea22ac4ebb78a4a6cdaeca329eb423f8ec8f1f73561"
       },
       {
         "path": "genesis.prerequisites.json",
-        "sha256": "6c1ea1b68d0888a369bae86a1c1161529f8d06e68d676fff529c712a43986d9a"
+        "sha256": "2241e1044a6f08ebc9a25d03291f94a32977f7dc111b1166b688a45668efc0ec"
       },
       {
         "path": "policies/gates_v0.1.json",

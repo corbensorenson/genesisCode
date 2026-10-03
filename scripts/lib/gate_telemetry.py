@@ -18,6 +18,8 @@ import threading
 import time
 from typing import Any, Optional, Sequence
 
+import gate_telemetry_darwin_inventory as darwin_inventory
+
 from supervisor_cancellation import SupervisorCancelled, cancellation_scope, deferred_cancellation
 
 POLICY_REL = "policies/gate_telemetry_v0.1.json"
@@ -243,10 +245,10 @@ def filesystem_free_bytes(root: Path) -> int:
     return int(stats.f_bavail) * int(stats.f_frsize)
 
 
-def linux_process_tree(root_pid: int) -> set[int]:
+def linux_process_tree(root_pid: int, stop: Optional[threading.Event] = None) -> set[int]:
     seen = set()
     queue = deque([root_pid])
-    while queue:
+    while queue and (stop is None or not stop.is_set()):
         pid = queue.popleft()
         if pid in seen:
             continue
@@ -276,16 +278,89 @@ class Sampler:
             while not self.stop.is_set():
                 self.sample()
                 self.stop.wait(self.interval)
-            self.sample()
-        except (OSError, subprocess.SubprocessError) as exc:
+        except (OSError, subprocess.SubprocessError, TelemetryError, darwin_inventory.InventoryError) as exc:
             self.error = str(exc)
+
+    def darwin_inventory(self) -> Optional[str]:
+        """Own a cancellable, bounded inventory helper rather than a blocked run."""
+        if self.stop.is_set():
+            return None
+        # Normal collection and cancellation have independent bounds: a cold
+        # interpreter plus a large tree can exceed one second, while stop must
+        # still interrupt it inside the existing two-second join envelope.
+        deadline = time.monotonic() + 5.0
+        maximum = 1024 * 1024
+        payload = bytearray()
+        leader_drained = False
+        proc = subprocess.Popen(
+            [sys.executable, "-I", "-B", str(Path(darwin_inventory.__file__).resolve()), str(self.pid)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True,
+        )
+        try:
+            if proc.stdout is None:
+                raise TelemetryError("process inventory output pipe is unavailable")
+            os.set_blocking(proc.stdout.fileno(), False)
+            while True:
+                if self.stop.is_set():
+                    return None
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TelemetryError("process inventory exceeded its five-second deadline")
+                try:
+                    chunk = os.read(proc.stdout.fileno(), min(65536, maximum + 1 - len(payload)))
+                except BlockingIOError:
+                    if not leader_drained and proc.poll() is not None:
+                        # A descendant can retain either pipe after leader
+                        # exit. Drain the group without waiting for pipe EOF.
+                        self.terminate_inventory_group(proc)
+                        leader_drained = True
+                    self.stop.wait(min(0.02, remaining))
+                    continue
+                if not chunk:
+                    if proc.wait(timeout=min(0.5, remaining)) != 0:
+                        detail = payload[-512:].decode("ascii", errors="replace").strip()
+                        suffix = f": {detail}" if detail else ""
+                        raise TelemetryError("process inventory exited unsuccessfully" + suffix)
+                    try:
+                        return payload.decode("ascii")
+                    except UnicodeError as exc:
+                        raise TelemetryError("process inventory is not ASCII") from exc
+                payload.extend(chunk)
+                if len(payload) > maximum:
+                    raise TelemetryError("process inventory exceeds its 1 MiB output bound")
+        finally:
+            # A helper can retain descendants or an open pipe after its leader
+            # exits. Its private group never includes the governed gate.
+            try:
+                self.terminate_inventory_group(proc)
+            finally:
+                try:
+                    proc.wait(timeout=0.5)
+                finally:
+                    if proc.stdout is not None:
+                        proc.stdout.close()
+
+    def terminate_inventory_group(self, proc):
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except PermissionError as exc:
+            status = proc.poll()
+            # Permission denial alone never proves successful cleanup.
+            if (status is None or sys.platform != "darwin"
+                    or darwin_inventory.NativeInventory().group_has_live_processes(proc.pid)):
+                raise TelemetryError(f"inventory group signal denied (leader_status={status})") from exc
 
     def sample(self):
         if self.platform == "linux":
-            pids = linux_process_tree(self.pid)
+            pids = linux_process_tree(self.pid, self.stop)
             rss_total = 0
             page_size = os.sysconf("SC_PAGE_SIZE")
             for pid in pids:
+                if self.stop.is_set():
+                    return
                 try:
                     fields = Path(f"/proc/{pid}/statm").read_text(encoding="ascii").split()
                     rss_total += int(fields[1]) * page_size
@@ -302,15 +377,24 @@ class Sampler:
                     pass
             self.peak_rss = max(self.peak_rss, rss_total)
         elif self.platform == "darwin":
-            proc = subprocess.run(["ps", "-axo", "pid=,ppid=,rss="], text=True, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            inventory = self.darwin_inventory()
+            if inventory is None:
+                return
             children = defaultdict(list)
             rss = {}
-            for line in proc.stdout.splitlines():
+            for line in inventory.splitlines():
                 fields = line.split()
-                if len(fields) == 3 and all(value.isdigit() for value in fields):
-                    pid, ppid, rss_kib = map(int, fields)
-                    children[ppid].append(pid)
-                    rss[pid] = rss_kib * 1024
+                if (len(fields) != 3 or any(not value.isascii() or not value.isdigit() for value in fields)
+                        or len(fields[0]) > 10 or len(fields[1]) > 10 or len(fields[2]) > 17):
+                    raise TelemetryError("process inventory row is malformed")
+                pid, ppid, rss_kib = map(int, fields)
+                if (not 0 < pid <= 2**31 - 1 or not 0 <= ppid <= 2**31 - 1
+                        or rss_kib > 2**54 or pid in rss
+                        or (not rss and (pid != self.pid or ppid != 0))
+                        or (rss and ppid not in rss)):
+                    raise TelemetryError("process inventory row contradicts its tree or numeric bounds")
+                children[ppid].append(pid)
+                rss[pid] = rss_kib * 1024
             pids, queue = set(), deque([self.pid])
             while queue:
                 pid = queue.popleft()

@@ -1230,7 +1230,8 @@
         "crates/gc_wasi_cli/Cargo.toml",
         "crates/gc_coreform",
         "crates/gc_kernel",
-        "crates/gc_registry"
+        "crates/gc_registry",
+        "genesis.prerequisites.json"
       ],
       "start_after": ["R4.1", "R5.1", "R5.3"],
       "sequential": true
