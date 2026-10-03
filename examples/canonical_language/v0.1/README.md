@@ -33,3 +33,22 @@ for training or deterministic evaluation.
 Do not broaden capabilities, disable limits, select the Rust compatibility
 frontend, or rewrite expected failures to make an invalid case pass. Repair the
 single declared mutation and rerun the exact command instead.
+
+## Replay fixture production
+
+The replay teaching logs are generated outputs of
+`scripts/update_agent_authoring_bundle.sh canonical-examples`. The updater
+builds the production CLI, records the unchanged program with its reviewed
+policy in an isolated workspace, verifies strict replay, and derives the invalid
+log by the declared single decision mutation. It requires rejection at that
+decision/capability invariant, so an earlier continuation mismatch cannot pass
+as the intended negative control. The complete candidate is validated before
+the updater writes the two logs and manifest. Publish them through the canonical
+generated-authority transaction, which stages and promotes the closure together.
+
+These logs teach the current source-bound profile; they are not retained release
+evidence or compatibility readers for older producer identities. Preserve stale
+logs as investigation evidence rather than editing their committed hashes.
+Historical runtime-identity/version compatibility remains a separate recovery
+obligation. The read-only Python validator checks structure and content bindings;
+the production CLI conformance test executes every valid and invalid scenario.

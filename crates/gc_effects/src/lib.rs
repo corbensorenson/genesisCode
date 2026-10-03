@@ -11,6 +11,11 @@ mod policy;
 mod refs;
 mod refs_authority;
 mod replay_authority;
+#[cfg(not(target_os = "wasi"))]
+mod rooted_fs;
+#[cfg(target_os = "wasi")]
+#[path = "rooted_fs_wasi.rs"]
+mod rooted_fs;
 mod runner;
 mod runner_browser_host;
 mod runner_editor_host;
@@ -74,3 +79,7 @@ pub fn set_session_effect_ceiling(limit: Option<u64>) {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(all(test, unix))]
+#[path = "rooted_fs_wasi.rs"]
+mod wasi_rooted_descriptor_controls;

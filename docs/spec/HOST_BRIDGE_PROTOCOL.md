@@ -77,6 +77,19 @@ Example:
   - `persistent-stdio` timeout signals the process tree, closes the request channel, joins the sole worker that owns and reaps the child, verifies no process-group member remains, and evicts the session. It never retries the uncertain timed-out request.
 - Hard bridge timeouts require platform process-tree termination support. Current Unix hosts use a dedicated process group per bridge tree. Other hosts fail closed with `<family>/bridge-policy` instead of advertising or attempting a cooperative timeout.
 - `max_bytes` applies to both request payload size and response payload size.
+- For `wasi_bridge_response_file`, it also bounds the complete encoded profile-document
+  body before parsing, including whitespace and every entry in an op-response map.
+  Selection from that map does not authorize loading a larger document. A canonical
+  decimal framing header and newline do not count toward the body limit; acquisition
+  allows at most the portable u64 header width plus newline before checking the body.
+  Overflow while admitting that framing envelope returns `<family>/bridge-policy`.
+  The file is acquired through a held rooted read grant. Oversized input returns
+  `<family>/bridge-response-too-large` before UTF-8 decoding or parsing. Existing file
+  path/read errors and `wasi/bridge-stdout-utf8`/`wasi/bridge-parse` classifications remain.
+  Aggregated profiles require a limit covering their complete encoded body, even when
+  the selected response is small. This corrects the previous selected-response-only
+  enforcement; it does not change inline-profile selection. An absent limit retains
+  the legacy unbounded profile and supplies no resource or cancellation qualification.
 - Violations return deterministic sealed errors with family-scoped codes:
   - `<family>/bridge-required`
   - `<family>/bridge-identity-denied`

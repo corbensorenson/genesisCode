@@ -27,5 +27,5 @@ Pure evaluation is deterministic. Host work requires explicit deny-by-default ef
 Negative examples are valid syntax that must fail at the named semantic/resource boundary.
 Compatibility: agentProfile=GC-AGENT-v0.3 cliEnvelope=genesis/error-v0.2 coreformProfile=genesis/coreform/v0.2 diagnostics=genesis/diagnostics-schema-v1 effectLog=genesis/effect-log/v3 genesisLock=2 gpk=2 hashProfile=genesis/hash-profile/gcv0.2-blake3 languageProfile=genesis/language-profile/v0.2 packageManifest=1 releaseTrain=0.2.0 v1ReleaseClaim=reserved-not-stable valueEffectHashProfile=genesis/value-effect-hash/v0.2
 Unsupported classes: experimental-syntax host-only-operation unavailable-target nondeterministic-facility out-of-profile-capability
-Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=45be98c331315d78289ff4f5567b09d462a030f8a9edad3384dbbf342516b888
+Authority: docs/spec/GC_AGENT_PROFILE_v0.3.json profile-sha256=7edb579f07852427110d4547d8568d2e720b14d66c4c018456d9b9bfe3128478
 Verify: bash scripts/check_gc_agent_core_card.sh

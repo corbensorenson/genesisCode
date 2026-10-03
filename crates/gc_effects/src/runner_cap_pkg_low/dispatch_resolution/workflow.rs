@@ -250,15 +250,12 @@ pub(super) fn finalize_workflow(
         #[cfg(any(test, feature = "parity-oracle"))]
         {
             finalize_workflow_parity(
+                CommitValidationContext::new(policy, commit_authority, error_tok, op),
                 model,
                 workflow,
                 &executed,
                 store,
-                policy,
-                commit_authority,
                 strict,
-                error_tok,
-                op,
             )?
         }
         #[cfg(not(any(test, feature = "parity-oracle")))]
@@ -275,15 +272,12 @@ pub(super) fn finalize_workflow(
 
     if strict {
         validate_locked_entries_strict(
+            CommitValidationContext::new(policy, commit_authority, error_tok, op),
             authority,
             store,
-            policy,
-            commit_authority,
             &model.requirements,
             &finalized.locked,
             true,
-            error_tok,
-            op,
         )?;
     }
     let rationale_hash = persist_object(

@@ -2,7 +2,7 @@
   "auditDate": "2026-08-11",
   "canonicalSpec": "docs/spec/STAGE0_DEPENDENCY_BOUNDARY_v0.1.md",
   "canonicalSpecSha256": "a332218b90c8527e8f20ed986b9447968eae82a70021bd94b53247ba49222c78",
-  "contentIdentitySha256": "5a0303c7e252654bbf72979cc3b7bfbfd27aea483fbd021ed913464390a89baa",
+  "contentIdentitySha256": "b03af58764ee5243bcd523ecbb6df15a4a9bc8710fc1a1a6f49f18b57cc0f3e6",
   "forbiddenAmbientPackages": [
     "async-std",
     "clap",
@@ -96,7 +96,7 @@
       "buildScriptPath": null,
       "manifestSha256": "d207fece2541279080ada5a06d3dbfdce6594efdeeae8bb5178580e2fc59a969",
       "productionResolvedPackageCount": 47,
-      "productionResolvedClosureSha256": "4c572f1e0d92d06eee485adcfe659d2fc1d3c9e44d7dcd404c82e0705931bfcf"
+      "productionResolvedClosureSha256": "91df2e6dcfac3c4a8a56d039d062909f9565eb21945fd26bc5467740abe9f45c"
     },
     {
       "allowedBuildExternalDependencies": [],
@@ -133,7 +133,7 @@
       "buildScriptPath": null,
       "manifestSha256": "fa94aa8061f5d4dcfd44ad57b7eecb8db071914566e0ab59c73d32a806ecf083",
       "productionResolvedPackageCount": 55,
-      "productionResolvedClosureSha256": "8cd5a4b1c1721fa977476ff9f8b02a18b09595bc70df2db6eb5a2f0583cdf676"
+      "productionResolvedClosureSha256": "02273dda08ee5e9ddfeaa075ce423f28e0b64e4fc3f31ee37bccec0a74ae6ffa"
     },
     {
       "allowedBuildExternalDependencies": [
@@ -181,7 +181,7 @@
       "buildScriptPath": "crates/gc_prelude/build.rs",
       "manifestSha256": "ce405c1ca2a460590ea1413f5f47758bcaac6498f300201c451c1a94cee79627",
       "productionResolvedPackageCount": 69,
-      "productionResolvedClosureSha256": "3a253d459ff1237dc47b47669f50bb8aa7b9d59b3cf984c426f09f1060bc8712"
+      "productionResolvedClosureSha256": "5b229a37b9ae7ae62bdfd216c5fa50f2519b58d8fcb16829ad32e4c232508c8a"
     }
   ],
   "stage0TrustContract": "docs/spec/STAGE0_TRUST_CONTRACT_v0.1.json",

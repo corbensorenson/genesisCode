@@ -11,6 +11,8 @@ import re
 import sys
 from pathlib import Path
 
+from selfhost_patch_authority import Error as RustCustodyError, rust_functions
+
 
 class CheckError(RuntimeError):
     pass
@@ -327,7 +329,28 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"{label} retains a direct local refs read")
     if "gpk_ref_export_fails_closed_without_authority_and_succeeds_with_it" not in sync_tests:
         fail("GPK internal-consumer authority control missing")
-    if "refs_authority.as_deref_mut(),\n        None," not in publish:
+    try:
+        publish_functions = [
+            function for function in rust_functions(publish)
+            if function["name"] == "handle_publish"
+        ]
+    except RustCustodyError as error:
+        fail(f"package publish producer cannot be scoped: {error}")
+    if len(publish_functions) != 1:
+        fail("package publish requires one named production producer")
+    publish_route = publish_functions[0]["body"]
+    recursive_sync = (
+        r'let\s+sync_out\s*=\s*call_capability_with_runtime\(\s*'
+        r'"core/sync::push",\s*&sync,\s*sync_pol,\s*policy,\s*'
+        r'Some\(store\),\s*Some\(refs\),\s*refs_authority,\s*'
+        r'None,\s*None,\s*None,\s*None,\s*None,\s*budget,\s*'
+        r'None,\s*bridge_runtime,\s*error_tok,\s*\)\?;'
+    )
+    recursive_matches = list(re.finditer(recursive_sync, publish_route))
+    if len(recursive_matches) != 1 or not re.match(
+        r"let\s+sync_out\s*=",
+        publish_functions[0]["masked"][recursive_matches[0].start():],
+    ):
         fail("package publish recursive sync push omits the GenesisCode refs authority")
     required_ops = (
         "core/refs::get", "core/refs::list", "core/refs::set", "core/refs::delete",
@@ -436,11 +459,29 @@ def self_test(root: Path, profile, schema) -> int:
         (profile, {"crates/gc_effects/src/runner_remote_ops/gpk.rs": gpk_root.replace("RefsAuthority::consumer_get(refs_authority, refs, &root)", "refs.get(&root)", 1)}, "GPK root read"),
         (profile, {"crates/gc_effects/src/runner_cap_gc_gpk_low/gpk_ops.rs": gpk.replace("RefsAuthority::consumer_get(ctx.refs_authority.as_deref_mut(), refs, name)", "refs.get(name)", 1)}, "GPK embedded read"),
         (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &refname)", "refs.get(&refname)", 1)}, "publish read"),
-        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("refs_authority.as_deref_mut(),\n        None,", "None,\n        None,", 1)}, "publish recursive policy route"),
+        (profile, {"crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs": publish.replace("refs_authority,\n        None,", "None,\n        None,", 1)}, "publish recursive policy route"),
         (profile, {"crates/gc_effects/src/runner_vcs_pkg_helpers/pkg_resolution.rs": resolution.replace("RefsAuthority::consumer_get(refs_authority.as_deref_mut(), refs, &rn)", "refs.get(&rn)", 1)}, "package read"),
         (profile, {"crates/gc_effects/src/runner_cap_vcs_low/dispatch_meta.rs": vcs_meta.replace("RefsAuthority::consumer_get(", "RefsAuthority::legacy_consumer_get(", 1)}, "VCS root read"),
         (profile, {"crates/gc_effects/src/runner_vcs_pkg_helpers/vcs_history.rs": vcs_history.replace("RefsAuthority::consumer_list(refs_authority, refs, None)", "refs.list(None)", 1)}, "VCS history read"),
         (profile, {"crates/gc_effects/tests/sync_registry/cases_b.rs": sync_tests.replace("gpk_ref_export_fails_closed_without_authority_and_succeeds_with_it", "gpk_ref_export_bypasses_authority", 1)}, "GPK consumer control"),
+    ])
+    recursive_call = re.search(
+        r'    let sync_out = call_capability_with_runtime\(.*?\n    \)\?;',
+        publish,
+        re.DOTALL,
+    )
+    if recursive_call is None or publish.count("refs_authority,\n        None,") != 1:
+        fail("publish recursive forwarding mutation fixture drift")
+    publish_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/publish_authority.rs"
+    mutations.extend([
+        (profile, {publish_path: publish.replace("refs_authority,\n        None,", "None,\n        None,", 1) + "\n// refs_authority.as_deref_mut(),\n//        None,\n"}, "publish omission with unrelated legacy marker"),
+        (profile, {publish_path: publish.replace("        &sync,\n        sync_pol,", "        payload,\n        sync_pol,", 1)}, "publish accepted sync payload binding"),
+        (profile, {publish_path: publish.replace("        &sync,\n        sync_pol,", "        &sync,\n        pol,", 1)}, "publish recursive policy binding"),
+        (profile, {publish_path: publish.replace("        bridge_runtime,\n        error_tok,", "        bridge_runtime,\n        wrong_error_tok,", 1)}, "publish recursive error seal binding"),
+        (profile, {publish_path: publish[:recursive_call.end()] + "\n" + recursive_call.group(0) + publish[recursive_call.end():]}, "duplicate publish sync dispatch"),
+        (profile, {publish_path: publish.replace("pub(super) fn handle_publish(", "pub(super) fn legacy_handle_publish(", 1)}, "named publish producer custody"),
+        (profile, {publish_path: publish.replace("refs_authority,\n        None,", "None,\n        None,", 1).replace("    append_authority_result(", "    /*\n" + recursive_call.group(0) + "\n    */\n    append_authority_result(", 1)}, "publish omission with commented forwarding call"),
+        (profile, {publish_path: publish.replace("refs_authority,\n        None,", "None,\n        None,", 1).replace("    append_authority_result(", '    let marker = r###"\n' + recursive_call.group(0) + '\n"###;\n    append_authority_result(', 1)}, "publish omission with raw-string forwarding call"),
     ])
     controls = 0
     for candidate, overrides, label in mutations:
@@ -450,7 +491,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"mutation survived: {label}")
-    if controls != 44:
+    if controls != 52:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

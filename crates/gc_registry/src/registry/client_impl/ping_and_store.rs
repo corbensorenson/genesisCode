@@ -39,6 +39,9 @@ impl RegistryClient {
     }
 
     pub fn store_has(&self, hashes: &[String]) -> Result<BTreeMap<String, bool>, RegistryError> {
+        for hash in hashes {
+            validate_store_hash(hash)?;
+        }
         if let RegistryKind::InProc { id } = &self.kind {
             let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
@@ -48,7 +51,6 @@ impl RegistryClient {
             return reg.store_has(hashes);
         }
         if let Some(root) = self.file_transport_root_for_op("store/has")? {
-            file_ensure_dirs(&root)?;
             let mut out = BTreeMap::new();
             for h in hashes {
                 out.insert(h.clone(), file_store_path(&root, h).exists());
@@ -89,51 +91,8 @@ impl RegistryClient {
         hash: &str,
         max_bytes: Option<usize>,
     ) -> Result<Vec<u8>, RegistryError> {
-        if let RegistryKind::InProc { id } = &self.kind {
-            let g = lock_inproc_map()?;
-            let reg = g.get(id).ok_or_else(|| {
-                RegistryError::RemoteSpec(format!("inproc registry not registered: {id}"))
-            })?;
-            reg.authorize(&self.auth)?;
-            let bytes = reg.store_get(hash)?;
-            enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
-            return Ok(bytes);
-        }
-        if let Some(root) = self.file_transport_root_for_op("store/get")? {
-            file_ensure_dirs(&root)?;
-            let p = file_store_path(&root, hash);
-            if !p.exists() {
-                return Err(RegistryError::Http("store/get: status 404".to_string()));
-            }
-            let bytes = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
-            enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
-            let got = blake3::hash(&bytes).to_hex().to_string();
-            if got != hash {
-                return Err(RegistryError::Protocol(
-                    "store/get: hash mismatch".to_string(),
-                ));
-            }
-            return Ok(bytes);
-        }
-        #[cfg(target_os = "wasi")]
-        {
-            return Err(wasi_http_bridge_required("store/get", &self.base));
-        }
-        #[cfg(not(target_os = "wasi"))]
-        {
-            let u = self
-                .base
-                .join(&format!("store/get/{hash}"))
-                .map_err(|e| RegistryError::RemoteSpec(format!("join store/get: {e}")))?;
-            let r = self
-                .apply_auth(self.http()?.get(u))
-                .send()
-                .map_err(|e| RegistryError::Http(format!("store/get: {e}")))?;
-            if !r.status().is_success() {
-                return Err(status_error("store/get", r.status()));
-            }
-            read_response_bytes_limited("store/get", r, max_bytes)
-        }
+        self.store_get_opt_bounded(hash, max_bytes)?
+            .ok_or_else(|| RegistryError::Http("store/get: status 404".to_string()))
     }
 
     pub fn store_get_opt(&self, hash: &str) -> Result<Option<Vec<u8>>, RegistryError> {
@@ -145,6 +104,7 @@ impl RegistryClient {
         hash: &str,
         max_bytes: Option<usize>,
     ) -> Result<Option<Vec<u8>>, RegistryError> {
+        validate_store_hash(hash)?;
         if let RegistryKind::InProc { id } = &self.kind {
             let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
@@ -152,33 +112,38 @@ impl RegistryClient {
             })?;
             reg.authorize(&self.auth)?;
             return match reg.store_get(hash) {
-                Ok(b) => {
-                    enforce_body_limit("store/get", max_bytes, b.len() as u64)?;
-                    Ok(Some(b))
+                Ok(bytes) => {
+                    enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
+                    verify_store_object("store/get", hash, &bytes)?;
+                    Ok(Some(bytes))
                 }
-                Err(RegistryError::Http(s)) if s.contains("status 404") => Ok(None),
+                Err(RegistryError::Http(s)) if s == "store/get: status 404" => Ok(None),
                 Err(e) => Err(e),
             };
         }
         if let Some(root) = self.file_transport_root_for_op("store/get")? {
-            file_ensure_dirs(&root)?;
             let p = file_store_path(&root, hash);
-            if !p.exists() {
-                return Ok(None);
-            }
-            let bytes = std::fs::read(&p).map_err(|e| RegistryError::Http(format!("{e}")))?;
-            enforce_body_limit("store/get", max_bytes, bytes.len() as u64)?;
-            let got = blake3::hash(&bytes).to_hex().to_string();
-            if got != hash {
-                return Err(RegistryError::Protocol(
-                    "store/get: hash mismatch".to_string(),
+            let mut file = match std::fs::File::open(&p) {
+                Ok(file) => file,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+                Err(e) => return Err(RegistryError::Http(format!("store/get open: {e}"))),
+            };
+            let metadata = file
+                .metadata()
+                .map_err(|e| RegistryError::Http(format!("store/get metadata: {e}")))?;
+            if !metadata.is_file() {
+                return Err(RegistryError::Http(
+                    "store/get: not a regular file".to_string(),
                 ));
             }
+            enforce_body_limit("store/get", max_bytes, metadata.len())?;
+            let bytes = read_bytes_limited("store/get", &mut file, max_bytes)?;
+            verify_store_object("store/get", hash, &bytes)?;
             return Ok(Some(bytes));
         }
         #[cfg(target_os = "wasi")]
         {
-            return Err(wasi_http_bridge_required("store/get", &self.base));
+            Err(wasi_http_bridge_required("store/get", &self.base))
         }
         #[cfg(not(target_os = "wasi"))]
         {
@@ -196,11 +161,14 @@ impl RegistryClient {
             if !r.status().is_success() {
                 return Err(status_error("store/get", r.status()));
             }
-            read_response_bytes_limited("store/get", r, max_bytes).map(Some)
+            let bytes = read_response_bytes_limited("store/get", r, max_bytes)?;
+            verify_store_object("store/get", hash, &bytes)?;
+            Ok(Some(bytes))
         }
     }
 
     pub fn store_put(&self, hash: &str, bytes: &[u8]) -> Result<(), RegistryError> {
+        verify_store_object("store/put", hash, bytes)?;
         if let RegistryKind::InProc { id } = &self.kind {
             let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {
@@ -260,6 +228,7 @@ impl RegistryClient {
         bytes: &[u8],
         chunk_bytes: usize,
     ) -> Result<(), RegistryError> {
+        verify_store_object("store/upload", hash, bytes)?;
         if chunk_bytes == 0 {
             return Err(RegistryError::Protocol(
                 "store/upload: chunk size must be > 0".to_string(),
@@ -287,6 +256,7 @@ impl RegistryClient {
         hash: &str,
         size_bytes: u64,
     ) -> Result<StoreUploadStartResp, RegistryError> {
+        validate_store_hash(hash)?;
         if let RegistryKind::InProc { id } = &self.kind {
             let g = lock_inproc_map()?;
             let reg = g.get(id).ok_or_else(|| {

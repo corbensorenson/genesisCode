@@ -36,6 +36,21 @@ The verifier uses an independently installed BLAKE3 implementation only as a
 cryptographic primitive. It does not import the parser, canonicalizer, printer,
 Prelude, runtime driver, or artifact loader under test.
 
+### Host checker environment
+
+The host-side frontend authority verifier requires the independent Python `blake3`
+distribution. Provision CPython 3.12 and install
+`scripts/requirements-selfhost-checker.txt` using `python3 -m pip --isolated
+--disable-pip-version-check install --index-url https://pypi.org/simple --require-hashes
+--only-binary=:all: --force-reinstall -r scripts/requirements-selfhost-checker.txt` before the self-host
+boundary gate. For local use, install in a dedicated virtual environment. The lock
+admits only the reviewed 1.0.4 wheels for glibc Linux and macOS on x86_64 or aarch64;
+forced installation prevents an already-installed copy from skipping wheel verification;
+an unsupported interpreter/platform, missing dependency, or hash mismatch fails
+closed. This distribution is a verification tool dependency, not a production
+runtime dependency. The verifier must never substitute the production Rust hash
+implementation for this independent observation.
+
 ## Nonclaims
 
 - This profile and its local verifier do not alone promote any ownership-ledger

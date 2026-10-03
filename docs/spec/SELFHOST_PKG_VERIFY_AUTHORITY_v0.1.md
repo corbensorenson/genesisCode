@@ -11,10 +11,17 @@ observation order, fail-fast outcome classification, sealed error code and messa
 checked and missing accounting, and the exact public verify report.
 
 Rust may perform bounded file-presence checks, BLAKE3 byte-integrity checks, CoreForm decoding,
-snapshot/commit/evidence/attestation schema parsing, and commit-closure traversal. Those are typed
+snapshot/evidence/attestation schema parsing, and commit-closure traversal. Those are typed
 mechanism observations. Rust MUST NOT choose the final error class, construct the success report,
 reorder dependencies or hashes, continue host reads after a terminal observation, silently fall
 back to native verify semantics, or accept a result not bound to the exact request and plan.
+
+Commit schema observations delegate to the artifact-backed `CommitAuthority` boundary specified
+in `SELFHOST_COMMIT_AUTHORITY_v0.1.md`. The observation mechanism MUST check the submitted commit's
+store integrity, decode that exact term, and call `validate_expected_commit` with its policy and
+authority context before traversing its fields. Missing authority or substituted results fail
+closed. Restoring `gc_vcs::Commit::from_term` in this production mechanism is forbidden; the
+package-verify contract does not acquire ownership of the delegated commit decision.
 
 ## Causal Protocol
 

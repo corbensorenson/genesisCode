@@ -27,7 +27,7 @@ impl Env {
         }
     }
 
-    fn module_anchor(&self) -> Self {
+    pub(crate) fn module_anchor(&self) -> Self {
         let mut current = self.clone();
         loop {
             if current.0.module_scope.get() {

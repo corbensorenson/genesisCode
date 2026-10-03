@@ -207,6 +207,14 @@ pub(super) fn cap_store_get_parity(
                             Some(op),
                         ));
                     }
+                    Err(gc_registry::RegistryError::HashMismatch { .. }) => {
+                        return Ok(mk_error(
+                            error_tok,
+                            "core/store/hash-mismatch",
+                            "remote bytes hash mismatch".to_string(),
+                            Some(op),
+                        ));
+                    }
                     Err(e) => {
                         if format!("{e}").contains("resource-limit:") {
                             return Ok(mk_resource_limit_error(

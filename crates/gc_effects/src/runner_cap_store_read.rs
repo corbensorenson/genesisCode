@@ -210,19 +210,17 @@ pub(super) fn cap_store_get(
                         Ok(None) => decide(":remote-not-found", None, true, None)?,
                         Err(error) => {
                             let rendered = error.to_string();
-                            let status = if matches!(
-                                error,
-                                gc_registry::RegistryError::Protocol(ref message)
-                                    if message == "store/get: hash mismatch"
-                            ) {
-                                ":remote-hash-mismatch"
-                            } else if rendered.contains("resource-limit:") {
-                                ":remote-resource-limit"
-                            } else if matches!(error, gc_registry::RegistryError::Auth(_)) {
-                                ":remote-auth-error"
-                            } else {
-                                ":remote-error"
-                            };
+                            let status =
+                                if matches!(error, gc_registry::RegistryError::HashMismatch { .. })
+                                {
+                                    ":remote-hash-mismatch"
+                                } else if rendered.contains("resource-limit:") {
+                                    ":remote-resource-limit"
+                                } else if matches!(error, gc_registry::RegistryError::Auth(_)) {
+                                    ":remote-auth-error"
+                                } else {
+                                    ":remote-error"
+                                };
                             let message = match status {
                                 ":remote-hash-mismatch" => "remote artifact hash mismatch",
                                 ":remote-resource-limit" => {

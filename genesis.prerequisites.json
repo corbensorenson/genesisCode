@@ -47,6 +47,7 @@
         "git",
         "jq",
         "python",
+        "python-blake3",
         "rustc",
         "rustfmt"
       ],
@@ -120,6 +121,7 @@
         "npm",
         "playwright",
         "python",
+        "python-blake3",
         "rust-target-wasm32-unknown-unknown",
         "rust-target-wasm32-wasip1",
         "rustc",
@@ -592,6 +594,25 @@
       },
       "purpose": "Dependency-free manifest, evidence, report, and gate helpers",
       "source": "scripts/**/*.py"
+    },
+    {
+      "id": "python-blake3",
+      "purpose": "Independent host-side frontend identity verifier; no GenesisCode runtime dependency.",
+      "source": "scripts/requirements-selfhost-checker.txt",
+      "constraint": {
+        "exact": "1.0.4"
+      },
+      "probe": {
+        "kind": "command-version",
+        "argv": [
+          "python3",
+          "-I",
+          "-B",
+          "-c",
+          "import blake3; print('blake3 ' + blake3.__version__)"
+        ],
+        "versionRegex": "^blake3 ([0-9]+\\.[0-9]+\\.[0-9]+)$"
+      }
     },
     {
       "constraint": {

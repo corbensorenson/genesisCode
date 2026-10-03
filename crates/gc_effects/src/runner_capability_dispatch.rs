@@ -382,13 +382,12 @@ pub(super) fn call_capability_with_runtime(
         ),
 
         "core/sync::push" => capability_sync_push(
+            OperationErrorContext { error_tok, op },
             payload,
             pol,
             policy,
             store,
             refs_authority,
-            error_tok,
-            op,
             timeout_ms,
         ),
 
@@ -657,9 +656,17 @@ pub(super) fn call_capability_with_runtime(
                 let path_s2 = path_s.clone();
                 let max_read_bytes2 = max_read_bytes;
                 let r = with_timeout_cancellable(ms, move |cancel| {
-                    let path = sandbox_path_read(&base_dir2, &path_s2)?;
-                    let bytes =
-                        read_file_with_optional_limit(&path, max_read_bytes2, Some(&cancel));
+                    let path = base_dir2.join(&path_s2);
+                    let bytes = crate::rooted_fs::FsRoot::open(&base_dir2)
+                        .and_then(|root| root.open_read(&path_s2))
+                        .map_err(FsReadError::Io)
+                        .and_then(|file| {
+                            crate::runner_io_ops::read_open_file_with_optional_limit(
+                                file,
+                                max_read_bytes2,
+                                Some(&cancel),
+                            )
+                        });
                     Ok((path, bytes))
                 })?;
                 return Ok(match r {
@@ -706,8 +713,17 @@ pub(super) fn call_capability_with_runtime(
                     ),
                 });
             }
-            let path = sandbox_path_read(&base_dir, &path_s)?;
-            match read_file_with_optional_limit(&path, max_read_bytes, None) {
+            let path = base_dir.join(&path_s);
+            match crate::rooted_fs::FsRoot::open(&base_dir)
+                .and_then(|root| root.open_read(&path_s))
+                .map_err(FsReadError::Io)
+                .and_then(|file| {
+                    crate::runner_io_ops::read_open_file_with_optional_limit(
+                        file,
+                        max_read_bytes,
+                        None,
+                    )
+                }) {
                 Ok(bytes) => Ok(Value::data(Term::Bytes(bytes.into()))),
                 Err(FsReadError::Io(e)) => Ok(Value::Sealed {
                     token: error_tok,
@@ -746,8 +762,10 @@ pub(super) fn call_capability_with_runtime(
             let data = payload_data(payload)?;
             let base_dir = effective_base_dir(pol)?;
             let create_dirs = pol.is_some_and(|p| p.create_dirs);
-            let path = sandbox_path_write(&base_dir, &path_s, create_dirs)?;
-            match write_file_no_follow(&path, &data) {
+            let path = base_dir.join(&path_s);
+            match crate::rooted_fs::FsRoot::open(&base_dir)
+                .and_then(|root| root.write(&path_s, &data, create_dirs))
+            {
                 Ok(()) => Ok(Value::data(Term::Nil)),
                 Err(e) => Ok(Value::Sealed {
                     token: error_tok,

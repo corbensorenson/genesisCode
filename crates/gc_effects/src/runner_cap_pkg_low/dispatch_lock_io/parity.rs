@@ -58,7 +58,7 @@ fn init(
     let hash = blake3::hash(&bytes).to_hex().to_string();
     let base = effective_base_dir(policy)?;
     let create_dirs = policy.map(|value| value.create_dirs).unwrap_or(false);
-    let path = sandbox_path_write(&base, &lock_s, create_dirs)
+    let path = sandbox_atomic_write_target(&base, &lock_s, create_dirs)
         .map_err(|error| EffectsError::Log(format!("parity path: {error}")))?;
     atomic_write_text(&path, &bytes).map_err(|error| {
         EffectsError::Log(format!("parity {operation} persistence failed: {error}"))
@@ -84,7 +84,7 @@ fn add(
         }
     };
     let base = effective_base_dir(policy)?;
-    let path = match sandbox_path_read(&base, &lock_s) {
+    let path = match sandbox_document_read(&base, &lock_s) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(
@@ -95,7 +95,7 @@ fn add(
             ));
         }
     };
-    let mut lock = match gc_pkg::GenesisLock::load(&path) {
+    let mut lock = match read_parity_lock(&path) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(
@@ -172,7 +172,7 @@ fn add(
     );
     let bytes = lock.to_toml_canonical().into_bytes();
     let hash = blake3::hash(&bytes).to_hex().to_string();
-    let write_path = sandbox_path_write(&base, &lock_s, false)
+    let write_path = sandbox_atomic_write_target(&base, &lock_s, false)
         .map_err(|error| EffectsError::Log(format!("parity path: {error}")))?;
     atomic_write_text(&write_path, &bytes).map_err(|error| {
         EffectsError::Log(format!("parity {operation} persistence failed: {error}"))
@@ -197,7 +197,7 @@ fn list(
             ));
         }
     };
-    let path = match sandbox_path_read(&effective_base_dir(policy)?, &lock_s) {
+    let path = match sandbox_document_read(&effective_base_dir(policy)?, &lock_s) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(
@@ -208,7 +208,7 @@ fn list(
             ));
         }
     };
-    let lock = match gc_pkg::GenesisLock::load(&path) {
+    let lock = match read_parity_lock(&path) {
         Ok(value) => value,
         Err(error) => {
             return Ok(mk_error(

@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import platform as host_platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -28,7 +29,21 @@ PLATFORM_PROBE_KEYS = {"id", "argv", "versionRegex", "constraint"}
 PROBE_KEYS = {"kind", "argv", "versionRegex", "packagePath", "versionField", "target"}
 CONSTRAINT_KEYS = {"exact", "minInclusive", "maxExclusive"}
 PROBE_KINDS = {"command-version", "command-presence", "node-package", "rustup-target"}
+PYTHON_CHECKER_LOCK = "scripts/requirements-selfhost-checker.txt"
+PYTHON_CHECKER_PROBE = (
+    "python3", "-I", "-B", "-c",
+    "import blake3; print('blake3 ' + blake3.__version__)",
+)
+# The four independently reviewed CPython 3.12 wheel identities are a closed
+# admission set, not arbitrary hashes supplied by a proposed lockfile.
+PYTHON_CHECKER_WHEELS = {
+    "bb2689cbef663d823011eeddec29c23d1c1f773ac867bfa854fb0590771a309d",
+    "fc9da486d47f399ac2aba8dfdfaf60cc7a507d8434623cee8f81f47852db594d",
+    "1e3018d12e16faea2e08f210123a9c2e603de6c1b80b381624cffd536e1022d1",
+    "17fb8c25d62b3dc35c2c4d59f3b2f3234814b2aa374c0b9bea3d326184bf9268",
+}
 SAFE_COMMANDS = {
+    PYTHON_CHECKER_PROBE,
     ("adb", "version"),
     ("bash", "--version"),
     ("bash", "scripts/install_wasi_sdk.sh", "--version"),
@@ -62,10 +77,10 @@ SAFE_COMMANDS = {
 EXPECTED_PROFILE_TOOLS = {
     "android-device": ({"adb"}, set()),
     "apple-device": ({"xcodebuild", "xcrun"}, {"idevice-id", "ios-deploy"}),
-    "ci": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "python", "rustc", "rustfmt"}, set()),
+    "ci": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "python", "python-blake3", "rustc", "rustfmt"}, set()),
     "core": ({"bash", "cargo", "clippy", "git", "python", "rustc", "rustfmt"}, {"cargo-nextest", "jq", "shellcheck"}),
     "formal": ({"git", "lake", "lean"}, set()),
-    "full": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "lake", "lean", "node", "npm", "playwright", "python", "rust-target-wasm32-unknown-unknown", "rust-target-wasm32-wasip1", "rustc", "rustfmt", "wasi-sdk", "wasm-bindgen", "wasmtime"}, {"shellcheck"}),
+    "full": ({"bash", "cargo", "cargo-deny", "cargo-nextest", "clippy", "git", "jq", "lake", "lean", "node", "npm", "playwright", "python", "python-blake3", "rust-target-wasm32-unknown-unknown", "rust-target-wasm32-wasip1", "rustc", "rustfmt", "wasi-sdk", "wasm-bindgen", "wasmtime"}, {"shellcheck"}),
     "fuzz": ({"cargo", "cargo-fuzz", "clang", "rustc"}, {"cargo-nextest"}),
     "wasi": ({"bash", "cargo", "python", "rust-target-wasm32-wasip1", "rustc", "wasi-sdk", "wasmtime"}, set()),
     "web": ({"bash", "cargo", "node", "npm", "playwright", "python", "rust-target-wasm32-unknown-unknown", "rustc", "wasm-bindgen"}, set()),
@@ -353,6 +368,35 @@ def exact_tool_version(manifest: Mapping[str, Any], tool_id: str) -> str:
     return constraint["exact"]
 
 
+def checker_lock_version(source: str) -> str:
+    try:
+        tokens = shlex.split(source.replace("\\\n", ""), comments=True)
+    except ValueError as exc:
+        raise PrerequisiteError("independent checker lock is not a closed requirement") from exc
+    hashes = [token.removeprefix("--hash=sha256:") for token in tokens[1:]]
+    if (not tokens or tokens[0] != "blake3==1.0.4"
+            or any(not token.startswith("--hash=sha256:") for token in tokens[1:])
+            or len(hashes) != len(set(hashes)) or set(hashes) != PYTHON_CHECKER_WHEELS):
+        raise PrerequisiteError("independent checker lock differs from its reviewed package/wheel admission")
+    return "1.0.4"
+
+
+def declared_python_modules(manifest: Mapping[str, Any]) -> Mapping[str, str]:
+    tool = tool_by_id(manifest, "python-blake3")
+    if (tool["source"] != PYTHON_CHECKER_LOCK
+            or tool["probe"] != {"kind": "command-version", "argv": list(PYTHON_CHECKER_PROBE),
+                                 "versionRegex": r"^blake3 ([0-9]+\.[0-9]+\.[0-9]+)$"}):
+        raise PrerequisiteError("Python checker declaration must use its isolated read-only probe and hash lock")
+    try:
+        source = (ROOT / PYTHON_CHECKER_LOCK).read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise PrerequisiteError("independent checker lock cannot be read") from exc
+    version = checker_lock_version(source)
+    if tool["constraint"] != {"exact": version}:
+        raise PrerequisiteError("Python checker prerequisite differs from its reviewed hash lock")
+    return {"blake3": version}
+
+
 def bounded_tool_range(manifest: Mapping[str, Any], tool_id: str) -> str:
     constraint = tool_by_id(manifest, tool_id)["constraint"]
     if not isinstance(constraint, dict) or set(constraint) != {"minInclusive", "maxExclusive"}:
@@ -373,6 +417,7 @@ def toml_string_array(source: str, key: str) -> List[str]:
 
 
 def validate_source_pins(manifest: Mapping[str, Any]) -> None:
+    declared_python_modules(manifest)
     toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
     channel_match = re.search(r'^channel\s*=\s*"([^"]+)"\s*$', toolchain, re.MULTILINE)
     if not channel_match:
@@ -618,6 +663,43 @@ def pure_self_test() -> None:
         raise PrerequisiteError("self-test accepted a duplicate key")
     manifest = load_json(DEFAULT_MANIFEST)
     validate_manifest(manifest)
+    declaration_mutations = [
+        ("missing-checker", lambda d: d["tools"].remove(tool_by_id(d, "python-blake3"))),
+        ("wrong-source", lambda d: tool_by_id(d, "python-blake3").__setitem__("source", "Cargo.lock")),
+        ("wrong-version", lambda d: tool_by_id(d, "python-blake3").__setitem__("constraint", {"exact": "9.9.9"})),
+        ("missing-isolation", lambda d: tool_by_id(d, "python-blake3")["probe"]["argv"].remove("-I")),
+        ("broad-version-reader", lambda d: tool_by_id(d, "python-blake3")["probe"].__setitem__("versionRegex", "(.*)")),
+        ("missing-ci-membership", lambda d: next(p for p in d["profiles"] if p["id"] == "ci")["requires"].remove("python-blake3")),
+        ("missing-full-membership", lambda d: next(p for p in d["profiles"] if p["id"] == "full")["requires"].remove("python-blake3")),
+    ]
+    for name, mutate in declaration_mutations:
+        candidate = json.loads(json.dumps(manifest))
+        mutate(candidate)
+        try:
+            validate_manifest(candidate)
+        except PrerequisiteError:
+            pass
+        else:
+            raise PrerequisiteError(f"self-test accepted Python checker declaration mutation: {name}")
+    lock = (ROOT / PYTHON_CHECKER_LOCK).read_text(encoding="utf-8")
+    approved_hash = sorted(PYTHON_CHECKER_WHEELS)[0]
+    lock_mutations = [
+        lock.replace("blake3==1.0.4", "blake3==1.0.5"),
+        lock.replace("blake3==1.0.4", "blake3>=1.0.4"),
+        lock.replace(approved_hash, "0" * 64),
+        lock.replace("--hash=sha256:" + approved_hash, ""),
+        lock + "\n--hash=sha256:" + approved_hash,
+        lock + "\nrequests==2.0.0\n",
+        lock + "\n'\n",
+    ]
+    for candidate in lock_mutations:
+        try:
+            checker_lock_version(candidate)
+        except PrerequisiteError:
+            pass
+        else:
+            raise PrerequisiteError("self-test accepted unreviewed Python checker lock")
+    print(f"python-checker-declaration-controls: ok (negative_controls={len(declaration_mutations) + len(lock_mutations)})")
 
 
 def main(argv: Sequence[str]) -> int:

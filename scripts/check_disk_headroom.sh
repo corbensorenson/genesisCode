@@ -8,7 +8,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 PATH_TO_CHECK="."
-MIN_FREE_KB="${GENESIS_MIN_FREE_KB:-1048576}" # 1 GiB default floor
+# Measurement alone does not declare a writing operation or block read-only work.
+# A caller may explicitly supply its operation-specific growth requirement.
+MIN_FREE_KB="${GENESIS_MIN_FREE_KB:-0}"
 CONTEXT="${GENESIS_DISK_CHECK_CONTEXT:-genesis}"
 AUTO_RECLAIM="${GENESIS_DISK_AUTO_RECLAIM:-0}"
 STRICT_MODE="${GENESIS_DISK_STRICT_MODE:-auto}"
@@ -19,7 +21,7 @@ Usage: scripts/check_disk_headroom.sh [options]
 
 Options:
   --path <dir>      filesystem path to check (default: .)
-  --min-kb <N>      minimum free KB required (default: GENESIS_MIN_FREE_KB or 1048576)
+  --min-kb <N>      minimum free KB required (default: GENESIS_MIN_FREE_KB or 0; observation only)
   --context <name>  label used in diagnostics (default: genesis)
   --auto-reclaim <0|1>  compatibility option; 1 is rejected because checks are read-only (default: 0)
   --strict <auto|0|1>   fail hard after retry (auto => CI=true only)

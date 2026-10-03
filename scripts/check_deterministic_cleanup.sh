@@ -19,12 +19,16 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from unittest.mock import patch
 
 source_root = Path(sys.argv[1]).resolve()
 temp = Path(sys.argv[2]).resolve()
 sys.path.insert(0, str(source_root / "scripts/lib"))
 import deterministic_cleanup as cleanup
 import generated_state as state
+from generated_state_accounting import accounting_self_test
+from cargo_metadata_admission import metadata_self_test
+from allocated_resources_controls import allocation_self_test
 
 controls = []
 
@@ -305,6 +309,7 @@ state_policy, _, _ = state.load_policy(source_root)
 generated_schema_paths = [
     "docs/spec/GENERATED_STATE_POLICY_v0.1.schema.json",
     "docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json",
+    "docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json",
 ]
 for relative in generated_schema_paths:
     schema = cleanup.load_json(source_root / relative)
@@ -456,6 +461,47 @@ post_crash = state.status(lifecycle)
 require(not quarantine_path.exists() and post_crash["entryCount"] >= 1, "quarantined transaction did not recover")
 controls.append("generated-state-crash-recovery")
 
+# Selfhost materializations are files, whereas Cargo materializations are trees.
+# Exercise both normal reclamation and recovery after the journaled rename.
+(lifecycle / ".genesis/cache/selfhost_toolchain").mkdir(parents=True)
+cleanup.initialize_root_marker(lifecycle, ".genesis/cache", "fixture-cache")
+for index, crash_after_rename in enumerate([False, True]):
+    key = str(index + 5) * 64
+    relative = f".genesis/cache/selfhost_toolchain/{key}.gc"
+    (lifecycle / relative).write_bytes(b"rebuildable artifact")
+    cached = state.admit(lifecycle, "selfhost-cache", key, relative, "selfhost-cache",
+                         free_bytes_override=1 << 30)
+    state.release(lifecycle, cached["leaseToken"])
+    with state.state_lock(lifecycle, loaded_policy) as state_root:
+        registry = state._load_registry(state_root, loaded_policy, loaded_sha)
+        entry = next(item for item in registry["entries"] if item["id"] == cached["entryId"])
+        if crash_after_rename:
+            registry["sequence"] += 1
+            transaction_id = state._transaction_id(entry, registry["sequence"])
+            quarantined = f"{loaded_policy['stateRoot']}/quarantine/{transaction_id}"
+            os.replace(lifecycle / relative, lifecycle / quarantined)
+            registry["transaction"] = {"entryId": entry["id"], "id": transaction_id,
+                "phase": "quarantined", "sourcePath": relative, "quarantinePath": quarantined}
+            state._write_registry(state_root, loaded_policy, registry)
+        else:
+            state._reclaim_entry(lifecycle, state_root, loaded_policy, registry, entry)
+    state.status(lifecycle)
+    final = state._load_registry(state_root, loaded_policy, loaded_sha)
+    require(not (lifecycle / relative).exists() and final["transaction"] is None
+            and all(item["id"] != cached["entryId"] for item in final["entries"]),
+            "file materialization reclamation/recovery left an unfinished transaction")
+    controls.append("generated-state-file-crash-recovery" if crash_after_rename
+                    else "generated-state-file-reclamation")
+
+quarantine_link = temp / "quarantine-link"
+quarantine_target = temp / "quarantine-target"
+quarantine_target.write_bytes(b"protected target")
+quarantine_link.symlink_to(quarantine_target)
+state_rejected("generated-state-quarantine-link-rejection",
+    lambda: state._remove_tree(quarantine_link), "not a regular file or directory")
+require(quarantine_target.read_bytes() == b"protected target" and quarantine_link.is_symlink(),
+        "quarantine link rejection changed the target or entry")
+
 concurrent_path = ".genesis/build/cargo-cache/v1/root/host/concurrent"
 command = [
     sys.executable, str(source_root / "scripts/lib/generated_state.py"),
@@ -499,47 +545,226 @@ for index in range(20):
         f".genesis/build/cargo-cache/v1/root/{target_family}/cycle-{index}", size_class,
         free_bytes_override=1 << 30,
     )
+    cycle_path = lifecycle / f".genesis/build/cargo-cache/v1/root/{target_family}/cycle-{index}"
+    cycle_path.mkdir(parents=True, exist_ok=True)
+    (cycle_path / "payload").write_bytes(b"x" * 1024)
     state.release(lifecycle, result["leaseToken"])
 steady = state.status(lifecycle)
 require(steady["rebuildableEntries"] <= 1 and steady["accountingBytes"] <= 8192, "profile cycles did not reach bounded steady state")
 controls.append("generated-state-bounded-steady-state")
 
-priority = temp / "priority"
-(priority / "policies").mkdir(parents=True)
-shutil.copyfile(source_root / cleanup.POLICY_REL, priority / cleanup.POLICY_REL)
-priority_policy = copy.deepcopy(bounded_policy)
-priority_policy["limits"]["softBytes"] = 14336
-(priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))
-(priority / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
-(priority / "source.gc").write_text("fixture\n", encoding="utf-8")
-subprocess.run(["git", "init", "-q"], cwd=priority, check=True)
-subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=priority, check=True)
-(priority / ".genesis/build").mkdir(parents=True)
-cleanup.initialize_root_marker(priority, ".genesis/build", "priority-fixture")
-host = state.admit(
-    priority, "cargo-cache", "6" * 64,
-    ".genesis/build/cargo-cache/v1/root/host/normal", "cargo-host",
-    free_bytes_override=1 << 30,
-)
-state.release(priority, host["leaseToken"])
-slim = state.admit(
-    priority, "cargo-cache", "7" * 64,
-    ".genesis/build/cargo-cache/v1/root/host/slim", "cargo-host-slim",
-    free_bytes_override=1 << 30,
-)
-state.release(priority, slim["leaseToken"])
-verifier = state.admit(
-    priority, "cargo-cache", "8" * 64,
-    ".genesis/build/cargo-cache/v1/tools-genesis-evidence-verifier/host/verifier",
-    "cargo-verifier", free_bytes_override=1 << 30,
-)
-require(
-    slim["entryId"] in verifier["reclaimedEntryIds"]
-    and host["entryId"] not in verifier["reclaimedEntryIds"],
-    "size-class reclaim priority did not preserve the warm host cache",
-)
-state.release(priority, verifier["leaseToken"])
+# Preserve priority pressure across filesystems with different directory
+# allocation. The second case is a finite backend model, not host qualification.
+physical_allocation = state.allocated_bytes
+for directory_minimum in (0, 4096):
+    def allocation_with_directory_minimum(path, max_entries=2_000_000):
+        total = physical_allocation(path, max_entries)
+        if directory_minimum and path.exists():
+            for item in [path, *path.rglob("*")]:
+                if item.is_dir():
+                    metadata = item.stat()
+                    allocated = metadata.st_blocks * 512
+                    total += max(0, directory_minimum - allocated)
+        return total
+
+    with patch.object(state, "allocated_bytes", side_effect=allocation_with_directory_minimum):
+        priority = temp / f"priority-{directory_minimum}"
+        (priority / "policies").mkdir(parents=True)
+        shutil.copyfile(source_root / cleanup.POLICY_REL, priority / cleanup.POLICY_REL)
+        priority_policy = copy.deepcopy(bounded_policy)
+        priority_policy["limits"]["softBytes"] = 14335
+        (priority / state.POLICY_REL).write_bytes(state.pretty_bytes(priority_policy))
+        (priority / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
+        (priority / "source.gc").write_text("fixture\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=priority, check=True)
+        subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=priority, check=True)
+        (priority / ".genesis/build").mkdir(parents=True)
+        cleanup.initialize_root_marker(priority, ".genesis/build", "priority-fixture")
+        host = state.admit(
+            priority, "cargo-cache", "6" * 64,
+            ".genesis/build/cargo-cache/v1/root/host/normal", "cargo-host",
+            free_bytes_override=1 << 30,
+        )
+        host_path = priority / ".genesis/build/cargo-cache/v1/root/host/normal"
+        host_path.mkdir(parents=True, exist_ok=True)
+        (host_path / "payload").write_bytes(b"h" * max(0, 8192 - state.allocated_bytes(host_path)))
+        state.release(priority, host["leaseToken"])
+        slim = state.admit(
+            priority, "cargo-cache", "7" * 64,
+            ".genesis/build/cargo-cache/v1/root/host/slim", "cargo-host-slim",
+            free_bytes_override=1 << 30,
+        )
+        slim_path = priority / ".genesis/build/cargo-cache/v1/root/host/slim"
+        slim_path.mkdir(parents=True, exist_ok=True)
+        (slim_path / "payload").write_bytes(b"s" * max(0, 4096 - state.allocated_bytes(slim_path)))
+        state.release(priority, slim["leaseToken"])
+        verifier_reservation = next(item["reservationBytes"] for item in priority_policy["sizeClasses"] if item["id"] == "cargo-verifier")
+        require(state.status(priority)["accountingBytes"] + verifier_reservation > priority_policy["limits"]["softBytes"],
+                "reclaim-priority fixture does not exercise allocation pressure")
+        verifier = state.admit(
+            priority, "cargo-cache", "8" * 64,
+            ".genesis/build/cargo-cache/v1/tools-genesis-evidence-verifier/host/verifier",
+            "cargo-verifier", free_bytes_override=1 << 30,
+        )
+        require(
+            slim["entryId"] in verifier["reclaimedEntryIds"]
+            and host["entryId"] not in verifier["reclaimedEntryIds"],
+            "size-class reclaim priority did not preserve the warm host cache",
+        )
+        state.release(priority, verifier["leaseToken"])
 controls.append("generated-state-size-class-reclaim-priority")
+
+# Admission costs are measured from the actual journal and all live writers.
+# Use a separate finite fixture so the low-space controls cannot reclaim history.
+cost_root = temp / "operation-cost"
+(cost_root / "policies").mkdir(parents=True)
+shutil.copyfile(source_root / cleanup.POLICY_REL, cost_root / cleanup.POLICY_REL)
+cost_policy = copy.deepcopy(bounded_policy)
+cost_policy["limits"].update(softBytes=262144, hardBytes=262144, minFreeBytes=0)
+for item in cost_policy["sizeClasses"]:
+    if item["id"] == "cargo-host":
+        item["reservationBytes"] = 65536
+(cost_root / state.POLICY_REL).write_bytes(state.pretty_bytes(cost_policy))
+(cost_root / ".gitignore").write_text(".genesis/\n", encoding="utf-8")
+(cost_root / "source.gc").write_text("fixture\n", encoding="utf-8")
+subprocess.run(["git", "init", "-q"], cwd=cost_root, check=True)
+subprocess.run(["git", "add", ".gitignore", "source.gc"], cwd=cost_root, check=True)
+(cost_root / ".genesis/build").mkdir(parents=True)
+cleanup.initialize_root_marker(cost_root, ".genesis/build", "cost-fixture")
+cost_a_path = ".genesis/build/cargo-cache/v1/root/host/cost-a"
+cost_b_path = ".genesis/build/cargo-cache/v1/root/host/cost-b"
+cost_a = state.admit(cost_root, "cargo-cache", "a" * 64, cost_a_path,
+                     "cargo-host", free_bytes_override=1 << 30)
+cost_loaded, _, cost_sha = state.load_policy(cost_root)
+with state.state_lock(cost_root, cost_loaded) as cost_state:
+    cost_registry = state._load_registry(cost_state, cost_loaded, cost_sha)
+journal_cost = state._journal_growth_bytes(cost_root, cost_registry)
+# Enough for the new writer alone; insufficient for both outstanding writers.
+state_rejected(
+    "generated-state-combined-pending-growth-denial",
+    lambda: state.admit(cost_root, "cargo-cache", "b" * 64, cost_b_path,
+                       "cargo-host", free_bytes_override=journal_cost + 65536 + 16384),
+    "low-disk admission denied",
+)
+(cost_root / cost_a_path).mkdir(parents=True)
+(cost_root / cost_a_path / "payload.bin").write_bytes(b"a" * 65536)
+cost_b = state.admit(cost_root, "cargo-cache", "b" * 64, cost_b_path,
+                     "cargo-host", free_bytes_override=journal_cost + 65536 + 16384)
+require(cost_b["pendingGrowthBytes"] == 65536,
+        "live target allocation was not refreshed before admission")
+controls.append("generated-state-live-allocation-refresh")
+shared_b = state.admit(cost_root, "cargo-cache", "b" * 64, cost_b_path,
+                      "cargo-host", free_bytes_override=journal_cost + 65536 + 16384)
+require(shared_b["pendingGrowthBytes"] == 65536,
+        "leases on the same materialization double-counted its growth")
+state.release(cost_root, shared_b["leaseToken"])
+state.release(cost_root, cost_a["leaseToken"])
+controls.append("generated-state-shared-target-growth-deduplication")
+warm_bytes = (cost_root / cost_a_path / "payload.bin").read_bytes()
+warm_a = state.admit(cost_root, "cargo-cache", "a" * 64, cost_a_path,
+                    "cargo-host", free_bytes_override=journal_cost + 65536 + 16384)
+require(not warm_a["reclaimedEntryIds"] and
+        (cost_root / cost_a_path / "payload.bin").read_bytes() == warm_bytes,
+        "a fitting warm target was deleted to satisfy an unrelated floor")
+state.release(cost_root, warm_a["leaseToken"])
+controls.append("generated-state-warm-cache-low-space-preservation")
+with state.state_lock(cost_root, cost_loaded) as cost_state:
+    probe_registry = state._load_registry(cost_state, cost_loaded, cost_sha)
+# A retained clone/open handle can make allocated bytes disappear without making
+# those bytes available to this writer. Model that filesystem observation.
+original_reclaim = state._reclaim_entry
+original_free = state._free_bytes
+probe_journal = state._journal_growth_bytes(cost_root, probe_registry)
+probe_free = probe_journal + 16384
+reclaim_calls = []
+def reclaim_without_physical_recovery(root, state_root, policy, registry, entry):
+    reclaim_calls.append(entry["id"])
+    registry["entries"] = [e for e in registry["entries"] if e["id"] != entry["id"]]
+    return 2 * 1024 * 1024
+state._reclaim_entry = reclaim_without_physical_recovery
+state._free_bytes = lambda _root: probe_free
+try:
+    state_rejected(
+        "generated-state-reclaim-requires-physical-space-recovery",
+        lambda: state._enforce_limits(cost_root, cost_state, cost_loaded,
+            probe_registry, cost_b["entryId"], 65536, cost_loaded["limits"], probe_free),
+        "low-disk admission denied",
+    )
+    require(len(reclaim_calls) == 1, "physical-space control did not exercise reclamation")
+finally:
+    state._reclaim_entry = original_reclaim
+    state._free_bytes = original_free
+with state.state_lock(cost_root, cost_loaded) as cost_state:
+    recovered_probe = state._load_registry(cost_state, cost_loaded, cost_sha)
+reclaim_calls.clear()
+state._reclaim_entry = reclaim_without_physical_recovery
+try:
+    recovered_ids = state._enforce_limits(cost_root, cost_state, cost_loaded,
+        recovered_probe, cost_b["entryId"], 65536, cost_loaded["limits"],
+        probe_free, free_bytes_fn=lambda: 262144)
+    require(len(reclaim_calls) == 1 and recovered_ids == reclaim_calls,
+            "genuine physical-space recovery did not admit the fitting writer")
+    controls.append("generated-state-physical-space-recovery-admission")
+finally:
+    state._reclaim_entry = original_reclaim
+# Escaped Unicode paths can be larger than longer ASCII paths in the journal.
+# Check the estimate against every possible serialized recovery record.
+journal_probe = copy.deepcopy(probe_registry)
+ascii_entry = state._entry(cost_loaded, "cargo-cache", "c" * 64,
+    ".genesis/build/cargo-cache/v1/" + "/".join(["a" * 200] * 10), "cargo-host", 1)
+unicode_entry = state._entry(cost_loaded, "cargo-cache", "d" * 64,
+    ".genesis/build/cargo-cache/v1/" + "/".join(["😀" * 50] * 18), "cargo-host", 1)
+# Use the declared cache namespace, without materializing these bounded fixtures.
+journal_probe["entries"] = [ascii_entry, unicode_entry]
+block = state._allocation_unit_bytes(cost_root)
+for source_entry in journal_probe["entries"]:
+    possible = copy.deepcopy(journal_probe)
+    possible["sequence"] += 2
+    possible["leases"].append({"entryId": "0" * 64, "id": "0" * 32,
+                              "pid": 2**63 - 1, "processIdentity": "0" * 64, "operation": "cargo-metadata", "growthBytes": 2**63 - 1})
+    possible["transaction"] = {"entryId": "0" * 64, "id": "0" * 64,
+        "phase": "quarantined", "sourcePath": source_entry["path"],
+        "quarantinePath": ".genesis/build/.generated-state-v0.1/quarantine/" + "0" * 64}
+    serialized_bytes = len(state.pretty_bytes(possible))
+    required_journal = 2 * ((serialized_bytes + block - 1) // block) * block + 4 * block
+    require(state._journal_growth_bytes(cost_root, journal_probe) >= required_journal,
+            "journal estimate missed the largest escaped recovery path")
+controls.append("generated-state-escaped-journal-size-accounting")
+with patch.object(state.os, "statvfs", None):
+    state_rejected("generated-state-unsupported-space-backend-rejection",
+                   lambda: state._journal_growth_bytes(cost_root, journal_probe),
+                   "physical-space backend unsupported")
+with patch.object(state.os, "statvfs", lambda _root: type("Stats", (), {
+        "f_frsize": 0, "f_bavail": 100,
+})()):
+    state_rejected("generated-state-invalid-space-unit-rejection",
+                   lambda: state._free_bytes(cost_root), "invalid units")
+
+state.release(cost_root, cost_b["leaseToken"])
+state_rejected(
+    "generated-state-recovery-journal-space-denial",
+    lambda: state.admit(cost_root, "cargo-cache", "a" * 64, cost_a_path,
+                       "cargo-host", free_bytes_override=1),
+    "recovery journal cannot fit",
+)
+# Read-only work does not acquire a writer reservation or impose a universal floor.
+mock_bin = temp / "disk-observation-bin"
+mock_bin.mkdir()
+mock_df = mock_bin / "df"
+mock_df.write_text("#!/bin/sh\nprintf 'Filesystem 1024-blocks Used Available Capacity Mounted\nfixture 100 99 1 99%% /\n'\n", encoding="utf-8")
+mock_df.chmod(0o700)
+observation_env = dict(os.environ, PATH=str(mock_bin) + os.pathsep + os.environ["PATH"],
+                       GENESIS_GATE_TELEMETRY_DISABLE="1", CI="true")
+observation_env.pop("GENESIS_MIN_FREE_KB", None)
+observation_cmd = ["bash", str(source_root / "scripts/check_disk_headroom.sh"),
+                   "--path", str(cost_root), "--strict", "1"]
+observed = subprocess.run(observation_cmd, env=observation_env, capture_output=True, text=True)
+require(observed.returncode == 0 and "required_kb=0" in observed.stdout,
+        "read-only observation was blocked by a blanket floor")
+explicit = subprocess.run([*observation_cmd, "--min-kb", "2"], env=observation_env,
+                          capture_output=True, text=True)
+require(explicit.returncode == 2, "explicit operation requirement was ignored")
+controls.append("generated-state-read-only-low-space-observation")
 
 state_rejected(
     "generated-state-unknown-owner-rejection",
@@ -622,7 +847,14 @@ require({".genesis/refs", ".genesis/store", ".genesis/pins.toml"}.issubset(clean
 require(".genesis/" in ignore and "node_modules/" in ignore and "target/" in ignore, "ignore ownership drift")
 controls.append("complete-ignored-root-ownership")
 
-require(len(controls) == 42 and len(set(controls)) == 42, f"control coverage drift: {controls}")
+require(accounting_self_test(source_root) == 11, "idle allocation control coverage drift")
+controls.append("generated-state-idle-allocation-accounting")
+require(metadata_self_test(source_root) == 23, "metadata operation control coverage drift")
+controls.append("cargo-metadata-operation-admission")
+require(allocation_self_test() == 16, "allocated-block control coverage drift")
+controls.append("shared-allocated-block-observation")
+
+require(len(controls) == 59 and len(set(controls)) == 59, f"control coverage drift: {controls}")
 authorities = [
     "policies/deterministic_cleanup_v0.1.json",
     "policies/generated_state_v0.1.json",
@@ -630,6 +862,12 @@ authorities = [
     *generated_schema_paths,
     "scripts/lib/deterministic_cleanup.py",
     "scripts/lib/generated_state.py",
+    "scripts/lib/allocated_resources.py",
+    "scripts/lib/allocated_resources_controls.py",
+    "scripts/lib/supervisor_cancellation.py",
+    "scripts/lib/gate_telemetry_darwin_inventory.py",
+    "scripts/lib/generated_state_accounting.py",
+    "scripts/lib/cargo_metadata_admission.py",
     "scripts/reclaim_build_space.sh",
     "scripts/lib/cargo_cache.py",
     "scripts/lib/dependency_mirror.py",

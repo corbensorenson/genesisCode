@@ -5,10 +5,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 ## Artifact Identity
 
 - Artifact path: `selfhost/toolchain.gc`
-- Artifact sha256: `8d0dbb53c22a420ce0dadebd22b6fe369bcc9bd0da292bad3b197499f6c09c2c`
-- Freshness artifact hash: `8d0dbb53c22a420ce0dadebd22b6fe369bcc9bd0da292bad3b197499f6c09c2c`
-- Freshness source hash: `5b3a5588c95aa6d830363c820cc878376cc673e5ff68fb65c10286fbf1f2d283`
-- Source aggregate hash (module path + module sha256): `f280f233ddbbcc9b3a014520c43eafeebdedc51c4568272ae360398572a18df1`
+- Artifact sha256: `657b3d595ec66192b958c0cfedfb3c2197aa702cd434ee514d13dfc1375881e3`
+- Freshness artifact hash: `657b3d595ec66192b958c0cfedfb3c2197aa702cd434ee514d13dfc1375881e3`
+- Freshness source hash: `d8cf5c917966721421979b5e9e0aa8204880c90a34a432dcdf28fd2ef569c9e7`
+- Source aggregate hash (module path + module sha256): `2aa2f6fdb3a990cb318f61523360ce3bf54d82dff795b3cff7c611a666c54073`
 - Manifest path: `selfhost/toolchain_manifest.gc`
 - Module count: `142`
 
@@ -19,10 +19,10 @@ Deterministic review-sidecar for `selfhost/toolchain.gc`.
 | `selfhost/parse.gc` | 389 | 17882 | 32 | `c703e7343f2d871a` |
 | `selfhost/parse_core_v1.gc` | 184 | 8297 | 9 | `043012c45aa0e0f3` |
 | `selfhost/canon.gc` | 496 | 20780 | 59 | `b15225e443e83bbb` |
-| `selfhost/printer/00_core_single_line.gc` | 208 | 7799 | 23 | `b3830b4d2e39fb31` |
+| `selfhost/printer/00_core_single_line.gc` | 209 | 7961 | 23 | `0d370d8fd85de8fc` |
 | `selfhost/printer/01_single_line_list.gc` | 38 | 1452 | 3 | `5f1d744a14a38286` |
 | `selfhost/printer/02_fmt_structured.gc` | 131 | 6260 | 8 | `bbe116ae8dc10b8b` |
-| `selfhost/printer/03_fmt_list_module.gc` | 133 | 5620 | 10 | `de51e99e34b710f5` |
+| `selfhost/printer/03_fmt_list_module.gc` | 133 | 5622 | 10 | `112a47d61d463d6b` |
 | `selfhost/hash.gc` | 28 | 1055 | 5 | `54f123181935d454` |
 | `selfhost/tool_coreform_v1.gc` | 28 | 1101 | 4 | `cc8247e0a315fff3` |
 | `selfhost/cli_coreform_v1.gc` | 453 | 19245 | 43 | `8c7e539dd64a35b5` |

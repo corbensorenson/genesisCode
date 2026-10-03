@@ -13,11 +13,14 @@ from pathlib import Path, PurePosixPath
 import re
 import secrets
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
 import time
 from typing import Any, Callable, Iterator, Mapping, MutableMapping, Sequence
+
+from allocated_resources import AllocationError, allocated_paths_bytes
 
 
 POLICY_REL = "policies/generated_state_v0.1.json"
@@ -37,7 +40,8 @@ ENTRY_FIELDS = {
     "id", "owner", "path", "contentKey", "sizeClass", "retentionClass", "reclaimOrder",
     "reservationBytes", "observedAllocatedBytes", "lastUseSequence",
 }
-LEASE_FIELDS = {"id", "entryId", "pid", "processIdentity"}
+LEGACY_LEASE_FIELDS = {"id", "entryId", "pid", "processIdentity"}
+LEASE_FIELDS = LEGACY_LEASE_FIELDS | {"operation", "growthBytes"}
 TRANSACTION_FIELDS = {"id", "entryId", "sourcePath", "quarantinePath", "phase"}
 REGISTRY_FIELDS = {
     "kind", "version", "policySha256", "sequence", "entries", "leases", "transaction",
@@ -61,17 +65,56 @@ def reject_duplicate_keys(pairs: Sequence[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def load_json(path: Path) -> Any:
+def _load_json_with_bytes(path: Path, *, no_follow: bool = False) -> tuple[Any, bytes]:
     try:
-        if path.stat().st_size > MAX_JSON_BYTES:
-            raise GeneratedStateError(f"JSON input exceeds {MAX_JSON_BYTES} bytes: {path}")
-        return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate_keys)
+        if not hasattr(os, "O_NONBLOCK") or (no_follow and not hasattr(os, "O_NOFOLLOW")):
+            raise GeneratedStateError("JSON file admission requires nonblocking descriptor support")
+        flags = os.O_RDONLY | os.O_NONBLOCK
+        if no_follow:
+            flags |= os.O_NOFOLLOW
+        descriptor = os.open(path, flags)
+        try:
+            observed = os.fstat(descriptor)
+            if not stat.S_ISREG(observed.st_mode):
+                raise GeneratedStateError(f"JSON input is not a regular file: {path}")
+            if observed.st_size > MAX_JSON_BYTES:
+                raise GeneratedStateError(f"JSON input exceeds {MAX_JSON_BYTES} bytes: {path}")
+            with os.fdopen(descriptor, "rb", buffering=0) as handle:
+                descriptor = None
+                payload = bytearray()
+                while len(payload) <= MAX_JSON_BYTES:
+                    chunk = handle.read(min(65536, MAX_JSON_BYTES + 1 - len(payload)))
+                    if not chunk:
+                        break
+                    payload.extend(chunk)
+                if len(payload) > MAX_JSON_BYTES:
+                    raise GeneratedStateError(f"JSON input exceeds {MAX_JSON_BYTES} bytes: {path}")
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+        frozen = bytes(payload)
+        return json.loads(frozen.decode("utf-8"), object_pairs_hook=reject_duplicate_keys), frozen
     except FileNotFoundError as exc:
         raise GeneratedStateError(f"missing file: {path}") from exc
     except json.JSONDecodeError as exc:
         raise GeneratedStateError(
             f"invalid JSON in {path}:{exc.lineno}:{exc.colno}: {exc.msg}"
         ) from exc
+    except UnicodeDecodeError as exc:
+        raise GeneratedStateError(f"JSON input is not UTF-8: {path}") from exc
+    except MemoryError as exc:
+        raise GeneratedStateError("bounded JSON input allocation failed") from exc
+    except RecursionError as exc:
+        raise GeneratedStateError("JSON input exceeds the decoder nesting limit") from exc
+    except GeneratedStateError:
+        raise
+    except ValueError as exc:
+        raise GeneratedStateError("JSON input exceeds the decoder value domain") from exc
+
+
+def load_json(path: Path, *, no_follow: bool = False) -> Any:
+    document, _ = _load_json_with_bytes(path, no_follow=no_follow)
+    return document
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -110,7 +153,7 @@ def _positive_int(value: Any, field: str, allow_zero: bool = False) -> int:
 
 def load_policy(root: Path, override: Path | None = None) -> tuple[dict[str, Any], Path, str]:
     path = (override or (root / POLICY_REL)).resolve()
-    policy = load_json(path)
+    policy, policy_payload = _load_json_with_bytes(path)
     if not isinstance(policy, dict) or set(policy) != POLICY_FIELDS:
         raise GeneratedStateError("generated-state policy fields mismatch")
     if policy["kind"] != "genesis/generated-state-policy-v0.1" or policy["version"] != "0.1":
@@ -208,7 +251,7 @@ def load_policy(root: Path, override: Path | None = None) -> tuple[dict[str, Any
     }
     if not required_roots.issubset(declared_roots):
         raise GeneratedStateError("generated-state producer declarations do not cover cleanup roots")
-    return policy, path, digest_bytes(path.read_bytes())
+    return policy, path, digest_bytes(policy_payload)
 
 
 def _safe_absolute(root: Path, rel: str, allow_absent: bool = True) -> Path:
@@ -327,23 +370,21 @@ def state_lock(root: Path, policy: Mapping[str, Any], create: bool = True) -> It
 def _new_registry(policy_sha: str) -> dict[str, Any]:
     return {
         "entries": [],
-        "kind": "genesis/generated-state-registry-v0.1",
+        "kind": "genesis/generated-state-registry-v0.2",
         "leases": [],
         "policySha256": policy_sha,
         "sequence": 0,
         "transaction": None,
-        "version": "0.1",
+        "version": "0.2",
     }
 
 
 def _validate_registry(registry: Any, policy: Mapping[str, Any], policy_sha: str) -> None:
     if not isinstance(registry, dict) or set(registry) != REGISTRY_FIELDS:
         raise GeneratedStateError("generated-state registry fields mismatch")
-    if (
-        registry["kind"] != "genesis/generated-state-registry-v0.1"
-        or registry["version"] != "0.1"
-        or registry["policySha256"] != policy_sha
-    ):
+    legacy = registry["version"] == "0.1"
+    expected_kind = "genesis/generated-state-registry-v0.1" if legacy else "genesis/generated-state-registry-v0.2"
+    if registry["version"] not in ("0.1", "0.2") or registry["kind"] != expected_kind or registry["policySha256"] != policy_sha:
         raise GeneratedStateError("generated-state registry identity mismatch")
     _positive_int(registry["sequence"], "registry.sequence", allow_zero=True)
     entries = registry["entries"]
@@ -359,6 +400,13 @@ def _validate_registry(registry: Any, policy: Mapping[str, Any], policy_sha: str
             raise GeneratedStateError("generated-state entry fields mismatch")
         if not isinstance(entry["id"], str) or not SHA_RE.fullmatch(entry["id"]):
             raise GeneratedStateError("generated-state entry id is invalid")
+        for field in ("owner", "sizeClass"):
+            if not isinstance(entry[field], str) or not ID_RE.fullmatch(entry[field]):
+                raise GeneratedStateError(f"generated-state entry {field} is invalid")
+        if not isinstance(entry["contentKey"], str) or not 0 < len(entry["contentKey"]) <= 256:
+            raise GeneratedStateError("generated-state entry content key is invalid")
+        if not isinstance(entry["retentionClass"], str) or entry["retentionClass"] not in PROTECTED_RETENTION | {"rebuildable-output"}:
+            raise GeneratedStateError("generated-state entry retention class is invalid")
         repo_path(entry["path"], "registry entry path")
         for field in (
             "reclaimOrder", "reservationBytes", "observedAllocatedBytes", "lastUseSequence"
@@ -367,6 +415,12 @@ def _validate_registry(registry: Any, policy: Mapping[str, Any], policy_sha: str
         expected = _entry_id(entry["owner"], entry["contentKey"], entry["path"])
         if entry["id"] != expected:
             raise GeneratedStateError("generated-state entry identity mismatch")
+        expected_entry = _entry(
+            policy, entry["owner"], entry["contentKey"], entry["path"], entry["sizeClass"],
+            entry["lastUseSequence"], entry["observedAllocatedBytes"],
+        )
+        if entry != expected_entry:
+            raise GeneratedStateError("generated-state entry contradicts producer policy")
         entry_ids.append(entry["id"])
         entry_paths.append(entry["path"])
     if entry_ids != sorted(set(entry_ids)) or len(entry_paths) != len(set(entry_paths)):
@@ -374,17 +428,28 @@ def _validate_registry(registry: Any, policy: Mapping[str, Any], policy_sha: str
     known_entries = set(entry_ids)
     lease_ids: list[str] = []
     for lease in leases:
-        if not isinstance(lease, dict) or set(lease) != LEASE_FIELDS:
+        if not isinstance(lease, dict) or set(lease) != (LEGACY_LEASE_FIELDS if legacy else LEASE_FIELDS):
             raise GeneratedStateError("generated-state lease fields mismatch")
         if not isinstance(lease["id"], str) or not TOKEN_RE.fullmatch(lease["id"]):
             raise GeneratedStateError("generated-state lease id is invalid")
-        if lease["entryId"] not in known_entries:
+        if not isinstance(lease["entryId"], str) or lease["entryId"] not in known_entries:
             raise GeneratedStateError("generated-state lease references an unknown entry")
         _positive_int(lease["pid"], "lease.pid")
         if not isinstance(lease["processIdentity"], str) or not SHA_RE.fullmatch(
             lease["processIdentity"]
         ):
             raise GeneratedStateError("generated-state process identity is invalid")
+        if not legacy:
+            growth = _positive_int(lease["growthBytes"], "lease.growthBytes", allow_zero=True)
+            entry = _entry_by_id(registry, lease["entryId"])
+            if lease["operation"] == "build":
+                if growth != 0:
+                    raise GeneratedStateError("build lease growth contradicts size-class reservation")
+            elif lease["operation"] == "cargo-metadata":
+                if entry["owner"] != "cargo-cache" or growth == 0 or growth > policy["limits"]["hardBytes"]:
+                    raise GeneratedStateError("cargo metadata lease growth or owner is invalid")
+            else:
+                raise GeneratedStateError("unknown generated-state lease operation")
         lease_ids.append(lease["id"])
     if lease_ids != sorted(set(lease_ids)):
         raise GeneratedStateError("generated-state leases must be sorted and unique")
@@ -392,7 +457,7 @@ def _validate_registry(registry: Any, policy: Mapping[str, Any], policy_sha: str
     if transaction is not None:
         if not isinstance(transaction, dict) or set(transaction) != TRANSACTION_FIELDS:
             raise GeneratedStateError("generated-state transaction fields mismatch")
-        if transaction["entryId"] not in known_entries:
+        if not isinstance(transaction["entryId"], str) or transaction["entryId"] not in known_entries:
             raise GeneratedStateError("generated-state transaction references an unknown entry")
         if transaction["phase"] not in ("planned", "quarantined"):
             raise GeneratedStateError("generated-state transaction phase is invalid")
@@ -405,8 +470,21 @@ def _validate_registry(registry: Any, policy: Mapping[str, Any], policy_sha: str
 
 def _load_registry(state_root: Path, policy: Mapping[str, Any], policy_sha: str) -> dict[str, Any]:
     path = state_root / str(policy["registryFile"])
-    registry = _new_registry(policy_sha) if not path.exists() else load_json(path)
+    try:
+        path.lstat()
+    except FileNotFoundError:
+        registry = _new_registry(policy_sha)
+    else:
+        registry = load_json(path, no_follow=True)
     _validate_registry(registry, policy, policy_sha)
+    if registry["version"] == "0.1":
+        # Validate before conversion. Legacy live leases always retain the full
+        # reservation; an observer does not persist this in-memory migration.
+        registry["kind"] = "genesis/generated-state-registry-v0.2"
+        registry["version"] = "0.2"
+        for lease in registry["leases"]:
+            lease.update(operation="build", growthBytes=0)
+        _validate_registry(registry, policy, policy_sha)
     return registry
 
 
@@ -477,28 +555,14 @@ def _entry(
 
 
 def allocated_bytes(path: Path, max_entries: int = 2_000_000) -> int:
-    if not path.exists():
-        return 0
-    total = 0
-    seen = 0
-    stack = [path]
-    while stack:
-        current = stack.pop()
-        stat = current.lstat()
-        if current.is_symlink():
-            raise GeneratedStateError("generated-state materialization contains a symlink")
-        seen += 1
-        if seen > max_entries:
-            raise GeneratedStateError("generated-state materialization entry bound exceeded")
-        total += int(getattr(stat, "st_blocks", 0)) * 512 or int(stat.st_size)
-        if current.is_dir():
-            with os.scandir(current) as iterator:
-                stack.extend(Path(item.path) for item in iterator)
-    return total
+    try:
+        return allocated_paths_bytes([path], max_entries=max_entries, reject_symlinks=True)
+    except AllocationError as exc:
+        raise GeneratedStateError(str(exc)) from exc
 
 
 def process_identity(pid: int) -> str | None:
-    if pid <= 0:
+    if isinstance(pid, bool) or not isinstance(pid, int) or pid <= 0:
         return None
     try:
         os.kill(pid, 0)
@@ -506,6 +570,8 @@ def process_identity(pid: int) -> str | None:
         return None
     except PermissionError:
         pass
+    except OverflowError:
+        return None
     payload: bytes
     proc_stat = Path(f"/proc/{pid}/stat")
     if proc_stat.is_file():
@@ -515,6 +581,19 @@ def process_identity(pid: int) -> str | None:
             payload = f"linux\0{pid}\0{fields[21]}\0{boot}".encode()
         except (OSError, IndexError):
             return None
+    elif sys.platform == "darwin":
+        # Preserve the existing posix/PID/lstart digest without launching a
+        # privileged ps child that cannot be observed by the resource owner.
+        import gate_telemetry_darwin_inventory as darwin_inventory
+        try:
+            started_sec = darwin_inventory.NativeInventory().start_time(pid)
+            if started_sec is None:
+                return None
+            started = time.asctime(time.localtime(started_sec))
+        except (darwin_inventory.InventoryError, OSError, OverflowError, ValueError) as exc:
+            # Unknown identity cannot be reclassified as an idle producer.
+            raise GeneratedStateError("Darwin process birth identity is unavailable") from exc
+        payload = f"posix\0{pid}\0{started}".encode()
     else:
         try:
             result = subprocess.run(
@@ -548,6 +627,12 @@ def _sort_registry(registry: MutableMapping[str, Any]) -> None:
 
 
 def _remove_tree(path: Path) -> None:
+    mode = path.lstat().st_mode
+    if stat.S_ISREG(mode):
+        path.unlink()
+        return
+    if not stat.S_ISDIR(mode):
+        raise GeneratedStateError("generated-state quarantine is not a regular file or directory")
     if not shutil.rmtree.avoids_symlink_attacks:
         raise GeneratedStateError("platform lacks symlink-safe recursive removal")
 
@@ -646,12 +731,16 @@ def _recover_leases(
 
 
 def _register_entry(
-    registry: MutableMapping[str, Any], candidate: Mapping[str, Any]
+    registry: MutableMapping[str, Any], candidate: Mapping[str, Any], *,
+    upgrade_reservation: bool = False,
 ) -> MutableMapping[str, Any]:
     existing = _entry_by_path(registry, candidate["path"])
     if existing is not None:
         if existing["id"] != candidate["id"]:
             raise GeneratedStateError("generated-state path ownership or content key changed")
+        if upgrade_reservation and candidate["reservationBytes"] > existing["reservationBytes"]:
+            existing["sizeClass"] = candidate["sizeClass"]
+            existing["reservationBytes"] = candidate["reservationBytes"]
         return existing
     if any(entry["id"] == candidate["id"] for entry in registry["entries"]):
         raise GeneratedStateError("generated-state entry identity collision")
@@ -660,9 +749,17 @@ def _register_entry(
     return _entry_by_id(registry, candidate["id"])  # type: ignore[return-value]
 
 
-def _cargo_size_class(
+def cargo_size_class(
     scope: str, build_environment: Mapping[str, Any] | None = None
 ) -> str:
+    if not isinstance(scope, str) or not scope:
+        raise GeneratedStateError("Cargo cache scope is invalid")
+    if build_environment is not None and (
+        not isinstance(build_environment, Mapping)
+        or any(not isinstance(key, str) or (value is not None and not isinstance(value, str))
+               for key, value in build_environment.items())
+    ):
+        raise GeneratedStateError("Cargo cache build environment is invalid")
     if scope == "evidence-verifier-host":
         return "cargo-verifier"
     if (
@@ -698,7 +795,7 @@ def _discover_legacy_build_entries(
                 if _entry_by_path(registry, relative) is not None:
                     continue
                 try:
-                    document = load_json(metadata)
+                    document = load_json(metadata, no_follow=True)
                     key = document["cacheKeySha256"]
                     scope = document["cacheKey"]["scope"]
                     build_environment = document["cacheKey"].get("buildEnvironment")
@@ -711,7 +808,7 @@ def _discover_legacy_build_entries(
                     "cargo-cache",
                     key,
                     relative,
-                    _cargo_size_class(scope, build_environment),
+                    cargo_size_class(scope, build_environment),
                     sequence,
                     allocated_bytes(target),
                 )
@@ -730,12 +827,40 @@ def _discover_legacy_build_entries(
         _register_entry(registry, candidate)
 
 
-def _accounting_bytes(entry: Mapping[str, Any]) -> int:
-    return max(int(entry["reservationBytes"]), int(entry["observedAllocatedBytes"]))
+def _accounting_bytes(entry: Mapping[str, Any], *, reserved: bool = False) -> int:
+    allocated = int(entry["observedAllocatedBytes"])
+    return max(int(entry["reservationBytes"]), allocated) if reserved else allocated
 
 
 def _active_entry_ids(registry: Mapping[str, Any]) -> set[str]:
     return {lease["entryId"] for lease in registry["leases"]}
+
+
+def _resource_reservations(registry: Mapping[str, Any], requested_id: str | None = None) -> tuple[set[str], dict[str, int]]:
+    builds = {lease["entryId"] for lease in registry["leases"] if lease.get("operation", "build") == "build"}
+    metadata: dict[str, int] = {}
+    for lease in registry["leases"]:
+        if lease.get("operation") == "cargo-metadata":
+            entry_id = lease["entryId"]
+            metadata[entry_id] = metadata.get(entry_id, 0) + int(lease["growthBytes"])
+    if requested_id is not None:
+        builds.add(requested_id)
+    return builds, metadata
+
+
+def _registry_accounting_bytes(
+    registry: Mapping[str, Any], requested_id: str | None = None, *,
+    include_idle: bool = True,
+) -> int:
+    """Stored allocation, shared build growth, and each bounded metadata writer."""
+    builds, metadata = _resource_reservations(registry, requested_id)
+    active = builds | set(metadata)
+    return sum(
+        _accounting_bytes(entry, reserved=entry["id"] in builds) + metadata.get(entry["id"], 0)
+        for entry in registry["entries"]
+        if entry["retentionClass"] == "rebuildable-output"
+        and (include_idle or entry["id"] in active)
+    )
 
 
 def _reclaim_entry(
@@ -806,9 +931,67 @@ def _effective_limits(policy: Mapping[str, Any], environ: Mapping[str, str]) -> 
     return limits
 
 
+def _filesystem_stats(root: Path) -> Any:
+    query = getattr(os, "statvfs", None)
+    if not callable(query):
+        raise GeneratedStateError("generated-state physical-space backend unsupported on this host")
+    stats = query(root)
+    if int(stats.f_frsize) <= 0 or int(stats.f_bavail) < 0:
+        raise GeneratedStateError("generated-state physical-space query returned invalid units")
+    return stats
+
+
+def _allocation_unit_bytes(root: Path) -> int:
+    return int(_filesystem_stats(root).f_frsize)
+
+
 def _free_bytes(root: Path) -> int:
-    stats = os.statvfs(root)
+    stats = _filesystem_stats(root)
     return int(stats.f_bavail) * int(stats.f_frsize)
+
+
+def _pending_growth_bytes(
+    registry: Mapping[str, Any], requested_id: str | None, requested_growth: int = 0,
+) -> int:
+    """Deduplicate build growth; independent metadata temporaries reserve separately."""
+    builds, metadata = _resource_reservations(registry, requested_id)
+    return sum(
+        max(
+            max(0, int(entry["reservationBytes"]) - int(entry["observedAllocatedBytes"])) * (entry["id"] in builds),
+            requested_growth if entry["id"] == requested_id else 0,
+        ) + metadata.get(entry["id"], 0)
+        for entry in registry["entries"]
+    )
+
+
+def _journal_growth_bytes(root: Path, registry: Mapping[str, Any]) -> int:
+    """Estimate next atomic registry allocation from its largest recovery record.
+
+    The payload is measured, not a global free-space floor. Include a prospective
+    lease, a quarantine record and sequence growth, two rounded registry copies,
+    and the four directory entries used by staging/quarantine. Filesystem blocks
+    are allocation units, not predictions of physical bytes reclaimed on APFS.
+    """
+    projected = dict(registry)
+    projected["sequence"] = int(registry["sequence"]) + 2
+    projected["leases"] = [*registry["leases"], {
+        "entryId": "0" * 64, "id": "0" * 32, "pid": 2**63 - 1,
+        "processIdentity": "0" * 64, "operation": "cargo-metadata", "growthBytes": 2**63 - 1,
+    }]
+    source = max((str(entry["path"]) for entry in registry["entries"]),
+                 key=lambda value: len(json.dumps(value, ensure_ascii=True)),
+                 default=".genesis/build")
+    projected["transaction"] = {
+        "entryId": "0" * 64, "id": "0" * 64, "phase": "quarantined",
+        "sourcePath": source,
+        "quarantinePath": ".genesis/build/.generated-state-v0.1/quarantine/" + "0" * 64,
+    }
+    payload_bytes = len(pretty_bytes(projected))
+    if payload_bytes > MAX_JSON_BYTES:
+        raise GeneratedStateError("generated-state recovery journal exceeds JSON bound")
+    block_bytes = _allocation_unit_bytes(root)
+    rounded = ((payload_bytes + block_bytes - 1) // block_bytes) * block_bytes
+    return 2 * rounded + 4 * block_bytes
 
 
 def _enforce_limits(
@@ -820,15 +1003,21 @@ def _enforce_limits(
     needed_growth: int,
     limits: Mapping[str, int],
     free_bytes: int,
+    free_bytes_fn: Callable[[], int] | None = None,
+    *, prospective_lease: bool = False,
 ) -> list[str]:
     reclaimed: list[str] = []
+    requested_id = None if prospective_lease else protected_entry_id
+
+    # No inactive deletion can make these simultaneous writers fit. Reject
+    # before opening a reclamation transaction or discarding a usable cache.
+    if _registry_accounting_bytes(
+        registry, requested_id, include_idle=False,
+    ) > limits["hardBytes"]:
+        raise GeneratedStateError("generated-state hard quota admission denied")
 
     def accounting() -> int:
-        return sum(
-            _accounting_bytes(entry)
-            for entry in registry["entries"]
-            if entry["retentionClass"] == "rebuildable-output"
-        )
+        return _registry_accounting_bytes(registry, requested_id)
 
     def candidates() -> list[MutableMapping[str, Any]]:
         active = _active_entry_ids(registry)
@@ -848,23 +1037,38 @@ def _enforce_limits(
             ),
         )
 
-    projected_free = free_bytes
+    measured_free = free_bytes
+    if measured_free < _journal_growth_bytes(root, registry):
+        raise GeneratedStateError("generated-state low-disk admission denied: recovery journal cannot fit")
+    read_free = free_bytes_fn or (lambda: _free_bytes(root))
+
+    def required_free() -> int:
+        return (limits["minFreeBytes"] + _journal_growth_bytes(root, registry)
+                + _pending_growth_bytes(registry, requested_id, needed_growth))
     while (
         accounting() > limits["softBytes"]
         or accounting() > limits["hardBytes"]
-        or projected_free < limits["minFreeBytes"] + needed_growth
+        or measured_free < required_free()
     ):
         available = candidates()
         if not available:
             break
         selected = available[0]
-        freed = _reclaim_entry(root, state_root, policy, registry, selected)
-        projected_free += freed
+        _reclaim_entry(root, state_root, policy, registry, selected)
+        # Deleting cloned/shared/open files need not release their st_blocks.
+        # Re-read the filesystem after every completed reclaim transaction.
+        measured_free = read_free()
         reclaimed.append(selected["id"])
     if accounting() > limits["hardBytes"]:
         raise GeneratedStateError("generated-state hard quota admission denied")
-    if projected_free < limits["minFreeBytes"] + needed_growth:
-        raise GeneratedStateError("generated-state low-disk admission denied")
+    required = required_free()
+    if measured_free < required:
+        raise GeneratedStateError(
+            "generated-state low-disk admission denied: "
+            f"freeBytes={measured_free} requiredBytes={required} "
+            f"pendingGrowthBytes={_pending_growth_bytes(registry, requested_id, needed_growth)} "
+            f"journalGrowthBytes={_journal_growth_bytes(root, registry)}"
+        )
     return reclaimed
 
 
@@ -879,18 +1083,33 @@ def admit(
     environ: Mapping[str, str] | None = None,
     identity_fn: Callable[[int], str | None] = process_identity,
     free_bytes_override: int | None = None,
+    *, metadata_payload: bytes | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
     policy, _, policy_sha = load_policy(root, policy_path)
     env = dict(os.environ if environ is None else environ)
     limits = _effective_limits(policy, env)
-    lease_pid = pid or os.getppid()
+    lease_pid = os.getppid() if pid is None else pid
+    _positive_int(lease_pid, "lease.pid")
     identity = identity_fn(lease_pid)
     if identity is None:
         raise GeneratedStateError("cannot bind generated-state lease to process identity")
     producer = _producer(policy, owner)
     if producer["leaseMode"] != "process":
         raise GeneratedStateError("protected generated state does not use admission leases")
+    operation = "build"
+    metadata_growth = 0
+    if metadata_payload is not None:
+        if owner != "cargo-cache" or not isinstance(metadata_payload, bytes) or not 0 < len(metadata_payload) <= MAX_JSON_BYTES:
+            raise GeneratedStateError("invalid bounded cargo metadata payload")
+        unit = _allocation_unit_bytes(root)
+        rounded = ((len(metadata_payload) + unit - 1) // unit) * unit
+        # Two payload copies and two allocation units per ancestor/final entry
+        # cover the bounded temporary+publication plan; journal costs are separate.
+        metadata_growth = 2 * rounded + 2 * (len(PurePosixPath(path).parts) + 2) * unit
+        if metadata_growth > limits["hardBytes"]:
+            raise GeneratedStateError("cargo metadata growth exceeds hard quota")
+        operation = "cargo-metadata"
     requested_path = _safe_absolute(root, path)
     with state_lock(root, policy) as state_root_value:
         assert state_root_value is not None
@@ -899,85 +1118,82 @@ def admit(
         _recover_transaction(root, state_root, policy, registry)
         _recover_leases(root, registry, identity_fn)
         _discover_legacy_build_entries(root, policy, registry)
-        available_free = _free_bytes(root) if free_bytes_override is None else free_bytes_override
+        # Idle retention is charged by stored allocation, not future growth.
+        # Refresh it too: an old release observation cannot authorize admission.
+        for entry in registry["entries"]:
+            if entry["retentionClass"] == "rebuildable-output":
+                entry["observedAllocatedBytes"] = allocated_bytes(
+                    _safe_absolute(root, entry["path"])
+                )
+        read_free = (lambda: _free_bytes(root)) if free_bytes_override is None else (
+            lambda: free_bytes_override
+        )
+        available_free = read_free()
         reclaimed: list[str] = []
+        candidate = _entry(
+            policy, owner, content_key, path, size_class,
+            registry["sequence"] + 1, allocated_bytes(requested_path),
+        )
+        if len(registry["leases"]) >= policy["limits"]["maxLeases"]:
+            raise GeneratedStateError("generated-state lease bound exceeded")
         existing = _entry_by_path(registry, path)
+        if existing is not None and existing["id"] != candidate["id"]:
+            raise GeneratedStateError("generated-state path ownership or content key changed")
         if existing is not None and existing["id"] not in _active_entry_ids(registry):
-            requested_reservation = _size_reservation(policy, size_class)
-            requested_growth = max(
-                0, requested_reservation - int(existing["observedAllocatedBytes"])
-            )
-            if (
-                _accounting_bytes(existing) > limits["hardBytes"]
-                or available_free < limits["minFreeBytes"] + requested_growth
-            ):
-                freed = _reclaim_entry(root, state_root, policy, registry, existing)
-                available_free += freed
+            if _accounting_bytes(existing) > limits["hardBytes"]:
+                # Even a completely empty replacement must fit beside live
+                # writers. Do not destroy the oversized cache for an impossible
+                # request; candidate validation also precedes this mutation.
+                minimum = _registry_accounting_bytes(registry, include_idle=False)
+                if minimum + (metadata_growth if operation == "cargo-metadata" else int(candidate["reservationBytes"])) > limits["hardBytes"]:
+                    raise GeneratedStateError("generated-state hard quota admission denied")
+                _reclaim_entry(root, state_root, policy, registry, existing)
+                available_free = read_free()
                 reclaimed.append(existing["id"])
                 existing = None
+                candidate["observedAllocatedBytes"] = allocated_bytes(requested_path)
         registry["sequence"] += 1
-        candidate = _entry(
-            policy,
-            owner,
-            content_key,
-            path,
-            size_class,
-            registry["sequence"],
-            allocated_bytes(requested_path),
-        )
         was_new = existing is None
-        current = _register_entry(registry, candidate)
-        current["lastUseSequence"] = registry["sequence"]
-        needed_growth = max(
-            0, int(current["reservationBytes"]) - int(current["observedAllocatedBytes"])
-        )
-        try:
-            reclaimed.extend(_enforce_limits(
-                root,
-                state_root,
-                policy,
-                registry,
-                current["id"],
-                needed_growth,
-                limits,
-                available_free,
-            ))
-        except GeneratedStateError:
-            if was_new:
-                registry["entries"] = [
-                    item for item in registry["entries"] if item["id"] != current["id"]
-                ]
-            _sort_registry(registry)
-            _write_registry(state_root, policy, registry)
-            raise
-        if len(registry["leases"]) >= policy["limits"]["maxLeases"]:
-            if was_new:
-                registry["entries"] = [
-                    item for item in registry["entries"] if item["id"] != current["id"]
-                ]
-            _sort_registry(registry)
-            _write_registry(state_root, policy, registry)
-            raise GeneratedStateError("generated-state lease bound exceeded")
+        previous_entry = dict(existing) if existing is not None else None
         token = secrets.token_hex(16)
         while any(lease["id"] == token for lease in registry["leases"]):
             token = secrets.token_hex(16)
-        registry["leases"].append(
-            {
-                "entryId": current["id"],
-                "id": token,
-                "pid": lease_pid,
-                "processIdentity": identity,
-            }
-        )
+        operation_limits = dict(limits)
+        if operation == "cargo-metadata" and not any(lease["operation"] == "build" for lease in registry["leases"]):
+            # Caller-declared requirements remain effective. The generic policy
+            # floor is a build reserve, not a metadata-operation requirement.
+            if "GENESIS_GENERATED_STATE_MIN_FREE_BYTES" not in env:
+                operation_limits["minFreeBytes"] = 0
+        try:
+            current = _register_entry(registry, candidate, upgrade_reservation=operation == "build")
+            current["lastUseSequence"] = registry["sequence"]
+            current["observedAllocatedBytes"] = candidate["observedAllocatedBytes"]
+            registry["leases"].append({
+                "entryId": current["id"], "id": token, "pid": lease_pid,
+                "processIdentity": identity, "operation": operation, "growthBytes": metadata_growth,
+            })
+            reclaimed.extend(_enforce_limits(
+                root, state_root, policy, registry, current["id"], 0,
+                operation_limits, available_free, read_free, prospective_lease=True,
+            ))
+        except BaseException:
+            registry["leases"] = [lease for lease in registry["leases"] if lease["id"] != token]
+            if was_new:
+                registry["entries"] = [item for item in registry["entries"]
+                                       if not (item["id"] == candidate["id"] and item["path"] == candidate["path"])]
+            elif previous_entry is not None:
+                existing.clear()
+                existing.update(previous_entry)
+            _sort_registry(registry)
+            _write_registry(state_root, policy, registry)
+            raise
         _sort_registry(registry)
         _write_registry(state_root, policy, registry)
-        accounting = sum(
-            _accounting_bytes(entry)
-            for entry in registry["entries"]
-            if entry["retentionClass"] == "rebuildable-output"
-        )
+        accounting = _registry_accounting_bytes(registry)
         return {
             "accountingBytes": accounting,
+            "pendingGrowthBytes": _pending_growth_bytes(registry, None),
+            "journalGrowthBytes": _journal_growth_bytes(root, registry),
             "entryId": current["id"],
             "hardBytes": limits["hardBytes"],
             "leasePid": lease_pid,
@@ -1116,7 +1332,7 @@ def status(
         entry for entry in registry["entries"] if entry["retentionClass"] == "rebuildable-output"
     ]
     return {
-        "accountingBytes": sum(_accounting_bytes(entry) for entry in rebuildable),
+        "accountingBytes": _registry_accounting_bytes(registry),
         "activeLeases": len(registry["leases"]),
         "entryCount": len(registry["entries"]),
         "hardBytes": limits["hardBytes"],

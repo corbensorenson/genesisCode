@@ -39,7 +39,7 @@ The diagnostic never runs an installer, package manager mutation, `rustup target
 | Profile | Required scope | Native SDK | Notes |
 |---|---|---:|---|
 | `core` | Bash, Python, Git, Rust/Cargo/rustfmt/Clippy | yes | Default local build/check profile; nextest, jq, and ShellCheck are optional |
-| `ci` | core plus exact nextest, cargo-deny, jq | yes | Standard CI and supply-chain profile |
+| `ci` | core plus exact nextest, cargo-deny, jq, independent Python blake3 checker | yes | Standard CI and supply-chain profile |
 | `web` | Node/npm, locked Playwright, wasm-bindgen, `wasm32-unknown-unknown` | yes | Node, browser, Web, and WebXR lanes |
 | `wasi` | WASI SDK 33.0, Wasmtime, and `wasm32-wasip1` | yes | Preview 1 CLI parity, including Rust crates with native C dependencies |
 | `formal` | Lean and Lake | no | R7 mechanized semantics/proofs; may run independently of native builds |
@@ -55,6 +55,18 @@ A profile declares its supported platform IDs. Selecting a profile on an undecla
 - Rust stage0 is exact `1.90.0`; Cargo and both installed WebAssembly targets must belong to that toolchain. rustfmt and Clippy are exact component versions.
 - WASI SDK is exact `33.0`. Its official platform archive is SHA-256 verified by `scripts/install_wasi_sdk.sh`; `WASI_SDK_PATH`, `WASI_SYSROOT`, and target-specific Cargo C compiler variables must identify the same extracted SDK. The Rust target alone is insufficient for crates such as bundled SQLite that compile C sources.
 - Python is `>=3.9.0 <4.0.0`; repository helpers must remain valid on Python 3.9 and cannot assume `tomllib`.
+- The CI/full independent Python checker is exact `blake3==1.0.4`, declared by
+  `python-blake3` and mirrored by `scripts/requirements-selfhost-checker.txt`.
+  Its isolated, bytecode-free probe imports the package and reports its exposed
+  version. GB-8 recognizes the module only after validating the declaration,
+  exact version, approved probe and closed four-wheel hash admission. It never
+  treats an installed third-party package as a standard-library module.
+  Provision the reviewed CPython 3.12 glibc Linux/macOS wheels through the
+  hash-required, binary-only, forced-install procedure in
+  `docs/spec/SELFHOST_FRONTEND_AUTHORITY_v0.1.md`. Other wheel/host combinations,
+  including Windows, remain unqualified; a passing presence/version probe is
+  neither wheel custody nor cross-host release evidence. The minimum core
+  build profile retains its Python 3.9 floor and does not acquire this package.
 - Bash is `>=3.2.0 <6.0.0`, preserving the macOS system Bash floor. Scripts cannot require Bash 4-only features without advancing this profile.
 - Node is `>=22.0.0 <23.0.0`, npm is `>=10.0.0 <11.0.0`, Playwright is exact `1.58.2`, and wasm-bindgen CLI is exact `0.2.108`.
 - Wasmtime is exact `36.0.9`, the selected maintained release line for current WASI parity. Advancing it requires rerunning WASI, replay, and cross-host gates.
@@ -86,5 +98,10 @@ Platform probes establish only the compiler/SDK envelope. Simulator runtime vers
 5. unknown profiles; and
 6. unsupported profile/platform combinations; and
 7. Rust target identity drift from `rust-toolchain.toml`.
+
+The Python checker declaration also rejects source/probe/version drift, missing
+CI/full membership, unreviewed or missing wheel hashes, duplicate hashes and
+additional requirements. GB-8 retains rejection of undeclared Python and
+shell-embedded imports, including comma-separated and continued import lists.
 
 Version updates must change the authoritative manifest and every affected tool-native mirror together, explain compatibility impact, and run the feature-specific gates. The diagnostic offers no installation command because installation is host-mutating and belongs to an explicit bootstrap procedure, not a check.

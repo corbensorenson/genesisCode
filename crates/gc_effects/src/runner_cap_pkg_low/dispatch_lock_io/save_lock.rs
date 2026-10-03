@@ -32,7 +32,7 @@ pub(super) fn dispatch_save_lock(
         }
     };
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_write(
+    let lock_path = match sandbox_atomic_write_target(
         &base_dir,
         &lock_s,
         pol.map(|policy| policy.create_dirs).unwrap_or(false),
@@ -443,7 +443,7 @@ fn dispatch_save_lock_parity(
     let bytes = l.to_toml_canonical();
     let lock_h = blake3::hash(bytes.as_bytes()).to_hex().to_string();
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_write(
+    let lock_path = match sandbox_atomic_write_target(
         &base_dir,
         &lock_s,
         pol.map(|p| p.create_dirs).unwrap_or(false),

@@ -42,7 +42,7 @@ impl RegistryClient {
                     }
                     #[cfg(not(target_os = "wasi"))]
                     {
-                        let mut b = Client::builder();
+                        let mut b = Client::builder().redirect(reqwest::redirect::Policy::none());
                         if let Some(t) = timeout {
                             b = b.timeout(t);
                         }

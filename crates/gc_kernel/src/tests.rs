@@ -2517,3 +2517,125 @@ fn fixed_decimal_parse_failure_is_sealed_error() {
         _ => panic!("expected sealed error, got {}", v.debug_repr()),
     }
 }
+
+#[test]
+fn empty_repeat_maximum_count_has_bounded_work_and_tier_exact_accounting() {
+    // A child watchdog bounds the counterexample even when a primitive fails
+    // to yield to evaluator step accounting. The child checks semantic results
+    // and deterministic counters; elapsed time is only the outer safety bound.
+    const CHILD: &str = "GENESIS_TEST_EMPTY_REPEAT_CHILD";
+    if std::env::var_os(CHILD).is_some() {
+        let zero = observe_tier(
+            r#"(prim str/repeat "" 0)"#,
+            false,
+            Some(100),
+            MemLimits::default(),
+        );
+        let source = format!(r#"(prim str/repeat "" {})"#, usize::MAX);
+        let reference = observe_tier(&source, false, Some(100), MemLimits::default());
+        let optimized = observe_tier(&source, true, Some(100), MemLimits::default());
+        assert_eq!(reference, optimized);
+        assert_eq!(reference.result.as_ref().unwrap().0, r#""""#);
+        assert_eq!(reference.counters.steps, zero.counters.steps);
+        return;
+    }
+    let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "tests::empty_repeat_maximum_count_has_bounded_work_and_tier_exact_accounting",
+            "--nocapture",
+        ])
+        .env(CHILD, "1")
+        .spawn()
+        .unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    loop {
+        if let Some(status) = child.try_wait().unwrap() {
+            assert!(status.success(), "empty-repeat child failed: {status}");
+            break;
+        }
+        if std::time::Instant::now() >= deadline {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            panic!("empty repetition exceeded bounded child watchdog despite a 100-step budget");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
+#[test]
+fn str_repeat_preserves_validation_and_output_limits_in_both_tiers() {
+    let out_of_range = BigInt::from(usize::MAX) + 1u8;
+    let cases = [
+        (r#"(prim str/repeat "" -1)"#.to_owned(), true),
+        (format!(r#"(prim str/repeat "" {out_of_range})"#), true),
+        (r#"(prim str/repeat "" true)"#.to_owned(), true),
+        (r#"(prim str/repeat 0 0)"#.to_owned(), true),
+        (r#"(prim str/repeat "abc" 0)"#.to_owned(), false),
+        (r#"(prim str/repeat "λ" 3)"#.to_owned(), false),
+    ];
+    for (source, sealed_error) in cases {
+        let forms = parse_module(&source).unwrap();
+        let reference = observe_tier(&source, false, Some(100), logical_meter_limits());
+        let optimized = observe_tier(&source, true, Some(100), logical_meter_limits());
+        assert_eq!(reference, optimized, "{source}");
+        for compiled in [false, true] {
+            let mut ctx = EvalCtx::with_step_limit(Some(100));
+            let token = ctx.protocol.unwrap().error;
+            let mut env = Env::empty();
+            let value = if compiled {
+                eval_module_compiled(&mut ctx, &mut env, &forms)
+            } else {
+                eval_module(&mut ctx, &mut env, &forms)
+            }
+            .unwrap();
+            if sealed_error {
+                assert!(
+                    matches!(value, Value::Sealed { token: actual, .. } if actual == token),
+                    "{source}"
+                );
+            } else {
+                let expected = if source.contains('λ') { "λλλ" } else { "" };
+                assert!(
+                    matches!(value.as_data(), Some(Term::Str(actual)) if actual == expected),
+                    "{source}"
+                );
+            }
+        }
+    }
+    let overflow = format!(r#"(prim str/repeat "ab" {})"#, usize::MAX);
+    let reference = observe_tier(&overflow, false, Some(100), MemLimits::default());
+    let optimized = observe_tier(&overflow, true, Some(100), MemLimits::default());
+    assert_eq!(reference, optimized);
+    assert_eq!(
+        reference.result.unwrap_err().0,
+        KernelErrorKind::MemoryLimit.to_string()
+    );
+}
+
+#[test]
+fn symbol_constructor_rejects_literal_and_integer_token_aliases_in_both_tiers() {
+    for name in ["nil", "true", "false", "0", "12name", "-1", "-12name"] {
+        let source = format!(
+            "(prim sym/from-str {})",
+            gc_coreform::print_term(&Term::Str(name.into()))
+        );
+        for compiled in [false, true] {
+            let mut ctx = EvalCtx::with_step_limit(Some(100));
+            let token = ctx.protocol.unwrap().error;
+            let mut env = Env::empty();
+            let forms = parse_module(&source).unwrap();
+            let value = if compiled {
+                eval_module_compiled(&mut ctx, &mut env, &forms)
+            } else {
+                eval_module(&mut ctx, &mut env, &forms)
+            }
+            .unwrap();
+            assert!(
+                matches!(value, Value::Sealed { token: actual, .. } if actual == token),
+                "{name} compiled={compiled}: {}",
+                value.debug_repr()
+            );
+        }
+    }
+}

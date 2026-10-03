@@ -55,7 +55,9 @@
                   ((core/str::concat "b\"")
                     ((core/str::concat (core/coreform::escape-bytes t)) "\""))
                   (if ((core/sym::eq? tg) (quote :sym))
-                    (core/sym::to-str t)
+                    (let ((text (core/sym::to-str t)))
+                      (let ((admitted (core/sym::from-str text)))
+                        (if (selfhost/printer::is-error admitted) admitted text)))
                     nil))))))))))
 
 (def selfhost/printer::is-atom?
@@ -205,4 +207,3 @@
                           vs
                           (((selfhost/printer::map-atom-parts2 entries) i)
                             ((core/pair::cons ks) ((core/pair::cons vs) acc))))))))))))))))
-

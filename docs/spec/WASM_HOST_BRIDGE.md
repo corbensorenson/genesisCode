@@ -49,6 +49,9 @@ response profile:
   - `wasi_bridge_profile = true` (explicit profile enable for non-WASI hosts/tests)
   - `wasi_bridge_response` (CoreForm term string)
   - `wasi_bridge_response_file` (path to CoreForm term or `op -> response` CoreForm map)
+    uses a held rooted file grant. A declared `max_bytes` bounds the whole encoded
+    document body before parsing, as specified in `HOST_BRIDGE_PROTOCOL.md`; an
+    aggregate map's selected response cannot bypass that document limit.
 - optional process-level fallback:
   - `GENESIS_WASI_BRIDGE_RESPONSES` (CoreForm map keyed by op symbol/string)
 

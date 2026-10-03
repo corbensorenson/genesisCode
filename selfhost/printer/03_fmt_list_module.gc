@@ -3,7 +3,7 @@
     (fn (indent)
       (let ((items (core/pair::as-proper-list t)))
         (if (core/list::is-nil? items)
-          ((core/pair::cons ((core/str::concat (selfhost/printer::spaces indent)) "(pair <improper>)")) nil)
+          ((core/error::make2 "core/type-error") "improper pair has no canonical CoreForm v0.2 serialization")
           (selfhost/printer::fmt-list-items items indent))))))
 
 (def selfhost/printer::fmt-list-items

@@ -42,7 +42,7 @@ atomic_render() {
 }
 
 configure_genesis_binary() {
-  if [[ -n "${GENESIS_AUTHORING_BIN:-}" ]]; then
+  if [[ -n "${GENESIS_AUTHORING_BIN:-}" && "${1:-}" != "fresh" ]]; then
     return
   fi
   source "$ROOT_DIR/scripts/lib/cargo_target_dir.sh"
@@ -91,7 +91,8 @@ update_authoring_skill() {
 }
 
 update_canonical_examples() {
-  python3 scripts/lib/gc_canonical_examples.py --refresh
+  configure_genesis_binary fresh
+  python3 scripts/lib/gc_canonical_examples.py --refresh --genesis-bin "$GENESIS_AUTHORING_BIN"
   python3 scripts/lib/gc_canonical_examples.py --check --self-test
   echo "update-agent-authoring-bundle: refreshed canonical examples"
 }

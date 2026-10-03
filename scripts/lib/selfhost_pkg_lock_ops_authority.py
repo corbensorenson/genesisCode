@@ -243,12 +243,20 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
             fail(f"production init/add/list route retains Rust semantic oracle: {marker}")
     for marker in (
         "let mut lock = gc_pkg::GenesisLock::empty(workspace)",
-        "let mut lock = match gc_pkg::GenesisLock::load(&path)",
-        "let lock = match gc_pkg::GenesisLock::load(&path)",
+        "let mut lock = match read_parity_lock(&path)",
+        "let lock = match read_parity_lock(&path)",
         "lock.set_requirement_with_metadata(", "let bytes = lock.to_toml_canonical().into_bytes()",
     ):
         if marker not in parity:
             fail(f"parity oracle lost retained legacy marker: {marker}")
+    parity_reader_marker = '#[cfg(any(test, feature = "parity-oracle"))]\nfn read_parity_lock('
+    if parent.count(parity_reader_marker) != 1:
+        fail("held parity lock reader is not uniquely compile-time guarded")
+    parity_reader = parent.split(parity_reader_marker, 1)[1].split("\n}", 1)[0]
+    for marker in ("file: &crate::runner_io_ops::DocumentRead", "read_bounded_lock(file)?",
+                   "gc_pkg::GenesisLock::from_toml_str", "file.description()", ", text)"):
+        if marker not in parity_reader:
+            fail(f"held parity lock reader missing contract: {marker}")
     if "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)" not in runner:
         fail("runner does not use the closed lock authority operation set")
 
@@ -337,10 +345,12 @@ def self_test(root: Path, profile, schema) -> int:
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_lock.rs", "authority.bridge_lock_toml(&bytes, facts)?", "legacy_bridge(&bytes, facts)?", "bridge-route")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish.rs", '"core/pkg-low::bridge" => bridge_objects::dispatch_bridge(', '"core/pkg-low::bridge" => legacy_bridge(', "bridge-dispatch")
     source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_publish/bridge_objects.rs", "bridge_lock::update_lock(", "legacy_bridge_lock(", "bridge-lock-route")
-    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs", "let mut lock = match gc_pkg::GenesisLock::load(&path)", "let mut lock = match gc_pkg::LegacyLock::load(&path)", "parity-oracle")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/parity.rs", "let mut lock = match read_parity_lock(&path)", "let mut lock = match gc_pkg::LegacyLock::load(&path)", "parity-oracle")
     source_mutation("crates/gc_effects/src/pkg_lock_read_authority.rs", '"core/pkg-low::list"', '"core/pkg-low::legacy-list"', "lazy-route-set")
     source_mutation("crates/gc_effects/src/runner.rs", "PkgLockReadAuthority::required_for_request(&req.op, &req.payload)", "req.op.starts_with(\"core/pkg-low::\")", "lazy-route-use")
 
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "read_bounded_lock(file)?", "std::fs::read(file.description())?", "parity-pathname-reopen")
+    source_mutation("crates/gc_effects/src/runner_cap_pkg_low.rs", "gc_pkg::GenesisLock::from_toml_str", "gc_pkg::GenesisLock::load", "parity-parser-custody")
     controls = 0
     for changed_profile, overrides, name in mutations:
         try:
@@ -349,7 +359,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"negative control survived: {name}")
-    if controls != 27:
+    if controls != 29:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-pkg-lock-ops-authority: self-test ok (negative_controls={controls})")
     return controls

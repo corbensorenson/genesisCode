@@ -359,6 +359,9 @@ def run_step(
     internal = {
         "generatedBytes": generated_bytes,
         "limitsSatisfied": output_within_limit and generated_limits and not timed_out,
+        "timedOut": timed_out,
+        "outputWithinLimit": output_within_limit,
+        "generatedLimitsSatisfied": generated_limits,
         "outputIdentitySha256": output_identity,
         "generatedIdentitySha256": generated_identity,
     }
@@ -618,6 +621,37 @@ def step_score(ids: list[str], reports: dict[str, dict[str, Any]]) -> int:
     return sum(10000 for step_id in ids if reports[step_id]["passed"]) // len(ids)
 
 
+def require_reference_execution(
+    case_id: str,
+    reports: list[dict[str, Any]],
+    internal: dict[str, dict[str, Any]],
+    limits_satisfied: bool,
+) -> None:
+    if limits_satisfied and all(row["passed"] for row in reports):
+        return
+    # Report bounded metadata only: command output and candidate contents remain private.
+    failed = []
+    for row in reports:
+        facts = internal[row["id"]]
+        if row["passed"] and facts["limitsSatisfied"]:
+            continue
+        failed.append({
+            "stepId": row["id"][:128],
+            "exitCode": row["exitCode"],
+            "assertionsPassed": row["assertionsPassed"],
+            "limitsSatisfied": facts["limitsSatisfied"],
+            "timedOut": facts.get("timedOut", False),
+            "outputWithinLimit": facts.get("outputWithinLimit", True),
+            "generatedLimitsSatisfied": facts.get("generatedLimitsSatisfied", True),
+        })
+    diagnostic = {
+        "caseId": case_id[:128],
+        "limitsSatisfied": limits_satisfied,
+        "failedSteps": failed,
+    }
+    raise ScoringError("reference execution failed closed: " + canonical_bytes(diagnostic).decode("utf-8"))
+
+
 def score_candidate(
     scoring: dict[str, Any],
     case_id: str,
@@ -674,7 +708,7 @@ def score_candidate(
         selfhost_artifact,
         policy["generatedPathPrefixes"],
     )
-    require(reference_limits and all(row["passed"] for row in reference_reports), "reference execution failed closed")
+    require_reference_execution(case_id, reference_reports, reference_internal, reference_limits)
     candidate_by_id = {row["id"]: row for row in candidate_reports}
     reference_by_id = {row["id"]: row for row in reference_reports}
 
@@ -842,6 +876,27 @@ def main() -> int:
         )
         controls = self_test(scoring) if args.self_test else 0
         if args.self_test:
+            positive = {"id": "reference-step", "passed": True, "exitCode": 0, "assertionsPassed": 1}
+            require_reference_execution("reference-case", [positive], {"reference-step": {"limitsSatisfied": True}}, True)
+            for reason in ("timedOut", "outputWithinLimit", "generatedLimitsSatisfied", "assertions"):
+                failed = dict(positive, passed=False, assertionsPassed=0 if reason == "assertions" else 1)
+                facts = {
+                    "limitsSatisfied": reason == "assertions",
+                    "timedOut": reason == "timedOut",
+                    "outputWithinLimit": reason != "outputWithinLimit",
+                    "generatedLimitsSatisfied": reason != "generatedLimitsSatisfied",
+                }
+                try:
+                    require_reference_execution("reference-case", [failed], {"reference-step": facts}, facts["limitsSatisfied"])
+                except ScoringError as exc:
+                    diagnostic = json.loads(str(exc).split(": ", 1)[1])
+                    require(diagnostic["caseId"] == "reference-case", "reference failure lost case context")
+                    detail = diagnostic["failedSteps"][0]
+                    require(detail["stepId"] == "reference-step", "reference failure lost step context")
+                    require(all(detail[key] == value for key, value in facts.items()), "reference failure lost limit context")
+                    require(detail["assertionsPassed"] == failed["assertionsPassed"], "reference failure lost assertion context")
+                else:
+                    raise ScoringError("failed reference execution was accepted")
             require(ratio_score(100, 100) == 10000, "equal ratio score drift")
             require(ratio_score(100, 125) == 8000, "bounded ratio score drift")
             require(

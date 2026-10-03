@@ -1,0 +1,9 @@
+# Independent host verifier dependency, not a GenesisCode runtime dependency.
+# CPython 3.12 wheels for Linux (glibc) and macOS, x86_64/aarch64 only.
+# Hashes reviewed from https://pypi.org/pypi/blake3/1.0.4/json on 2026-10-02.
+# Source builds and undeclared platforms must fail rather than selecting a fallback.
+blake3==1.0.4 \
+    --hash=sha256:bb2689cbef663d823011eeddec29c23d1c1f773ac867bfa854fb0590771a309d \
+    --hash=sha256:fc9da486d47f399ac2aba8dfdfaf60cc7a507d8434623cee8f81f47852db594d \
+    --hash=sha256:1e3018d12e16faea2e08f210123a9c2e603de6c1b80b381624cffd536e1022d1 \
+    --hash=sha256:17fb8c25d62b3dc35c2c4d59f3b2f3234814b2aa374c0b9bea3d326184bf9268

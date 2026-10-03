@@ -231,7 +231,7 @@ fn pkg_publish_roundtrip_over_http_registry_server() {
         get_remote_ref(&remote_dir, "refs/heads/main"),
         Some(commit_ok)
     );
-    server.join().unwrap();
+    server.stop_and_join().unwrap();
 }
 
 #[test]
@@ -337,5 +337,5 @@ fn sync_push_pull_roundtrip_over_http_registry_server() {
         Some(commit_h)
     );
 
-    server.join().unwrap();
+    server.stop_and_join().unwrap();
 }

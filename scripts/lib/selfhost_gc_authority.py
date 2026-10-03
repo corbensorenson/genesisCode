@@ -221,10 +221,24 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
         '.update_pins(":unpin"', ".purge_plan(",
         "let _pins_lock = gc_path_lock(&pins_path)?", "let _quarantine_lock",
         "gc_store_lock(store_dir)?", "gc_store_inventory(store)?",
-        "store.verify_hex(hash)", "quarantine_store", "atomic_write_text(&pins_path, &plan.body)",
+        "store.verify_hex(hash)", "quarantine_store", "atomic_write_text(&write_target, &plan.body)",
+        "sandbox_atomic_write_target(&base_dir, &pins_s, create_dirs)?",
         "for hash in &dead_plan.dead", "for hash in purge",
         "authorized GC quarantine destination already exists",
     ], "GC production capability")
+    if "atomic_write_text(&pins_path" in cap:
+        fail("GC pins replacement bypasses its rooted write target")
+    io_ops = read_text(root, "crates/gc_effects/src/runner_io_ops.rs", overrides)
+    require_all(io_ops, [
+        "target: &crate::rooted_fs::AtomicWriteTarget",
+        ".prepare_atomic_write(input, create_dirs)?", "target.write(bytes)",
+    ], "GC rooted writer custody")
+    rooted_writer = read_text(root, "crates/gc_effects/src/rooted_fs.rs", overrides)
+    require_all(rooted_writer, [
+        "pub(crate) struct AtomicWriteTarget", "for sequence in 0..1024u32",
+        ".create_new(true)", "file.sync_all()?", "parent.rename(&temporary, &parent, &leaf)",
+        "parent.remove_file_or_symlink(&temporary)?",
+    ], "GC rooted document writer")
     for residual in (
         "gc_pins_load", "gc_pins_write", "GcPins::empty", "gc_store_dead_set",
         "gc_roots_plan_from_sources", "sync_closure_local",
@@ -233,6 +247,13 @@ def static_check(root: Path, profile, overrides=None, artifact_path=None, check_
             fail(f"GC production route retains Rust semantic residual {residual!r}")
     if cap.index(".dead_plan(") > cap.index("for hash in &dead_plan.dead"):
         fail("GC mutation precedes authority dead plan")
+    for operation in ("pin", "unpin"):
+        route = cap.split('"core/gc-low::' + operation + '" => {', 1)[1].split('\n        "core/gc-low::', 1)[0]
+        admission = route.index("let write_target = sandbox_atomic_write_target")
+        if admission > route.index("let pins_path = sandbox_path_write"):
+            fail(f"{operation} path materialization precedes rooted writer admission")
+        if admission > route.index("let _pins_lock = gc_path_lock"):
+            fail(f"{operation} locking precedes rooted writer admission")
     pin_lock = cap.index("let _pins_lock = gc_path_lock(&pins_path)?")
     if pin_lock > cap.index('.update_pins(":pin"'):
         fail("pin read/update is not serialized before authority evaluation")
@@ -350,6 +371,11 @@ def self_test(root: Path, profile, schema) -> None:
         ("crates/gc_effects/src/runner_gc_ops.rs", lambda text: text.replace("options.custom_flags(libc::O_NONBLOCK);", "", 1)),
         ("crates/gc_cli/tests/cli_gc.rs", lambda text: text.replace("gc_pin_rejects_malformed_existing_pins_without_overwrite", "missing_negative", 1)),
         ("docs/spec/SEMANTIC_OWNERSHIP_LEDGER_v0.1.json", lambda text: text.replace('"id": "SD-ARTIFACT-GC",', '"id": "SD-ARTIFACT-GC",\n      "fallbackReachability": "reachable",', 1)),
+        ("crates/gc_effects/src/runner_cap_gc_gpk_low.rs", lambda text: text.replace("atomic_write_text(&write_target, &plan.body)", "atomic_write_text(&pins_path, &plan.body)", 1)),
+        ("crates/gc_effects/src/runner_io_ops.rs", lambda text: text.replace("target: &crate::rooted_fs::AtomicWriteTarget", "target: &std::path::Path", 1)),
+        ("crates/gc_effects/src/rooted_fs.rs", lambda text: text.replace("parent.remove_file_or_symlink(&temporary)?", "", 1)),
+        ("crates/gc_effects/src/rooted_fs.rs", lambda text: text.replace("for sequence in 0..1024u32", "for sequence in 0..", 1)),
+        ("crates/gc_effects/src/runner_cap_gc_gpk_low.rs", lambda text: text.replace("let write_target = sandbox_atomic_write_target(&base_dir, &pins_s, create_dirs)?;\n            ", "", 1).replace("let _pins_lock = gc_path_lock(&pins_path)?;", "let _pins_lock = gc_path_lock(&pins_path)?;\n            let write_target = sandbox_atomic_write_target(&base_dir, &pins_s, create_dirs)?;", 1)),
     ]
     for relative, mutate in mutations:
         overrides = {relative: mutate((root / relative).read_text())}
@@ -360,7 +386,7 @@ def self_test(root: Path, profile, schema) -> None:
         else:
             fail(f"static mutation was accepted: {relative}")
 
-    if controls != 17:
+    if controls != 22:
         fail(f"negative control inventory drift: {controls}")
     print(f"selfhost-gc-authority-self-test: ok (negative_controls={controls})")
 

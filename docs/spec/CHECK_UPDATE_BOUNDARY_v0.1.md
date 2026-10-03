@@ -195,6 +195,90 @@ presence is an error, so ordinary callers cannot select an observation-only
 passing mode. Failed generation never authorizes or partially retains a
 publication.
 
+Process-group lifetime is a separate delegation from shared disk attribution.
+The owner supplies `GENESIS_GATE_PROCESS_GROUP_OWNER_FD`, an inherited read/write regular-file descriptor or the aggregate
+owner's append-only write descriptor, and `GENESIS_GATE_EVENT_ROOT`, its absolute regular
+event directory. An environment-only descriptor, a closed/non-inheritable or
+read-only descriptor, or a missing/invalid event root fails before spawning.
+Nested telemetry observers retain the caller's group and forward this lifetime
+descriptor explicitly. They never signal the inherited caller group. The owner
+kills and drains that group when its command or validator terminates, including
+descendants left by an exited leader. Callers that create another Python
+subprocess must explicitly preserve delegated descriptors; stale environment
+claims cannot silently fall back to a new session.
+
+A standalone observer creates one owned command group and private event
+directory, delegates their lifetime to nested observers, and kills/reaps its
+group on signal, launch/observer failure or leader termination. SIGINT, SIGTERM
+and SIGHUP request one unwind; ignoring those signals in a command cannot keep
+that owned group running. Signal cancellation after command admission retains
+the signal-derived exit and `signaled` observation. Sampling errors are polled
+during execution, then propagated after child cleanup. Event descriptors and
+sampler threads close on every exit; group-owned private event files are removed
+by their owner even when nested observers receive SIGKILL. These POSIX controls
+do not contain commands that deliberately escape their group and do not qualify
+Windows, host crashes, SIGKILL of the owning supervisor or independent release
+acceptance.
+
+The sampler starts no further inventory work after stop. Darwin's fixed
+unprivileged isolated Python helper reads the process tree through libproc's
+public `proc_listpids` and `RUSAGE_INFO_V0` ABI. It avoids privileged `/bin/ps`
+execution and runs in a private helper group with a five-second collection
+deadline,
+a 1 MiB output ceiling enforced while reading, and interruptible nonblocking
+pipe reads. Stop kills that group, reaps its helper and closes the pipe within the
+existing two-second sampler join envelope; an exited leader cannot retain an
+executing helper descendant. Kernel orphan reaping is not an owned child wait.
+Darwin signal permission
+denial supplies no cleanup proof: the owner reaps an exited leader and checks
+native group membership and exit state, accepting only an empty or entirely
+exited group. A live member or unknown group state fails explicitly. Timeout,
+excess output, malformed encoding or nonzero helper exit
+fails the observation explicitly. A partial or truncated inventory never
+supplies successful evidence. Linux traversal checks stop while discovering
+and sampling the process tree. The last successful samples and child rusage
+remain available; stopping does not launch a final unbounded inventory probe.
+The helper bounds discovery to 32,768 processes, rejects truncated native
+child inventories, and treats only a vanished process as an ordinary sampling
+race. RSS is conservatively rounded up to KiB for the existing inventory
+protocol. The parent rejects malformed, oversized-numeric, duplicate or
+contradictory tree rows before committing a sample; numeric conversion cannot
+escape the explicit sampler error channel. The ABI is defined in Apple’s
+[public libproc headers](https://github.com/apple-oss-distributions/xnu/blob/main/libsyscall/wrappers/libproc/libproc.h)
+and `sys/resource.h`; native observations do not qualify unsupported hosts.
+Darwin cache leases read PID start time from the exact-size native BSD ABI
+instead of launching a privileged `ps` child. They preserve the existing
+`posix`/PID/English-asctime digest payload, including its second precision and
+timezone behavior. A vanished PID remains absent; an unknown native birth
+observation fails explicitly and cannot authorize stale-lease reclamation.
+
+The aggregate disk ceiling charges sampled allocated growth in declared owned
+paths, with filesystem/device/inode deduplication. Those paths include the
+private staging tree and its Git registration, controlled child temporary
+directories and validation logs, publication backups and exclusive temporary
+copies, and net growth of replaced canonical outputs. A preexisting hard-link
+alias cannot create a second baseline deduction. Child `TMPDIR`, `TMP`, and
+`TEMP` point into the owned temporary scope. Whole-volume free-space decline is
+an observation, not attribution: unrelated writers must not spend this
+transaction's quota, and unrelated deletion must not conceal an owned overrun.
+Unavailable allocation metadata and unreadable owned paths fail closed; they
+cannot be reported as zero or used to qualify an unsupported host.
+Continuous allocation scans use the validated telemetry policy's aggregate
+sampling interval; node completion and publication boundaries force fresh
+allocation measurements. Wall, exhaustion, and event checks run on every poll.
+Actual filesystem exhaustion still fails closed. Operation-specific admission
+and shared-volume reservations remain separate from this sampled growth guard;
+a sampled quota pass does not establish complete supervision of arbitrary
+callbacks or writes outside declared paths.
+
+Publication validates owned allocation and drains its final event record while
+the rollback journal remains available. A quota, pressure, or incomplete-event
+failure restores previous replacements and removes exclusive temporary copies.
+Once that validation commits publication, cleanup does not retrospectively
+invalidate it because another writer changes volume pressure. Terminal logs
+retain sampled owned peak allocation and whole-volume decline as distinct local
+observations; neither metric alone is release qualification.
+
 Cache hits and network attempts cross a closed append-only event channel owned
 by the parent observer. Repository Cargo cache materialization emits a cache
 hit only after a matching content-addressed cache is reused. A gate emits a
@@ -588,23 +672,147 @@ paths outside an owner's declared roots, undeclared size classes, duplicate
 keys, and hard-quota overrides above GB-5 fail closed.
 
 Rebuildable producers MUST acquire a process-bound random lease before
-materializing repository-local state. Admission accounts for the larger of a
-size-class reservation and observed allocated bytes, reclaims inactive entries
+materializing repository-local state. Admission charges inactive entries by
+observed allocated bytes and each distinct live or requested build materialization by
+the larger of its size-class reservation and observed allocation. It reclaims
+inactive entries
 in `(reclaim-order, last-use-sequence, entry-id)` order at the soft quota, and
 denies admission when active or requested state cannot fit under the hard quota
-or the minimum-free-space reserve. An inactive requested entry already above
-the hard quota may be transactionally evicted and recreated; an active entry
-is never reclaimed. Process identity includes operating-system boot/session
-and process-start identity so PID reuse cannot preserve a stale lease.
+or its physical-space requirement. That requirement currently includes the
+existing build reserve, the sum of remaining growth for every distinct live and
+new requested materialization, and the recovery-journal allocation estimate
+derived from its measured payload.
+Multiple build leases on one materialization share its reservation; distinct writers
+cannot spend the same free bytes. Admission refreshes both live and inactive
+allocated sizes before quota decisions and counts
+`max(0, reservation - observed)` once per live/requested materialization.
+When live and requested state alone exceeds the hard quota, admission MUST deny
+before reclaiming inactive caches: no such deletion can make those writers fit.
+For a build request sharing an existing materialization, a larger requested class
+raises the one shared reservation before quota and physical-space checks. Admission
+never silently uses a smaller registered budget. A denied upgrade restores the
+prior entry and retains all earlier live leases; releasing an older lease cannot
+lower an admitted live upgrade. A smaller request keeps a larger retained budget
+conservatively. Metadata-only requests do not relabel a live build's reservation.
+An existing ownership/content identity is checked before oversized-entry eviction;
+cache size cannot change whether an identity conflict is rejected.
+The lease-count bound MUST also be checked before evicting an oversized idle
+requested cache. Persisted entry ownership, roots, size class, reservation,
+retention and reclamation order MUST agree with the current producer policy;
+a registry record cannot grant itself a smaller reservation or deletion authority.
+
+Cargo metadata-only materialization uses a separate `cargo-metadata` lease.
+The common library freezes the exact bounded serialized payload before admission
+and writes those same bytes. Each such lease reserves two allocation-unit-rounded
+payload copies plus two allocation units per relative path component and two
+additional components. These growth budgets add for concurrent metadata writers,
+including writers sharing a cache; they do not replace a live build reservation.
+Quota accounting adds metadata growth to the entry's observed/build accounting;
+physical admission adds it to all remaining build growth and the journal estimate.
+This operation requires its own derived headroom rather than the default build
+free-space floor when no build lease is live. An explicit caller minimum and the
+floor protecting any live build remain effective. Directory overhead is an
+estimate, not an arbitrary-filesystem hard bound or build-peak qualification.
+Transient metadata leases are released on success and materialization failure.
+On the declared POSIX profiles, an existing metadata file is opened nonblocking
+and without following a final symlink, admitted as regular through its descriptor,
+then compared through an unbuffered read bounded to the expected payload plus one
+byte. This does not claim an ancestor-race repair or universal cancellation.
+Discovery of unregistered Cargo entries and registry loading also use the shared
+descriptor-admitted JSON reader: nonblocking open, regular-file admission,
+unbuffered bounded chunks and at most one byte beyond the existing 8 MiB limit.
+An initial descriptor size is an early rejection, never permission for an
+unbounded later read. Invalid UTF-8 and duplicate keys return explicit lifecycle
+errors. Registry and discovered metadata final links are rejected, including
+dangling registry entries; a dangling link is not absent writable state. Explicit
+policy JSON paths retain link-to-regular compatibility. Missing nonblocking or
+required no-follow descriptor support fails closed; this does not qualify an
+unsupported host or repair ancestor traversal races.
+The frozen metadata plan also binds the cache identity and size-class selection
+used for admission. The identity must agree with the frozen canonical cache key;
+later mutation of the caller's result cannot change the lease's key or build
+reservation while publishing the earlier payload. Discovery and materialization
+share one type-admitted Cargo size-class selector. Legacy missing environment
+observations retain the conservative build class; malformed environment values
+fail explicitly before entry registration or lease mutation.
+The generated-state policy identity MUST hash the same frozen bounded payload that was decoded
+and validated, rather than rereading its path. Decoder nesting/value-domain and
+allocation failures return explicit errors and close the admitted descriptor.
+Registry reference IDs and entry fields are type-admitted before host collection
+operations or identity construction. Explicit invalid process IDs are rejected
+before lease mutation; only an absent PID selects the caller-parent default.
+Process identity returns unavailable for invalid or host-unrepresentable IDs.
+
+Lifecycle and generated-authority allocation observers share a bounded host
+library. Within one observed forest they charge each `(device, inode)` once,
+using the maximum allocated-block observation of an alias. POSIX `st_blocks`
+counts 512-byte units; zero blocks remain zero even for a large sparse logical
+file. Logical length is never a fallback for unavailable allocation metadata.
+Missing or malformed block metadata, unsupported descriptor backends, and
+permission or enumeration failures return explicit owner errors. A name that
+disappears during an active writer's scan is an ordinary sampled race.
+Observers hold directory descriptors during descent and use non-following
+child metadata/open operations. Lifecycle materializations reject link entries,
+including dangling links; aggregate observations charge link entries without
+following destinations. Every walk has entry and directory-depth bounds and
+closes descriptors and iterators on success, disappearance, cancellation and
+failure. Callers still authorize the forest roots; these observations neither
+grant reclamation authority nor prove an atomic snapshot, exact copy-on-write
+consumption, or a bound on a future writer's temporary peak.
+
+The journal estimate measures the prospective serialized registry including the
+next lease, sequence growth and largest quarantine record. It reserves two
+filesystem-block-rounded registry copies and four directory-entry allocation
+units for atomic replacement and recovery. Filesystem metadata overhead remains
+platform-dependent; this is an allocation estimate, not a hard filesystem-wide
+write guarantee, and execution growth supervision remains required. Insufficient
+journal headroom denies admission before starting reclamation. After each
+completed reclaim, admission
+MUST re-read available filesystem bytes; allocated file sizes never substitute
+for actual physical space recovery. Clones, shared extents and open handles
+therefore cannot authorize fictitious headroom. A fitting warm requested cache
+is preserved. An inactive requested entry already above the hard quota may be
+transactionally evicted and recreated; an active entry is never reclaimed.
+
+The standalone disk precheck observes free space by default; an explicit
+`--min-kb` or `GENESIS_MIN_FREE_KB` is a caller-declared requirement. Read-only
+observations acquire no writer reservation and can proceed below build budgets.
+The existing build `minFreeBytes` policy is retained pending replacement by
+per-command peak-write admission: a warm cache can still require temporary
+replacement files or copy-on-write allocation without growing its final size.
+Final cache size alone MUST NOT justify removing a writer's peak-space reserve.
+The current physical-space backend requires `statvfs` with positive allocation
+units and nonnegative caller-available blocks. Missing backends or invalid units
+return explicit lifecycle errors instead of guessed sizes or host exceptions.
+Windows mutex support alone does not qualify its resource-admission backend;
+only the declared Darwin/Linux guard profiles are covered by this transaction.
+
+These reservations coordinate this repository-local registry. They do not
+claim a host-wide scheduler, prevent unrelated applications from writing, or
+replace the existing bounded gate/aggregate growth supervision and process-group
+cancellation. Ordinary unsupervised Cargo invocations, the build reserve and
+remaining explicit heavy-profile estimates require separate operation-specific
+integration before claiming universal resource-admission closure. Process
+identity includes operating-system boot/session and process-start identity so
+PID reuse cannot preserve a stale lease.
 
 The disposable registry conforms to
-`docs/spec/GENERATED_STATE_REGISTRY_v0.1.schema.json`. Its mutex is resolved
+`docs/spec/GENERATED_STATE_REGISTRY_v0.2.schema.json`, with closed lease fields
+`operation` and `growthBytes`. Build leases use zero explicit growth and the
+policy-bound size-class reservation; metadata leases require positive bounded
+growth and Cargo ownership. Validated v0.1 registries remain readable and their
+four-field leases are conservatively interpreted as build leases. Passive reads
+do not persist migration; the next registry mutation atomically writes v0.2.
+The v0.1 schema remains unchanged and old readers reject the new version rather
+than silently lowering its reservations. Its mutex is resolved
 through the Git control directory, outside every cleanup root, so admission
 and whole-root quarantine serialize on Unix, macOS, Windows, and linked Git
 worktrees without holding an open file inside the tree being renamed. Registry
 writes are atomic and every reclamation journals `planned` then `quarantined`
 state before removal. A later admission or status operation deterministically
-finishes an interrupted quarantine. Recursive removal requires the platform's
+finishes an interrupted quarantine. A regular-file materialization is unlinked;
+directory materializations use recursive removal, and special files or final
+symlinks are rejected without following their targets. Recursive removal requires the platform's
 symlink-attack-resistant implementation and uses bounded retries only for
 transient metadata recreation; continuous mutation remains a fail-closed
 transaction for later recovery.
@@ -757,10 +965,24 @@ Publication snapshots all non-output inputs, rejects concurrent source drift,
 and acquires one create-new lock in the Git common directory. Each replacement
 is prepared beside its destination while termination signals are blocked. A
 rollback journal preserves the original bytes until every output is promoted;
-any copy, replace, validation, injected-failure, or signal-path error restores
+any copy, replace, validation or injected-failure error restores
 every already replaced path in reverse order and removes the lock. Read-only
 generated-authority checks fail closed while that lock exists. Repeating a
 successful closure must produce no changed bytes and a clean working tree.
+
+The supervisor handles SIGINT, SIGTERM and SIGHUP as one cancellation request.
+Outside publication, it kills owned process groups, waits for their leaders,
+closes validation logs and event descriptors, and removes its staging worktree
+and Git registration before returning `128 + signal`. Ownership transfer during
+child creation is protected against interruption. Timeout and failed-spawn
+paths use the same cleanup, including descendants whose group leader exited.
+Further stop requests during unwind cannot interrupt cleanup. During atomic
+publication, cancellation is deferred until the complete verified commit or
+error-triggered rollback, temporary cleanup and lock release; cancellation does
+not report a partial publication. POSIX process-group ownership does not contain
+a child that deliberately escapes its group. SIGKILL, process crashes, Windows
+descendant containment and independent supported-host acceptance remain outside
+these local controls; they must not be inferred from a cancellation result.
 
 Automatic closure can never execute signing, attestation, key generation,
 dependency custody, release-asset publication, or retained E3/E4 evidence

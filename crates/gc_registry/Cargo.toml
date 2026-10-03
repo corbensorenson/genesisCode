@@ -18,4 +18,12 @@ gc_vcs = { path = "../gc_vcs" }
 
 [target.'cfg(not(target_os = "wasi"))'.dependencies]
 fs2 = "0.4"
+bytes.workspace = true
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+http-body-util = "0.1"
+hyper = { version = "1", default-features = false, features = ["http1", "server"] }
+hyper-util = { version = "0.1", default-features = false, features = ["tokio"] }
+tokio = { version = "1", default-features = false, features = ["rt", "net", "time", "sync"] }
+
+[target.'cfg(not(target_os = "wasi"))'.dev-dependencies]
 tiny_http = "0.12"

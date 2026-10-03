@@ -4,6 +4,9 @@ All notable GenesisCode changes are tracked here. The project is pre-1.0; format
 
 ## [Unreleased]
 
+- Reject registry redirects, malformed object identities and corrupt backend responses at the shared client boundary; stream bounded file/HTTP reads and admit complete sync download batches before installation. Preserve existing store/sync hash-mismatch classifications and strict replay. Whole-closure rollback and independent recovery acceptance remain open.
+- Recover journaled reclamation of regular-file selfhost caches as well as Cargo directories; reject quarantine links without changing their targets or the existing resource policy.
+
 - Define GenesisCode, GenesisBench, and Genesis Model as independently versioned products with separate release authorities, typed compatibility, isolated acceptance lanes, and no model dependency for the language release.
 - Expand the benchmark roadmap through signed public governance, lineage-correct statistics, fixed-scaffold model comparison, temporal challenge overlays, construct-validity studies, a training/evaluation firewall, profile-bound local models, and four-cell language/model co-evolution.
 - Add the self-hostable signed GenesisBench result registry and deterministic lexicographic static leaderboard, preserving complete append-only result history and independently replayed scoring.
@@ -45,6 +48,13 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 #### Known Gaps
 
+- `P1.10`: F02: authorize anchored filesystem traversal before mutation, including escaping symlinks and replacement races. Affected claims: `CAP-DENY-DEFAULT-POLICY`, `CAP-EFFECT-REPLAY`, `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.11`: F03: preserve source and destination on self-rename and failed overwrite; enforce safe replacement semantics. Affected claims: `CAP-EFFECT-REPLAY`, `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.12`: F04: remove the final filesystem entry without dereferencing its symlink target; specify native/WASI behavior. Affected claims: `CAP-EFFECT-REPLAY`, `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
+- `P1.13`: F05: bound actual primitive work, including empty string repetition at maximum count, across execution tiers. Affected claims: `CAP-KERNEL-DETERMINISM`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`.
+- `P1.14`: F06: bind package verify custody to artifact-backed commit authority and reject native-decoder restoration. Affected claims: `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-SELFHOST-CUTOVER`, `CAP-SEMANTIC-VCS`, `CAP-STRICT-NO-FALLBACK`.
+- `P1.15`: F07: preserve registry service liveness and bounded wait/shutdown/join/drop ownership. Affected claims: `CAP-HOST-BRIDGE`, `CAP-PACKAGE-MANAGER`.
+- `P1.9`: F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility. Local 2026-10-02 E0 serialization-admission controls do not close lossless runtime hashing, versioned replay compatibility, remaining production-boundary audit or independent acceptance. Affected claims: `CAP-COREFORM-IDENTITY`, `CAP-EFFECT-REPLAY`, `CAP-EVIDENCE-GATED-PUBLISH`, `CAP-PACKAGE-MANAGER`, `CAP-RUNTIME-SURFACES`, `CAP-SEMANTIC-VCS`.
 - `R1.3.f`: Meet the cold, warm, large-workspace, parallel-agent, cancellation, and restart interface budgets. Affected claims: `CAP-AGENT-JSON-CONTRACTS`.
 - `R1.5.f`: Validate skill distribution, offline use, token budgets, and multi-agent compatibility. Affected claims: `CAP-AGENT-SKILL-PACK`.
 - `R2.3.e`: Meet explicit incremental large-workspace agent-loop SLOs. Affected claims: `CAP-AGENT-WORKSPACE-PERF`.
@@ -121,7 +131,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 - `R8.2.r`: Prove a reproducible Genesis-native data science and local ML system. Affected claims: `TARGET-DATA-ML`.
 - `R8.3.a`: Ship and maintain at least five evidence-backed flagship programs. Affected claims: `CAP-DOMAIN-STARTERS`, `CAP-GRAPHICS-RUNTIME`.
 - `R9.2.c`: Publish and independently mirror immutable E4 release attestations. Affected claims: `CAP-TOOL-QUALIFICATION`.
-- Active P0/P1 defect IDs: none. Roadmap gaps above remain open.
+- Active P0/P1 defect IDs: `P1.9`, `P1.10`, `P1.11`, `P1.12`, `P1.13`, `P1.14`, `P1.15`, `P1.16`. Roadmap gaps above remain open.
 
 #### Evidence
 
@@ -136,7 +146,7 @@ V1 registry claim: `reserved-not-stable`. Reserved IDs are not stable compatibil
 
 | Lockfile | Records | Registry | Git | SHA-256 |
 |---|---:|---:|---:|---|
-| `Cargo.lock` | 461 | 443 | 0 | `ba28b65b338829a7db9fc4301f226a339c6aab81743b974ae5ca0de1601cbcae` |
+| `Cargo.lock` | 472 | 454 | 0 | `f6097c180c884d7519243b71d287e9a18beddae96b15dfbabf2a9515662f4682` |
 | `tools/genesis-evidence-producer/Cargo.lock` | 41 | 40 | 0 | `a7aa895176386dcbde3de7e0d49a8511ca38227880ee30e82c12978cc5fa416e` |
 | `tools/genesis-evidence-verifier/Cargo.lock` | 41 | 40 | 0 | `d3a5c9c2e7d3cb614d79b3360210c93f63317cdbb808250d0084ff4c1822f3eb` |
 | `package-lock.json` | 3 | sha512 integrity | 0 | `f5b2fa938c2c572fa8172b0f57418c10dca846791855fbd25b1b662b188097ed` |
@@ -155,7 +165,7 @@ No security gate is represented as passed by this static document. Release autho
 - `scripts/check_supply_chain.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 - `scripts/check_versioning_release_hygiene.sh` (`release-only`, `release-full`, network `deny`): required, not attested here.
 
-Machine-readable identity: `9c74462371952e86432cc5bea932b9a724cc37fa90f364f2bf6cef209806f1fd`.
+Machine-readable identity: `147562c2996927318ca137b47723cb22f052e96abb9734bbd3c5d1b5ec128ead`.
 <!-- END GENERATED RELEASE NOTES: genesis/release-notes/v0.1 -->
 
 ## [0.2.0] - 2026-07-02

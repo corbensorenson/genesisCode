@@ -1,3 +1,4 @@
+mod admission;
 mod canon;
 mod fixed_decimal;
 mod parse;
@@ -5,6 +6,11 @@ mod print;
 mod special_form;
 mod term;
 
+pub use admission::{
+    CanonicalDomainError, SymbolNameError, hash_module_checked, hash_term_checked,
+    print_module_checked, print_term_checked, print_term_compact_checked, validate_canonical_term,
+    validate_symbol_name,
+};
 pub use canon::{canonicalize_form, canonicalize_module};
 pub use fixed_decimal::{FIXED_DEC_KIND, FixedDecimal, MAX_FIXED_DECIMAL_SCALE};
 pub use parse::{ParseError, parse_module, parse_term};

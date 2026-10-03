@@ -660,6 +660,19 @@ jobs:
         if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: cargo fmt --all -- --check
 
+      - name: Install Independent Checker Python
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Hash-Locked Independent Checker Dependency
+        if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
+        run: |
+          python3 -m pip --isolated --disable-pip-version-check install \
+            --index-url https://pypi.org/simple --require-hashes --only-binary=:all: --force-reinstall \
+            -r scripts/requirements-selfhost-checker.txt
+
       - name: Selfhost Boundary Guard
         if: ${{ (env.GENESIS_CI_LANE == 'standard' || env.GENESIS_CI_LANE == 'governance') }}
         run: bash scripts/check_selfhost_boundary.sh --strict
@@ -1080,6 +1093,7 @@ jobs:
           cargo build -p gc_wasi_cli --target wasm32-wasip1 --release --locked --offline
           GENESIS_WASI_SMOKE_NATIVE_BIN="$native_smoke_bin" \
             bash scripts/wasi_smoke.sh "$CARGO_TARGET_DIR/wasm32-wasip1/release/genesis_wasi.wasm"
+          bash scripts/test_wasi_rooted_fs.sh
 
       - name: Finalize Hosted Timing Calibration
         if: ${{ always() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && env.GENESIS_CI_PROFILE == 'standard' && env.GENESIS_CI_LANE == 'standard' }}

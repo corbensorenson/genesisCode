@@ -71,7 +71,7 @@ pub(super) fn handle_pkg_install(
     let frozen = payload_pkg_bool(payload, ":frozen").unwrap_or(false);
     let strict = payload_pkg_bool(payload, ":strict").unwrap_or(false);
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+    let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
         Ok(path) => path,
         Err(error) => {
             return Ok(mk_error(
@@ -275,15 +275,12 @@ pub(super) fn handle_pkg_install(
                     return Ok(value);
                 }
                 closure_checked = match validate_commit_artifact_closure(
+                    CommitValidationContext::new(policy, commit_authority, error_tok, op),
                     store,
-                    policy,
-                    commit_authority,
                     &step.name,
                     &step.snapshot,
                     commit,
                     true,
-                    error_tok,
-                    op,
                 ) {
                     Ok(count) => count,
                     Err(value) => return Ok(value),
@@ -495,28 +492,28 @@ fn is_not_found_error(v: &Value) -> bool {
 }
 
 pub(super) fn handle_pkg_verify(
+    validation: CommitValidationContext<'_>,
     payload: &Term,
     pol: Option<&OpPolicy>,
-    policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     lock_authority: Option<&mut PkgLockReadAuthority>,
     identity_authority: Option<&mut PkgResolutionIdentityAuthority>,
-    commit_authority: &mut Option<CommitAuthority>,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<Value, EffectsError> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     let Some(authority) = identity_authority else {
         #[cfg(any(test, feature = "parity-oracle"))]
         {
             return handle_pkg_verify_parity(
+                CommitValidationContext::new(policy, commit_authority, error_tok, op),
                 payload,
                 pol,
-                policy,
                 store,
                 lock_authority,
-                commit_authority,
-                error_tok,
-                op,
             );
         }
         #[cfg(not(any(test, feature = "parity-oracle")))]
@@ -539,7 +536,7 @@ pub(super) fn handle_pkg_verify(
     };
 
     let base_dir = effective_base_dir(pol)?;
-    let lock_path = match sandbox_path_read(&base_dir, &lock_s) {
+    let lock_path = match sandbox_document_read(&base_dir, &lock_s) {
         Ok(p) => p,
         Err(e) => {
             return Ok(mk_error(

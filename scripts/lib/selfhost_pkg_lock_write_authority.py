@@ -160,8 +160,26 @@ def validate_sources(root: Path, profile, overrides=None) -> None:
     if parity_boundary not in save_lock:
         fail("test-only parity oracle boundary missing")
     production = save_lock.split(parity_boundary, 1)[0]
+    io_ops = text(root, "crates/gc_effects/src/runner_io_ops.rs", overrides)
+    # Custody the typed held-directory grant and its exact forwarding writer.
+    # A diagnostic pathname or a pathname reopen cannot satisfy this contract.
+    target_pattern = (
+        r"pub\(crate\) fn sandbox_atomic_write_target\(\s*"
+        r"base_dir: &Path,\s*input: &str,\s*create_dirs: bool,\s*"
+        r"\) -> Result<crate::rooted_fs::AtomicWriteTarget, EffectsError> \{\s*"
+        r"Ok\(crate::rooted_fs::FsRoot::open\(base_dir\)\?\.prepare_atomic_write"
+        r"\(input, create_dirs\)\?\)\s*\}"
+    )
+    writer_pattern = (
+        r"pub\(crate\) fn atomic_write_text\(\s*"
+        r"target: &crate::rooted_fs::AtomicWriteTarget,\s*bytes: &\[u8\],\s*"
+        r"\) -> Result<\(\), std::io::Error> \{\s*target\.write\(bytes\)\s*\}"
+    )
+    if not re.search(target_pattern, io_ops) or not re.search(writer_pattern, io_ops):
+        fail("lock persistence does not consume the exact held-directory atomic target")
     for marker in (
-        "authority.write(payload)?", "sandbox_path_write(", "atomic_write_text(&lock_path, &bytes)",
+        "authority.write(payload)?", "let lock_path = match sandbox_atomic_write_target(",
+        "atomic_write_text(&lock_path, &bytes)",
         "requires the artifact-loaded GenesisCode lock write authority",
     ):
         if marker not in production:
@@ -238,6 +256,7 @@ def self_test(root: Path, profile, schema) -> int:
         "crates/gc_effects/src/runner_cap_pkg_low/dispatch_resolution.rs",
         "crates/gc_effects/src/runner_cap_pkg_low.rs",
         "crates/gc_effects/src/runner.rs",
+        "crates/gc_effects/src/runner_io_ops.rs",
     ]
     sources = {path: text(root, path, {}) for path in paths}
     mutations = []
@@ -282,6 +301,24 @@ def self_test(root: Path, profile, schema) -> int:
                 "            pkg_lock_write_authority,\n            pkg_resolution_identity_authority,",
                 "            None,\n            pkg_resolution_identity_authority,", 1)}, "resolution authority forwarding"),
     ])
+    save_path = "crates/gc_effects/src/runner_cap_pkg_low/dispatch_lock_io/save_lock.rs"
+    io_path = "crates/gc_effects/src/runner_io_ops.rs"
+    for path, before, after, label in (
+        (save_path, "let lock_path = match sandbox_atomic_write_target(",
+         "let lock_path = match sandbox_path_write(", "legacy pathname producer"),
+        (io_path, "target: &crate::rooted_fs::AtomicWriteTarget,",
+         "target: &Path,", "untyped pathname writer"),
+        (io_path, "target.write(bytes)",
+         "std::fs::write(target, bytes)", "reopened pathname persistence"),
+        (io_path, "prepare_atomic_write(input, create_dirs)",
+         "legacy_path(input, false, true, create_dirs)", "legacy target admission"),
+        (io_path, "target.write(bytes)",
+         "std::fs::remove_file(target)?; target.write(bytes)", "extra destructive writer action"),
+    ):
+        expected_anchors = 2 if path == save_path else 1
+        if sources[path].count(before) != expected_anchors:
+            fail(f"negative control anchor drift: {label}")
+        mutations.append((profile, {path: sources[path].replace(before, after, 1)}, label))
     controls = 0
     for candidate, overrides, label in mutations:
         try:
@@ -290,7 +327,7 @@ def self_test(root: Path, profile, schema) -> int:
             controls += 1
         else:
             fail(f"mutation survived: {label}")
-    if controls != 16:
+    if controls != 21:
         fail(f"negative control inventory drift: {controls}")
     return controls
 

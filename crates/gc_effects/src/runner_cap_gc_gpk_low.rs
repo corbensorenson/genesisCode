@@ -273,11 +273,12 @@ pub(super) fn capability_gc_gpk_low(
             let target = payload_gc_target(payload)?;
 
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
+            let write_target = sandbox_atomic_write_target(&base_dir, &pins_s, create_dirs)?;
             let pins_path = sandbox_path_write(&base_dir, &pins_s, create_dirs)?;
             let _pins_lock = gc_path_lock(&pins_path)?;
             let document = gc_pins_document_at(&pins_path).map_err(EffectsError::Log)?;
             let plan = authority.update_pins(":pin", &target, document)?;
-            atomic_write_text(&pins_path, &plan.body)?;
+            atomic_write_text(&write_target, &plan.body)?;
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -305,11 +306,12 @@ pub(super) fn capability_gc_gpk_low(
             let target = payload_gc_target(payload)?;
 
             let create_dirs = pol.map(|p| p.create_dirs).unwrap_or(false);
+            let write_target = sandbox_atomic_write_target(&base_dir, &pins_s, create_dirs)?;
             let pins_path = sandbox_path_write(&base_dir, &pins_s, create_dirs)?;
             let _pins_lock = gc_path_lock(&pins_path)?;
             let document = gc_pins_document_at(&pins_path).map_err(EffectsError::Log)?;
             let plan = authority.update_pins(":unpin", &target, document)?;
-            atomic_write_text(&pins_path, &plan.body)?;
+            atomic_write_text(&write_target, &plan.body)?;
 
             let mut m = BTreeMap::new();
             m.insert(TermOrdKey(Term::symbol(":ok")), Term::Bool(true));
@@ -325,7 +327,7 @@ pub(super) fn capability_gc_gpk_low(
             Ok(Value::data(Term::Map(m)))
         }
         "core/gc-low::purge" => {
-            let authority = gc_authority.as_deref_mut().ok_or_else(|| {
+            let authority = gc_authority.ok_or_else(|| {
                 EffectsError::Log(
                     "core/gc-low::purge requires the artifact-loaded GenesisCode GC authority"
                         .to_string(),
@@ -419,7 +421,7 @@ pub(super) fn capability_gc_gpk_low(
                 policy,
                 store,
                 refs,
-                refs_authority: refs_authority.as_deref_mut(),
+                refs_authority,
                 budget,
                 error_tok,
                 op,

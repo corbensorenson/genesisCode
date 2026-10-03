@@ -1,5 +1,5 @@
-pub(super) struct SyncPullStats<'a> {
-    pub(super) pulled: &'a mut u64,
+pub(super) struct SyncPullStats<'a, 'store> {
+    pub(super) import: &'a mut crate::store::ArtifactImport<'store>,
     pub(super) already: &'a mut u64,
     pub(super) store_written_bytes: &'a mut usize,
     pub(super) store_max_run_bytes: Option<usize>,
@@ -17,7 +17,7 @@ pub(super) fn sync_pull_closure(
     depth: u64,
     policy: &CapsPolicy,
     commit_authority: &mut Option<CommitAuthority>,
-    stats: &mut SyncPullStats<'_>,
+    stats: &mut SyncPullStats<'_, '_>,
 ) -> Result<(), Value> {
     use std::collections::{HashSet, VecDeque};
 
@@ -55,7 +55,13 @@ pub(super) fn sync_pull_closure(
 
         let mut missing_hashes: Vec<String> = Vec::new();
         for (h, _) in &batch {
-            if store.path_for(h).exists() {
+            let staged = stats
+                .import
+                .contains(h)
+                .map_err(|error| sync_import_error(error, stats.error_tok, stats.op))?;
+            if staged {
+                *stats.already = stats.already.saturating_add(1);
+            } else if store.path_for(h).exists() {
                 if store.verify_hex(h).is_err() {
                     return Err(mk_error(
                         stats.error_tok,
@@ -78,6 +84,19 @@ pub(super) fn sync_pull_closure(
                 stats.max_artifact_bytes,
                 stats.max_batch_bytes,
             );
+            // Admit each batch into the request-owned overlay. Destination writes
+            // wait for every requested root/ref closure to finish admission.
+            let mut planned_bytes = stats
+                .store_written_bytes
+                .checked_add(stats.import.staged_bytes())
+                .ok_or_else(|| {
+                    mk_error(
+                        stats.error_tok,
+                        "core/caps/resource-limit",
+                        "store artifact byte accounting overflow".to_string(),
+                        Some(stats.op),
+                    )
+                })?;
             for (i, h) in missing_hashes.iter().enumerate() {
                 let bytes = match &dl_results[i] {
                     Ok(b) => b,
@@ -105,8 +124,24 @@ pub(super) fn sync_pull_closure(
                         ));
                     }
                 };
+                gc_registry::verify_store_object("store/get", h, bytes).map_err(|error| {
+                    mk_error(
+                        stats.error_tok,
+                        registry_error_code(&error, "core/sync/remote-auth"),
+                        error.to_string(),
+                        Some(stats.op),
+                    )
+                })?;
+                planned_bytes = planned_bytes.checked_add(bytes.len()).ok_or_else(|| {
+                    mk_error(
+                        stats.error_tok,
+                        "core/caps/resource-limit",
+                        "store artifact byte accounting overflow".to_string(),
+                        Some(stats.op),
+                    )
+                })?;
                 if let Some(limit) = stats.store_max_run_bytes {
-                    let observed = (*stats.store_written_bytes).saturating_add(bytes.len());
+                    let observed = planned_bytes;
                     if observed > limit {
                         return Err(mk_resource_limit_error(
                             stats.error_tok,
@@ -117,32 +152,36 @@ pub(super) fn sync_pull_closure(
                         ));
                     }
                 }
-                let got = store.put_bytes(bytes).map_err(|e| {
+            }
+            for (h, result) in missing_hashes.iter().zip(&dl_results) {
+                // Every result was admitted above; keep a fallible path rather
+                // than assuming that a remote cannot return an error.
+                let bytes = result.as_ref().map_err(|error| {
                     mk_error(
                         stats.error_tok,
-                        "core/store/io-error",
-                        e.to_string(),
+                        registry_error_code(error, "core/sync/remote-auth"),
+                        error.to_string(),
                         Some(stats.op),
                     )
                 })?;
-                if got != *h {
-                    return Err(mk_error(
-                        stats.error_tok,
-                        "core/sync/hash-mismatch",
-                        "remote bytes hash mismatch".to_string(),
-                        Some(stats.op),
-                    ));
-                }
-                *stats.store_written_bytes =
-                    (*stats.store_written_bytes).saturating_add(bytes.len());
-                *stats.pulled = stats.pulled.saturating_add(1);
+                stats
+                    .import
+                    .stage(h, bytes)
+                    .map_err(|error| sync_import_error(error, stats.error_tok, stats.op))?;
             }
         }
 
         for (h, dleft) in batch {
-            let t = match store_get_term(store, &h) {
-                Ok(t) => t,
-                Err(_) => continue,
+            let bytes = stats
+                .import
+                .get_bytes(&h)
+                .map_err(|error| sync_import_error(error, stats.error_tok, stats.op))?;
+            let t = match std::str::from_utf8(&bytes)
+                .ok()
+                .and_then(|text| gc_coreform::parse_term(text).ok())
+            {
+                Some(term) => term,
+                None => continue,
             };
 
             // Typed commits are admitted by GenesisCode before their references affect traversal.
@@ -212,6 +251,26 @@ pub(super) fn sync_pull_closure(
     }
 
     Ok(())
+}
+
+pub(super) fn sync_import_error(
+    error: crate::store::ImportError,
+    error_tok: SealId,
+    op: &str,
+) -> Value {
+    let code = match &error {
+        crate::store::ImportError::ResourceLimit(_) => "core/caps/resource-limit",
+        crate::store::ImportError::Identity(error) => {
+            registry_error_code(error, "core/sync/remote-auth")
+        }
+        crate::store::ImportError::Store(EffectsError::Log(message))
+            if message.contains("artifact store corruption") =>
+        {
+            "core/store/corruption"
+        }
+        _ => "core/store/io-error",
+    };
+    mk_error(error_tok, code, error.to_string(), Some(op))
 }
 
 pub(super) fn sync_parallel_store_get_bytes(

@@ -36,8 +36,8 @@ use crate::runner_gpu_host::{GpuHostRuntime, gpu_host_call};
 use crate::runner_host_bridge::HostBridgeRuntime;
 use crate::runner_io_ops::{
     FsReadError, atomic_write_text, effective_base_dir, io_error_payload, payload_path,
-    read_file_with_optional_limit, sandbox_path_allow_missing, sandbox_path_read,
-    sandbox_path_write, write_file_no_follow,
+    sandbox_atomic_write_target, sandbox_document_read, sandbox_optional_document_read,
+    sandbox_path_allow_missing, sandbox_path_read, sandbox_path_write,
 };
 use crate::runner_pkg_payload::{
     payload_pkg_bool, payload_pkg_bridge_dep_name, payload_pkg_bridge_ecosystem,

@@ -3,7 +3,10 @@ use std::sync::{Arc, OnceLock};
 use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::PrimOp;
 use crate::fallible_alloc::{clone_str, vec_with_capacity};
-use gc_coreform::{Term, TermOrdKey, parse_term, print_term};
+use gc_coreform::{Term, TermOrdKey, parse_term};
+
+#[path = "compiled/blob_inventory.rs"]
+mod inventory;
 
 use super::{
     CExpr, COMPILED_MODULE_BLOB_MAGIC, CompiledCoverageSites, CompiledForm, CompiledModule,
@@ -55,6 +58,7 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
     for _ in 0..module_names_len {
         module_names.push(cur.read_str()?);
     }
+    inventory::validate_names(&module_names)?;
     let statement_sites = cur.read_str_vec()?;
     let decision_sites = cur.read_str_vec()?;
     let forms_len = cur.read_count(1, "forms")?;
@@ -65,6 +69,13 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             0 => {
                 let name = cur.read_str()?;
                 let module_slot = cur.read_u32()?;
+                let slot = usize::try_from(module_slot).ok();
+                if slot.and_then(|slot| module_names.get(slot)) != Some(&name) {
+                    return Err(KernelError::new(
+                        KernelErrorKind::Internal,
+                        "compiled def name disagrees with module slot",
+                    ));
+                }
                 let expr = decode_cexpr(&mut cur)?;
                 forms.push(CompiledForm::Def {
                     name,
@@ -90,6 +101,7 @@ pub(super) fn decode_compiled_module_blob(bytes: &[u8]) -> Result<CompiledModule
             "compiled module blob has trailing bytes",
         ));
     }
+    super::validation::validate(&forms, &module_names)?;
     let decision_conditions = super::compiled_coverage::collect_decision_conditions_and_validate(
         &forms,
         statement_sites.len(),
@@ -134,7 +146,7 @@ fn push_str_slice(out: &mut Vec<u8>, xs: &[String]) -> Result<(), KernelError> {
 }
 
 fn push_term(out: &mut Vec<u8>, t: &Term) -> Result<(), KernelError> {
-    let rendered = print_term(t);
+    let rendered = inventory::render_term(t)?;
     push_str(out, &rendered)
 }
 

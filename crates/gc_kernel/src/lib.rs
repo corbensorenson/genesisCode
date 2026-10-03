@@ -6,6 +6,7 @@ mod eval;
 mod fallible_alloc;
 mod free_vars;
 mod logical_heap;
+mod runtime_term_hash;
 pub mod text_profile;
 mod value;
 
@@ -21,6 +22,9 @@ pub use error::{KernelError, KernelErrorKind, ResourceLimit};
 pub use eval::{
     DEFAULT_STEP_LIMIT, DecisionCoverageCounters, DecisionSample, EvalCtx, EvalObservedCounters,
     EvalState, MemLimits, MemObservedCounters, ProtocolTokens, StepLimit, eval_module, eval_term,
+};
+pub use runtime_term_hash::{
+    RUNTIME_TERM_HASH_PROFILE_ID, RuntimeTermHashLimits, runtime_term_hash,
 };
 pub use value::{
     Apply, Contract, EffectProgram, EffectRequest, NativeFn, SealId, Sym,

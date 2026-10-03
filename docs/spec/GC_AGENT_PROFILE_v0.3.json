@@ -279,16 +279,27 @@
             "HASH_DOMAIN_PREFIX"
           ],
           "path": "crates/gc_coreform/src/term.rs"
+        },
+        {
+          "anchors": [
+            "pub fn validate_symbol_name",
+            "pub fn validate_canonical_term",
+            "pub fn hash_term_checked"
+          ],
+          "path": "crates/gc_coreform/src/admission.rs"
         }
       ],
       "conformanceChecks": [
         "scripts/check_version_surfaces.sh",
-        "crates/gc_cli/tests/gc_agent_profile_v03.rs"
+        "crates/gc_cli/tests/gc_agent_profile_v03.rs",
+        "crates/gc_coreform/src/admission.rs",
+        "crates/gc_effects/tests/coreform_canonical_admission.rs"
       ],
       "id": "coreform-mapping",
       "invariants": [
         "Source atoms and collections map to the nine canonical Term variants.",
         "Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.",
+        "Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.",
         "Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation."
       ],
       "limitations": [
@@ -420,6 +431,14 @@
             "capability-base-relative-no-host-prefix"
           ],
           "path": "docs/spec/TEXT_PATH_PROFILE_v0.1.json"
+        },
+        {
+          "anchors": [
+            "gc_coreform::validate_symbol_name(s)",
+            "\"sym/from-str invalid symbol text\"",
+            "if out_len != 0"
+          ],
+          "path": "crates/gc_kernel/src/eval_prims/text_bytes.rs"
         }
       ],
       "conformanceChecks": [
@@ -434,7 +453,8 @@
         "Int is signed arbitrary precision; int/div and int/mod use Euclidean division with 0 <= remainder < abs(divisor), and a zero divisor returns a trusted sealed core/numeric-error.",
         "Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.",
         "Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.",
-        "Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless."
+        "Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.",
+        "sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain."
       ],
       "limitations": [
         "CompiledClosure and NativeFn are implementation values, not forgeable source literals; SealToken and Sealed cannot be serialized as ordinary data.",
@@ -622,17 +642,27 @@
             "Every performed effect appends a deterministic log entry"
           ],
           "path": "docs/spec/SEALS_DISPATCH_REPLAY.md"
+        },
+        {
+          "anchors": [
+            "pub(super) fn unseal_effect_request",
+            "gc_coreform::validate_canonical_term(&r.payload)",
+            "EffectsError::BadPayload"
+          ],
+          "path": "crates/gc_effects/src/runner_response_budget.rs"
         }
       ],
       "conformanceChecks": [
         "scripts/check_host_abi_conformance.sh",
-        "scripts/check_evidence_adversarial_matrix.sh"
+        "scripts/check_evidence_adversarial_matrix.sh",
+        "crates/gc_effects/tests/coreform_canonical_admission.rs"
       ],
       "id": "effects",
       "invariants": [
         "Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.",
         "The host runner denies every operation absent from caps.toml and records deterministic replay facts.",
-        "Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch."
+        "Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.",
+        "Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect."
       ],
       "limitations": [
         "Operation availability is selected by the host capability index and caps.toml; profile membership never grants a capability."
@@ -894,21 +924,25 @@
   ],
   "kind": "genesis/gc-agent-profile-v0.3",
   "profileId": "GC-AGENT-v0.3",
-  "profileIdentitySha256": "45be98c331315d78289ff4f5567b09d462a030f8a9edad3384dbbf342516b888",
+  "profileIdentitySha256": "7edb579f07852427110d4547d8568d2e720b14d66c4c018456d9b9bfe3128478",
   "sourceIdentities": {
     "crates/gc_cli/tests/gc_agent_profile_v03.rs": "04716e0603e8eace128099de6c5b479df40c43f8dbc96a9b238fab89641c99c3",
     "crates/gc_cli_driver/src/diagnostics.rs": "57f4f8b7e9057a81c5f641ea8c3a96f3668c0f6935e4b5613637483903802307",
+    "crates/gc_coreform/src/admission.rs": "f758d95ed873cb4da4188f78898e3319da868c700a77403de223a20f56e10057",
     "crates/gc_coreform/src/fixed_decimal.rs": "be55956b0a833485f7cdda109abf1d6ff71359440616fd4f41249bb45a4032ba",
-    "crates/gc_coreform/src/parse.rs": "3dccaa205943c8f4cdfbcc9ea50b4a34336737171c5a6d054a8944ae4d58c439",
-    "crates/gc_coreform/src/term.rs": "8d6cd05c43f203e0f653e801e4702df1ae07bb7307ca5d6db6b0ce3d37858c26",
+    "crates/gc_coreform/src/parse.rs": "ee0e3093551788acf6894c2fccbabf9749f6071904d74ebc3fc38d0882312576",
+    "crates/gc_coreform/src/term.rs": "07e8b5cd68bf27305e70df0e4e7261c552338b36ccc316522e1d82eb38db9f75",
     "crates/gc_effects/src/policy.rs": "df1bf515c29fd078b88908f98c300580a81c4948626cc162ce25b9bec4b3c7c5",
+    "crates/gc_effects/src/runner_response_budget.rs": "48032cb18a0e6a9927d51357fe04eb9293ccf7c517b2c38674a60c362b983a0e",
+    "crates/gc_effects/tests/coreform_canonical_admission.rs": "e2ca1e477c385295f96fc5b6347bd633588917c4933d2e853dc424a0e5fe1aaf",
     "crates/gc_kernel/src/error.rs": "2809950c07c0c53101de67031a153c05f23012736a8a5f46ae83e7a7f6180d01",
     "crates/gc_kernel/src/eval.rs": "07b7709f054c8196910713cb7058e792543f4330690ef083ee1f0d683ee8032d",
     "crates/gc_kernel/src/eval_forms.rs": "4d353e8b66f09bb819784e7798a2ba897f25e51087a1ceac79bfbc36b1dba8a1",
     "crates/gc_kernel/src/eval_prims.rs": "fb4dff87bb458558f0233c028c315b651fa315ddc90af32490056ddd64046ef6",
     "crates/gc_kernel/src/eval_prims/int_div.rs": "ba69c937f1332eb21779bca731469d907382d5b07ef0dbb2c10cf6eb0c426bf7",
+    "crates/gc_kernel/src/eval_prims/text_bytes.rs": "9fac60d1b6a3bada8a7b8e39bb94355980b80fb9b982eb6079876fec3bb84aba",
     "crates/gc_kernel/src/eval_treewalk.rs": "7d908d1172673e1204d52adb9ccf77d7cd5407a28168570ac09cbfb9a9e30d0f",
-    "crates/gc_kernel/src/tests.rs": "5dd509510d984331a9dc6e65e67e2abeb6dc0f1a1861eed313437108d0224a8e",
+    "crates/gc_kernel/src/tests.rs": "7a6b00444d5b6b38bae829b06a4f6df91867e10ef485df9a3b688af008e8b532",
     "crates/gc_kernel/src/value.rs": "e92c047d5a64a3adf4a5c50fe0960c4f33e3bb7d8fb6084bd7e5a75cd968d5e3",
     "crates/gc_pkg/src/manifest.rs": "d60e84b07dcfc18246bf8587203aa75bf2426dc8ee58262ea7718021e4be3792",
     "crates/gc_prelude/src/lib.rs": "df796d65a584c49d23fa5b00ab72f4158cc20bcf1c2eeb8e85c8ff3ed7910fb4",
@@ -919,14 +953,14 @@
     "docs/spec/MODULE_SCOPE.md": "19dd45f791609e244ab1a798c360bb3036ed6aa9e3fa123eeefc7121b43ff788",
     "docs/spec/NUMERIC_PROFILE_v0.1.json": "a1e998667d9d7669740c62a0de2a56320c233f73d5263697d9bba8019ddbc8dc",
     "docs/spec/PACKAGE_TOML.md": "518fd5bda289d3e9f88a5a9b6e5ae73185ecae6ac9fe08f8fdb158bf4b7c0c88",
-    "docs/spec/SEALS_DISPATCH_REPLAY.md": "246d800fea0d0f07ec2d46e56b3a442484c1c8f97abd0d4cb8fd2c97ecf2627f",
+    "docs/spec/SEALS_DISPATCH_REPLAY.md": "650e098a561400a4ab0a7bbc5136a0d6e063edd996223f180c24eff5f54a261c",
     "docs/spec/TEXT_PATH_PROFILE_v0.1.json": "c2eedb2c40d4f4f263bebda1cd5f558b00cb3bb8ada1f5b05d0eb98aa727c53f",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.version-surfaces.json": "12bb19e3f1010922c8796c56a764f50b7e5006df231dca944b6c6d669c72a3e1",
-    "policies/gc_agent_profile_v0.3.json": "234fab159f59bf1733b2d1b56b6253dae391e0e39ecf4bfe58636aab32581229",
+    "policies/gc_agent_profile_v0.3.json": "f8761f2a241469eac535592cf7b95cfa4d53252d867cf4872e2e2aaaf8712706",
     "scripts/check_agent_authoring_bundle.sh": "f265b2dd9c89d403f66902dda21efb08372bea1457081404a928590a0b6b4238",
     "scripts/check_cli_diagnostics_contract.sh": "08969ab30ebda815ad82c1170bcd3235d1b3c0b8dc87ab4cfe99b6a08f271984",
-    "scripts/check_evidence_adversarial_matrix.sh": "34c443c70bdb603ee9250a0c121d296fc4a4033533fa61865d31aef74e79b64e",
+    "scripts/check_evidence_adversarial_matrix.sh": "7aadaa6a2d865739e264674b6dd757ab8d50afb1f33362d0c0482c62ae13d0c1",
     "scripts/check_gc_agent_symbol_index.sh": "fe98597e129c69482d76b2c98eb927ef36298d36e61b78312978c30f52a84f98",
     "scripts/check_host_abi_conformance.sh": "6be7b0bf671e77f484218728e0992d4f1041867db2dd93b52e88a02a3d4340ab",
     "scripts/check_kernel_tcb_contract.sh": "94ab57ce2db0d8a3a66756f6353302921c18760b9704a33e558bde1a02dd7407",

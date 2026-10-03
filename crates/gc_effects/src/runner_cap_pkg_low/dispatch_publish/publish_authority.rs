@@ -182,7 +182,7 @@ pub(super) fn handle_publish(
         policy,
         Some(store),
         Some(refs),
-        refs_authority.as_deref_mut(),
+        refs_authority,
         None,
         None,
         None,

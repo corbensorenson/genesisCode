@@ -6,7 +6,7 @@ toc: false
 
 # Frozen symbol inventory
 
-**176 symbols** · profile `GC-AGENT-v0.3` · identity `6c3f2d7a0d94dd996cb09792a5a5497d983def302c0ec93417c9a79cf825b368`
+**176 symbols** · profile `GC-AGENT-v0.3` · identity `063a4602ab50684b340d5df8e36efd3e82109695a82af50c2d058020839dcc29`
 
 This page is generated from the closed agent symbol index. Search by exact spelling; symbol names are case-sensitive.
 
@@ -207,6 +207,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -216,6 +217,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -390,6 +392,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 
 **Examples**
@@ -399,6 +402,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 
 </details>
 
@@ -419,6 +423,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 
 **Examples**
@@ -428,6 +433,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 
 </details>
 
@@ -453,6 +459,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -466,6 +473,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -491,6 +499,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -504,6 +513,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -529,6 +539,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -542,6 +553,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -567,6 +579,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -580,6 +593,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -673,6 +687,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -686,6 +701,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -711,6 +727,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -724,6 +741,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -774,6 +792,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
@@ -782,6 +801,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -790,12 +810,14 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
 - `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -850,6 +872,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
@@ -858,6 +881,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -866,12 +890,14 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
 - `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -931,6 +957,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -944,6 +971,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -964,6 +992,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 
 **Examples**
@@ -973,6 +1002,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 
 </details>
 
@@ -1027,6 +1057,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 
 **Examples**
@@ -1036,6 +1067,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 
 </details>
 
@@ -1061,6 +1093,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1074,6 +1107,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1099,6 +1133,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1112,6 +1147,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1166,6 +1202,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 
 **Examples**
@@ -1175,6 +1212,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 
 </details>
 
@@ -1195,6 +1233,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 
 **Examples**
@@ -1204,6 +1243,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 
 </details>
 
@@ -1326,6 +1366,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 
 - Source atoms and collections map to the nine canonical Term variants.
 - Lists are proper Pair/Nil chains and maps use deterministic structural key ordering.
+- Canonical admission checks every nested symbol, list element, vector element, map key and value; unsupported runtime pairs cannot become placeholder wire bytes or canonical identities.
 - Canonical identity uses genesis/hash-profile/gcv0.2-blake3 and GCv0.2 NUL domain separation.
 - User-visible immutable data is represented by canonical CoreForm or persistent vectors/maps.
 - Closures, seals, native functions, contracts, and effect programs are opaque runtime values with stable hashing rules.
@@ -1334,6 +1375,7 @@ This page is generated from the closed agent symbol index. Search by exact spell
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1342,12 +1384,14 @@ This page is generated from the closed agent symbol index. Search by exact spell
 **Sources**
 
 - `crates/gc_coreform/src/term.rs`: pub const COREFORM_PROFILE_ID, pub enum Term, Term::Map, HASH_DOMAIN_PREFIX
+- `crates/gc_coreform/src/admission.rs`: pub fn validate_symbol_name, pub fn validate_canonical_term, pub fn hash_term_checked
 - `crates/gc_kernel/src/value.rs`: pub enum Value, CompiledClosure, SealToken, EffectProgram, EffectRequest
 - `crates/gc_kernel/src/eval_prims.rs`: "int/add", "vec/get", "map/put", "crypto/blake3"
 - `crates/gc_kernel/src/eval_prims/int_div.rs`: pub(super) fn prim_int_div_mod, pub(super) fn prim_int_div_mod_values, "int/div", "int/mod"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1535,6 +1579,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1548,6 +1593,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1573,6 +1619,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1586,6 +1633,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1611,6 +1659,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1624,6 +1673,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1649,6 +1699,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1662,6 +1713,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1687,6 +1739,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1700,6 +1753,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1725,6 +1779,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1738,6 +1793,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1763,6 +1819,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1776,6 +1833,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1801,6 +1859,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -1814,6 +1873,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -1835,6 +1895,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -1844,6 +1905,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2166,6 +2228,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2175,6 +2238,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2196,6 +2260,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2205,6 +2270,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2226,6 +2292,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2235,6 +2302,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2256,6 +2324,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2265,6 +2334,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2286,6 +2356,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2295,6 +2366,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2316,6 +2388,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2325,6 +2398,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2346,6 +2420,7 @@ allow_unlimited = false
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -2355,6 +2430,7 @@ allow_unlimited = false
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -2380,6 +2456,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2393,6 +2470,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2508,6 +2586,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2521,6 +2600,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2546,6 +2626,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2559,6 +2640,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2584,6 +2666,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2597,6 +2680,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2622,6 +2706,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2635,6 +2720,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2660,6 +2746,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2673,6 +2760,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2698,6 +2786,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2711,6 +2800,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2736,6 +2826,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2749,6 +2840,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2774,6 +2866,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2787,6 +2880,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2812,6 +2906,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2825,6 +2920,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2850,6 +2946,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2863,6 +2960,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2888,6 +2986,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2901,6 +3000,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -2926,6 +3026,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -2939,6 +3040,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3542,6 +3644,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3555,6 +3658,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3580,6 +3684,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3593,6 +3698,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3618,6 +3724,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3631,6 +3738,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3656,6 +3764,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3669,6 +3778,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3694,6 +3804,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3707,6 +3818,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3732,6 +3844,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3745,6 +3858,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3770,6 +3884,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3783,6 +3898,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3808,6 +3924,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3821,6 +3938,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -3976,6 +4094,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -3989,6 +4108,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4044,6 +4164,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -4057,6 +4178,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4082,6 +4204,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -4095,6 +4218,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4120,6 +4244,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -4133,6 +4258,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4158,6 +4284,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -4171,6 +4298,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4196,6 +4324,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -4209,6 +4338,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4234,6 +4364,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -4247,6 +4378,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -4991,6 +5123,7 @@ path = "../escape.gc"
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5004,6 +5137,7 @@ path = "../escape.gc"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5029,6 +5163,7 @@ path = "../escape.gc"
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5042,6 +5177,7 @@ path = "../escape.gc"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5067,6 +5203,7 @@ path = "../escape.gc"
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5080,6 +5217,7 @@ path = "../escape.gc"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5105,6 +5243,7 @@ path = "../escape.gc"
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5118,6 +5257,7 @@ path = "../escape.gc"
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5269,6 +5409,7 @@ path = "../escape.gc"
 - Effects are explicit Pure or Perform programs; kernel evaluation performs no host operation.
 - The host runner denies every operation absent from caps.toml and records deterministic replay facts.
 - Replay consumes entries in order and rejects operation, hash, decision, capability, or scheduler mismatch.
+- Payload serialization admission precedes hashing and dispatch; noncanonical raw data returns an explicit BadPayload host error without a performed effect.
 
 **Examples**
 
@@ -5278,6 +5419,7 @@ path = "../escape.gc"
 
 - `crates/gc_prelude/src/prelude.rs`: core/effect::pure, core/effect::perform, core/effect::bind
 - `docs/spec/SEALS_DISPATCH_REPLAY.md`: Runner is deny-by-default, Every performed effect appends a deterministic log entry
+- `crates/gc_effects/src/runner_response_budget.rs`: pub(super) fn unseal_effect_request, gc_coreform::validate_canonical_term(&r.payload), EffectsError::BadPayload
 
 </details>
 
@@ -5458,6 +5600,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5471,6 +5614,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5496,6 +5640,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5509,6 +5654,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5534,6 +5680,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5547,6 +5694,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5572,6 +5720,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5585,6 +5734,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5610,6 +5760,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5623,6 +5774,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5648,6 +5800,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5661,6 +5814,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5686,6 +5840,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5699,6 +5854,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5724,6 +5880,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5737,6 +5894,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5762,6 +5920,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5775,6 +5934,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5830,6 +5990,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5843,6 +6004,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5868,6 +6030,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5881,6 +6044,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -5906,6 +6070,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -5919,6 +6084,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -6065,6 +6231,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -6078,6 +6245,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -6103,6 +6271,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -6116,6 +6285,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -6141,6 +6311,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -6154,6 +6325,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -6179,6 +6351,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -6192,6 +6365,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 
@@ -6217,6 +6391,7 @@ allow_unlimited = false
 - Dec is an opaque canonical fixed-decimal value with a maximum scale of 4096; construction and arithmetic that exceed the bound return a trusted sealed core/numeric-error.
 - Str identity is exact UTF-8: no implicit normalization or folding; str/len counts bytes; Unicode 17 scalar/grapheme APIs and str/nfc are explicit.
 - Effect paths are Unicode 17 NFC, base-relative, slash-only, case-exact, locale-free, and lossless.
+- sym/from-str requires text that parses as exactly one identical symbol; reserved literals, integer-token prefixes and delimiters return a trusted sealed core/type-error. Arbitrary pair/cons data remains valid runtime data but may be outside the canonical serialization domain.
 
 **Examples**
 
@@ -6230,6 +6405,7 @@ allow_unlimited = false
 - `crates/gc_coreform/src/fixed_decimal.rs`: pub const MAX_FIXED_DECIMAL_SCALE: u32 = 4096, pub fn from_unscaled, pub fn parse, pub fn mul
 - `docs/spec/NUMERIC_PROFILE_v0.1.json`: genesis/numeric-profile-v0.1, euclidean, core/numeric-error, "maxScale": 4096, No Core float
 - `docs/spec/TEXT_PATH_PROFILE_v0.1.json`: genesis/text-path-profile-v0.1, "version": "17.0.0", exact-utf8-scalar-sequence-no-implicit-normalization, core/text-range-error, capability-base-relative-no-host-prefix
+- `crates/gc_kernel/src/eval_prims/text_bytes.rs`: gc_coreform::validate_symbol_name(s), "sym/from-str invalid symbol text", if out_len != 0
 
 </details>
 

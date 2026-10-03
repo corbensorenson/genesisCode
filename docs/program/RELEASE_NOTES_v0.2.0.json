@@ -4,7 +4,7 @@
     "runtimeGateClaims": "requirements-only-unverified",
     "unqualifiedCapabilityRule": "L5 on every tier-1 platform with immutable E3 or E4 evidence"
   },
-  "contentIdentitySha256": "9c74462371952e86432cc5bea932b9a724cc37fa90f364f2bf6cef209806f1fd",
+  "contentIdentitySha256": "147562c2996927318ca137b47723cb22f052e96abb9734bbd3c5d1b5ec128ead",
   "kind": "genesis/release-notes-v0.1",
   "releaseTrain": "0.2.0",
   "sections": {
@@ -26,11 +26,12 @@
             "E1:cap-kernel-determinism/check-2"
           ],
           "gapIds": [
-            "R7.2.a"
+            "R7.2.a",
+            "P1.13"
           ],
           "id": "CAP-KERNEL-DETERMINISM",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.13; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -47,11 +48,12 @@
             "E1:cap-coreform-identity/check-1"
           ],
           "gapIds": [
-            "R7.2.f"
+            "R7.2.f",
+            "P1.9"
           ],
           "id": "CAP-COREFORM-IDENTITY",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -90,11 +92,12 @@
             "E1:cap-deny-default-policy/check-1"
           ],
           "gapIds": [
-            "R7.3.a"
+            "R7.3.a",
+            "P1.10"
           ],
           "id": "CAP-DENY-DEFAULT-POLICY",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.10; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -112,11 +115,15 @@
             "E1:cap-effect-replay/check-2"
           ],
           "gapIds": [
-            "R7.2.c"
+            "R7.2.c",
+            "P1.9",
+            "P1.10",
+            "P1.11",
+            "P1.12"
           ],
           "id": "CAP-EFFECT-REPLAY",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -133,11 +140,16 @@
             "E1:cap-semantic-vcs/check-1"
           ],
           "gapIds": [
-            "R4.2.e"
+            "R4.2.e",
+            "P1.9",
+            "P1.10",
+            "P1.11",
+            "P1.12",
+            "P1.14"
           ],
           "id": "CAP-SEMANTIC-VCS",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12, P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -156,11 +168,18 @@
           ],
           "gapIds": [
             "R4.2.e",
-            "R6.1.a"
+            "R6.1.a",
+            "P1.9",
+            "P1.10",
+            "P1.11",
+            "P1.12",
+            "P1.13",
+            "P1.14",
+            "P1.15"
           ],
           "id": "CAP-PACKAGE-MANAGER",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12, P1.13, P1.14, P1.15; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -201,11 +220,13 @@
             "E1:cap-evidence-gated-publish/check-1"
           ],
           "gapIds": [
-            "R6.2.d"
+            "R6.2.d",
+            "P1.9",
+            "P1.14"
           ],
           "id": "CAP-EVIDENCE-GATED-PUBLISH",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -223,11 +244,16 @@
           ],
           "gapIds": [
             "R3.2.a",
-            "R6.3.a"
+            "R6.3.a",
+            "P1.9",
+            "P1.10",
+            "P1.11",
+            "P1.12",
+            "P1.13"
           ],
           "id": "CAP-RUNTIME-SURFACES",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.9, P1.10, P1.11, P1.12, P1.13; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -269,11 +295,12 @@
             "E1:cap-selfhost-cutover/check-3"
           ],
           "gapIds": [
-            "R4.4.c"
+            "R4.4.c",
+            "P1.14"
           ],
           "id": "CAP-SELFHOST-CUTOVER",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -292,11 +319,12 @@
           "gapIds": [
             "R4.2.e",
             "R4.2.g",
-            "R4.4.c"
+            "R4.4.c",
+            "P1.14"
           ],
           "id": "CAP-STRICT-NO-FALLBACK",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.14; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -545,11 +573,15 @@
             "E1:cap-host-bridge/check-2"
           ],
           "gapIds": [
-            "R7.3.b"
+            "R7.3.b",
+            "P1.10",
+            "P1.11",
+            "P1.12",
+            "P1.15"
           ],
           "id": "CAP-HOST-BRIDGE",
           "immutableEvidenceIds": [],
-          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded.",
+          "limitations": "Implementation or routing exists, but the mapped checks are not yet pinned as per-platform L2 evidence and no cross-host L3, product L4, or immutable release L5 evidence is recorded. The 2026-10-01 review additionally blocks qualification on P1.10, P1.11, P1.12, P1.15; ROADMAP.md section 3.29 defines fresh reproduction, correction and acceptance requirements.",
           "maturity": "L1",
           "maturityByPlatform": {
             "linux-arm64": "L0",
@@ -1743,11 +1775,11 @@
           "gitPackageRecords": 0,
           "path": "Cargo.lock",
           "pathOrWorkspacePackageRecords": 18,
-          "registryPackageRecords": 443,
+          "registryPackageRecords": 454,
           "schemaVersion": 4,
-          "sha256": "ba28b65b338829a7db9fc4301f226a339c6aab81743b974ae5ca0de1601cbcae",
-          "totalPackageRecords": 461,
-          "uniquePackageIdentities": 461
+          "sha256": "f6097c180c884d7519243b71d287e9a18beddae96b15dfbabf2a9515662f4682",
+          "totalPackageRecords": 472,
+          "uniquePackageIdentities": 472
         },
         {
           "gitPackageRecords": 0,
@@ -1878,8 +1910,91 @@
       ]
     },
     "knownGaps": {
-      "activeDefectIds": [],
+      "activeDefectIds": [
+        "P1.9",
+        "P1.10",
+        "P1.11",
+        "P1.12",
+        "P1.13",
+        "P1.14",
+        "P1.15",
+        "P1.16"
+      ],
       "roadmapGaps": [
+        {
+          "affectedClaims": [
+            "CAP-DENY-DEFAULT-POLICY",
+            "CAP-EFFECT-REPLAY",
+            "CAP-HOST-BRIDGE",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-RUNTIME-SURFACES",
+            "CAP-SEMANTIC-VCS"
+          ],
+          "id": "P1.10",
+          "summary": "F02: authorize anchored filesystem traversal before mutation, including escaping symlinks and replacement races."
+        },
+        {
+          "affectedClaims": [
+            "CAP-EFFECT-REPLAY",
+            "CAP-HOST-BRIDGE",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-RUNTIME-SURFACES",
+            "CAP-SEMANTIC-VCS"
+          ],
+          "id": "P1.11",
+          "summary": "F03: preserve source and destination on self-rename and failed overwrite; enforce safe replacement semantics."
+        },
+        {
+          "affectedClaims": [
+            "CAP-EFFECT-REPLAY",
+            "CAP-HOST-BRIDGE",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-RUNTIME-SURFACES",
+            "CAP-SEMANTIC-VCS"
+          ],
+          "id": "P1.12",
+          "summary": "F04: remove the final filesystem entry without dereferencing its symlink target; specify native/WASI behavior."
+        },
+        {
+          "affectedClaims": [
+            "CAP-KERNEL-DETERMINISM",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-RUNTIME-SURFACES"
+          ],
+          "id": "P1.13",
+          "summary": "F05: bound actual primitive work, including empty string repetition at maximum count, across execution tiers."
+        },
+        {
+          "affectedClaims": [
+            "CAP-EVIDENCE-GATED-PUBLISH",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-SELFHOST-CUTOVER",
+            "CAP-SEMANTIC-VCS",
+            "CAP-STRICT-NO-FALLBACK"
+          ],
+          "id": "P1.14",
+          "summary": "F06: bind package verify custody to artifact-backed commit authority and reject native-decoder restoration."
+        },
+        {
+          "affectedClaims": [
+            "CAP-HOST-BRIDGE",
+            "CAP-PACKAGE-MANAGER"
+          ],
+          "id": "P1.15",
+          "summary": "F07: preserve registry service liveness and bounded wait/shutdown/join/drop ownership."
+        },
+        {
+          "affectedClaims": [
+            "CAP-COREFORM-IDENTITY",
+            "CAP-EFFECT-REPLAY",
+            "CAP-EVIDENCE-GATED-PUBLISH",
+            "CAP-PACKAGE-MANAGER",
+            "CAP-RUNTIME-SURFACES",
+            "CAP-SEMANTIC-VCS"
+          ],
+          "id": "P1.9",
+          "summary": "F01: eliminate symbol/literal and improper-pair canonical identity collisions across construction, codecs, hashes and artifact storage, with explicit term-domain admission and versioned compatibility. Local 2026-10-02 E0 serialization-admission controls do not close lossless runtime hashing, versioned replay compatibility, remaining production-boundary audit or independent acceptance."
+        },
         {
           "affectedClaims": [
             "CAP-AGENT-JSON-CONTRACTS"
@@ -2519,7 +2634,16 @@
       ]
     },
     "security": {
-      "activeDefectIds": [],
+      "activeDefectIds": [
+        "P1.9",
+        "P1.10",
+        "P1.11",
+        "P1.12",
+        "P1.13",
+        "P1.14",
+        "P1.15",
+        "P1.16"
+      ],
       "claimState": "requirements-only-unverified",
       "mandatoryChecks": [
         {
@@ -2534,7 +2658,7 @@
         {
           "claim": "required-but-not-attested",
           "entrypoint": "scripts/check_evidence_adversarial_matrix.sh",
-          "executionIdentitySha256": "8cff602dbf244463fb827f70fc6ce31257fb76b4541100508567d3f1fd7ba641",
+          "executionIdentitySha256": "b686c1153348d35c232edc811e28deb68ad36d48a8382f7a39f18ade7f415596",
           "gateId": "gate/evidence-adversarial-matrix",
           "kind": "test",
           "networkMode": "deny",
@@ -2609,7 +2733,7 @@
     }
   },
   "sourceIdentities": {
-    "Cargo.lock": "ba28b65b338829a7db9fc4301f226a339c6aab81743b974ae5ca0de1601cbcae",
+    "Cargo.lock": "f6097c180c884d7519243b71d287e9a18beddae96b15dfbabf2a9515662f4682",
     "Cargo.toml": "36566f84c9351572596298906707431245352296c7718aa1035087f61d83ab32",
     "deny.toml": "efdae31392b03f5228bd48e96eb14ef718520ae19b4d9de064ef9ed1c19978e5",
     "docs/program/EVIDENCE_FIXTURE_CLASSIFICATION_v0.1.json": "d1aa20fa3652cf7cc5a122bea2c8e7d212c52009aea716fe2ce790617d91e109",
@@ -2620,7 +2744,7 @@
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-e0-2026-07-10-sha256-a3d6c7b809f1c1ba403bab0c4e18fce94154cbae4b35b23aa9e96cfb1c02e967.json": "42b49dd7adfc8c7dc2dccb838dc33fca8f3f73f357e4316b3b8e956c52108280",
     "docs/program/evidence/roadmap-baselines/roadmap-baseline-fixture-key-sha256-f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f.pub": "f942d973dd550ff9b95e0a61f47e8cee9580e8bb8d43f0226408d57bde2d113f",
     "docs/program/evidence/roadmap-baselines/roadmap-workloads-v0.1-sha256-4fdb7f57fdf68a0ef33dcdf075c3697c8213317958e354c1d55e518784f69dea.json": "3eeb4593d1a0c89e90ad95c381e15c231fde5bec11a6fb61b0a0c550f398be61",
-    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "6e6804e7e1ed47a10a3ad103851d59c8a7022cb6f54c6e2dbef882b9b9d31835",
+    "docs/spec/CAPABILITY_EVIDENCE_LEDGER_v0.1.json": "964448dccb186efe8c6be371a455748f53ecdb80363884b716693b2b789b3e0c",
     "genesis.compatibility.json": "d81bc1502ba5194821bc9b28741c2496d943cf27a95d140d6f95a698c10a0fc9",
     "genesis.dependency-mirror.json": "15dc59a3fce87403aa8a25e61c9c089c7a47f15c9bce0cae4e8b48e6a02fb42f",
     "genesis.lock": "a34951c3a8058835c3555bae3f212315ac4c143db2932fbf2567e6b2855f0d09",

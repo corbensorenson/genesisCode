@@ -78,15 +78,39 @@ pub(super) fn capability_sync_pull(
             return Ok(mk_error(error_tok, code, format!("{e}"), Some(op)));
         }
     };
+    // Preserve the existing per-selector closure bound across one request.
+    // Staging must not impose a smaller aggregate limit on multiple selectors.
+    let Some(max_import_objects) = roots
+        .len()
+        .checked_add(refnames.len())
+        .and_then(|selectors| selectors.checked_mul(50_000))
+    else {
+        return Ok(mk_error(
+            error_tok,
+            "core/caps/resource-limit",
+            "sync import object bound overflow".to_string(),
+            Some(op),
+        ));
+    };
     let mut pulled: u64 = 0;
     let mut already: u64 = 0;
     let mut heads: Vec<Term> = Vec::new();
     let mut pending_refs: Vec<BulkSetInput> = Vec::with_capacity(refnames.len());
     let mut commit_authority = None;
 
+    let mut import = crate::store::ArtifactImport::new(
+        store,
+        sp.max_artifact_bytes,
+        policy
+            .store
+            .max_run_bytes
+            .map(|limit| limit.saturating_sub(budget.store_written_bytes)),
+        max_import_objects,
+    );
+
     for h in &roots {
         let mut stats = SyncPullStats {
-            pulled: &mut pulled,
+            import: &mut import,
             already: &mut already,
             store_written_bytes: &mut budget.store_written_bytes,
             store_max_run_bytes: policy.store.max_run_bytes,
@@ -127,7 +151,7 @@ pub(super) fn capability_sync_pull(
             }
         };
         let mut stats = SyncPullStats {
-            pulled: &mut pulled,
+            import: &mut import,
             already: &mut already,
             store_written_bytes: &mut budget.store_written_bytes,
             store_max_run_bytes: policy.store.max_run_bytes,
@@ -164,6 +188,10 @@ pub(super) fn capability_sync_pull(
             .into_iter()
             .collect(),
         ));
+    }
+
+    if let Err(error) = import.publish(&mut budget.store_written_bytes, &mut pulled) {
+        return Ok(sync_import_error(error, error_tok, op));
     }
 
     if !pending_refs.is_empty() {
@@ -230,15 +258,15 @@ pub(super) fn capability_sync_pull(
 }
 
 pub(super) fn capability_sync_push(
+    errors: OperationErrorContext<'_>,
     payload: &Term,
     pol: Option<&OpPolicy>,
     policy: &CapsPolicy,
     store: Option<&ArtifactStore>,
     refs_authority: Option<&mut RefsAuthority>,
-    error_tok: SealId,
-    op: &str,
     timeout_ms: Option<u64>,
 ) -> Result<Value, EffectsError> {
+    let OperationErrorContext { error_tok, op } = errors;
     let store = store.ok_or_else(|| {
         EffectsError::Log("missing artifact store for core/sync::push".to_string())
     })?;
@@ -314,14 +342,11 @@ pub(super) fn capability_sync_push(
     let mut commit_authority = None;
     for h in &roots {
         match sync_closure_local(
+            CommitValidationContext::new(policy, &mut commit_authority, error_tok, op),
             store,
             h,
             depth,
-            policy,
-            &mut commit_authority,
             &mut all,
-            error_tok,
-            op,
         ) {
             Ok(()) => {}
             Err(v) => return Ok(v),
@@ -448,15 +473,18 @@ pub(super) fn capability_sync_push(
 }
 
 pub(super) fn sync_closure_local(
+    validation: CommitValidationContext<'_>,
     store: &ArtifactStore,
     root: &str,
     depth: u64,
-    policy: &CapsPolicy,
-    commit_authority: &mut Option<CommitAuthority>,
     out: &mut std::collections::BTreeSet<String>,
-    error_tok: SealId,
-    op: &str,
 ) -> Result<(), Value> {
+    let CommitValidationContext {
+        policy,
+        commit_authority,
+        error_tok,
+        op,
+    } = validation;
     use std::collections::{HashSet, VecDeque};
     let mut q: VecDeque<(String, u64)> = VecDeque::new();
     q.push_back((root.to_string(), depth));

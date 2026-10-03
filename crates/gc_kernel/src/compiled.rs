@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, OnceLock};
 
@@ -8,6 +7,7 @@ use crate::error::{KernelError, KernelErrorKind};
 use crate::eval::{CoverageRunId, EvalCtx, PrimOp, prim, prim_op, prim_op2, type_err};
 use crate::value::{NativeFn, Value};
 use gc_coreform::{Term, TermOrdKey};
+mod capture;
 #[path = "compiled_blob.rs"]
 mod compiled_blob;
 #[path = "compiled_compile.rs"]
@@ -18,6 +18,8 @@ mod compiled_coverage;
 mod compiled_runtime;
 #[cfg(test)]
 mod tests;
+mod validation;
+pub use capture::{CompiledLexicalEnv, CompiledModuleCells};
 #[path = "compiled/trace_impl.rs"]
 mod trace_impl;
 
@@ -105,69 +107,6 @@ impl CompiledCoverageSites {
 }
 
 #[derive(Clone, Debug)]
-pub struct CompiledLexicalEnv(Shared<Vec<Option<Value>>>);
-
-impl CompiledLexicalEnv {
-    fn empty() -> Self {
-        Self(Shared::new(Vec::new()))
-    }
-
-    fn get(&self, depth: u16, slot: u16) -> Option<Value> {
-        if slot != 0 {
-            return None;
-        }
-        self.0.get(usize::from(depth)).cloned().flatten()
-    }
-
-    fn from_slots(slots: Vec<Option<Value>>) -> Self {
-        Self(Shared::new(slots))
-    }
-
-    #[cfg(test)]
-    pub(crate) fn captured_value_count(&self) -> usize {
-        self.0.iter().filter(|value| value.is_some()).count()
-    }
-
-    #[cfg(test)]
-    pub(crate) fn slot_span(&self) -> usize {
-        self.0.len()
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct CompiledModuleCells(Shared<RefCell<Vec<Option<Value>>>>);
-
-impl CompiledModuleCells {
-    fn new(len: usize) -> Self {
-        Self(Shared::new(RefCell::new(vec![None; len])))
-    }
-
-    fn empty() -> Self {
-        Self::new(0)
-    }
-
-    fn get(&self, slot: u32) -> Option<Value> {
-        let slot = usize::try_from(slot).ok()?;
-        self.0.borrow().get(slot).cloned().flatten()
-    }
-
-    fn set(&self, slot: u32, value: Value) -> Result<(), KernelError> {
-        let slot = usize::try_from(slot).map_err(|_| {
-            KernelError::new(KernelErrorKind::Internal, "module slot exceeds usize range")
-        })?;
-        let mut cells = self.0.borrow_mut();
-        let Some(cell) = cells.get_mut(slot) else {
-            return Err(KernelError::new(
-                KernelErrorKind::Internal,
-                format!("module slot out of range: {slot}"),
-            ));
-        };
-        *cell = Some(value);
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug)]
 struct RuntimeEnv {
     lexical: CompiledLexicalEnv,
     inline_slots: Shared<Vec<Value>>,
@@ -232,10 +171,10 @@ impl RuntimeEnv {
         &self,
         plan: &ClosureCapturePlan,
     ) -> Result<CompiledLexicalEnv, KernelError> {
-        let Some(max_depth) = plan.lexical_depths.last().copied() else {
-            return Ok(CompiledLexicalEnv::empty());
-        };
-        let mut slots = vec![None; max_depth.saturating_add(1)];
+        let mut slots = crate::fallible_alloc::vec_with_capacity(
+            plan.lexical_depths.len(),
+            "compiled lexical capture entries",
+        )?;
         for depth in &plan.lexical_depths {
             let depth_u16 = u16::try_from(*depth).map_err(|_| {
                 KernelError::new(
@@ -249,9 +188,12 @@ impl RuntimeEnv {
                     format!("compiled closure capture slot is missing at depth {depth}"),
                 )
             })?;
-            slots[*depth] = Some(value);
+            slots.push((depth_u16, value));
         }
-        Ok(CompiledLexicalEnv::from_slots(slots))
+        Ok(CompiledLexicalEnv::from_slots(
+            slots,
+            plan.lexical_names.clone(),
+        ))
     }
 
     fn external_for_capture(&self, plan: &ClosureCapturePlan) -> Env {
@@ -307,6 +249,7 @@ pub(crate) enum CExpr {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct ClosureCapturePlan {
     lexical_depths: BTreeSet<usize>,
+    lexical_names: Arc<BTreeMap<String, usize>>,
     external_names: BTreeSet<String>,
 }
 
@@ -327,6 +270,7 @@ fn collect_compiled_captures(expr: &Arc<CExpr>, introduced: usize, plan: &mut Cl
                 let depth = usize::from(*depth);
                 if depth >= introduced {
                     plan.lexical_depths.insert(depth - introduced);
+                    Arc::make_mut(&mut plan.lexical_names).insert(name.clone(), depth - introduced);
                 }
             }
             VarResolution::External => {
@@ -437,7 +381,7 @@ pub fn eval_compiled_module(
     m: &CompiledModule,
 ) -> Result<Value, KernelError> {
     env.mark_module_scope();
-    let module = CompiledModuleCells::new(m.module_names.len());
+    let module = CompiledModuleCells::new(&m.module_names, env.clone());
     let coverage_run = ctx.coverage_begin_indexed_run(
         m.coverage_sites.statement_sites().len(),
         m.coverage_sites.decision_sites().len(),
@@ -448,13 +392,10 @@ pub fn eval_compiled_module(
         for f in &m.forms {
             match f {
                 CompiledForm::Def {
-                    name,
-                    module_slot,
-                    expr,
+                    module_slot, expr, ..
                 } => {
                     let v = compiled_runtime::eval_cexpr_runtime(ctx, runtime.clone(), expr)?;
-                    runtime.module.set(*module_slot, v.clone())?;
-                    env.set_local(name.clone(), v);
+                    runtime.module.set(*module_slot, v)?;
                     last = Value::data(Term::Nil);
                 }
                 CompiledForm::Expr(e) => {
