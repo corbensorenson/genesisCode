@@ -110,6 +110,16 @@ fn canonical_language_pairs_execute_through_production_selfhost_cli() {
                     });
                 assert_manifest_expectation(&document, expectation);
 
+                if pair_id == "replay" && side == "invalid" {
+                    assert_eq!(
+                        document.pointer("/error/context/facts/reason"),
+                        Some(&Value::String(
+                            ":cap mismatch: deny decisions must carry nil cap".into()
+                        )),
+                        "the replay negative must reach its declared decision mutation"
+                    );
+                }
+
                 if !expectation["ok"].as_bool().expect("expected ok") {
                     let failure_material = serde_json::to_string(&(
                         document.get("error"),

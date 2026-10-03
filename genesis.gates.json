@@ -9,7 +9,7 @@
       "executionIdentitySha256": "540c489ae73378db61d81330911b96042db738727a8df437afaefc2e1d56faf7",
       "expectedDurationSeconds": 45,
       "id": "gate/agent-authoring-bundle",
-      "inputIdentitySha256": "ff4149f206653efd79159f108b793131ccaa43b77491935bd706d8fd2ca15dfd",
+      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -252,6 +252,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -989,7 +990,7 @@
       "executionIdentitySha256": "d96876cc218a7bde1706f0ebcac9d0ef41a4f1c8788113ff49a977c003f01a10",
       "expectedDurationSeconds": 900,
       "id": "gate/ai-iteration-slo",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -2008,6 +2009,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -2856,7 +2858,7 @@
       "executionIdentitySha256": "1745e51e3a54f49111bccb73c375d870014a88921d2cca982a6397084966f6e5",
       "expectedDurationSeconds": 15,
       "id": "gate/capability-evidence-ledger-contract",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -3875,6 +3877,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -4422,7 +4425,7 @@
       "executionIdentitySha256": "25ef32f5bca99f1363339aa96ab323b260b0b1c9b9e23ac90f73c30e071322cc",
       "expectedDurationSeconds": 600,
       "id": "gate/changed-impact",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -5441,6 +5444,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -5860,7 +5864,7 @@
       "executionIdentitySha256": "1e230c2ef01ff8120c3979715cc8896d61d66f880ac62747d5048e37067fd145",
       "expectedDurationSeconds": 555,
       "id": "gate/check-update-boundary",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -6879,6 +6883,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -7378,7 +7383,7 @@
       "executionIdentitySha256": "5e2b1ceb11cef9750a03446ae0a173c275509bb888314e915e69eaae340741b4",
       "expectedDurationSeconds": 600,
       "id": "gate/default-iteration-workflow",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -8397,6 +8402,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -9109,7 +9115,7 @@
       "executionIdentitySha256": "2352db54072de81e7ea01ed3a42a8b330308c2314f9971e5c62b20247f808a4d",
       "expectedDurationSeconds": 15,
       "id": "gate/doc-topology-drift",
-      "inputIdentitySha256": "3f5d4dbfed4fb2f50f37030b15ab9ac7d81669958f5c375ea721c8f943bcd7e9",
+      "inputIdentitySha256": "7e368643fdd46f031a8f979a61abcd35d948e2c7a933c30b72fb03639f9b559b",
       "inputs": {
         "paths": [
           "CHANGELOG.md",
@@ -9392,7 +9398,7 @@
       "executionIdentitySha256": "c817320e387b1ec8002b0fd78a4e5002538f6473da89297fc655dc0bcaf80691",
       "expectedDurationSeconds": 15,
       "id": "gate/engineering-gate-contract",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -10411,6 +10417,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -12118,7 +12125,7 @@
       "executionIdentitySha256": "d6c8d1ace84f763378ae689b8b0b8dcfd2cddf2f32eea70756b0bf717643aefc",
       "expectedDurationSeconds": 60,
       "id": "gate/gate-resource-telemetry",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13137,6 +13144,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -13540,7 +13548,7 @@
       "executionIdentitySha256": "e61c75f7395ae219a79aa14fb18498868c05d0891910e14480f7ca13697a614c",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-core-card",
-      "inputIdentitySha256": "ff4149f206653efd79159f108b793131ccaa43b77491935bd706d8fd2ca15dfd",
+      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -13783,6 +13791,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -13900,7 +13909,7 @@
       "executionIdentitySha256": "f2714bd81b1ac744dc1b8208c3f324bf9df196bb120cb80bf4f69799cad52257",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-profile",
-      "inputIdentitySha256": "ff4149f206653efd79159f108b793131ccaa43b77491935bd706d8fd2ca15dfd",
+      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14143,6 +14152,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -14260,7 +14270,7 @@
       "executionIdentitySha256": "9a3b86c23c8a41461dd038e8cc2d01b82a76c1bab516ffb76a621dc9ddfaa62f",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-symbol-index",
-      "inputIdentitySha256": "ff4149f206653efd79159f108b793131ccaa43b77491935bd706d8fd2ca15dfd",
+      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14503,6 +14513,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -14620,7 +14631,7 @@
       "executionIdentitySha256": "bafb51ac1b5c845c17495b4e7dfca28b3fd8e4003c819f0627a59c5f38902812",
       "expectedDurationSeconds": 600,
       "id": "gate/gc-agent-task-cards",
-      "inputIdentitySha256": "ff4149f206653efd79159f108b793131ccaa43b77491935bd706d8fd2ca15dfd",
+      "inputIdentitySha256": "d1c2929aeec6b4128d8ffd3d78252c2a0452ff5e855e4bff901da9a1f33bfaeb",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -14863,6 +14874,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -15177,7 +15189,7 @@
       "executionIdentitySha256": "dcd7ac4d115f9c371997aacd153c442411e0281677cbbda102221e0ac8b9d5c5",
       "expectedDurationSeconds": 15,
       "id": "gate/generated-artifact-policy",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -16196,6 +16208,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -17257,7 +17270,7 @@
       "executionIdentitySha256": "76d21a90d7e95d468705171b07709ae4c77c20d22cb81650087f7fa28513f04a",
       "expectedDurationSeconds": 600,
       "id": "gate/gpu-stack-decoupling",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -18276,6 +18289,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -18884,7 +18898,7 @@
       "executionIdentitySha256": "4bdcf8ddef236ac27da09784311c4f258151057d54cdadb7a965c4053f6c8b66",
       "expectedDurationSeconds": 1800,
       "id": "gate/green-front-door",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -19903,6 +19917,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -20893,7 +20908,7 @@
       "executionIdentitySha256": "ac0c50fd8eb4a14b9cf362079c42cebab1f842023d718cd8861cb462acac5b0a",
       "expectedDurationSeconds": 15,
       "id": "gate/no-user-panics",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -21912,6 +21927,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -22612,7 +22628,7 @@
       "executionIdentitySha256": "5b143cfcf1449a0635d36469596994e7b31fbd1161547cdf39bce563e1ee3c23",
       "expectedDurationSeconds": 15,
       "id": "gate/prelude-capability-coverage",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -23631,6 +23647,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -27175,7 +27192,7 @@
       "executionIdentitySha256": "d79afd82822d8fee0909c2752f6be20fbdd3f3e6074ab4b2c1d286e5f156faee",
       "expectedDurationSeconds": 600,
       "id": "gate/test-execution-profile-matrix",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -28194,6 +28211,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",
@@ -28715,7 +28733,7 @@
       "executionIdentitySha256": "06bb1b108c6ae3ad34c9d24f41584d651c9df3f2bcccde29c34e7d6748b0b1e8",
       "expectedDurationSeconds": 600,
       "id": "gate/upgrade-plan-health",
-      "inputIdentitySha256": "71d45de299e8bfb8da14b7e5f713828ee45a648d903a807b62aed812d5c3a6f6",
+      "inputIdentitySha256": "6a80312f11178404e7547f09f289233edb394bfd3cf55a460d062835ff2415a1",
       "inputs": {
         "paths": [
           ".agents/skills/genesiscode-authoring/SKILL.md",
@@ -29734,6 +29752,7 @@
           "scripts/lib/gc_agent_symbol_index.py",
           "scripts/lib/gc_agent_task_cards.py",
           "scripts/lib/gc_canonical_examples.py",
+          "scripts/lib/gc_canonical_replay.py",
           "scripts/lib/gc_capability_lease.py",
           "scripts/lib/gc_diagnostic_catalog.py",
           "scripts/lib/gc_diagnostic_goldens.py",

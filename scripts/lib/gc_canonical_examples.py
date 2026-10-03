@@ -8,7 +8,9 @@ import copy
 import hashlib
 import json
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -128,11 +130,11 @@ def validate_argv(pair_id: str, argv: Any) -> None:
     require(len(commands) == 1, f"{pair_id}: argv must contain one allowed command")
 
 
-def validate_scenario(pair_id: str, side: str, scenario: Any) -> dict[str, bytes]:
+def validate_scenario(pair_id: str, side: str, scenario: Any, fixture_root: Path) -> dict[str, bytes]:
     require(isinstance(scenario, dict) and set(scenario) == SCENARIO_KEYS, f"{pair_id}/{side}: scenario fields are not closed")
     expected_root = f"{SUITE_ROOT}/{pair_id}/{side}"
     require(scenario["root"] == expected_root, f"{pair_id}/{side}: scenario root drift")
-    root = ROOT / safe_relative(scenario["root"], f"{pair_id}/{side}")
+    root = fixture_root / safe_relative(scenario["root"], f"{pair_id}/{side}")
     require(root.is_dir() and not root.is_symlink(), f"{pair_id}/{side}: scenario root is invalid")
     files = scenario["files"]
     require(isinstance(files, list) and files, f"{pair_id}/{side}: files missing")
@@ -189,7 +191,7 @@ def validate_scenario(pair_id: str, side: str, scenario: Any) -> dict[str, bytes
     return rendered
 
 
-def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
+def validate(document: Any, *, check_identity: bool = True, fixture_root: Path = ROOT) -> dict[str, Any]:
     require(isinstance(document, dict) and set(document) == TOP_KEYS, "manifest fields are not closed")
     require(document["kind"] == "genesis/canonical-example-suite-v0.1", "manifest kind drift")
     require(document["version"] == "0.1.0" and document["suiteId"] == "GC-CANONICAL-EXAMPLES-v0.1", "manifest version drift")
@@ -220,8 +222,8 @@ def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
         require(isinstance(capabilities, list), f"{pair_id}: capabilities must be an array")
         sorted_unique(capabilities, f"{pair_id}: capabilities")
         require(all(CAP_RE.fullmatch(capability) is not None for capability in capabilities), f"{pair_id}: invalid capability")
-        valid_files = validate_scenario(pair_id, "valid", pair["valid"])
-        invalid_files = validate_scenario(pair_id, "invalid", pair["invalid"])
+        valid_files = validate_scenario(pair_id, "valid", pair["valid"], fixture_root)
+        invalid_files = validate_scenario(pair_id, "invalid", pair["invalid"], fixture_root)
         require(set(valid_files) == set(invalid_files), f"{pair_id}: paired file sets differ")
         mutation = pair["mutation"]
         require(isinstance(mutation, dict) and set(mutation) == {"kind", "path", "before", "after"}, f"{pair_id}: mutation fields are not closed")
@@ -242,19 +244,37 @@ def validate(document: Any, *, check_identity: bool = True) -> dict[str, Any]:
     return document
 
 
-def refresh(document: Any) -> dict[str, Any]:
+def refresh(document: Any, *, fixture_root: Path = ROOT) -> dict[str, Any]:
     """Refresh profile and file facts without changing reviewed example semantics."""
     doc = copy.deepcopy(document)
     doc["profile"]["sha256"] = hashlib.sha256(PROFILE.read_bytes()).hexdigest()
     for pair in doc["pairs"]:
         for side in ("valid", "invalid"):
             scenario = pair[side]
-            root = ROOT / scenario["root"]
+            root = fixture_root / scenario["root"]
             for row in scenario["files"]:
                 payload = safe_file(root, row["path"], f"{pair['id']} {side}").read_bytes()
                 row["sha256"] = hashlib.sha256(payload).hexdigest()
     doc["contentIdentitySha256"] = canonical_identity(doc)
-    return validate(doc)
+    return validate(doc, fixture_root=fixture_root)
+
+
+def refresh_with_replay(document: Any, binary: Path) -> tuple[dict[str, Any], dict[str, bytes]]:
+    """Produce new teaching logs; never repair hashes inside historical logs."""
+    from gc_canonical_replay import produce_logs
+
+    # Admit the reviewed structure and mutation before executing any producer.
+    reviewed = refresh(document)
+    pair = next(pair for pair in reviewed["pairs"] if pair["id"] == "replay")
+    payloads = produce_logs(ROOT, pair, binary, ExampleError)
+    # Validate the entire candidate before the updater writes any canonical file.
+    with tempfile.TemporaryDirectory(prefix="genesis-canonical-candidate-") as temporary:
+        candidate = Path(temporary)
+        destination = candidate / SUITE_ROOT
+        shutil.copytree(ROOT / SUITE_ROOT, destination)
+        for relative, payload in payloads.items():
+            (candidate / relative).write_bytes(payload)
+        return refresh(reviewed, fixture_root=candidate), payloads
 
 
 def self_test(document: dict[str, Any]) -> int:
@@ -291,6 +311,9 @@ def self_test(document: dict[str, Any]) -> int:
             rejected += 1
         else:
             raise ExampleError(f"negative control accepted: {name}")
+    from gc_canonical_replay import self_test as replay_producer_self_test
+    pair = next(pair for pair in document["pairs"] if pair["id"] == "replay")
+    rejected += replay_producer_self_test(ROOT, pair, ExampleError)
     return rejected
 
 
@@ -301,14 +324,19 @@ def main() -> int:
     mode.add_argument("--print-identity", action="store_true")
     mode.add_argument("--refresh", action="store_true")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--genesis-bin", type=Path, help="fresh production CLI for replay-log generation")
     args = parser.parse_args()
     validate_schema(load_json(SCHEMA))
     if args.refresh:
         require(not args.self_test, "refresh mode does not run mutation controls")
-        document = refresh(load_json(MANIFEST))
+        require(args.genesis_bin is not None, "refresh requires a fresh production --genesis-bin")
+        document, payloads = refresh_with_replay(load_json(MANIFEST), args.genesis_bin.resolve())
+        for relative, payload in payloads.items():
+            (ROOT / relative).write_bytes(payload)
         MANIFEST.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(f"gc-canonical-examples: refreshed {MANIFEST.relative_to(ROOT)}")
         return 0
+    require(args.genesis_bin is None, "--genesis-bin is only accepted in refresh mode")
     document = validate(load_json(MANIFEST), check_identity=args.check)
     if args.print_identity:
         print(canonical_identity(document))
